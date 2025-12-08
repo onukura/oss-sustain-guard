@@ -1,0 +1,35 @@
+source 'https://rubygems.org'
+
+ruby '3.2.0'
+
+# Rails framework
+gem 'rails', '~> 7.1.0'
+
+# Database
+gem 'pg', '~> 1.5'
+gem 'redis', '~> 5.0'
+
+# Application server
+gem 'puma', '~> 6.4'
+
+# HTTP client
+gem 'faraday', '~> 2.8'
+
+# Background jobs
+gem 'sidekiq', '~> 7.2'
+
+# Authentication
+gem 'devise', '~> 4.9'
+
+# JSON serialization
+gem 'jbuilder', '~> 2.11'
+
+group :development, :test do
+  gem 'rspec-rails', '~> 6.1'
+  gem 'factory_bot_rails', '~> 6.4'
+  gem 'faker', '~> 3.2'
+end
+
+group :development do
+  gem 'rubocop', '~> 1.59', require: false
+end

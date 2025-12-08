@@ -91,29 +91,45 @@ class TestAnalyzePackage:
         result = analyze_package("nonexistent", "python", {})
         assert result is None
 
+    @patch("oss_sustain_guard.cli.save_cache")
     @patch("oss_sustain_guard.cli.analyze_repository")
     @patch("oss_sustain_guard.cli.get_resolver")
     @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
     def test_analyze_package_success(
-        self, mock_excluded, mock_get_resolver, mock_analyze_repo
+        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
     ):
         """Test successful package analysis."""
+        from oss_sustain_guard.core import AnalysisResult, Metric
+
         mock_resolver = MagicMock()
         mock_resolver.resolve_github_url.return_value = ("psf", "requests")
         mock_get_resolver.return_value = mock_resolver
 
-        mock_result = MagicMock()
+        mock_result = AnalysisResult(
+            repo_url="https://github.com/psf/requests",
+            total_score=85,
+            metrics=[
+                Metric(
+                    name="Test Metric",
+                    score=85,
+                    max_score=100,
+                    message="Package analyzed successfully",
+                    risk="Low",
+                )
+            ],
+        )
         mock_analyze_repo.return_value = mock_result
 
         result = analyze_package("requests", "python", {})
         assert result == mock_result
         mock_analyze_repo.assert_called_once_with("psf", "requests")
 
+    @patch("oss_sustain_guard.cli.save_cache")
     @patch("oss_sustain_guard.cli.analyze_repository")
     @patch("oss_sustain_guard.cli.get_resolver")
     @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
     def test_analyze_package_error(
-        self, mock_excluded, mock_get_resolver, mock_analyze_repo
+        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
     ):
         """Test package analysis with error."""
         mock_resolver = MagicMock()
@@ -124,3 +140,5 @@ class TestAnalyzePackage:
 
         result = analyze_package("pkg", "python", {})
         assert result is None
+        # save_cache should not be called on error
+        mock_save_cache.assert_not_called()
