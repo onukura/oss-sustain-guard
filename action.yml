@@ -1,0 +1,43 @@
+name: 'OSS Sustain Guard - Package Sustainability Checker'
+description: 'Check package sustainability metrics (bus factor, maintainer drain, funding, etc.) across multiple ecosystems'
+author: 'onukura'
+
+inputs:
+  packages:
+    description: 'Packages to analyze (space-separated). Format: "requests" (Python) or "npm:react" (JavaScript) or "rust:tokio" (Rust)'
+    required: false
+    default: ''
+  ecosystem:
+    description: 'Default ecosystem for unqualified packages (python, javascript, go, rust, php, java, kotlin, scala, csharp, dotnet). Use "auto" to detect.'
+    required: false
+    default: 'auto'
+  include-lock:
+    description: 'Auto-detect packages from lock files (package-lock.json, Cargo.lock, pyproject.toml, etc.)'
+    required: false
+    default: 'false'
+  verbose:
+    description: 'Display detailed metric information'
+    required: false
+    default: 'false'
+  insecure:
+    description: 'Disable SSL certificate verification for HTTPS requests'
+    required: false
+    default: 'false'
+  github-token:
+    description: 'GitHub token for API calls (uses GITHUB_TOKEN by default)'
+    required: false
+
+outputs:
+  summary:
+    description: 'Summary of analysis results'
+
+runs:
+  using: 'docker'
+  image: 'docker://ghcr.io/onukura/oss-sustain-guard:latest'
+  env:
+    INPUT_PACKAGES: ${{ inputs.packages }}
+    INPUT_ECOSYSTEM: ${{ inputs.ecosystem }}
+    INPUT_INCLUDE_LOCK: ${{ inputs.include-lock }}
+    INPUT_VERBOSE: ${{ inputs.verbose }}
+    INPUT_INSECURE: ${{ inputs.insecure }}
+    GITHUB_TOKEN: ${{ inputs.github-token }}

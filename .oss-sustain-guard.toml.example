@@ -1,0 +1,9 @@
+# OSS Sustain Guard Configuration
+
+[tool.oss-sustain-guard]
+
+# Packages to exclude from sustainability checks
+exclude = [
+    "some-internal-package",
+    "legacy-dependency",
+]

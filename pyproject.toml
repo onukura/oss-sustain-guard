@@ -1,0 +1,96 @@
+[project]
+name = "oss-sustain-guard"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+authors = [
+  {name = "onukura", email = "26293997+onukura@users.noreply.github.com"},
+]
+license = {file = "LICENSE"}
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = [
+    "python-dotenv>=1.2.1",
+    "rich>=14.2.0",
+    "typer>=0.20.0",
+    "httpx>=0.28.1",
+    "tomli>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.14.8",
+    "pre-commit>=4.5.0",
+]
+
+[project.scripts]
+oss-guard = "oss_sustain_guard.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["oss_sustain_guard"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+include = ["pyproject.toml", "oss_sustain_guard/**/*.py", "tests/**/*.py", "builder/**/*.py"]
+target-version = "py313"
+line-length = 88
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+  "E", # pycodestyle errors
+  "W", # pycodestyle warnings
+  "F", # pyflakes
+  "I",  # isort
+  "C", # flake8-comprehensions
+  "B", # flake8-bugbear
+]
+ignore = [
+  "C901", # complex-structure (C901)
+  "E203", # Whitespace before ':' (E203)
+  "E501", # Line too long (82 &gt; 79 characters) (E501)
+  "F811", # Redefinition of unused name from line n (F811)
+  "E741", # Do not define classes named 'I', 'O', or 'l' (E742)
+  "E266", # too many leading '#' for block comment (E266)
+  "PIE",  # flake8-pie (PIE)
+  "F601", # multi-value-repeated-key-literal (F601)
+  "E721", # type-comparison (E721)
+  "B008", # Do not perform function call `Body` in argument defaults
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+split-on-trailing-comma = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.oss-sustain-guard]
+# Example: packages to exclude from sustainability checks
+# exclude = ["some-internal-package", "legacy-dependency"]

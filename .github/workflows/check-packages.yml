@@ -1,0 +1,58 @@
+name: Check Package Sustainability
+
+on:
+  workflow_call:
+    inputs:
+      packages:
+        description: 'Package names to check (space-separated). Examples: "requests" or "npm:react rust:tokio"'
+        required: true
+        type: string
+      include-lock:
+        description: 'Auto-detect packages from lock files (package-lock.json, Cargo.lock, etc.)'
+        required: false
+        type: boolean
+        default: false
+      verbose:
+        description: 'Display detailed information for each metric'
+        required: false
+        type: boolean
+        default: false
+      fail-on-score:
+        description: 'Fail workflow if minimum score falls below this threshold (0-100)'
+        required: false
+        type: number
+        default: 0
+    outputs:
+      results:
+        description: 'JSON results of the analysis'
+        value: ${{ jobs.check-packages.outputs.results }}
+
+permissions:
+  contents: read
+
+jobs:
+  check-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      results: ${{ steps.check.outputs.results }}
+    steps:
+      - name: Checkout oss-sustain-guard
+        uses: actions/checkout@v4
+        with:
+          repository: onukura/oss-sustain-guard
+          ref: main
+      
+      - name: Run package check with Docker
+        id: check
+        uses: onukura/oss-sustain-guard@main
+        with:
+          packages: ${{ inputs.packages }}
+          include-lock: ${{ inputs.include-lock }}
+          verbose: ${{ inputs.verbose }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Check minimum score threshold
+        if: inputs.fail-on-score > 0
+        run: |
+          echo "⚠️  Note: Fail-on-score threshold set to ${{ inputs.fail-on-score }}"
+          echo "This feature requires custom score parsing implementation"
