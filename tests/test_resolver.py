@@ -126,13 +126,15 @@ version = "4.2.0"
     with tempfile.NamedTemporaryFile(suffix=".lock", delete=False) as f:
         f.write(poetry_lock_content)
         f.flush()
-        try:
-            packages = parse_lockfile_poetry(f.name)
-            assert "requests" in packages
-            assert "django" in packages
-            assert len(packages) == 2
-        finally:
-            Path(f.name).unlink()
+        temp_path = f.name
+    # Close file before deletion (Windows requirement)
+    try:
+        packages = parse_lockfile_poetry(temp_path)
+        assert "requests" in packages
+        assert "django" in packages
+        assert len(packages) == 2
+    finally:
+        Path(temp_path).unlink()
 
 
 def test_parse_lockfile_uv():
@@ -149,13 +151,15 @@ version = "2.0.0"
     with tempfile.NamedTemporaryFile(suffix=".lock", delete=False) as f:
         f.write(uv_lock_content)
         f.flush()
-        try:
-            packages = parse_lockfile_uv(f.name)
-            assert "fastapi" in packages
-            assert "pydantic" in packages
-            assert len(packages) == 2
-        finally:
-            Path(f.name).unlink()
+        temp_path = f.name
+    # Close file before deletion (Windows requirement)
+    try:
+        packages = parse_lockfile_uv(temp_path)
+        assert "fastapi" in packages
+        assert "pydantic" in packages
+        assert len(packages) == 2
+    finally:
+        Path(temp_path).unlink()
 
 
 def test_parse_lockfile_pipenv():
@@ -170,14 +174,16 @@ def test_parse_lockfile_pipenv():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as f:
         json.dump(pipfile_lock_data, f)
         f.flush()
-        try:
-            packages = parse_lockfile_pipenv(f.name)
-            assert "requests" in packages
-            assert "flask" in packages
-            assert "pytest" in packages
-            assert len(packages) == 3
-        finally:
-            Path(f.name).unlink()
+        temp_path = f.name
+    # Close file before deletion (Windows requirement)
+    try:
+        packages = parse_lockfile_pipenv(temp_path)
+        assert "requests" in packages
+        assert "flask" in packages
+        assert "pytest" in packages
+        assert len(packages) == 3
+    finally:
+        Path(temp_path).unlink()
 
 
 def test_get_packages_from_lockfile_poetry():
@@ -220,11 +226,13 @@ def test_parse_lockfile_poetry_empty():
     with tempfile.NamedTemporaryFile(suffix=".lock", delete=False) as f:
         f.write(b"")
         f.flush()
-        try:
-            packages = parse_lockfile_poetry(f.name)
-            assert len(packages) == 0
-        finally:
-            Path(f.name).unlink()
+        temp_path = f.name
+    # Close file before deletion (Windows requirement)
+    try:
+        packages = parse_lockfile_poetry(temp_path)
+        assert len(packages) == 0
+    finally:
+        Path(temp_path).unlink()
 
 
 def test_parse_lockfile_pipenv_empty():
@@ -232,11 +240,13 @@ def test_parse_lockfile_pipenv_empty():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as f:
         json.dump({}, f)
         f.flush()
-        try:
-            packages = parse_lockfile_pipenv(f.name)
-            assert len(packages) == 0
-        finally:
-            Path(f.name).unlink()
+        temp_path = f.name
+    # Close file before deletion (Windows requirement)
+    try:
+        packages = parse_lockfile_pipenv(temp_path)
+        assert len(packages) == 0
+    finally:
+        Path(temp_path).unlink()
 
 
 @patch("httpx.Client.get")

@@ -153,10 +153,11 @@ def test_get_cache_dir_from_config(temp_project_root):
     """Test cache directory from config file."""
     config_file = temp_project_root / ".oss-sustain-guard.toml"
     custom_dir = temp_project_root / "my_cache"
+    # Use POSIX path format to avoid Windows backslash escaping issues in TOML
     config_file.write_text(
         f"""
 [tool.oss-sustain-guard.cache]
-directory = "{custom_dir}"
+directory = "{custom_dir.as_posix()}"
 """
     )
 
