@@ -4,7 +4,7 @@
 
 `data/database.json` is the cache database for OSS Sustain Guard. It stores pre-computed sustainability analysis results, enabling fast lookups without real-time analysis.
 
-## Schema Specification (v2.0 - Multi-Language Support)
+## Schema Specification (v2.1 - Multi-Language Support with Cache Metadata)
 
 ### Top-Level Structure
 
@@ -24,7 +24,7 @@
 
 ```json
 {
-  "ecosystem": "python|javascript|go|rust",
+  "ecosystem": "python|javascript|go|rust|php|java|csharp|ruby",
   "package_name": "string",
   "github_url": "https://github.com/{owner}/{repo}",
   "total_score": 0-100,
@@ -37,7 +37,12 @@
       "risk": "Critical|High|Medium|Low|None"
     },
     ...
-  ]
+  ],
+  "cache_metadata": {
+    "fetched_at": "ISO 8601 datetime",
+    "ttl_seconds": integer,
+    "source": "github|local|api"
+  }
 }
 ```
 
@@ -47,11 +52,20 @@
 
 | Field | Type | Description |
 |----------|-----|------|
-| `ecosystem` | string | Ecosystem name: `python`, `javascript`, `go`, `rust` |
+| `ecosystem` | string | Ecosystem name: `python`, `javascript`, `go`, `rust`, `php`, `java`, `csharp`, `ruby` |
 | `package_name` | string | Package name within the ecosystem |
 | `github_url` | string | GitHub repository URL |
 | `total_score` | integer | Total score (0-100) |
 | `metrics` | array | Array of individual metrics |
+| `cache_metadata` | object | Cache metadata (v2.1+) |
+
+### Cache Metadata (v2.1+)
+
+| Field | Type | Description |
+|----------|-----|------|
+| `fetched_at` | string | ISO 8601 timestamp when data was fetched |
+| `ttl_seconds` | integer | Time-to-live in seconds (default: 604800 = 7 days) |
+| `source` | string | Data source: `github` (remote), `local` (fallback), `api` (Libraries.io) |
 
 ### Metrics
 

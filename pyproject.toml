@@ -32,8 +32,9 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-cov>=6.0.0",
     "ruff>=0.14.8",
-    "pre-commit>=4.5.0",
+    "prek>=0.2.20",
 ]
 
 [project.scripts]
@@ -51,6 +52,34 @@ minversion = "8.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["oss_sustain_guard"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+    "@abstract",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [tool.ruff]
 include = ["pyproject.toml", "oss_sustain_guard/**/*.py", "tests/**/*.py", "builder/**/*.py"]
@@ -94,3 +123,17 @@ line-ending = "auto"
 [tool.oss-sustain-guard]
 # Example: packages to exclude from sustainability checks
 # exclude = ["some-internal-package", "legacy-dependency"]
+
+[tool.oss-sustain-guard.cache]
+
+# Cache directory (default: ~/.cache/oss-sustain-guard)
+# Supports environment variable expansion: ~, $HOME, etc.
+# directory = "~/.cache/oss-sustain-guard"
+
+# Cache TTL (Time To Live) in seconds (default: 604800 = 7 days)
+# After this period, cached data is considered stale and will be refetched
+# ttl_seconds = 604800
+
+# Enable or disable caching (default: true)
+# When disabled, data is always fetched fresh from GitHub/local sources
+# enabled = true

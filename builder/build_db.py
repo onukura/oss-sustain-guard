@@ -23,7 +23,7 @@ import json
 import os
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +31,7 @@ import httpx
 from dotenv import load_dotenv
 from rich.console import Console
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.config import DEFAULT_CACHE_TTL, get_verify_ssl
 from oss_sustain_guard.core import analyze_repository
 
 load_dotenv()
@@ -316,13 +316,19 @@ async def process_package(
     try:
         analysis_result = analyze_repository(owner, name)
 
-        # Store the result
+        # Store the result with cache metadata
+        now = datetime.now(timezone.utc).isoformat()
         analysis_data = {
             "ecosystem": ecosystem,
             "package_name": package_name,
             "github_url": analysis_result.repo_url,
             "total_score": analysis_result.total_score,
             "metrics": [metric._asdict() for metric in analysis_result.metrics],
+            "cache_metadata": {
+                "fetched_at": now,
+                "ttl_seconds": DEFAULT_CACHE_TTL,
+                "source": "api",
+            },
         }
         console.print(
             f"    [bold green]📊 Analysis complete. Score: {analysis_result.total_score}/100[/bold green]"

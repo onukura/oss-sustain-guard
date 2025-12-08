@@ -1,5 +1,9 @@
 # OSS Sustain Guard
 
+[![Test & Coverage](https://github.com/onukura/oss-sustain-guard/actions/workflows/test.yml/badge.svg)](https://github.com/onukura/oss-sustain-guard/actions/workflows/test.yml)
+[![Python Version](https://img.shields.io/pypi/pyversions/oss-sustain-guard)](https://pypi.org/project/oss-sustain-guard/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Evaluates the sustainability of Python packages using metrics such as Bus Factor, Maintainer Drain, Release Frequency, and Security Status.
 
 With the **Token-less Experience** + **Static Snapshot API** model, users can perform fast evaluations without API tokens.
@@ -295,6 +299,101 @@ git commit -m "Emergency fix" --no-verify
 
 See [PRE_COMMIT_INTEGRATION.md](./docs/PRE_COMMIT_INTEGRATION.md) for details.
 
+## 💾 Cache Management
+
+OSS Sustain Guard caches package analysis data locally to improve performance and reduce network requests.
+
+### Cache Configuration
+
+Configure cache behavior via:
+
+1. **Command-line options**
+2. **Environment variables**
+3. **Configuration file** (`.oss-sustain-guard.toml`)
+
+#### Command-line Options
+
+```bash
+# Specify custom cache directory
+oss-guard check requests --cache-dir /path/to/cache
+
+# Set custom TTL (in seconds, default: 604800 = 7 days)
+oss-guard check requests --cache-ttl 86400  # 1 day
+
+# Disable cache (always fetch fresh data)
+oss-guard check requests --no-cache
+
+# Clear cache
+oss-guard check --clear-cache
+```
+
+#### Environment Variables
+
+```bash
+# Set cache directory
+export OSS_SUSTAIN_GUARD_CACHE_DIR="$HOME/.cache/oss-sustain-guard"
+
+# Set cache TTL (in seconds)
+export OSS_SUSTAIN_GUARD_CACHE_TTL=604800
+
+# Run check
+oss-guard check requests
+```
+
+#### Configuration File
+
+Create `.oss-sustain-guard.toml` in your project root:
+
+```toml
+[tool.oss-sustain-guard.cache]
+# Cache directory (default: ~/.cache/oss-sustain-guard)
+directory = "~/.cache/oss-sustain-guard"
+
+# Cache TTL in seconds (default: 604800 = 7 days)
+ttl_seconds = 604800
+
+# Enable/disable cache (default: true)
+enabled = true
+```
+
+### Cache Statistics
+
+View cache statistics:
+
+```bash
+# All ecosystems
+oss-guard cache-stats
+
+# Specific ecosystem
+oss-guard cache-stats python
+```
+
+Example output:
+
+```text
+Cache Statistics
+  Directory: /home/user/.cache/oss-sustain-guard
+  Total entries: 604
+  Valid entries: 598
+  Expired entries: 6
+
+Per-Ecosystem Breakdown:
+┏━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━┓
+┃ Ecosystem ┃ Total ┃ Valid ┃ Expired ┃
+┡━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━┩
+│ python    │   188 │   185 │       3 │
+│ rust      │   198 │   198 │       0 │
+│ ruby      │   197 │   195 │       2 │
+└───────────┴───────┴───────┴─────────┘
+```
+
+### Cache Behavior
+
+- **Default Location**: `~/.cache/oss-sustain-guard/`
+- **Default TTL**: 7 days (604800 seconds)
+- **Auto-refresh**: Expired entries are automatically refetched
+- **Per-ecosystem files**: Each language has its own cache file (e.g., `python.json`, `javascript.json`)
+
 ## 📊 Score Explanation
 
 Scores are evaluated in the range of 0-100:
@@ -507,6 +606,75 @@ MIT License
 ## 🤝 Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss the proposed changes.
+
+## 🧪 Development
+
+### Setup Development Environment
+
+```bash
+# Clone repository
+git clone https://github.com/onukura/oss-sustain-guard.git
+cd oss-sustain-guard
+
+# Install dependencies with uv
+uv sync
+
+# Install pre-commit hooks
+uv run pre-commit install
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+uv run pytest tests/ -v
+
+# Run tests with coverage
+uv run pytest tests/ --cov=oss_sustain_guard --cov-report=term --cov-report=html
+
+# View coverage report
+open htmlcov/index.html  # macOS
+xdg-open htmlcov/index.html  # Linux
+start htmlcov/index.html  # Windows
+```
+
+### Code Quality
+
+```bash
+# Run linter
+uv run ruff check oss_sustain_guard tests builder
+
+# Run formatter
+uv run ruff format oss_sustain_guard tests builder
+
+# Run type checker (if mypy is added)
+uv run mypy oss_sustain_guard
+```
+
+### Testing CI Locally
+
+```bash
+# Test pre-commit hooks
+uv run pre-commit run --all-files
+
+# Test specific ecosystem resolver
+uv run pytest tests/resolvers/test_python.py -v
+
+# Test cache functionality
+uv run pytest tests/test_cache.py -v
+```
+
+### Coverage Goals
+
+Current coverage: **55%**
+
+Priority areas for improvement:
+
+- `cli.py` (17%) - CLI integration tests
+- `core.py` (42%) - GitHub API mocking tests
+- Resolver error paths - Edge case handling
+
+Target: **80%+ coverage**
 
 ## 🐛 Bug Reports
 

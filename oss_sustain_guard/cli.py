@@ -10,7 +10,15 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from oss_sustain_guard.config import get_verify_ssl, is_package_excluded, set_verify_ssl
+from oss_sustain_guard.cache import clear_cache, get_cache_stats, load_cache, save_cache
+from oss_sustain_guard.config import (
+    get_verify_ssl,
+    is_cache_enabled,
+    is_package_excluded,
+    set_cache_dir,
+    set_cache_ttl,
+    set_verify_ssl,
+)
 from oss_sustain_guard.core import AnalysisResult, Metric, analyze_repository
 from oss_sustain_guard.resolvers import detect_ecosystems, get_resolver
 from oss_sustain_guard.resolvers.python import (
@@ -33,47 +41,92 @@ console = Console()
 # --- Helper Functions ---
 
 
-def load_database() -> dict:
-    """Load the sustainability database from GitHub repository or local fallback.
+def load_database(use_cache: bool = True) -> dict:
+    """Load the sustainability database with caching support.
 
-    Tries to load from GitHub repository first, then falls back to local
-    data/latest/ directory if GitHub is unavailable.
+    Loads data with the following priority:
+    1. User cache (~/.cache/oss-sustain-guard/*.json) if enabled and valid
+    2. GitHub repository (remote)
+    3. Local data/latest/ directory (fallback)
+
+    Args:
+        use_cache: If False, skip cache and load fresh data.
+
+    Returns:
+        Dictionary of package data keyed by "ecosystem:package_name".
     """
     merged = {}
 
     # List of ecosystems to load
     ecosystems = ["python", "javascript", "ruby", "rust", "php", "java", "csharp"]
 
-    # Try loading from GitHub first
-    github_success = False
-    for ecosystem in ecosystems:
-        url = f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json"
-        try:
-            with httpx.Client(verify=get_verify_ssl(), follow_redirects=True) as client:
-                response = client.get(url, timeout=10)
-                response.raise_for_status()
-                data = response.json()
-                merged.update(data)
-                github_success = True
-                console.print(f"Loaded {ecosystem} data from GitHub.")
-        except Exception as e:
-            # Silently skip GitHub errors for now, will try local fallback
-            console.print(
-                f"[yellow]Warning: Failed to load {ecosystem} data from GitHub: {e}[/yellow]"
-            )
-            pass
-
-    # If GitHub loading failed, fall back to local data/latest/
-    if not github_success and LATEST_DIR.exists():
-        for ecosystem_file in LATEST_DIR.glob("*.json"):
-            try:
-                with open(ecosystem_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    merged.update(data)
-            except Exception as e:
+    # Load from cache first if enabled
+    if use_cache and is_cache_enabled():
+        for ecosystem in ecosystems:
+            cached_data = load_cache(ecosystem)
+            if cached_data:
+                merged.update(cached_data)
                 console.print(
-                    f"[yellow]Warning: Failed to load {ecosystem_file}: {e}[/yellow]"
+                    f"[dim]Loaded {len(cached_data)} entries from cache: {ecosystem}[/dim]"
                 )
+
+    # Determine which ecosystems need fresh data
+    ecosystems_to_fetch = []
+    if not use_cache or not is_cache_enabled():
+        # Need all ecosystems if not using cache
+        ecosystems_to_fetch = ecosystems
+    else:
+        # Only fetch ecosystems that have no cache data
+        for ecosystem in ecosystems:
+            ecosystem_keys = [k for k in merged.keys() if k.startswith(f"{ecosystem}:")]
+            if not ecosystem_keys:
+                ecosystems_to_fetch.append(ecosystem)
+
+    # Try loading missing ecosystems from GitHub
+    if ecosystems_to_fetch:
+        github_success = False
+        for ecosystem in ecosystems_to_fetch:
+            url = f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json"
+            try:
+                with httpx.Client(
+                    verify=get_verify_ssl(), follow_redirects=True
+                ) as client:
+                    response = client.get(url, timeout=10)
+                    response.raise_for_status()
+                    data = response.json()
+                    merged.update(data)
+                    github_success = True
+                    console.print(f"Loaded {ecosystem} data from GitHub.")
+
+                    # Save to cache if enabled
+                    if use_cache and is_cache_enabled():
+                        save_cache(ecosystem, data)
+            except Exception as e:
+                # Silently skip GitHub errors for now, will try local fallback
+                console.print(
+                    f"[yellow]Warning: Failed to load {ecosystem} data from GitHub: {e}[/yellow]"
+                )
+
+        # If GitHub loading failed, fall back to local data/latest/
+        if not github_success and LATEST_DIR.exists():
+            for ecosystem in ecosystems_to_fetch:
+                ecosystem_file = LATEST_DIR / f"{ecosystem}.json"
+                if ecosystem_file.exists():
+                    try:
+                        with open(ecosystem_file, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                            merged.update(data)
+                            console.print(
+                                f"Loaded {ecosystem} data from local fallback."
+                            )
+
+                            # Save to cache if enabled
+                            if use_cache and is_cache_enabled():
+                                save_cache(ecosystem, data)
+                    except Exception as e:
+                        console.print(
+                            f"[yellow]Warning: Failed to load {ecosystem_file}: {e}[/yellow]"
+                        )
 
     return merged
 
@@ -397,10 +450,42 @@ def check(
         "--insecure",
         help="Disable SSL certificate verification for HTTPS requests.",
     ),
+    cache_dir: Path | None = typer.Option(
+        None,
+        "--cache-dir",
+        help="Cache directory path (default: ~/.cache/oss-sustain-guard).",
+    ),
+    cache_ttl: int | None = typer.Option(
+        None,
+        "--cache-ttl",
+        help="Cache TTL in seconds (default: 604800 = 7 days).",
+    ),
+    no_cache: bool = typer.Option(
+        False,
+        "--no-cache",
+        help="Disable cache and load fresh data.",
+    ),
+    clear_cache_flag: bool = typer.Option(
+        False,
+        "--clear-cache",
+        help="Clear cache and exit.",
+    ),
 ):
     """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)."""
+    # Handle --clear-cache option
+    if clear_cache_flag:
+        cleared = clear_cache()
+        console.print(f"[green]✨ Cleared {cleared} cache file(s).[/green]")
+        raise typer.Exit(code=0)
+
+    # Apply cache configuration
+    if cache_dir:
+        set_cache_dir(cache_dir)
+    if cache_ttl:
+        set_cache_ttl(cache_ttl)
+
     set_verify_ssl(not insecure)
-    db = load_database()
+    db = load_database(use_cache=not no_cache)
     results_to_display = []
     packages_to_analyze: list[tuple[str, str]] = []  # (ecosystem, package_name)
 
@@ -541,6 +626,47 @@ def check(
             )
     else:
         console.print("No results to display.")
+
+
+@app.command()
+def cache_stats(
+    ecosystem: str | None = typer.Argument(
+        None,
+        help="Specific ecosystem to check (python, javascript, rust, etc.), or omit for all ecosystems.",
+    ),
+):
+    """Display cache statistics."""
+    stats = get_cache_stats(ecosystem)
+
+    if not stats["exists"]:
+        console.print(
+            f"[yellow]Cache directory does not exist: {stats['cache_dir']}[/yellow]"
+        )
+        return
+
+    console.print("[bold cyan]Cache Statistics[/bold cyan]")
+    console.print(f"  Directory: {stats['cache_dir']}")
+    console.print(f"  Total entries: {stats['total_entries']}")
+    console.print(f"  Valid entries: [green]{stats['valid_entries']}[/green]")
+    console.print(f"  Expired entries: [yellow]{stats['expired_entries']}[/yellow]")
+
+    if stats["ecosystems"]:
+        console.print("\n[bold cyan]Per-Ecosystem Breakdown:[/bold cyan]")
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Ecosystem", style="cyan")
+        table.add_column("Total", justify="right")
+        table.add_column("Valid", justify="right", style="green")
+        table.add_column("Expired", justify="right", style="yellow")
+
+        for eco, eco_stats in stats["ecosystems"].items():
+            table.add_row(
+                eco,
+                str(eco_stats["total"]),
+                str(eco_stats["valid"]),
+                str(eco_stats["expired"]),
+            )
+
+        console.print(table)
 
 
 if __name__ == "__main__":

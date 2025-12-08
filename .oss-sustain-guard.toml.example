@@ -7,3 +7,17 @@ exclude = [
     "some-internal-package",
     "legacy-dependency",
 ]
+
+[tool.oss-sustain-guard.cache]
+
+# Cache directory (default: ~/.cache/oss-sustain-guard)
+# Supports environment variable expansion: ~, $HOME, etc.
+# directory = "~/.cache/oss-sustain-guard"
+
+# Cache TTL (Time To Live) in seconds (default: 604800 = 7 days)
+# After this period, cached data is considered stale and will be refetched
+# ttl_seconds = 604800
+
+# Enable or disable caching (default: true)
+# When disabled, data is always fetched fresh from GitHub/local sources
+# enabled = true

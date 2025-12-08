@@ -28,6 +28,12 @@ jobs:
       - name: Install dependencies
         run: uv sync
       
+      - name: Run tests before database update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          uv run pytest tests/ -v --cov=oss_sustain_guard --cov-report=term
+      
       - name: Run database builder for all ecosystems
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
