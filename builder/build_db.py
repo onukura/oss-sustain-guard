@@ -152,8 +152,7 @@ async def fetch_libraries_io_packages(
         async with httpx.AsyncClient(
             verify=get_verify_ssl(), timeout=60, headers=headers
         ) as client:
-            max_pages = 2  # Limit to first 2 pages to avoid timeouts (200 packages)
-            while len(all_packages) < limit and page <= max_pages:
+            while len(all_packages) < limit:
                 url = f"{LIBRARIES_IO_API_URL}/search"
                 params = {
                     "platforms": libraries_io_ecosystem,
@@ -470,7 +469,7 @@ async def main(
             f"[bold cyan]Fetching packages from Libraries.io for {ecosystem}...[/bold cyan]"
         )
 
-        packages = await fetch_libraries_io_packages(libraries_io_name, 500)
+        packages = await fetch_libraries_io_packages(libraries_io_name, 5000)
         if packages:
             packages_by_ecosystem[ecosystem] = packages
             console.print(f"  [cyan]✅ Fetched {len(packages)} packages[/cyan]")
