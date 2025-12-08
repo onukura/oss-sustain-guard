@@ -47,6 +47,65 @@ class TestGoResolver:
         assert result == ("golang", "text")
 
     @patch("httpx.Client.get")
+    def test_resolve_github_url_short_name(self, mock_get):
+        """Test resolving short package name via pkg.go.dev search."""
+        # Mock search response
+        search_response = MagicMock()
+        search_response.status_code = 200
+        search_response.text = """
+            <a href="/gorm.io/gorm" data-test-id="snippet-title">
+              gorm
+            </a>
+        """
+
+        # Mock package page response
+        package_response = MagicMock()
+        package_response.text = """
+            <div class="UnitMeta-repo">
+                <a href="https://github.com/go-gorm/gorm">github.com/go-gorm/gorm</a>
+            </div>
+        """
+
+        mock_get.side_effect = [search_response, package_response]
+
+        resolver = GoResolver()
+        result = resolver.resolve_github_url("gorm")
+        assert result == ("go-gorm", "gorm")
+
+    @patch("httpx.Client.get")
+    def test_resolve_github_url_with_unitmeta_repo(self, mock_get):
+        """Test resolving with UnitMeta-repo section."""
+        mock_response = MagicMock()
+        mock_response.text = """
+            <h2>Repository</h2>
+            <div class="UnitMeta-repo">
+                <a href="https://github.com/sirupsen/logrus" title="repo">
+                    github.com/sirupsen/logrus
+                </a>
+            </div>
+            <a href="https://github.com/golang/go">Go Language</a>
+        """
+        mock_get.return_value = mock_response
+
+        resolver = GoResolver()
+        result = resolver.resolve_github_url("github.com/sirupsen/logrus")
+        assert result == ("sirupsen", "logrus")
+
+    @patch("httpx.Client.get")
+    def test_resolve_github_url_fallback_filtering(self, mock_get):
+        """Test fallback pattern with golang/go filtering."""
+        mock_response = MagicMock()
+        mock_response.text = """
+            <a href="https://github.com/golang/go">Go logo</a>
+            <a href="https://github.com/user/repo">Repository</a>
+        """
+        mock_get.return_value = mock_response
+
+        resolver = GoResolver()
+        result = resolver.resolve_github_url("example.com/user/repo")
+        assert result == ("user", "repo")
+
+    @patch("httpx.Client.get")
     def test_resolve_github_url_network_error(self, mock_get):
         """Test resolving with network error."""
         import httpx

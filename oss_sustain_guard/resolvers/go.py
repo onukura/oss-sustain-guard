@@ -22,10 +22,12 @@ class GoResolver(LanguageResolver):
         Resolve Go module to GitHub repository.
 
         Go modules often use GitHub paths directly (e.g., github.com/user/repo).
-        For other paths, query pkg.go.dev API.
+        For other paths, query pkg.go.dev API. If package_name is a short name
+        (e.g., "gorm"), attempt to search pkg.go.dev for the canonical module path.
 
         Args:
-            package_name: The Go module path (e.g., github.com/golang/go or golang.org/x/net).
+            package_name: The Go module path (e.g., github.com/golang/go or golang.org/x/net)
+                         or a short package name (e.g., "gorm").
 
         Returns:
             A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
@@ -38,11 +40,30 @@ class GoResolver(LanguageResolver):
                 repo = parts[2]
                 return owner, repo
 
-        # For non-GitHub paths, try to query pkg.go.dev API
-        # This is a fallback and may not always work
+        # For non-GitHub paths or short names, try to query pkg.go.dev
         try:
             with httpx.Client(verify=get_verify_ssl()) as client:
-                # Query pkg.go.dev API (simplified approach)
+                # First, try to search for the package if it's a short name
+                if "/" not in package_name:
+                    search_response = client.get(
+                        f"https://pkg.go.dev/search?q={package_name}&m=package",
+                        timeout=10,
+                        follow_redirects=True,
+                    )
+                    if search_response.status_code == 200:
+                        import re
+
+                        # Look for the first search result with data-test-id="snippet-title"
+                        # Pattern: <a href="/module/path" ... data-test-id="snippet-title">
+                        pattern = (
+                            r'<a href="/([^"?]+)"[^>]*data-test-id="snippet-title"'
+                        )
+                        matches = re.findall(pattern, search_response.text)
+                        if matches:
+                            # Use the first match as the canonical path
+                            package_name = matches[0]
+
+                # Query pkg.go.dev for package details
                 response = client.get(
                     f"https://pkg.go.dev/{package_name}?tab=overview",
                     timeout=10,
@@ -50,18 +71,28 @@ class GoResolver(LanguageResolver):
                 )
                 response.raise_for_status()
 
-                # Look for GitHub repository link in the response HTML
-                # This is a fragile approach but Go modules don't have a JSON API
+                # Look for GitHub repository link in the UnitMeta-repo section
                 if "github.com" in response.text:
-                    # Simple pattern matching for GitHub URLs
                     import re
 
-                    pattern = r"https://github\.com/([^/]+)/([^/\s\"]+)"
+                    # First try to find the repository link in UnitMeta-repo section
+                    # This is more reliable than searching the entire page
+                    pattern = r'class="UnitMeta-repo"[^>]*>.*?href="https://github\.com/([^/]+)/([^/"]+)"'
+                    matches = re.findall(pattern, response.text, re.DOTALL)
+                    if matches:
+                        owner, repo = matches[0]
+                        return owner, repo
+
+                    # Fallback: search for any GitHub URL
+                    pattern = r'https://github\.com/([^/]+)/([^/\s"<>]+)'
                     matches = re.findall(pattern, response.text)
                     if matches:
-                        # Return the first match
-                        owner, repo = matches[0]
-                        return owner, repo.split("#")[0]  # Clean fragment
+                        # Filter out common false positives (golang/go is the Go logo link)
+                        for owner, repo in matches:
+                            if owner != "golang" or repo != "go":
+                                # Clean any trailing characters
+                                repo = repo.split("#")[0].split("?")[0].rstrip("/")
+                                return owner, repo
 
         except (httpx.RequestError, httpx.HTTPStatusError):
             pass
