@@ -18,6 +18,21 @@ class JavaResolver(LanguageResolver):
 
     MAVEN_CENTRAL_API_URL = "https://search.maven.org/solrsearch/select"
 
+    # Known package to GitHub repository mappings for packages where pom.xml resolution fails
+    KNOWN_PACKAGES = {
+        "org.apache.commons:commons-lang3": ("apache", "commons-lang"),
+        "org.slf4j:slf4j-api": ("qos-ch", "slf4j"),
+        "junit:junit": ("junit-team", "junit4"),
+        "org.mockito:mockito-core": ("mockito", "mockito"),
+        "org.hamcrest:hamcrest": ("hamcrest", "JavaHamcrest"),
+        "com.google.code.gson:gson": ("google", "gson"),
+        "org.projectlombok:lombok": ("projectlombok", "lombok"),
+        "org.apache.log4j:log4j": ("apache", "logging-log4j1"),
+        "ch.qos.logback:logback-classic": ("qos-ch", "logback"),
+        "org.apache.commons:commons-pool2": ("apache", "commons-pool"),
+        "org.apache.commons:commons-dbcp2": ("apache", "commons-dbcp"),
+    }
+
     @property
     def ecosystem_name(self) -> str:
         return "java"
@@ -32,6 +47,10 @@ class JavaResolver(LanguageResolver):
         Returns:
             A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
         """
+        # Check known packages first
+        if package_name in self.KNOWN_PACKAGES:
+            return self.KNOWN_PACKAGES[package_name]
+
         try:
             # Parse groupId:artifactId format
             if ":" not in package_name:
