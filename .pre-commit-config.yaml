@@ -1,5 +1,7 @@
 repos:
   - repo: https://github.com/onukura/oss-sustain-guard
-    rev: ""
+    rev: "f4b8c9f589b81278c5e0525273d28118a0570bc9"
     hooks:
       - id: oss-sustain-guard
+        args: [--include-lock, --insecure]
+        verbose: true
