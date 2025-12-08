@@ -3,7 +3,7 @@
   description: "Analyzes package sustainability across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)"
   entry: oss-guard check
   language: python
-  files: ^(requirements\.txt|package\.json|go\.mod|Cargo\.toml|composer\.json|pom\.xml|\.csproj|pyproject\.toml|package-lock\.json|yarn\.lock|poetry\.lock|uv\.lock|Gemfile|Gemfile\.lock|go\.sum|Cargo\.lock|composer\.lock|pom\.xml|packages\.config|\.nuspec)$
-  stages: [commit]
+  stages: [pre-commit]
   pass_filenames: false
   require_serial: true
+  always_run: true
