@@ -49,14 +49,23 @@ RATE_LIMIT_DELAY = 0.5  # 0.5 seconds between requests (faster, but within 60 re
 
 # Mapping of ecosystem names (Libraries.io → project)
 ECOSYSTEM_MAPPING = {
+    "NPM": "javascript",
     "Pypi": "python",
-    "Npm": "javascript",
     "Cargo": "rust",
     "Maven": "java",
     "Packagist": "php",
     "Rubygems": "ruby",
-    "Nuget": "csharp",
+    "NuGet": "csharp",
     "Go": "go",
+    # Popular ecosystems (commented out for now)
+    # "CocoaPods": "swift",  # Objective-C/Swift
+    # "Pub": "dart",  # Dart
+    # "CPAN": "perl",  # Perl
+    # "CRAN": "r",  # R
+    # "Clojars": "clojure",  # Clojure
+    # "Hex": "elixir",  # Elixir
+    # "Hackage": "haskell",  # Haskell
+    # "Conda": "python",  # Alternative Python package manager
 }
 
 # Reverse mapping for lookups
