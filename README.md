@@ -68,7 +68,18 @@ oss-guard check csharp:Newtonsoft.Json # C#
 # Mix multiple ecosystems
 oss-guard check requests npm:express rust:tokio
 
-# Auto-detect from lock files
+# Auto-detect from manifest files in current directory
+oss-guard check
+
+# Analyze a specific manifest file
+oss-guard check --manifest package.json
+oss-guard check --manifest requirements.txt
+oss-guard check -m Cargo.toml
+
+# Auto-detect from specific directory
+oss-guard check --root-dir /path/to/project
+
+# Auto-detect with lock files
 oss-guard check --include-lock
 ```
 

@@ -493,6 +493,18 @@ def check(
         "--clear-cache",
         help="Clear cache and exit.",
     ),
+    root_dir: Path = typer.Option(
+        Path("."),
+        "--root-dir",
+        "-r",
+        help="Root directory for auto-detection of manifest files (default: current directory).",
+    ),
+    manifest: Path | None = typer.Option(
+        None,
+        "--manifest",
+        "-m",
+        help="Path to a specific manifest file (e.g., package.json, requirements.txt, Cargo.toml). Overrides auto-detection.",
+    ),
 ):
     """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)."""
     # Handle --clear-cache option
@@ -512,11 +524,87 @@ def check(
     results_to_display = []
     packages_to_analyze: list[tuple[str, str]] = []  # (ecosystem, package_name)
 
-    # If no packages specified, auto-detect from manifest files only
-    auto_detect_mode = not packages
-    if auto_detect_mode:
-        console.print("🔍 No packages specified. Auto-detecting from manifest files...")
-        detected_ecosystems = detect_ecosystems(".")
+    # Handle --manifest option (direct manifest file specification)
+    if manifest:
+        manifest = manifest.resolve()
+        if not manifest.exists():
+            console.print(f"[red]Error: Manifest file does not exist: {manifest}[/red]")
+            raise typer.Exit(code=1)
+        if not manifest.is_file():
+            console.print(f"[red]Error: Manifest path is not a file: {manifest}[/red]")
+            raise typer.Exit(code=1)
+
+        console.print(f"📋 Reading manifest file: {manifest}")
+
+        # Detect ecosystem from manifest filename
+        manifest_name = manifest.name
+        detected_eco = None
+
+        # Try to match with known manifest file patterns
+        for eco in [
+            "python",
+            "javascript",
+            "rust",
+            "go",
+            "php",
+            "java",
+            "ruby",
+            "csharp",
+        ]:
+            resolver = get_resolver(eco)
+            if resolver and manifest_name in resolver.get_manifest_files():
+                detected_eco = eco
+                break
+
+        if not detected_eco:
+            console.print(
+                f"[red]Error: Could not detect ecosystem from manifest file: {manifest_name}[/red]"
+            )
+            console.print(
+                "[yellow]Supported manifest files: package.json, requirements.txt, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config[/yellow]"
+            )
+            raise typer.Exit(code=1)
+
+        console.print(f"✅ Detected ecosystem: {detected_eco}")
+
+        # Parse manifest file
+        resolver = get_resolver(detected_eco)
+        if not resolver:
+            console.print(
+                f"[red]Error: Failed to get resolver for ecosystem: {detected_eco}[/red]"
+            )
+            raise typer.Exit(code=1)
+
+        try:
+            manifest_packages = resolver.parse_manifest(str(manifest))
+            console.print(
+                f"   Found {len(manifest_packages)} package(s) in {manifest_name}"
+            )
+            for pkg_info in manifest_packages:
+                packages_to_analyze.append((detected_eco, pkg_info.name))
+        except Exception as e:
+            console.print(f"[red]Error: Failed to parse {manifest_name}: {e}[/red]")
+            raise typer.Exit(code=1) from None
+
+    # Validate and resolve root directory (only if not using --manifest)
+    elif (
+        not packages and not manifest
+    ):  # Only validate root_dir if not using --manifest and no packages specified
+        root_dir = root_dir.resolve()
+        if not root_dir.exists():
+            console.print(
+                f"[red]Error: Root directory does not exist: {root_dir}[/red]"
+            )
+            raise typer.Exit(code=1)
+        if not root_dir.is_dir():
+            console.print(f"[red]Error: Root path is not a directory: {root_dir}[/red]")
+            raise typer.Exit(code=1)
+
+        # Auto-detect from manifest files in root_dir
+        console.print(
+            f"🔍 No packages specified. Auto-detecting from manifest files in {root_dir}..."
+        )
+        detected_ecosystems = detect_ecosystems(str(root_dir))
         if detected_ecosystems:
             console.print(f"✅ Detected ecosystems: {', '.join(detected_ecosystems)}")
             for detected_eco in detected_ecosystems:
@@ -525,9 +613,8 @@ def check(
                     continue
 
                 # Check for manifest files only (ignore lockfiles in auto-detect mode)
-                current_dir = Path(".")
                 for manifest_name in resolver.get_manifest_files():
-                    manifest_path = current_dir / manifest_name
+                    manifest_path = root_dir / manifest_name
                     if manifest_path.exists():
                         console.print(f"📋 Found manifest file: {manifest_name}")
                         # Parse manifest to extract dependencies
@@ -550,7 +637,9 @@ def check(
         else:
             # No manifest files found - silently exit (useful for pre-commit hooks)
             raise typer.Exit(code=0)
-    else:
+
+    # Process package arguments (if packages specified and not using --manifest)
+    elif packages and not manifest:
         # Process package arguments
         if len(packages) == 1 and Path(packages[0]).is_file():
             console.print(f"📄 Reading packages from [bold]{packages[0]}[/bold]")
@@ -577,7 +666,7 @@ def check(
 
         # If --include-lock is explicitly specified, detect and add packages from lockfiles
         if include_lock:
-            detected_ecosystems = detect_ecosystems(".")
+            detected_ecosystems = detect_ecosystems(str(root_dir))
             if detected_ecosystems:
                 console.print(
                     f"🔍 Detected ecosystems: {', '.join(detected_ecosystems)}"
@@ -587,7 +676,7 @@ def check(
                     if not resolver:
                         continue
 
-                    lockfiles = resolver.detect_lockfiles(".")
+                    lockfiles = resolver.detect_lockfiles(str(root_dir))
                     if lockfiles:
                         console.print(
                             f"🔒 Found lockfile(s) for {detected_eco}: {', '.join(str(l.name) for l in lockfiles)}"
@@ -607,9 +696,7 @@ def check(
                                     f"   [yellow]Warning: Failed to parse {lockfile.name}: {e}[/yellow]"
                                 )
         else:
-            console.print(
-                "   [yellow]No lockfiles detected in current directory.[/yellow]"
-            )
+            console.print(f"   [yellow]No lockfiles detected in {root_dir}.[/yellow]")
 
     # Remove duplicates while preserving order
     seen = set()
