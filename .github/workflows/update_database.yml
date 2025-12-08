@@ -2,7 +2,7 @@ name: Update OSS Sustain Guard Database
 
 on:
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
   workflow_dispatch:
 
 permissions:
@@ -11,11 +11,6 @@ permissions:
 jobs:
   update_database:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        ecosystem: [python, javascript, ruby, rust, php, java, csharp]
-      fail-fast: false
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,27 +28,28 @@ jobs:
       - name: Install dependencies
         run: uv sync
       
-      - name: Run database builder for ${{ matrix.ecosystem }}
+      - name: Run database builder for all ecosystems
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: uv run python builder/build_db.py --top-packages --ecosystems ${{ matrix.ecosystem }} --limit 5000
-      
-      - name: Check if database changed
-        id: check_changes
+          LIBRARIES_IO_API_KEY: ${{ secrets.LIBRARIES_IO_API_KEY }}
         run: |
-          if git diff --quiet HEAD -- data/; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Commit and push database update
-        if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add data/
-          git commit -m "chore: update ${{ matrix.ecosystem }} database"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Run ecosystems sequentially to respect Libraries.io rate limit (60 req/min)
+          for ecosystem in python javascript ruby rust php java csharp go; do
+            echo "Processing $ecosystem..."
+            uv run python builder/build_db.py --ecosystems $ecosystem --max-concurrent 1
+            
+            # Check if this ecosystem changed
+            if ! git diff --quiet HEAD -- data/latest/$ecosystem.json data/archive/*/; then
+              echo "Changes detected in $ecosystem, committing..."
+              git config --local user.email "action@github.com"
+              git config --local user.name "GitHub Action"
+              git add data/latest/$ecosystem.json data/archive/
+              git commit -m "chore: update $ecosystem database - $(date -u +'%Y-%m-%d')" || true
+              git push
+            else
+              echo "No changes in $ecosystem"
+            fi
+            
+            echo "Waiting before next ecosystem..."
+            sleep 10
+          done
