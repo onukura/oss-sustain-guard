@@ -1,8 +1,8 @@
 - id: oss-sustain-guard
   name: "OSS Sustain Guard"
   description: "Analyzes package sustainability across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)"
-  entry: bash -c 'PYTHONUNBUFFERED=1 python -m oss_sustain_guard.cli check'
-  language: system
+  entry: python -m oss_sustain_guard.cli check
+  language: python
   stages: [pre-commit]
   pass_filenames: false
   require_serial: true
