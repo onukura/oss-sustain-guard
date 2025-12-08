@@ -643,14 +643,16 @@ async def _fetch_maven_packages(limit: int) -> list[str] | None:
         ]
 
         async with httpx.AsyncClient(
-            verify=get_verify_ssl(), timeout=30, headers=headers
+            verify=get_verify_ssl(),
+            timeout=httpx.Timeout(10.0, read=120.0),
+            headers=headers,
         ) as client:
             for group in popular_groups:
                 # Search for artifacts in this group
                 url = f"https://search.maven.org/solrsearch/select?q=g:{group}*&rows={rows_per_query}&wt=json"
                 response = await client.get(url)
                 response.raise_for_status()
-                await asyncio.sleep(0.05)  # Rate limiting
+                await asyncio.sleep(1.0)  # Rate limiting (increased from 0.5)
                 data = response.json()
                 docs = data.get("response", {}).get("docs", [])
 
@@ -674,7 +676,11 @@ async def _fetch_maven_packages(limit: int) -> list[str] | None:
                     unique_artifacts.append(artifact)
 
             return unique_artifacts[:limit] if unique_artifacts else None
-    except Exception:
+    except Exception as e:
+        import traceback
+
+        print(f"[ERROR] Failed to fetch Maven packages: {type(e).__name__}: {e}")
+        traceback.print_exc()
         return None
 
 
