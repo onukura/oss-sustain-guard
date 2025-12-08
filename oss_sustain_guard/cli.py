@@ -3,6 +3,7 @@ Command-line interface for OSS Sustain Guard.
 """
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -12,6 +13,7 @@ from rich.table import Table
 
 from oss_sustain_guard.cache import clear_cache, get_cache_stats, load_cache, save_cache
 from oss_sustain_guard.config import (
+    DEFAULT_CACHE_TTL,
     get_verify_ssl,
     is_cache_enabled,
     is_package_excluded,
@@ -415,6 +417,27 @@ def analyze_package(
 
     try:
         analysis_result = analyze_repository(owner, repo_name)
+
+        # Save to cache for future use
+        cache_entry = {
+            db_key: {
+                "ecosystem": ecosystem,
+                "package_name": package_name,
+                "github_url": analysis_result.repo_url,
+                "total_score": analysis_result.total_score,
+                "metrics": [metric._asdict() for metric in analysis_result.metrics],
+                "cache_metadata": {
+                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "ttl_seconds": DEFAULT_CACHE_TTL,
+                    "source": "realtime",
+                },
+            }
+        }
+
+        if is_cache_enabled():
+            save_cache(ecosystem, cache_entry)
+            console.print("    [dim]💾 Cached for future use[/dim]")
+
         return analysis_result
     except Exception as e:
         console.print(f"    [red]Error analyzing {owner}/{repo_name}: {e}[/red]")
