@@ -1,6 +1,6 @@
 # Contributing to OSS Sustain Guard
 
-Thank you for your interest in contributing to OSS Sustain Guard! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing! This guide covers development setup, testing, code style, and architecture.
 
 ## 📋 Table of Contents
 
@@ -8,6 +8,7 @@ Thank you for your interest in contributing to OSS Sustain Guard! This document 
 - [Development Workflow](#development-workflow)
 - [Testing Guidelines](#testing-guidelines)
 - [Code Style](#code-style)
+- [Architecture](#architecture)
 - [Pull Request Process](#pull-request-process)
 - [Adding New Features](#adding-new-features)
 
@@ -326,11 +327,140 @@ uv run ruff format --check oss_sustain_guard tests builder
    - README.md ecosystem table
    - Add examples
 
+## 🏗️ Architecture
+
+### File Structure
+
+```text
+oss_sustain_guard/
+  __init__.py                    # Package marker
+  cli.py                         # Typer CLI & Rich output
+  core.py                        # Analysis engine & GitHub GraphQL
+  config.py                      # Configuration management
+  cache.py                       # Cache management
+  resolver.py                    # Backward compatibility layer
+
+  resolvers/                     # Multi-language resolver package
+    __init__.py                  # Registry & factory functions
+    base.py                      # BaseResolver abstract class
+    python.py                    # Python (PyPI) resolver
+    javascript.py                # JavaScript (npm) resolver
+    go.py                        # Go resolver
+    rust.py                      # Rust (crates.io) resolver
+    ruby.py                      # Ruby (RubyGems) resolver
+    php.py                       # PHP (Composer/Packagist) resolver
+    java.py                      # Java/Kotlin/Scala (Maven Central) resolver
+    csharp.py                    # C# (.NET/NuGet) resolver
+
+builder/
+  build_db.py                    # Multi-language DB generation script
+  fallback_packages.py           # Fallback package definitions
+
+data/
+  latest/                        # Current snapshot
+    python.json
+    javascript.json
+    ...
+  archive/                       # Historical snapshots
+    {YYYY-MM-DD}/
+      python.json
+      ...
+
+tests/
+  resolvers/                     # Resolver unit tests
+    test_base.py
+    test_python.py
+    test_javascript.py
+    ...
+  test_cli_multi.py              # Multi-language CLI tests
+  test_cache.py                  # Cache functionality tests
+  test_config.py                 # Configuration tests
+  test_core.py                   # Core analysis tests
+
+.github/workflows/
+  test.yml                       # Test automation
+  update_database.yml            # Database update automation
+```
+
+### Multi-Language Data Flow
+
+```text
+Package Input
+    ↓
+  parse_package_spec()
+    ├─ ecosystem: "python"    → python:requests
+    ├─ ecosystem: "javascript" → npm:react
+    ├─ ecosystem: "go"         → go:gin
+    ├─ ecosystem: "rust"       → rust:tokio
+    ├─ ecosystem: "php"        → php:symfony/console
+    ├─ ecosystem: "java"       → java:com.google.guava:guava
+    └─ ecosystem: "csharp"     → csharp:Newtonsoft.Json
+    ↓
+  get_resolver(ecosystem)
+    ├─ PythonResolver (PyPI API)
+    ├─ JavaScriptResolver (npm API)
+    ├─ GoResolver (GitHub paths)
+    ├─ RustResolver (crates.io API)
+    ├─ RubyResolver (RubyGems API)
+    ├─ PhpResolver (Packagist V2 API)
+    ├─ JavaResolver (Maven Central API)
+    └─ CSharpResolver (NuGet V3 API)
+    ↓
+  resolve_github_url(package_name)
+    ↓
+  GitHub GraphQL API
+    ↓
+  analyze_repository(owner, repo)
+    ├─ Calculate 9 metrics
+    └─ AnalysisResult (0-100 score)
+    ↓
+  Check cache or perform new analysis
+    ↓
+  display_results() → Rich table
+```
+
+### Ecosystem Support Matrix
+
+| Ecosystem | API | Lock Files | Authentication |
+|-----------|-----|-----------|------|
+| Python | PyPI API | poetry.lock, uv.lock, Pipfile.lock | Not required |
+| JavaScript | npm API | package-lock.json, yarn.lock, pnpm-lock.yaml | Not required |
+| Go | pkg.go.dev | go.sum | Not required |
+| Ruby | RubyGems API | Gemfile.lock | Not required |
+| Rust | crates.io API | Cargo.lock | Not required |
+| PHP | Packagist V2 API | composer.lock | Not required |
+| Java | Maven Central API | gradle.lockfile, build.sbt.lock | Not required |
+| C# | NuGet V3 API | packages.lock.json | Not required |
+
+### Cache Architecture
+
+OSS Sustain Guard uses a local filesystem cache to store package analysis results:
+
+**Location:** `~/.cache/oss-sustain-guard/` (configurable)
+
+**Structure:**
+
+- Per-ecosystem JSON files: `python.json`, `javascript.json`, etc.
+- Each entry includes:
+  - `repo_url`: GitHub repository URL
+  - `total_score`: Overall sustainability score (0-100)
+  - `metrics`: Array of individual metric results
+  - `cache_metadata`: Metadata with `fetched_at`, `ttl_seconds`, `source`
+
+**TTL Management:**
+
+- Default TTL: 7 days (604800 seconds)
+- Configurable via CLI, environment variables, or TOML config
+- Auto-refresh on cache expiration
+
+**Priority:** CLI args > env vars > TOML config > defaults
+
+See `oss_sustain_guard/cache.py` for implementation details.
+
 ## 📞 Getting Help
 
 - **Issues**: [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/onukura/oss-sustain-guard/discussions)
-- **Email**: See package maintainer information
 
 ## 📜 License
 
