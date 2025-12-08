@@ -23,7 +23,7 @@ from oss_sustain_guard.resolvers.python import (
 project_root = Path(__file__).resolve().parent.parent
 
 # --- Constants ---
-GITHUB_REPO_URL = "https://github.com/onukura/oss-sustain-guard/raw/refs/heads/main"
+GITHUB_REPO_URL = "https://media.githubusercontent.com/media/onukura/oss-sustain-guard/refs/heads/main"
 LATEST_DIR = project_root / "data" / "latest"
 
 # --- Typer App ---
@@ -49,7 +49,7 @@ def load_database() -> dict:
     for ecosystem in ecosystems:
         url = f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json"
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
+            with httpx.Client(verify=get_verify_ssl(), follow_redirects=True) as client:
                 response = client.get(url, timeout=10)
                 response.raise_for_status()
                 data = response.json()
