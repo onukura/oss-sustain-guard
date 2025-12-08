@@ -1,0 +1,26 @@
+name: Check Project Dependencies - Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-dependencies-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Python dependencies Test
+        uses: ./
+        with:
+          packages: ''
+          include-lock: 'true'
+          verbose: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Summary
+        run: |
+          echo "✅ Dependency sustainability check completed"
+          echo "All core and dev dependencies have been analyzed"
