@@ -6,6 +6,94 @@
 
 **Key Philosophy:** "Token-less Experience" + "Static Snapshot API" model - precomputed JSON database (`data/latest/*.json` and `data/archive/`) eliminates need for user API tokens. Multi-language support with language-specific registry resolvers.
 
+## 💡 Project Philosophy & Core Principles
+
+**Mission:** OSS Sustain Guard is designed to spark thoughtful conversations about open-source sustainability, not to pass judgment on projects. We aim to **raise awareness** about the challenges maintainers face and encourage the community to think together about how we can better support the open-source ecosystem.
+
+### Core Beliefs
+
+1. 🌱 **Sustainability matters** - Open-source projects need ongoing support to thrive
+2. 🤝 **Community support is essential** - For community-driven projects, we highlight funding opportunities to help users give back
+3. 📊 **Transparency helps everyone** - By providing objective metrics, we help maintainers and users make informed decisions
+4. 🎯 **Respectful evaluation** - We distinguish between corporate-backed and community-driven projects, recognizing their different sustainability models
+5. 💝 **Supporting maintainers** - When available, we display funding links for community projects to encourage direct support
+
+### Design Principles for All Changes
+
+When implementing new features or making improvements, always follow these principles:
+
+1. **Information, not judgment** - Use supportive language instead of critical terms
+   - ❌ "Risk", "Error", "Failed", "Critical"
+   - ✅ "Health Status", "Observation", "Note", "Needs attention"
+
+2. **Empathy and respect** - Consider both maintainers and users
+   - Show understanding of the challenges open-source maintainers face
+   - Provide actionable insights, not just warnings
+   - Recognize that every project has unique circumstances
+
+3. **Supportive messaging** - Frame observations constructively
+   - Instead of "High Risk", say "Needs attention" or "Consider improving"
+   - Instead of "Failed to load", say "Unable to load" or "Note: Using fallback"
+   - Instead of "No funding", say "Funding information not available"
+
+4. **Funding awareness** - Promote sustainability
+   - Display funding links for community-driven projects
+   - Do not show funding links for corporate-backed projects (they have different models)
+   - Use encouraging language: "Consider supporting" not "Please donate"
+
+5. **Color psychology** - Use colors thoughtfully
+   - 🟢 Green: Healthy, good status
+   - 🟡 Yellow: Information, needs attention, monitor
+   - 🔴 Red: Needs support (not "critical failure")
+   - ⚪ Gray/Dim: Informational, less important notes
+
+6. **Metrics presentation** - Focus on observations
+   - Column names: "Health Status" not "Risk", "Observation" not "Message"
+   - Status labels: "Healthy", "Monitor", "Needs attention", "Needs support"
+   - Avoid absolute judgments; context matters
+
+### Examples of Philosophy in Practice
+
+**UI Text:**
+```python
+# ❌ Avoid
+"Error: Package failed analysis"
+"Critical Risk Detected"
+"Skipping excluded packages"
+
+# ✅ Prefer
+"ℹ️  Unable to complete analysis for package"
+"🔍 This project needs attention in some areas"
+"📋 Package excluded by configuration"
+```
+
+**Table Headers:**
+```python
+# ❌ Avoid
+"Risk Level" | "Critical Issues" | "Failures"
+
+# ✅ Prefer
+"Health Status" | "Key Observations" | "Areas to Monitor"
+```
+
+**Status Messages:**
+```python
+# ❌ Avoid
+"High Risk" | "Critical" | "Failed"
+
+# ✅ Prefer
+"Needs attention" | "Monitor" | "Consider improving"
+```
+
+This philosophy applies to:
+- CLI output and error messages
+- Documentation and README
+- Code comments (internal understanding)
+- User-facing text and help messages
+- Metric names and descriptions
+
+**Remember:** This tool is a conversation starter about OSS sustainability, not a judgment. Every project has unique circumstances, and metrics are just one part of the story.
+
 ## Architecture & Data Flow
 
 ### Core Modules
