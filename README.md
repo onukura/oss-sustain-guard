@@ -15,7 +15,7 @@
 > - **GitHub rate limiting**: GitHub API has rate limits; cached data helps avoid hitting these limits
 > - **GitHub unavailable packages**: Cannot be evaluated (non-GitHub repositories or private packages not accessible via GitHub API)
 > - **SSL verification**: Use `--insecure` flag to disable SSL verification for development/testing only
-> - **Package resolution failures**: If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
+> - **Package resolution**: If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
 
 ## 💡 Project Philosophy
 
@@ -87,11 +87,11 @@ When analyzing community-driven projects, OSS Sustain Guard displays funding lin
 $ oss-guard check go:gorm
 
 OSS Sustain Guard Report
-┌──────────────┬────────┬──────┬────────────────────────────────────────────┐
-│ Package      │ Score  │ Risk │ Details                                    │
-├──────────────┼────────┼──────┼────────────────────────────────────────────┤
-│ go-gorm/gorm │ 89/100 │ None │ Analyzed: Healthy: 58 active contributors. │
-└──────────────┴────────┴──────┴────────────────────────────────────────────┘
+┌──────────────┬────────┬──────────────┬────────────────────────────────────────────┐
+│ Package      │ Score  │ Health Status│ Details                                    │
+├──────────────┼────────┼──────────────┼────────────────────────────────────────────┤
+│ go-gorm/gorm │ 89/100 │ Healthy      │ Analyzed: Healthy: 58 active contributors. │
+└──────────────┴────────┴──────────────┴────────────────────────────────────────────┘
 
 💝 go-gorm/gorm is a community-driven project. Consider supporting:
    • GITHUB: https://github.com/jinzhu
@@ -233,7 +233,7 @@ Scores are evaluated in the range of 0-100:
 
 - **80-100**: 🟢 **Excellent** - Healthy project
 - **50-79**: 🟡 **Caution** - Areas needing improvement
-- **0-49**: 🔴 **Critical** - Severe risks
+- **0-49**: 🔴 **Needs Attention** - Significant areas for improvement
 
 ### Metrics Details
 
@@ -244,7 +244,7 @@ Scores are evaluated in the range of 0-100:
 | Zombie Check | 20 | Inactive repository detection |
 | Merge Velocity | 10 | Merge processing speed |
 | CI Status | 5 | Automated test coverage |
-| Funding | 10 | Sponsorship status (more critical for community-driven projects) |
+| Funding | 10 | Sponsorship status (more important for community-driven projects) |
 | Release Cadence | 10 | Release frequency |
 | Security Posture | 15 | Security configuration and alerts |
 | Community Health | 5 | Issue response time |
@@ -252,7 +252,7 @@ Scores are evaluated in the range of 0-100:
 **Note on Funding Metric:** This metric is scored differently based on project type:
 
 - **Community-driven projects** (max 10 points): Funding sources are essential for sustainability. Projects with active funding (GitHub Sponsors, Patreon, Open Collective, etc.) score higher.
-- **Corporate-backed projects** (max 5 points): Funding is less critical as corporate backing provides sustainability. The metric acknowledges organizational support.
+- **Corporate-backed projects** (max 5 points): Funding is less important as corporate backing provides sustainability. The metric acknowledges organizational support.
 
 ## ⚙️ Configuration
 
