@@ -197,7 +197,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
             "Bus Factor",
             0,
             max_score,
-            "Unable to fetch commit history.",
+            "Note: Commit history data not available.",
             "High",
         )
 
@@ -207,7 +207,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
             "Bus Factor",
             0,
             max_score,
-            "Unable to fetch commit history.",
+            "Note: Commit history data not available.",
             "High",
         )
 
@@ -217,7 +217,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
             "Bus Factor",
             0,
             max_score,
-            "No commit history available.",
+            "No commit history available for analysis.",
             "Critical",
         )
 
@@ -330,7 +330,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
             "Maintainer Drain",
             max_score,
             max_score,
-            "Unable to verify maintainer status.",
+            "Note: Maintainer data not available for verification.",
             "None",
         )
 
@@ -340,7 +340,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
             "Maintainer Drain",
             max_score,
             max_score,
-            "Unable to verify maintainer status.",
+            "Note: Maintainer data not available for verification.",
             "None",
         )
 
@@ -476,7 +476,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
             "Zombie Check",
             0,
             max_score,
-            "Unable to determine last activity.",
+            "Note: Last activity data not available.",
             "High",
         )
 
@@ -488,7 +488,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
             "Zombie Check",
             0,
             max_score,
-            "Unable to parse last activity timestamp.",
+            "Note: Activity timestamp format not recognized.",
             "High",
         )
 
@@ -501,7 +501,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
             "Zombie Check",
             0,
             max_score,
-            f"No activity for {days_since_last_push} days (2+ years). Likely abandoned.",
+            f"No activity for {days_since_last_push} days (2+ years). Project may be inactive.",
             "Critical",
         )
     elif days_since_last_push > 365:  # 1+ year
@@ -601,15 +601,15 @@ def check_merge_velocity(repo_data: dict[str, Any]) -> Metric:
         score = 0
         risk = "Critical"
         message = (
-            f"Critical: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
-            f"PR review process needs urgent review."
+            f"Observe: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
+            f"Consider reviewing PR review process."
         )
     elif avg_merge_time > 1000:  # 42-83 days
         score = 2
         risk = "High"
         message = (
-            f"High: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
-            f"Very slow review cycle."
+            f"Note: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
+            f"Review cycle is quite slow."
         )
     elif avg_merge_time > 500:  # 21-42 days
         score = 6
@@ -661,7 +661,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
             "CI Status",
             0,
             max_score,
-            "Unable to fetch CI status.",
+            "Note: CI status data not available.",
             "High",
         )
 
@@ -671,7 +671,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
             "CI Status",
             0,
             max_score,
-            "Unable to fetch CI status.",
+            "Note: CI status data not available.",
             "High",
         )
 
@@ -861,7 +861,7 @@ def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
             "Release Cadence",
             0,
             max_score,
-            "Unable to determine last release date.",
+            "Note: Release date information not available.",
             "High",
         )
 
@@ -872,7 +872,7 @@ def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
             "Release Cadence",
             0,
             max_score,
-            "Unable to parse last release date.",
+            "Note: Release date format not recognized.",
             "High",
         )
 
@@ -902,7 +902,7 @@ def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
         score = 0
         risk = "High"
         message = (
-            f"Abandoned: Last release {days_since_release} days ago ({tag_name}). "
+            f"Observe: Last release {days_since_release} days ago ({tag_name}). "
             f"No releases in over a year."
         )
 
@@ -952,8 +952,8 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
         score = 0
         risk = "Critical"
         message = (
-            f"Critical: {critical_count} unresolved CRITICAL vulnerability alert(s). "
-            f"Immediate action required."
+            f"Attention needed: {critical_count} unresolved CRITICAL vulnerability alert(s). "
+            f"Review and action recommended."
         )
     elif high_count >= 3:
         score = 5
@@ -1080,8 +1080,8 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
         score = 0
         risk = "High"
         message = (
-            f"Poor: Average issue response time {avg_response_time:.1f} hours "
-            f"({avg_response_time / 24:.1f} days). Community may be unresponsive."
+            f"Observe: Average issue response time {avg_response_time:.1f} hours "
+            f"({avg_response_time / 24:.1f} days). Community response could be improved."
         )
 
     return Metric("Community Health", score, max_score, message, risk)
@@ -1128,56 +1128,102 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
         try:
             metrics.append(check_bus_factor(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Bus factor check failed: {e}[/yellow]")
-            metrics.append(Metric("Bus Factor", 0, 20, f"Error: {e}", "High"))
+            console.print(f"  [yellow]⚠️  Bus factor check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric("Bus Factor", 0, 20, f"Note: Analysis incomplete - {e}", "High")
+            )
 
         try:
             metrics.append(check_maintainer_drain(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Maintainer drain check failed: {e}[/yellow]")
-            metrics.append(Metric("Maintainer Drain", 0, 10, f"Error: {e}", "High"))
+            console.print(
+                f"  [yellow]⚠️  Maintainer drain check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Maintainer Drain",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "High",
+                )
+            )
 
         try:
             metrics.append(check_zombie_status(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Zombie status check failed: {e}[/yellow]")
-            metrics.append(Metric("Zombie Status", 0, 20, f"Error: {e}", "High"))
+            console.print(f"  [yellow]⚠️  Zombie status check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric(
+                    "Zombie Status", 0, 20, f"Note: Analysis incomplete - {e}", "High"
+                )
+            )
 
         try:
             metrics.append(check_merge_velocity(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Merge velocity check failed: {e}[/yellow]")
-            metrics.append(Metric("Merge Velocity", 0, 10, f"Error: {e}", "High"))
+            console.print(f"  [yellow]⚠️  Merge velocity check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric(
+                    "Merge Velocity", 0, 10, f"Note: Analysis incomplete - {e}", "High"
+                )
+            )
 
         try:
             metrics.append(check_ci_status(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  CI status check failed: {e}[/yellow]")
-            metrics.append(Metric("CI Status", 0, 5, f"Error: {e}", "High"))
+            console.print(f"  [yellow]⚠️  CI status check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric("CI Status", 0, 5, f"Note: Analysis incomplete - {e}", "High")
+            )
 
         try:
             metrics.append(check_funding(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Funding check failed: {e}[/yellow]")
-            metrics.append(Metric("Funding", 0, 10, f"Error: {e}", "High"))
+            console.print(f"  [yellow]⚠️  Funding check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric("Funding", 0, 10, f"Note: Analysis incomplete - {e}", "High")
+            )
 
         try:
             metrics.append(check_release_cadence(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Release cadence check failed: {e}[/yellow]")
-            metrics.append(Metric("Release Cadence", 0, 10, f"Error: {e}", "High"))
+            console.print(
+                f"  [yellow]⚠️  Release cadence check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Release Cadence", 0, 10, f"Note: Analysis incomplete - {e}", "High"
+                )
+            )
 
         try:
             metrics.append(check_security_posture(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Security posture check failed: {e}[/yellow]")
-            metrics.append(Metric("Security Posture", 0, 15, f"Error: {e}", "High"))
+            console.print(
+                f"  [yellow]⚠️  Security posture check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Security Posture",
+                    0,
+                    15,
+                    f"Note: Analysis incomplete - {e}",
+                    "High",
+                )
+            )
 
         try:
             metrics.append(check_community_health(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Community health check failed: {e}[/yellow]")
-            metrics.append(Metric("Community Health", 0, 5, f"Error: {e}", "High"))
+            console.print(
+                f"  [yellow]⚠️  Community health check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Community Health", 0, 5, f"Note: Analysis incomplete - {e}", "High"
+                )
+            )
 
         # Calculate raw total score
         raw_total = sum(m.score for m in metrics)
@@ -1206,7 +1252,7 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
         )
 
     except Exception as e:
-        console.print(f"  [bold red]❌ Critical error during analysis: {e}[/bold red]")
+        console.print(f"  [bold red]❌ Unable to complete analysis: {e}[/bold red]")
         raise
 
 

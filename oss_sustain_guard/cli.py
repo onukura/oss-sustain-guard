@@ -52,18 +52,23 @@ def load_database(use_cache: bool = True) -> dict:
     3. Local data/latest/ directory (fallback)
 
     Args:
-        use_cache: If False, skip cache and load fresh data.
+        use_cache: If False, skip all cached data sources (user cache, GitHub, local files)
+                   and perform real-time analysis only.
 
     Returns:
         Dictionary of package data keyed by "ecosystem:package_name".
     """
     merged = {}
 
+    # If use_cache is False, return empty dict to force real-time analysis for all packages
+    if not use_cache:
+        return merged
+
     # List of ecosystems to load
     ecosystems = ["python", "javascript", "ruby", "rust", "php", "java", "csharp", "go"]
 
     # Load from cache first if enabled
-    if use_cache and is_cache_enabled():
+    if is_cache_enabled():
         for ecosystem in ecosystems:
             cached_data = load_cache(ecosystem)
             if cached_data:
@@ -74,8 +79,8 @@ def load_database(use_cache: bool = True) -> dict:
 
     # Determine which ecosystems need fresh data
     ecosystems_to_fetch = []
-    if not use_cache or not is_cache_enabled():
-        # Need all ecosystems if not using cache
+    if not is_cache_enabled():
+        # Need all ecosystems if cache is disabled
         ecosystems_to_fetch = ecosystems
     else:
         # Only fetch ecosystems that have no cache data
@@ -101,7 +106,7 @@ def load_database(use_cache: bool = True) -> dict:
                     console.print(f"Loaded {ecosystem} data from GitHub.")
 
                     # Save to cache if enabled
-                    if use_cache and is_cache_enabled():
+                    if is_cache_enabled():
                         save_cache(ecosystem, data)
             except Exception:
                 # Silently skip GitHub errors for now, will try local fallback
@@ -123,7 +128,7 @@ def load_database(use_cache: bool = True) -> dict:
                             )
 
                             # Save to cache if enabled
-                            if use_cache and is_cache_enabled():
+                            if is_cache_enabled():
                                 save_cache(ecosystem, data)
                     except Exception:
                         console.print(
