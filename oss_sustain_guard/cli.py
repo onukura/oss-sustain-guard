@@ -184,12 +184,12 @@ def display_results(results: list[AnalysisResult]):
 
     console.print(table)
 
-    # Display funding links for community-driven projects
+    # Display funding links if available
     for result in results:
-        if result.is_community_driven and result.funding_links:
+        if result.funding_links:
             console.print(
                 f"\n💝 [bold cyan]{result.repo_url.replace('https://github.com/', '')}[/bold cyan] "
-                f"is a community-driven project. Consider supporting:"
+                f"- Consider supporting:"
             )
             for link in result.funding_links:
                 platform = link.get("platform", "Unknown")
@@ -215,10 +215,10 @@ def display_results_detailed(results: list[AnalysisResult]):
             f"   Total Score: [{risk_color}]{result.total_score}/100[/{risk_color}]"
         )
 
-        # Display funding information for community-driven projects
-        if result.is_community_driven and result.funding_links:
+        # Display funding information if available
+        if result.funding_links:
             console.print(
-                "   💝 [bold green]Community-driven project[/bold green] - Consider supporting:"
+                "   💝 [bold cyan]Funding support available[/bold cyan] - Consider supporting:"
             )
             for link in result.funding_links:
                 platform = link.get("platform", "Unknown")
