@@ -232,8 +232,8 @@ enabled = true
 Scores are evaluated in the range of 0-100:
 
 - **80-100**: 🟢 **Excellent** - Healthy project
-- **50-79**: 🟡 **Caution** - Areas needing improvement
-- **0-49**: 🔴 **Needs Attention** - Significant areas for improvement
+- **50-79**: 🟡 **Monitor** - Areas to consider supporting
+- **0-49**: 🔴 **Needs Attention** - Needs support and improvement
 
 ### Metrics Details
 
@@ -241,7 +241,7 @@ Scores are evaluated in the range of 0-100:
 |--------|----------|------|
 | Bus Factor | 20 | Single maintainer dependency |
 | Maintainer Drain | 10 | Long-inactive maintainers |
-| Zombie Check | 20 | Inactive repository detection |
+| Zombie Check | 20 | Repository activity assessment |
 | Merge Velocity | 10 | Merge processing speed |
 | CI Status | 5 | Automated test coverage |
 | Funding | 10 | Sponsorship status (more important for community-driven projects) |
