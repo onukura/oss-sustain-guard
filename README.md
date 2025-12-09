@@ -8,10 +8,25 @@
 
 ✨ **No API tokens required** - Fast, cache-based evaluation for Python, JavaScript, Go, Rust, PHP, Java, C#, and Ruby packages.
 
+## 💡 Project Philosophy
+
+OSS Sustain Guard is designed to spark thoughtful conversations about open-source sustainability, not to pass judgment on projects. Our mission is to **raise awareness** about the challenges maintainers face and encourage the community to think together about how we can better support the open-source ecosystem.
+
+We believe that:
+
+- 🌱 **Sustainability matters** - Open-source projects need ongoing support to thrive
+- 🤝 **Community support is essential** - For community-driven projects, we highlight funding opportunities to help users give back
+- 📊 **Transparency helps everyone** - By providing objective metrics, we help maintainers and users make informed decisions
+- 🎯 **Respectful evaluation** - We distinguish between corporate-backed and community-driven projects, recognizing their different sustainability models
+- 💝 **Supporting maintainers** - When available, we display funding links for community projects to encourage direct support
+
+This tool is meant to be a conversation starter about OSS sustainability, not a judgment. Every project has unique circumstances, and metrics are just one part of the story.
+
 ## 🎯 Key Features
 
 - **9 Sustainability Metrics** - Bus Factor, Maintainer Drain, Release Cadence, Security, and more
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby
+- **Community Support Awareness** - Displays funding links for community-driven projects
 - **Fast & Cache-Based** - Pre-computed data for instant results
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
 - **Zero Configuration** - Works out of the box
@@ -52,6 +67,28 @@ oss-guard check flask -v
 # Clear cache
 oss-guard check --clear-cache
 ```
+
+**Community Funding Support:**
+
+When analyzing community-driven projects, OSS Sustain Guard displays funding links to help you support the maintainers:
+
+```bash
+$ oss-guard check go:gorm
+
+OSS Sustain Guard Report
+┌──────────────┬────────┬──────┬────────────────────────────────────────────┐
+│ Package      │ Score  │ Risk │ Details                                    │
+├──────────────┼────────┼──────┼────────────────────────────────────────────┤
+│ go-gorm/gorm │ 89/100 │ None │ Analyzed: Healthy: 58 active contributors. │
+└──────────────┴────────┴──────┴────────────────────────────────────────────┘
+
+💝 go-gorm/gorm is a community-driven project. Consider supporting:
+   • GITHUB: https://github.com/jinzhu
+   • PATREON: https://patreon.com/jinzhu
+   • OPEN_COLLECTIVE: https://opencollective.com/gorm
+```
+
+Corporate-backed projects (e.g., maintained by organizations) do not display funding links, as they typically have different sustainability models.
 
 ### Multi-Language Support
 
@@ -196,10 +233,15 @@ Scores are evaluated in the range of 0-100:
 | Zombie Check | 20 | Inactive repository detection |
 | Merge Velocity | 10 | Merge processing speed |
 | CI Status | 5 | Automated test coverage |
-| Funding | 10 | Sponsorship status |
+| Funding | 10 | Sponsorship status (more critical for community-driven projects) |
 | Release Cadence | 10 | Release frequency |
 | Security Posture | 15 | Security configuration and alerts |
 | Community Health | 5 | Issue response time |
+
+**Note on Funding Metric:** This metric is scored differently based on project type:
+
+- **Community-driven projects** (max 10 points): Funding sources are essential for sustainability. Projects with active funding (GitHub Sponsors, Patreon, Open Collective, etc.) score higher.
+- **Corporate-backed projects** (max 5 points): Funding is less critical as corporate backing provides sustainability. The metric acknowledges organizational support.
 
 ## ⚙️ Configuration
 

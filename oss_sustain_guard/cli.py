@@ -103,10 +103,10 @@ def load_database(use_cache: bool = True) -> dict:
                     # Save to cache if enabled
                     if use_cache and is_cache_enabled():
                         save_cache(ecosystem, data)
-            except Exception as e:
+            except Exception:
                 # Silently skip GitHub errors for now, will try local fallback
                 console.print(
-                    f"[yellow]Warning: Failed to load {ecosystem} data from GitHub: {e}[/yellow]"
+                    f"[dim]Note: Using local data for {ecosystem} (GitHub unavailable)[/dim]"
                 )
 
         # If GitHub loading failed, fall back to local data/latest/
@@ -125,9 +125,9 @@ def load_database(use_cache: bool = True) -> dict:
                             # Save to cache if enabled
                             if use_cache and is_cache_enabled():
                                 save_cache(ecosystem, data)
-                    except Exception as e:
+                    except Exception:
                         console.print(
-                            f"[yellow]Warning: Failed to load {ecosystem_file}: {e}[/yellow]"
+                            f"[dim]Note: Could not load {ecosystem_file.name}[/dim]"
                         )
 
     return merged
@@ -138,29 +138,43 @@ def display_results(results: list[AnalysisResult]):
     table = Table(title="OSS Sustain Guard Report")
     table.add_column("Package", justify="left", style="cyan", no_wrap=True)
     table.add_column("Score", justify="center", style="magenta")
-    table.add_column("Risk", justify="left", style="red")
-    table.add_column("Details", justify="left")
+    table.add_column("Health Status", justify="left")
+    table.add_column("Key Observations", justify="left")
 
     for result in results:
-        risk_color = "green"
+        score_color = "green"
         if result.total_score < 50:
-            risk_color = "red"
+            score_color = "red"
         elif result.total_score < 80:
-            risk_color = "yellow"
+            score_color = "yellow"
 
-        highest_risk = "None"
-        details = []
+        # Determine health status with supportive language
+        if result.total_score >= 80:
+            health_status = "[green]Healthy ✓[/green]"
+        elif result.total_score >= 50:
+            health_status = "[yellow]Needs attention[/yellow]"
+        else:
+            health_status = "[red]Needs support[/red]"
+
+        # Gather key observations (areas needing attention)
+        observations = []
         for metric in result.metrics:
             if metric.risk in ("High", "Critical"):
-                details.append(f"[{metric.risk}] {metric.message}")
-        if details:
-            highest_risk = f"[{risk_color}]{' / '.join(details)}[/{risk_color}]"
+                observations.append(metric.message)
+
+        # Create friendly observation text
+        if observations:
+            observation_text = " • ".join(observations[:2])  # Show top 2 observations
+            if len(observations) > 2:
+                observation_text += f" (+{len(observations) - 2} more)"
+        else:
+            observation_text = "No significant concerns detected"
 
         table.add_row(
             result.repo_url.replace("https://github.com/", ""),
-            f"[{risk_color}]{result.total_score}/100[/{risk_color}]",
-            highest_risk,
-            f"Analyzed: {result.metrics[0].message}",  # Placeholder
+            f"[{score_color}]{result.total_score}/100[/{score_color}]",
+            health_status,
+            observation_text,
         )
 
     console.print(table)
@@ -211,22 +225,31 @@ def display_results_detailed(results: list[AnalysisResult]):
         metrics_table.add_column("Metric", style="cyan", no_wrap=True)
         metrics_table.add_column("Score", justify="center", style="magenta")
         metrics_table.add_column("Max", justify="center", style="magenta")
-        metrics_table.add_column("Risk", justify="left", style="red")
-        metrics_table.add_column("Message", justify="left")
+        metrics_table.add_column("Status", justify="left")
+        metrics_table.add_column("Observation", justify="left")
 
         for metric in result.metrics:
-            # Risk color coding
-            risk_style = "green"
+            # Status color coding with supportive language
+            status_style = "green"
+            status_text = "Good"
             if metric.risk in ("Critical", "High"):
-                risk_style = "red"
+                status_style = "red"
+                status_text = "Needs attention"
             elif metric.risk == "Medium":
-                risk_style = "yellow"
+                status_style = "yellow"
+                status_text = "Monitor"
+            elif metric.risk == "Low":
+                status_style = "yellow"
+                status_text = "Consider improving"
+            else:  # None
+                status_style = "green"
+                status_text = "Healthy"
 
             metrics_table.add_row(
                 metric.name,
                 f"[cyan]{metric.score}[/cyan]",
                 f"[cyan]{metric.max_score}[/cyan]",
-                f"[{risk_style}]{metric.risk}[/{risk_style}]",
+                f"[{status_style}]{status_text}[/{status_style}]",
                 metric.message,
             )
 
@@ -289,9 +312,7 @@ def check_legacy(
                 console.print(f"      Found {len(lock_packages)} package(s)")
                 packages_to_analyze.extend(lock_packages)
         else:
-            console.print(
-                "   [yellow]No lockfiles detected in current directory.[/yellow]"
-            )
+            console.print("   [dim]No lockfiles found in current directory.[/dim]")
 
     # Remove duplicates while preserving order
     seen = set()
@@ -342,10 +363,12 @@ def check_legacy(
                     analysis_result = analyze_repository(owner, name)
                     results_to_display.append(analysis_result)
                 except Exception as e:
-                    console.print(f"    [red]Error analyzing {owner}/{name}: {e}[/red]")
+                    console.print(
+                        f"    [yellow]⚠️  Unable to analyze {owner}/{name}: {e}[/yellow]"
+                    )
             else:
                 console.print(
-                    f"    [red]Could not resolve GitHub repository for {pkg_name}.[/red]"
+                    f"    [yellow]ℹ️  GitHub repository not found for {pkg_name}. Package may not have public source code.[/yellow]"
                 )
 
     if results_to_display:
@@ -428,13 +451,15 @@ def analyze_package(
     # Resolve GitHub URL using appropriate resolver
     resolver = get_resolver(ecosystem)
     if not resolver:
-        console.print(f"  -> [red]Unknown ecosystem: {ecosystem}[/red]")
+        console.print(
+            f"  -> [yellow]ℹ️  Ecosystem '{ecosystem}' is not yet supported[/yellow]"
+        )
         return None
 
     repo_info = resolver.resolve_github_url(package_name)
     if not repo_info:
         console.print(
-            f"  -> [red]Could not resolve GitHub repository for {db_key}.[/red]"
+            f"  -> [yellow]ℹ️  GitHub repository not found for {db_key}. Package may not have public source code.[/yellow]"
         )
         return None
 
@@ -468,7 +493,9 @@ def analyze_package(
 
         return analysis_result
     except Exception as e:
-        console.print(f"    [red]Error analyzing {owner}/{repo_name}: {e}[/red]")
+        console.print(
+            f"    [yellow]⚠️  Unable to complete analysis for {owner}/{repo_name}: {e}[/yellow]"
+        )
         return None
 
 
@@ -556,10 +583,12 @@ def check(
     if manifest:
         manifest = manifest.resolve()
         if not manifest.exists():
-            console.print(f"[red]Error: Manifest file does not exist: {manifest}[/red]")
+            console.print(f"[yellow]⚠️  Manifest file not found: {manifest}[/yellow]")
+            console.print("[dim]Please check the file path and try again.[/dim]")
             raise typer.Exit(code=1)
         if not manifest.is_file():
-            console.print(f"[red]Error: Manifest path is not a file: {manifest}[/red]")
+            console.print(f"[yellow]⚠️  Path is not a file: {manifest}[/yellow]")
+            console.print("[dim]Please provide a path to a manifest file.[/dim]")
             raise typer.Exit(code=1)
 
         console.print(f"📋 Reading manifest file: {manifest}")
@@ -586,10 +615,10 @@ def check(
 
         if not detected_eco:
             console.print(
-                f"[red]Error: Could not detect ecosystem from manifest file: {manifest_name}[/red]"
+                f"[yellow]⚠️  Could not detect ecosystem from manifest file: {manifest_name}[/yellow]"
             )
             console.print(
-                "[yellow]Supported manifest files: package.json, requirements.txt, pyproject.toml, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config[/yellow]"
+                "[dim]Supported manifest files:[/dim] package.json, requirements.txt, pyproject.toml, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config"
             )
             raise typer.Exit(code=1)
 
@@ -599,7 +628,7 @@ def check(
         resolver = get_resolver(detected_eco)
         if not resolver:
             console.print(
-                f"[red]Error: Failed to get resolver for ecosystem: {detected_eco}[/red]"
+                f"[yellow]⚠️  Unable to process {detected_eco} packages at this time[/yellow]"
             )
             raise typer.Exit(code=1)
 
@@ -611,7 +640,10 @@ def check(
             for pkg_info in manifest_packages:
                 packages_to_analyze.append((detected_eco, pkg_info.name))
         except Exception as e:
-            console.print(f"[red]Error: Failed to parse {manifest_name}: {e}[/red]")
+            console.print(f"[yellow]⚠️  Unable to parse {manifest_name}: {e}[/yellow]")
+            console.print(
+                "[dim]The file may be malformed or in an unexpected format.[/dim]"
+            )
             raise typer.Exit(code=1) from None
 
     # Validate and resolve root directory (only if not using --manifest)
@@ -620,12 +652,12 @@ def check(
     ):  # Only validate root_dir if not using --manifest and no packages specified
         root_dir = root_dir.resolve()
         if not root_dir.exists():
-            console.print(
-                f"[red]Error: Root directory does not exist: {root_dir}[/red]"
-            )
+            console.print(f"[yellow]⚠️  Directory not found: {root_dir}[/yellow]")
+            console.print("[dim]Please check the path and try again.[/dim]")
             raise typer.Exit(code=1)
         if not root_dir.is_dir():
-            console.print(f"[red]Error: Root path is not a directory: {root_dir}[/red]")
+            console.print(f"[yellow]⚠️  Path is not a directory: {root_dir}[/yellow]")
+            console.print("[dim]Please provide a directory path with --root-dir.[/dim]")
             raise typer.Exit(code=1)
 
         # Auto-detect from manifest files in root_dir
@@ -659,7 +691,7 @@ def check(
                                 )
                         except Exception as e:
                             console.print(
-                                f"   [yellow]Warning: Failed to parse {manifest_name}: {e}[/yellow]"
+                                f"   [dim]Warning: Unable to parse {manifest_name} - {e}[/dim]"
                             )
                         break
         else:
@@ -724,7 +756,7 @@ def check(
                                     f"   [yellow]Warning: Failed to parse {lockfile.name}: {e}[/yellow]"
                                 )
         else:
-            console.print(f"   [yellow]No lockfiles detected in {root_dir}.[/yellow]")
+            console.print(f"   [dim]No lockfiles found in {root_dir}.[/dim]")
 
     # Remove duplicates while preserving order
     seen = set()
