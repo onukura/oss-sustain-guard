@@ -39,6 +39,8 @@ class AnalysisResult(NamedTuple):
     repo_url: str
     total_score: int
     metrics: list[Metric]
+    funding_links: list[dict[str, str]] = []  # List of {"platform": str, "url": str}
+    is_community_driven: bool = False  # True if project is community-driven
 
 
 # --- Helper Functions ---
@@ -1191,10 +1193,16 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
             f"Analysis complete for [bold cyan]{owner}/{name}[/bold cyan]. Score: {total_score}/100"
         )
 
+        # Extract funding links and community status
+        funding_links = repo_info.get("fundingLinks", [])
+        is_community_driven = not is_corporate_backed(repo_info)
+
         return AnalysisResult(
             repo_url=f"https://github.com/{owner}/{name}",
             total_score=total_score,
             metrics=metrics,
+            funding_links=funding_links,
+            is_community_driven=is_community_driven,
         )
 
     except Exception as e:

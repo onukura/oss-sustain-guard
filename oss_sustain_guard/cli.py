@@ -165,6 +165,18 @@ def display_results(results: list[AnalysisResult]):
 
     console.print(table)
 
+    # Display funding links for community-driven projects
+    for result in results:
+        if result.is_community_driven and result.funding_links:
+            console.print(
+                f"\n💝 [bold cyan]{result.repo_url.replace('https://github.com/', '')}[/bold cyan] "
+                f"is a community-driven project. Consider supporting:"
+            )
+            for link in result.funding_links:
+                platform = link.get("platform", "Unknown")
+                url = link.get("url", "")
+                console.print(f"   • {platform}: [link={url}]{url}[/link]")
+
 
 def display_results_detailed(results: list[AnalysisResult]):
     """Display detailed analysis results with all metrics for each package."""
@@ -183,6 +195,16 @@ def display_results_detailed(results: list[AnalysisResult]):
         console.print(
             f"   Total Score: [{risk_color}]{result.total_score}/100[/{risk_color}]"
         )
+
+        # Display funding information for community-driven projects
+        if result.is_community_driven and result.funding_links:
+            console.print(
+                "   💝 [bold green]Community-driven project[/bold green] - Consider supporting:"
+            )
+            for link in result.funding_links:
+                platform = link.get("platform", "Unknown")
+                url = link.get("url", "")
+                console.print(f"      • {platform}: [link={url}]{url}[/link]")
 
         # Metrics table
         metrics_table = Table(show_header=True, header_style="bold magenta")
@@ -305,6 +327,8 @@ def check_legacy(
                     )
                     for m in cached_data["metrics"]
                 ],
+                funding_links=cached_data.get("funding_links", []),
+                is_community_driven=cached_data.get("is_community_driven", False),
             )
             results_to_display.append(result)
         else:
@@ -396,6 +420,8 @@ def analyze_package(
                 )
                 for m in cached_data.get("metrics", [])
             ],
+            funding_links=cached_data.get("funding_links", []),
+            is_community_driven=cached_data.get("is_community_driven", False),
         )
         return result
 
@@ -426,6 +452,8 @@ def analyze_package(
                 "github_url": analysis_result.repo_url,
                 "total_score": analysis_result.total_score,
                 "metrics": [metric._asdict() for metric in analysis_result.metrics],
+                "funding_links": analysis_result.funding_links,
+                "is_community_driven": analysis_result.is_community_driven,
                 "cache_metadata": {
                     "fetched_at": datetime.now(timezone.utc).isoformat(),
                     "ttl_seconds": DEFAULT_CACHE_TTL,
