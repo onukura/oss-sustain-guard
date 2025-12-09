@@ -130,7 +130,7 @@ def test_save_and_load_cache(tmp_path):
     with patch("oss_sustain_guard.config.get_cache_dir", return_value=tmp_path):
         data = {"python:requests": {"total_score": 85}}
         save_cache("python", data)
-        
+
         loaded = load_cache("python")
         assert "python:requests" in loaded
         assert loaded["python:requests"]["total_score"] == 85

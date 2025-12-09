@@ -1,4 +1,29 @@
+exclude: ^(.venv|venv|node_modules)/
+
 repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.14.8
+    hooks:
+      # Run the linter.
+      - id: ruff-check
+        args: [--fix]
+      # Run the formatter.
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: check-docstring-first
+      - id: check-added-large-files
+        args: ["--maxkb=5000"]
+      - id: check-toml
+      - id: check-yaml
+        exclude: |
+          (?x)(
+              ^helm-values/|
+              ^.venv/
+          )
+      - id: detect-private-key
   - repo: https://github.com/onukura/oss-sustain-guard
     rev: "f4b8c9f589b81278c5e0525273d28118a0570bc9"
     hooks:

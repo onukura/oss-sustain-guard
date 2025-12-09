@@ -20,14 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check Python dependencies
         uses: onukura/oss-sustain-guard@main
         with:
           packages: 'python-dotenv rich typer httpx tomli pytest ruff pre-commit'
           verbose: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Summary
         run: |
           echo "✅ Dependency sustainability check completed"

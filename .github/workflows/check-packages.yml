@@ -41,7 +41,7 @@ jobs:
         with:
           repository: onukura/oss-sustain-guard
           ref: main
-      
+
       - name: Run package check with Docker
         id: check
         uses: onukura/oss-sustain-guard@main
@@ -50,7 +50,7 @@ jobs:
           include-lock: ${{ inputs.include-lock }}
           verbose: ${{ inputs.verbose }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Check minimum score threshold
         if: inputs.fail-on-score > 0
         run: |

@@ -60,10 +60,10 @@ def test_parse_and_check_package():
     # Load fixture
     with open(FIXTURES_DIR / "package.json") as f:
         data = json.load(f)
-    
+
     # Extract packages
     packages = list(data["dependencies"].keys())
-    
+
     # Mock and test
     with patch("oss_sustain_guard.cli.analyze_package") as mock:
         mock.return_value = AnalysisResult(

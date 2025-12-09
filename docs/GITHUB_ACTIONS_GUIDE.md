@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check core dependencies
         uses: onukura/oss-sustain-guard@main
         with:
@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Analyze all dependencies
         uses: onukura/oss-sustain-guard@main
         with:
@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Auto-detect and check dependencies
         uses: onukura/oss-sustain-guard@main
         with:
@@ -139,13 +139,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check high-risk dependencies
         uses: onukura/oss-sustain-guard@main
         with:
           packages: 'critical-payment-lib authentication-provider'
           verbose: 'true'
-      
+
       - name: Review critical packages
         if: failure()
         run: echo "⚠️  Critical packages need review!"
@@ -163,14 +163,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Analyze dependencies
         id: analysis
         uses: onukura/oss-sustain-guard@main
         with:
           packages: 'requests django'
           verbose: 'true'
-      
+
       - name: Comment on PR
         uses: actions/github-script@v7
         with:
@@ -198,7 +198,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Run weekly audit
         uses: onukura/oss-sustain-guard@main
         with:
@@ -284,7 +284,7 @@ jobs:
     uses: onukura/oss-sustain-guard/.github/workflows/check-packages.yml@main
     with:
       packages: 'flask django requests'
-  
+
   check-javascript:
     uses: onukura/oss-sustain-guard/.github/workflows/check-packages.yml@main
     with:

@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check Python dependencies Test
         uses: ./
         with:
@@ -19,7 +19,7 @@ jobs:
           include-lock: 'true'
           verbose: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Summary
         run: |
           echo "✅ Dependency sustainability check completed"

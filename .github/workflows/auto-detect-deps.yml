@@ -21,12 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Auto-detect and analyze all dependencies
         uses: onukura/oss-sustain-guard@main
         with:
           include-lock: 'true'
           verbose: 'true'
-      
+
       - name: Analysis complete
         run: echo "✅ All dependencies auto-detected and analyzed from lock files"

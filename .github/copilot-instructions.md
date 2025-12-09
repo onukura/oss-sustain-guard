@@ -104,7 +104,7 @@ from resolvers.base import BaseResolver
 
 class MyResolver(BaseResolver):
     """Resolver for MyRegistry packages to GitHub URLs."""
-    
+
     def resolve(self, package_name: str) -> tuple[str, str] | None:
         """Resolve package name to (owner, repo) tuple."""
         # Fetch from registry API
