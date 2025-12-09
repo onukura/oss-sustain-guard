@@ -42,7 +42,7 @@ class TestRootDirOption:
         )
 
         assert result.exit_code == 1
-        assert "Error: Root directory does not exist" in result.output
+        assert "Directory not found: /nonexistent/directory" in result.output
 
     def test_root_dir_file_instead_of_directory(self):
         """Test error handling when root-dir is a file."""
@@ -56,7 +56,7 @@ class TestRootDirOption:
             )
 
             assert result.exit_code == 1
-            assert "Error: Root path is not a directory" in result.output
+            assert "Path is not a directory" in result.output
 
     def test_root_dir_default_current_directory(self):
         """Test that default root-dir is current directory."""
@@ -189,7 +189,7 @@ class TestManifestOption:
         )
 
         assert result.exit_code == 1
-        assert "Error: Manifest file does not exist" in result.output
+        assert "Manifest file not found: /nonexistent/package.json" in result.output
 
     def test_manifest_directory_instead_of_file(self):
         """Test error handling when manifest path is a directory."""
@@ -201,7 +201,7 @@ class TestManifestOption:
         )
 
         assert result.exit_code == 1
-        assert "Error: Manifest path is not a file" in result.output
+        assert "Path is not a file" in result.output
 
     def test_manifest_unknown_file_type(self):
         """Test error handling for unknown manifest file type."""
@@ -221,7 +221,7 @@ class TestManifestOption:
             )
 
             assert result.exit_code == 1
-            assert "Error: Could not detect ecosystem" in result.output
+            assert "Could not detect ecosystem from manifest file" in result.output
             assert "Supported manifest files" in result.output
         finally:
             Path(temp_path).unlink(missing_ok=True)
