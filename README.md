@@ -47,6 +47,8 @@ oss-guard check python:django npm:react rust:tokio
 oss-guard check --include-lock
 ```
 
+![Demo](./docs/assets/demo01..png)
+
 ## 📖 Usage
 
 ### Command Line
