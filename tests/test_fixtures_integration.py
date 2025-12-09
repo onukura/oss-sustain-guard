@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import tomli
 from typer.testing import CliRunner
 
 from oss_sustain_guard.cli import app
@@ -133,6 +134,55 @@ class TestPythonFixtures:
                 )
                 result = runner.invoke(app, ["check", f"python:{pkg}", "--insecure"])
                 assert result.exit_code == 0
+
+    def test_parse_pyproject_toml(self):
+        """Test parsing pyproject.toml fixture."""
+        pyproject_path = FIXTURES_DIR / "pyproject.toml"
+        if not pyproject_path.exists():
+            return  # Skip if fixture doesn't exist yet
+
+        # Simple check that file exists and is valid TOML
+        with open(pyproject_path, "rb") as f:
+            data = tomli.load(f)
+
+        # Verify it has poetry dependencies
+        assert "tool" in data
+        assert "poetry" in data["tool"]
+        assert "dependencies" in data["tool"]["poetry"]
+
+    def test_parse_pipfile(self):
+        """Test parsing Pipfile fixture."""
+        pipfile_path = FIXTURES_DIR / "Pipfile"
+        if not pipfile_path.exists():
+            return  # Skip if fixture doesn't exist yet
+
+        # Simple check that file exists and is valid TOML
+        with open(pipfile_path, "rb") as f:
+            data = tomli.load(f)
+
+        # Verify it has packages section
+        assert "packages" in data
+        assert isinstance(data["packages"], dict)
+        # Check for some expected packages
+        assert "django" in data["packages"]
+
+    def test_parse_pipfile_lock(self):
+        """Test parsing Pipfile.lock fixture."""
+        pipfile_lock_path = FIXTURES_DIR / "Pipfile.lock"
+        if not pipfile_lock_path.exists():
+            return  # Skip if fixture doesn't exist yet
+
+        # Pipfile.lock is JSON format
+        with open(pipfile_lock_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Verify structure
+        assert "_meta" in data
+        assert "default" in data
+        assert isinstance(data["default"], dict)
+        # Check for some expected packages
+        assert "django" in data["default"]
+        assert "requests" in data["default"]
 
 
 class TestRustFixtures:

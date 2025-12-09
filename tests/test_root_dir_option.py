@@ -142,6 +142,26 @@ class TestManifestOption:
             assert "Reading manifest file" in result.output
             assert "Detected ecosystem: python" in result.output
 
+    def test_manifest_with_pyproject_toml(self):
+        """Test reading from a specific pyproject.toml file."""
+        fixtures_dir = Path(__file__).parent / "fixtures"
+        manifest_path = fixtures_dir / "pyproject.toml"
+
+        if not manifest_path.exists():
+            return
+
+        with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            mock_analyze.return_value = None
+
+            result = runner.invoke(
+                app,
+                ["check", "--manifest", str(manifest_path), "--insecure"],
+            )
+
+            assert "Reading manifest file" in result.output
+            assert "Detected ecosystem: python" in result.output
+            assert "pyproject.toml" in result.output
+
     def test_manifest_with_cargo_toml(self):
         """Test reading from a specific Cargo.toml file."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -224,6 +244,25 @@ class TestManifestOption:
 
             assert "Reading manifest file" in result.output
             assert "Detected ecosystem: javascript" in result.output
+
+    def test_manifest_with_pipfile(self):
+        """Test --manifest with Pipfile."""
+        fixtures_dir = Path(__file__).parent / "fixtures"
+        manifest_path = fixtures_dir / "Pipfile"
+
+        if not manifest_path.exists():
+            return
+
+        with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            mock_analyze.return_value = None
+
+            result = runner.invoke(
+                app,
+                ["check", "-m", str(manifest_path), "--insecure"],
+            )
+
+            assert "Reading manifest file" in result.output
+            assert "Detected ecosystem: python" in result.output
 
     def test_manifest_with_absolute_path(self):
         """Test --manifest with absolute path from different directory."""

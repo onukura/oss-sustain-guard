@@ -561,7 +561,7 @@ def check(
                 f"[red]Error: Could not detect ecosystem from manifest file: {manifest_name}[/red]"
             )
             console.print(
-                "[yellow]Supported manifest files: package.json, requirements.txt, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config[/yellow]"
+                "[yellow]Supported manifest files: package.json, requirements.txt, pyproject.toml, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config[/yellow]"
             )
             raise typer.Exit(code=1)
 

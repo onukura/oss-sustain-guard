@@ -12,27 +12,36 @@ These fixtures validate that OSS Sustain Guard correctly:
 ## Fixture Files
 
 ### JavaScript/npm
+
 - **package.json** - Node.js project with React, Express, TypeScript, and common dependencies
 
 ### Python
+
 - **requirements.txt** - Django project with REST framework, Celery, and testing tools
+- **pyproject.toml** - Poetry project with FastAPI, SQLAlchemy, and Pydantic
 
 ### Rust
+
 - **Cargo.toml** - Tokio-based async application with Actix-web and SQLx
 
 ### Java
+
 - **pom.xml** - Spring Boot application with Maven dependencies
 
 ### PHP
+
 - **composer.json** - Laravel project with Guzzle, Monolog, and Doctrine
 
 ### Ruby
+
 - **Gemfile** - Rails application with Sidekiq, Devise, and RSpec
 
 ### C#/.NET
+
 - **packages.config** - .NET project with Newtonsoft.Json, Entity Framework, and Serilog
 
 ### Go
+
 - **go.mod** - Go application with Gin, GORM, Viper, and Cobra
 
 ## Usage in Tests
