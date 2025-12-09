@@ -70,6 +70,11 @@ class PhpResolver(LanguageResolver):
                     return self._parse_github_url(source_url)
 
             return None
+        except httpx.HTTPStatusError as e:
+            # Return None for 404 errors (package not found)
+            if e.response.status_code == 404:
+                return None
+            raise
         except (httpx.RequestError, ValueError, KeyError):
             return None
 
