@@ -19,6 +19,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = [
@@ -36,6 +37,12 @@ dev = [
     "ruff>=0.14.8",
     "prek>=0.2.20",
 ]
+
+[project.urls]
+Repository = "https://github.com/onukura/oss-sustain-guard"
+Documentation = "https://github.com/onukura/oss-sustain-guard"
+Releases = "https://github.com/onukura/oss-sustain-guard/releases"
+Issues = "https://github.com/onukura/oss-sustain-guard/issues"
 
 [project.scripts]
 oss-guard = "oss_sustain_guard.cli:app"
@@ -58,6 +65,7 @@ source = ["oss_sustain_guard"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
+    "*/builder/*",
     "*/__pycache__/*",
     "*/venv/*",
     "*/.venv/*",
