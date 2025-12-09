@@ -2,9 +2,9 @@
 
 ## Overview
 
-`data/database.json` is the cache database for OSS Sustain Guard. It stores pre-computed sustainability analysis results, enabling fast lookups without real-time analysis.
+`data/latest/{language}.json` stores pre-computed sustainability analysis results, enabling fast lookups without real-time analysis. Each ecosystem maintains its own JSON file.
 
-## Schema Specification (v2.1 - Multi-Language Support with Cache Metadata)
+## Schema Specification (v2.0 - Multi-Language Support)
 
 ### Top-Level Structure
 
@@ -37,14 +37,11 @@
       "risk": "Critical|High|Medium|Low|None"
     },
     ...
-  ],
-  "cache_metadata": {
-    "fetched_at": "ISO 8601 datetime",
-    "ttl_seconds": integer,
-    "source": "github|local|api"
-  }
+  ]
 }
 ```
+
+**Note**: The database files (`data/latest/{language}.json`) store core analysis data. Additional fields like `funding_links` and `is_community_driven` are computed at runtime by the `analyze_repository()` function in `core.py` when needed for CLI display.
 
 ## Field Descriptions
 
@@ -57,15 +54,15 @@
 | `github_url` | string | GitHub repository URL |
 | `total_score` | integer | Total score (0-100) |
 | `metrics` | array | Array of individual metrics |
-| `cache_metadata` | object | Cache metadata (v2.1+) |
 
-### Cache Metadata (v2.1+)
+### Runtime Fields (Not Stored in Database)
+
+The following fields are computed at runtime by `analyze_repository()` in `core.py`:
 
 | Field | Type | Description |
 |----------|-----|------|
-| `fetched_at` | string | ISO 8601 timestamp when data was fetched |
-| `ttl_seconds` | integer | Time-to-live in seconds (default: 604800 = 7 days) |
-| `source` | string | Data source: `github` (remote), `local` (fallback), `api` (Libraries.io) |
+| `funding_links` | array | List of funding platforms and URLs (computed from GitHub repository data) |
+| `is_community_driven` | boolean | Whether project is community-driven (vs corporate-backed) |
 
 ### Metrics
 
@@ -225,13 +222,16 @@ The database is automatically updated daily at UTC 00:00 via `.github/workflows/
 
 ## Version History
 
-### v2.0 (December 2024)
+### v2.0 (Current)
 
-- Multi-language support (Python, JavaScript, Go, Rust)
-- Key format change: `package_name` → `ecosystem:package_name`
-- Added `ecosystem` field
-- Added `package_name` field
+- Multi-language support (Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby)
+- Separate files per ecosystem: `data/latest/{language}.json`
+- Key format: `{ecosystem}:{package_name}`
+- Added `ecosystem` and `package_name` fields
+- Runtime computation of `funding_links` and `is_community_driven` in `core.py`
 
 ### v1.0 (Initial Release)
 
 - Python packages only
+- Single database file
+- Flat key structure without ecosystem prefix

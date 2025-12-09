@@ -8,6 +8,15 @@
 
 ✨ **No API tokens required** - Fast, cache-based evaluation for Python, JavaScript, Go, Rust, PHP, Java, C#, and Ruby packages.
 
+> 📌 **Important Notes:**
+>
+> - For **cached packages**: Instant evaluation without API calls
+> - For **uncached packages**: GitHub API queries are required (requires `GITHUB_TOKEN` environment variable)
+> - **GitHub rate limiting**: GitHub API has rate limits; cached data helps avoid hitting these limits
+> - **GitHub unavailable packages**: Cannot be evaluated (non-GitHub repositories or private packages not accessible via GitHub API)
+> - **SSL verification**: Use `--insecure` flag to disable SSL verification for development/testing only
+> - **Package resolution failures**: If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
+
 ## 💡 Project Philosophy
 
 OSS Sustain Guard is designed to spark thoughtful conversations about open-source sustainability, not to pass judgment on projects. Our mission is to **raise awareness** about the challenges maintainers face and encourage the community to think together about how we can better support the open-source ecosystem.
@@ -247,20 +256,57 @@ Scores are evaluated in the range of 0-100:
 
 ## ⚙️ Configuration
 
-**Exclude packages** - Create `.oss-sustain-guard.toml`:
+### Exclude Packages
+
+Create `.oss-sustain-guard.toml`:
 
 ```toml
 [tool.oss-sustain-guard]
 exclude = ["internal-package", "legacy-dependency"]
 ```
 
-**GitHub token** - For non-cached packages (optional):
+See [Exclude Packages Guide](./docs/EXCLUDE_PACKAGES_GUIDE.md) for details.
+
+### GitHub Token (Required for Uncached Packages)
+
+When analyzing packages not in the cache, the tool requires GitHub API access. Set your GitHub token:
 
 ```bash
-export GITHUB_TOKEN=your_github_token
+# Using Personal Access Token
+export GITHUB_TOKEN=ghp_your_personal_access_token
+
+# Then run the analysis
+oss-guard check requests django
 ```
 
-See [Exclude Packages Guide](./docs/EXCLUDE_PACKAGES_GUIDE.md) for details.
+**When is GITHUB_TOKEN needed?**
+
+- ✅ **Not needed**: Packages already in cache (pre-computed data)
+- ❌ **Required**: First-time analysis of packages not in the cache
+
+**Getting a GitHub Token:**
+
+1. Go to [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)
+2. Create a token with `public_repo` scope (read-only access to public repositories)
+3. Set environment variable: `export GITHUB_TOKEN=your_token`
+
+**Example with uncached package:**
+
+```bash
+# This package might not be in cache and will require GITHUB_TOKEN
+$ export GITHUB_TOKEN=ghp_xxxxxxxxxxxx
+$ oss-guard check my-private-package
+```
+
+### SSL Verification
+
+For development/testing, you can disable SSL verification:
+
+```bash
+oss-guard check requests --insecure
+```
+
+> ⚠️ **Warning**: Only use `--insecure` in development environments. Never disable SSL verification in production.
 
 ## 🤝 Contributing
 
