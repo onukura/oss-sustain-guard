@@ -1,6 +1,6 @@
 # CHAOSS Metrics Alignment Validation Report
 
-**Date:** December 10, 2025  
+**Date:** December 10, 2025
 **Purpose:** Validate OSS Sustain Guard metrics against official CHAOSS (Community Health Analytics in Open Source Software) metrics and models
 
 ## Executive Summary
@@ -140,7 +140,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 - CHAOSS: "Here's the data, you decide what it means"
 - OSS Sustain Guard: "Here's the data + our interpretation for sustainability risk"
 
-**Recommendation:** 
+**Recommendation:**
 - ✅ Keep our scoring - it provides actionable insights
 - ✅ Add `--raw` flag to show CHAOSS-style uninterpreted metrics
 - ✅ Document our scoring methodology as "OSS Sustain Guard Risk Framework"
@@ -151,12 +151,12 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 ```
 📦 Package Name
    Total Score: 74/100
-   
+
    📊 CHAOSS Metric Models:
    ┌─────────────────────┬───────┬─────┬──────────────────┐
    │ Model               │ Score │ Max │ Observation      │
    └─────────────────────┴───────┴─────┴──────────────────┘
-   
+
    🔍 Raw Signals:
    ┌─────────────────────┬───────┐
    │ Signal              │ Value │
