@@ -237,7 +237,18 @@ Scores are evaluated in the range of 0-100 using a **category-weighted approach*
 - **50-79**: 🟡 **Monitor** - Areas to consider supporting
 - **0-49**: 🔴 **Needs Attention** - Needs support and improvement
 
-### Scoring Categories (Total: 100%)
+### Scoring Profiles
+
+OSS Sustain Guard supports **multiple scoring profiles** to evaluate projects based on different priorities:
+
+- **🔵 Balanced** (default) - Balanced view across all dimensions
+- **🔒 Security First** - Prioritizes security and risk mitigation (40% security weight)
+- **🤝 Contributor Experience** - Focuses on community engagement (40% community weight)
+- **🌱 Long-term Stability** - Emphasizes maintainer health (35% maintainer weight)
+
+See [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) for detailed comparison and usage examples.
+
+### Scoring Categories (Balanced Profile)
 
 | Category | Weight | Focus Areas |
 |----------|--------|-------------|
@@ -360,6 +371,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code st
 
 ## 📝 Documentation
 
+- [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
 - [Database Schema](./docs/DATABASE_SCHEMA.md) - JSON database format
 - [Pre-Commit Integration](./docs/PRE_COMMIT_INTEGRATION.md) - Hook configuration
 - [GitHub Actions Guide](./docs/GITHUB_ACTIONS_GUIDE.md) - CI/CD setup

@@ -53,6 +53,8 @@ def load_cache(ecosystem: str) -> dict[str, Any]:
     """
     Load cache for a specific ecosystem.
 
+    Handles both v1.x (flat dict) and v2.0 (wrapped with schema metadata) formats.
+
     Args:
         ecosystem: Ecosystem name (python, javascript, rust, etc.).
 
@@ -66,7 +68,15 @@ def load_cache(ecosystem: str) -> dict[str, Any]:
 
     try:
         with open(cache_path, "r", encoding="utf-8") as f:
-            all_data = json.load(f)
+            raw_data = json.load(f)
+
+        # Handle schema versions
+        if isinstance(raw_data, dict) and "_schema_version" in raw_data:
+            # v2.0+ format with metadata
+            all_data = raw_data.get("packages", {})
+        else:
+            # v1.x format (flat dict) - backward compatibility
+            all_data = raw_data
 
         # Filter valid entries only
         valid_data = {}

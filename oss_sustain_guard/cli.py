@@ -22,16 +22,13 @@ from oss_sustain_guard.config import (
     set_verify_ssl,
 )
 from oss_sustain_guard.core import (
+    SCORING_PROFILES,
     AnalysisResult,
     Metric,
     analyze_repository,
+    compute_weighted_total_score,
 )
 from oss_sustain_guard.resolvers import detect_ecosystems, get_resolver
-from oss_sustain_guard.resolvers.python import (
-    detect_lockfiles,
-    get_github_url_from_pypi,
-    get_packages_from_lockfile,
-)
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -125,7 +122,19 @@ def load_database(use_cache: bool = True) -> dict:
                 if ecosystem_file.exists():
                     try:
                         with open(ecosystem_file, "r", encoding="utf-8") as f:
-                            data = json.load(f)
+                            raw_data = json.load(f)
+
+                            # Handle schema versions
+                            if (
+                                isinstance(raw_data, dict)
+                                and "_schema_version" in raw_data
+                            ):
+                                # v2.0+ format with metadata
+                                data = raw_data.get("packages", {})
+                            else:
+                                # v1.x format (flat dict) - backward compatibility
+                                data = raw_data
+
                             merged.update(data)
                             console.print(
                                 f"Loaded {ecosystem} data from local fallback."
@@ -325,139 +334,6 @@ def display_results_detailed(
             console.print(signals_table)
 
 
-@app.command()
-def check_legacy(
-    packages: list[str] = typer.Argument(
-        ...,
-        help="[DEPRECATED: Use 'check' instead] List of packages to check (e.g., 'requests fastapi') or a path to a requirements.txt file.",
-    ),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Display detailed metrics for each package.",
-    ),
-    include_lock: bool = typer.Option(
-        False,
-        "--include-lock",
-        "-l",
-        help="Include packages from lockfiles (poetry.lock, uv.lock, Pipfile.lock) in the current directory.",
-    ),
-    insecure: bool = typer.Option(
-        False,
-        "--insecure",
-        help="Disable SSL certificate verification for HTTPS requests.",
-    ),
-):
-    """[DEPRECATED: Use 'check' instead] Analyze the sustainability of specified Python packages."""
-    set_verify_ssl(not insecure)
-    db = load_database()
-    results_to_display = []
-    packages_to_analyze = []
-
-    if len(packages) == 1 and Path(packages[0]).is_file():
-        console.print(f"📄 Reading packages from [bold]{packages[0]}[/bold]")
-        with open(packages[0], "r", encoding="utf-8") as f:
-            # Basic parsing, ignores versions and comments
-            package_list = [
-                line.strip().split("==")[0]
-                for line in f
-                if line.strip() and not line.startswith("#")
-            ]
-            packages_to_analyze.extend(package_list)
-    else:
-        packages_to_analyze.extend(packages)
-
-    # If --include-lock is specified, detect and parse lockfiles
-    if include_lock:
-        lockfiles = detect_lockfiles(".")
-        if lockfiles:
-            console.print(
-                f"🔒 Found {len(lockfiles)} lockfile(s), extracting packages..."
-            )
-            for lockfile in lockfiles:
-                console.print(f"   -> Parsing [bold]{lockfile.name}[/bold]")
-                lock_packages = get_packages_from_lockfile(lockfile)
-                console.print(f"      Found {len(lock_packages)} package(s)")
-                packages_to_analyze.extend(lock_packages)
-        else:
-            console.print("   [dim]No lockfiles found in current directory.[/dim]")
-
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_packages = []
-    for pkg in packages_to_analyze:
-        if pkg not in seen:
-            seen.add(pkg)
-            unique_packages.append(pkg)
-    packages_to_analyze = unique_packages
-
-    console.print(f"🔍 Analyzing {len(packages_to_analyze)} package(s)...")
-
-    excluded_count = 0
-    for pkg_name in packages_to_analyze:
-        # Check if package is excluded
-        if is_package_excluded(pkg_name):
-            excluded_count += 1
-            console.print(
-                f"  -> Skipping [bold yellow]{pkg_name}[/bold yellow] (excluded)"
-            )
-            continue
-
-        if pkg_name in db:
-            console.print(f"  -> Found [bold green]{pkg_name}[/bold green] in cache.")
-            cached_data = db[pkg_name]
-            # Reconstruct AnalysisResult from cached dict
-            result = AnalysisResult(
-                repo_url=cached_data["github_url"],
-                total_score=cached_data["total_score"],
-                metrics=[
-                    Metric(
-                        m["name"], m["score"], m["max_score"], m["message"], m["risk"]
-                    )
-                    for m in cached_data["metrics"]
-                ],
-                funding_links=cached_data.get("funding_links", []),
-                is_community_driven=cached_data.get("is_community_driven", False),
-                models=cached_data.get("models", []),
-                signals=cached_data.get("signals", {}),
-            )
-            results_to_display.append(result)
-        else:
-            console.print(
-                f"  -> [bold yellow]{pkg_name}[/bold yellow] not in cache. Performing real-time analysis..."
-            )
-            repo_info = get_github_url_from_pypi(pkg_name)
-            if repo_info:
-                owner, name = repo_info
-                try:
-                    analysis_result = analyze_repository(owner, name)
-                    results_to_display.append(analysis_result)
-                except Exception as e:
-                    console.print(
-                        f"    [yellow]⚠️  Unable to analyze {owner}/{name}: {e}[/yellow]"
-                    )
-            else:
-                console.print(
-                    f"    [yellow]ℹ️  GitHub repository not found for {pkg_name}. Package may not have public source code.[/yellow]"
-                )
-
-    if results_to_display:
-        if verbose:
-            display_results_detailed(
-                results_to_display, show_signals=verbose, show_models=False
-            )
-        else:
-            display_results(results_to_display, show_models=False)
-        if excluded_count > 0:
-            console.print(
-                f"\n⏭️  Skipped {excluded_count} excluded package(s).",
-                style="yellow",
-            )
-    else:
-        console.print("No results to display.")
-
-
 def parse_package_spec(spec: str) -> tuple[str, str]:
     """
     Parse package specification in format 'ecosystem:package' or 'package'.
@@ -479,6 +355,7 @@ def analyze_package(
     package_name: str,
     ecosystem: str,
     db: dict,
+    profile: str = "balanced",
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -487,6 +364,7 @@ def analyze_package(
         package_name: Name of the package.
         ecosystem: Ecosystem name (python, javascript, go, rust).
         db: Cached database dictionary.
+        profile: Scoring profile to use for score calculation.
 
     Returns:
         AnalysisResult if successful, None otherwise.
@@ -502,20 +380,24 @@ def analyze_package(
     if db_key in db:
         console.print(f"  -> Found [bold green]{db_key}[/bold green] in cache.")
         cached_data = db[db_key]
-        # Reconstruct AnalysisResult from cached dict
+        # Reconstruct metrics from cached data
+        metrics = [
+            Metric(
+                m["name"],
+                m["score"],
+                m["max_score"],
+                m["message"],
+                m["risk"],
+            )
+            for m in cached_data.get("metrics", [])
+        ]
+        # Recalculate total score with selected profile
+        recalculated_score = compute_weighted_total_score(metrics, profile)
+        # Reconstruct AnalysisResult
         result = AnalysisResult(
             repo_url=cached_data.get("github_url", "unknown"),
-            total_score=cached_data.get("total_score", 0),
-            metrics=[
-                Metric(
-                    m["name"],
-                    m["score"],
-                    m["max_score"],
-                    m["message"],
-                    m["risk"],
-                )
-                for m in cached_data.get("metrics", [])
-            ],
+            total_score=recalculated_score,
+            metrics=metrics,
             funding_links=cached_data.get("funding_links", []),
             is_community_driven=cached_data.get("is_community_driven", False),
             models=cached_data.get("models", []),
@@ -604,6 +486,12 @@ def check(
         "-M",
         help="Display CHAOSS-aligned metric models (Risk Model, Sustainability Model).",
     ),
+    profile: str = typer.Option(
+        "balanced",
+        "--profile",
+        "-p",
+        help="Scoring profile: balanced (default), security_first, contributor_experience, long_term_stability.",
+    ),
     insecure: bool = typer.Option(
         False,
         "--insecure",
@@ -643,6 +531,16 @@ def check(
     ),
 ):
     """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)."""
+    # Validate profile
+    if profile not in SCORING_PROFILES:
+        console.print(
+            f"[red]❌ Unknown profile '{profile}'.[/red]",
+        )
+        console.print(
+            f"[dim]Available profiles: {', '.join(SCORING_PROFILES.keys())}[/dim]"
+        )
+        raise typer.Exit(code=1)
+
     # Handle --clear-cache option
     if clear_cache_flag:
         cleared = clear_cache()
@@ -861,7 +759,7 @@ def check(
             )
             continue
 
-        result = analyze_package(pkg_name, eco, db)
+        result = analyze_package(pkg_name, eco, db, profile)
         if result:
             results_to_display.append(result)
 

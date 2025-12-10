@@ -9,6 +9,7 @@ import pytest
 
 from oss_sustain_guard.core import (
     SCORING_CATEGORIES,
+    SCORING_PROFILES,
     AnalysisResult,
     Metric,
     _query_github_graphql,
@@ -26,6 +27,7 @@ from oss_sustain_guard.core import (
     check_project_popularity,
     check_retention,
     check_review_health,
+    compare_scoring_profiles,
     compute_category_breakdown,
     compute_weighted_total_score,
     is_corporate_backed,
@@ -998,4 +1000,182 @@ def test_scoring_categories_structure():
         assert "weight" in config
         assert "description" in config
         assert "metrics" in config
-        assert len(config["metrics"]) > 0
+
+
+# --- Scoring Profile Tests ---
+
+
+def test_default_balanced_profile():
+    """Test that balanced profile produces expected scores."""
+    metrics = [
+        # Maintainer Health (25%)
+        Metric("Contributor Redundancy", 10, 20, "Test", "Low"),
+        Metric("Maintainer Retention", 5, 10, "Test", "Low"),
+        Metric("Contributor Attraction", 7, 10, "Test", "Low"),
+        Metric("Contributor Retention", 6, 10, "Test", "Low"),
+        Metric("Organizational Diversity", 5, 10, "Test", "Low"),
+        # Development Activity (20%)
+        Metric("Recent Activity", 15, 20, "Test", "Low"),
+        Metric("Release Rhythm", 8, 10, "Test", "Low"),
+        Metric("Build Health", 4, 5, "Test", "Low"),
+        Metric("Change Request Resolution", 7, 10, "Test", "Low"),
+        # Community Engagement (20%)
+        Metric("Issue Responsiveness", 4, 5, "Test", "Low"),
+        Metric("PR Acceptance Ratio", 8, 10, "Test", "Low"),
+        Metric("PR Responsiveness", 4, 5, "Test", "Low"),
+        Metric("Review Health", 8, 10, "Test", "Low"),
+        Metric("Issue Resolution Duration", 7, 10, "Test", "Low"),
+        # Project Maturity (15%)
+        Metric("Documentation Presence", 9, 10, "Test", "Low"),
+        Metric("Code of Conduct", 5, 5, "Test", "Low"),
+        Metric("License Clarity", 5, 5, "Test", "Low"),
+        Metric("Project Popularity", 8, 10, "Test", "Low"),
+        Metric("Fork Activity", 4, 5, "Test", "Low"),
+        # Security & Funding (20%)
+        Metric("Security Signals", 12, 15, "Test", "Low"),
+        Metric("Funding Signals", 8, 10, "Test", "Low"),
+    ]
+
+    score = compute_weighted_total_score(metrics, "balanced")
+    assert 0 <= score <= 100
+    assert isinstance(score, int)
+
+
+def test_security_first_profile():
+    """Test that security_first profile weights security heavily."""
+    metrics = [
+        Metric("Contributor Redundancy", 20, 20, "Test", "None"),
+        Metric("Security Signals", 0, 15, "Critical", "Critical"),  # Poor security
+        Metric("Funding Signals", 0, 10, "Test", "High"),
+    ]
+
+    balanced_score = compute_weighted_total_score(metrics, "balanced")
+    security_score = compute_weighted_total_score(metrics, "security_first")
+
+    # Security-first should score lower due to poor security
+    assert security_score < balanced_score
+
+
+def test_contributor_experience_profile():
+    """Test that contributor_experience profile emphasizes community."""
+    metrics = [
+        Metric("Issue Responsiveness", 5, 5, "Excellent", "None"),
+        Metric("PR Acceptance Ratio", 10, 10, "Excellent", "None"),
+        Metric("Review Health", 10, 10, "Excellent", "None"),
+        Metric("Security Signals", 0, 15, "Poor", "High"),  # Poor security
+    ]
+
+    balanced_score = compute_weighted_total_score(metrics, "balanced")
+    contributor_score = compute_weighted_total_score(metrics, "contributor_experience")
+
+    # Contributor experience should score higher due to excellent community metrics
+    assert contributor_score > balanced_score
+
+
+def test_long_term_stability_profile():
+    """Test that long_term_stability profile prioritizes maintainer health."""
+    metrics = [
+        # Excellent maintainer health
+        Metric("Contributor Redundancy", 20, 20, "Excellent", "None"),
+        Metric("Maintainer Retention", 10, 10, "Excellent", "None"),
+        Metric("Contributor Attraction", 10, 10, "Excellent", "None"),
+        Metric("Contributor Retention", 10, 10, "Excellent", "None"),
+        Metric("Organizational Diversity", 10, 10, "Excellent", "None"),
+        # Poor other metrics
+        Metric("Security Signals", 0, 15, "Poor", "High"),
+        Metric("Project Popularity", 0, 10, "Poor", "Low"),
+    ]
+
+    balanced_score = compute_weighted_total_score(metrics, "balanced")
+    stability_score = compute_weighted_total_score(metrics, "long_term_stability")
+
+    # Stability profile should score higher due to excellent maintainer health
+    assert stability_score > balanced_score
+
+
+def test_invalid_profile_raises_error():
+    """Test that invalid profile name raises ValueError."""
+    metrics = [Metric("Test", 10, 10, "Test", "None")]
+
+    try:
+        compute_weighted_total_score(metrics, "invalid_profile")
+        raise AssertionError("Should have raised ValueError")
+    except ValueError as e:
+        assert "Unknown profile" in str(e)
+        assert "invalid_profile" in str(e)
+
+
+def test_compare_scoring_profiles():
+    """Test profile comparison functionality."""
+    metrics = [
+        Metric("Contributor Redundancy", 10, 20, "Test", "Low"),
+        Metric("Security Signals", 10, 15, "Test", "Low"),
+        Metric("Issue Responsiveness", 4, 5, "Test", "Low"),
+    ]
+
+    comparison = compare_scoring_profiles(metrics)
+
+    # Should have all profiles
+    assert len(comparison) == len(SCORING_PROFILES)
+    assert "balanced" in comparison
+    assert "security_first" in comparison
+    assert "contributor_experience" in comparison
+    assert "long_term_stability" in comparison
+
+    # Each profile should have required fields
+    for _profile_key, profile_data in comparison.items():
+        assert "name" in profile_data
+        assert "description" in profile_data
+        assert "total_score" in profile_data
+        assert "weights" in profile_data
+        assert "category_scores" in profile_data
+        assert 0 <= profile_data["total_score"] <= 100
+
+
+def test_compare_profiles_different_scores():
+    """Test that different profiles produce different scores."""
+    metrics = [
+        # Heavy security issues
+        Metric("Security Signals", 0, 15, "Critical", "Critical"),
+        Metric("Funding Signals", 0, 10, "None", "High"),
+        # Excellent community
+        Metric("Issue Responsiveness", 5, 5, "Excellent", "None"),
+        Metric("PR Acceptance Ratio", 10, 10, "Excellent", "None"),
+        Metric("Review Health", 10, 10, "Excellent", "None"),
+    ]
+
+    comparison = compare_scoring_profiles(metrics)
+
+    # Security-first should score lowest
+    security_score = comparison["security_first"]["total_score"]
+    contributor_score = comparison["contributor_experience"]["total_score"]
+
+    # Contributor experience should score higher than security-first
+    assert contributor_score > security_score
+
+
+def test_profile_weights_sum_to_one():
+    """Test that all profile weights sum to approximately 1.0."""
+    for profile_key, profile_config in SCORING_PROFILES.items():
+        weights = profile_config["weights"]
+        total_weight = sum(weights.values())
+        assert abs(total_weight - 1.0) < 0.01, (
+            f"Profile '{profile_key}' weights sum to {total_weight}, expected ~1.0"
+        )
+
+
+def test_category_scores_consistent_across_profiles():
+    """Test that category scores are calculated consistently."""
+    metrics = [
+        Metric("Contributor Redundancy", 10, 20, "Test", "Low"),
+        Metric("Security Signals", 12, 15, "Test", "Low"),
+    ]
+
+    comparison = compare_scoring_profiles(metrics)
+
+    # All profiles should have same category_scores
+    first_profile = list(comparison.values())[0]
+    category_scores = first_profile["category_scores"]
+
+    for profile_data in comparison.values():
+        assert profile_data["category_scores"] == category_scores

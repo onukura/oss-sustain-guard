@@ -49,6 +49,7 @@ from rich.console import Console
 
 from oss_sustain_guard.config import DEFAULT_CACHE_TTL, get_verify_ssl
 from oss_sustain_guard.core import analyze_repository
+from oss_sustain_guard.schema_migrations import CURRENT_SCHEMA_VERSION
 
 load_dotenv()
 
@@ -101,7 +102,7 @@ def load_existing_data(filepath: Path) -> dict:
 
 
 def save_ecosystem_data(data: dict, ecosystem: str, is_latest: bool = True):
-    """Save ecosystem data to appropriate directory."""
+    """Save ecosystem data to appropriate directory with schema metadata."""
     if is_latest:
         output_dir = LATEST_DIR
     else:
@@ -111,8 +112,16 @@ def save_ecosystem_data(data: dict, ecosystem: str, is_latest: bool = True):
     output_dir.mkdir(parents=True, exist_ok=True)
     filepath = output_dir / f"{ecosystem}.json"
 
+    # Wrap data with schema metadata
+    wrapped_data = {
+        "_schema_version": CURRENT_SCHEMA_VERSION,
+        "_generated_at": datetime.now(timezone.utc).isoformat(),
+        "_ecosystem": ecosystem,
+        "packages": data,
+    }
+
     with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False, sort_keys=True)
+        json.dump(wrapped_data, f, indent=2, ensure_ascii=False, sort_keys=True)
 
     return filepath
 
@@ -126,7 +135,13 @@ def merge_ecosystem_files() -> dict:
 
     for ecosystem_file in LATEST_DIR.glob("*.json"):
         ecosystem_data = load_existing_data(ecosystem_file)
-        merged.update(ecosystem_data)
+        # Handle both v1.x (flat dict) and v2.0 (wrapped with metadata)
+        if "_schema_version" in ecosystem_data and "packages" in ecosystem_data:
+            # v2.0 format
+            merged.update(ecosystem_data["packages"])
+        else:
+            # v1.x format (backward compatibility)
+            merged.update(ecosystem_data)
 
     return merged
 
@@ -333,12 +348,13 @@ async def process_package(
         analysis_result = analyze_repository(owner, name)
 
         # Store the result with cache metadata
+        # NOTE: total_score is NOT stored because it depends on the scoring profile.
+        # It will be calculated at runtime based on the user's selected profile.
         now = datetime.now(timezone.utc).isoformat()
         analysis_data = {
             "ecosystem": ecosystem,
             "package_name": package_name,
             "github_url": analysis_result.repo_url,
-            "total_score": analysis_result.total_score,
             "metrics": [metric._asdict() for metric in analysis_result.metrics],
             "models": [model._asdict() for model in analysis_result.models],
             "signals": analysis_result.signals,
@@ -351,7 +367,7 @@ async def process_package(
             },
         }
         console.print(
-            f"    [bold green]📊 Analysis complete. Score: {analysis_result.total_score}/100 "
+            f"    [bold green]📊 Analysis complete. "
             f"({len(analysis_result.metrics)} metrics, {len(analysis_result.models)} models)[/bold green]"
         )
         return db_key, analysis_data
@@ -366,7 +382,7 @@ async def process_package(
 async def process_ecosystem_packages(
     ecosystem: str,
     packages: list[dict],
-    max_concurrent: int = 5,
+    max_concurrent: int = 1,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """
@@ -432,7 +448,8 @@ async def process_ecosystem_packages(
 
 async def main(
     ecosystems: list[str] | None = None,
-    max_concurrent: int = 5,
+    max_concurrent: int = 1,
+    limit: int = 5000,
     verify_ssl: bool = True,
     dry_run: bool = False,
 ):
@@ -442,6 +459,7 @@ async def main(
     Args:
         ecosystems: List of specific ecosystems to process. If None, all are processed.
         max_concurrent: Maximum number of concurrent package processing tasks.
+        limit: Maximum number of packages to fetch per ecosystem from Libraries.io.
         verify_ssl: If True, verify SSL certificates.
         dry_run: If True, only collect package URLs without analyzing via GitHub.
     """
@@ -505,7 +523,9 @@ async def main(
             f"[bold cyan]Fetching packages from Libraries.io for {ecosystem}...[/bold cyan]"
         )
 
-        packages = await fetch_libraries_io_packages(libraries_io_name, 5000)
+        packages = await fetch_libraries_io_packages(
+            libraries_io_ecosystem=libraries_io_name, limit=limit
+        )
         if packages:
             packages_by_ecosystem[ecosystem] = packages
             console.print(f"  [cyan]✅ Fetched {len(packages)} packages[/cyan]")
@@ -597,6 +617,12 @@ if __name__ == "__main__":
         help="Maximum number of concurrent package processing tasks per ecosystem (default: 5)",
     )
     parser.add_argument(
+        "--limit",
+        type=int,
+        default=5000,
+        help="Maximum number of packages to fetch per ecosystem from Libraries.io (default: 5000)",
+    )
+    parser.add_argument(
         "--insecure",
         action="store_true",
         help="Disable SSL certificate verification (useful for environments with certificate issues)",
@@ -613,6 +639,7 @@ if __name__ == "__main__":
         main(
             ecosystems=args.ecosystems,
             max_concurrent=args.max_concurrent,
+            limit=args.limit,
             verify_ssl=not args.insecure,
             dry_run=args.dry_run,
         )

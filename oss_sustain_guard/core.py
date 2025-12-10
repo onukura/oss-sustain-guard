@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.schema_migrations import normalize_metric_name
 
 # Load environment variables from .env file
 load_dotenv()
@@ -2238,27 +2239,100 @@ SCORING_CATEGORIES = {
     },
 }
 
+# Scoring profiles for different use cases
+# Each profile adjusts category weights based on specific priorities
+SCORING_PROFILES = {
+    "balanced": {
+        "name": "Balanced",
+        "description": "Balanced view across all sustainability dimensions",
+        "weights": {
+            "Maintainer Health": 0.25,
+            "Development Activity": 0.20,
+            "Community Engagement": 0.20,
+            "Project Maturity": 0.15,
+            "Security & Funding": 0.20,
+        },
+    },
+    "security_first": {
+        "name": "Security First",
+        "description": "Prioritizes security and risk mitigation",
+        "weights": {
+            "Maintainer Health": 0.20,
+            "Development Activity": 0.15,
+            "Community Engagement": 0.10,
+            "Project Maturity": 0.15,
+            "Security & Funding": 0.40,  # Doubled importance
+        },
+    },
+    "contributor_experience": {
+        "name": "Contributor Experience",
+        "description": "Focuses on community engagement and contributor-friendliness",
+        "weights": {
+            "Maintainer Health": 0.15,
+            "Development Activity": 0.15,
+            "Community Engagement": 0.40,  # Doubled importance
+            "Project Maturity": 0.20,
+            "Security & Funding": 0.10,
+        },
+    },
+    "long_term_stability": {
+        "name": "Long-term Stability",
+        "description": "Emphasizes maintainer health and sustainable development",
+        "weights": {
+            "Maintainer Health": 0.35,  # Highest priority
+            "Development Activity": 0.25,
+            "Community Engagement": 0.15,
+            "Project Maturity": 0.15,
+            "Security & Funding": 0.10,
+        },
+    },
+}
 
-def compute_weighted_total_score(metrics: list[Metric]) -> int:
+
+def compute_weighted_total_score(
+    metrics: list[Metric], profile: str = "balanced"
+) -> int:
     """
     Computes a weighted total score based on sustainability categories.
 
-    The scoring system groups metrics into 5 categories:
-    1. Maintainer Health (25%): Bus factor, retention, diversity
-    2. Development Activity (20%): Releases, CI, activity
-    3. Community Engagement (20%): Responsiveness, PR handling
-    4. Project Maturity (15%): Docs, CoC, license, popularity
-    5. Security & Funding (20%): Security posture, funding
+    The scoring system groups metrics into 5 categories and applies
+    different weights based on the selected profile:
+
+    Profiles:
+    - balanced: Balanced view (default)
+    - security_first: Prioritizes security (40% weight)
+    - contributor_experience: Focuses on community (40% weight)
+    - long_term_stability: Emphasizes maintainer health (35% weight)
 
     Each category score is normalized to 0-100, then weighted.
 
+    Supports backward compatibility: automatically migrates v1.x metric names
+    to v2.0 schema using METRIC_NAME_MIGRATION mapping.
+
     Args:
         metrics: List of computed Metric instances
+        profile: Scoring profile name (default: "balanced")
 
     Returns:
         Total score on 0-100 scale
+
+    Raises:
+        ValueError: If profile is not recognized
     """
-    metric_dict = {m.name: m for m in metrics}
+    if profile not in SCORING_PROFILES:
+        raise ValueError(
+            f"Unknown profile '{profile}'. Available: {', '.join(SCORING_PROFILES.keys())}"
+        )
+
+    profile_config = SCORING_PROFILES[profile]
+    weights = profile_config["weights"]
+
+    # Create metric dict with schema migration support
+    metric_dict: dict[str, Metric] = {}
+    for m in metrics:
+        # Normalize metric name (v1.x -> v2.0 if needed)
+        normalized_name = normalize_metric_name(m.name)
+        metric_dict[normalized_name] = m
 
     category_scores: dict[str, float] = {}
 
@@ -2281,14 +2355,70 @@ def compute_weighted_total_score(metrics: list[Metric]) -> int:
 
         category_scores[category_name] = normalized
 
-    # Apply category weights to compute final score
+    # Apply category weights from selected profile
     total_score = 0.0
-    for category_name, category_config in SCORING_CATEGORIES.items():
-        weight = category_config["weight"]
+    for category_name in SCORING_CATEGORIES.keys():
+        weight = weights.get(category_name, 0)
         category_normalized = category_scores.get(category_name, 0)
         total_score += category_normalized * weight
 
     return int(round(total_score))
+
+
+def compare_scoring_profiles(metrics: list[Metric]) -> dict[str, dict[str, Any]]:
+    """
+    Compares scores across all available scoring profiles.
+
+    Useful for understanding how different priorities affect the total score
+    and identifying which profile best matches your use case.
+
+    Args:
+        metrics: List of computed Metric instances
+
+    Returns:
+        Dictionary with profile names as keys, containing:
+        - name: Profile display name
+        - description: Profile description
+        - total_score: Total score (0-100) for this profile
+        - weights: Category weights used
+        - category_scores: Normalized category scores (0-100)
+    """
+    comparison: dict[str, dict[str, Any]] = {}
+    metric_dict = {m.name: m for m in metrics}
+
+    # Calculate normalized category scores (same for all profiles)
+    category_scores: dict[str, float] = {}
+    for category_name, category_config in SCORING_CATEGORIES.items():
+        category_metrics = category_config["metrics"]
+        category_score = 0.0
+        category_max = 0.0
+
+        for metric_name in category_metrics:
+            if metric_name in metric_dict:
+                m = metric_dict[metric_name]
+                category_score += m.score
+                category_max += m.max_score
+
+        normalized = (category_score / category_max) * 100 if category_max > 0 else 0
+        category_scores[category_name] = normalized
+
+    # Calculate total score for each profile
+    for profile_key, profile_config in SCORING_PROFILES.items():
+        weights = profile_config["weights"]
+        total_score = sum(
+            category_scores.get(cat, 0) * weights.get(cat, 0)
+            for cat in SCORING_CATEGORIES.keys()
+        )
+
+        comparison[profile_key] = {
+            "name": profile_config["name"],
+            "description": profile_config["description"],
+            "total_score": int(round(total_score)),
+            "weights": weights,
+            "category_scores": category_scores.copy(),
+        }
+
+    return comparison
 
 
 def compute_category_breakdown(metrics: list[Metric]) -> dict[str, dict[str, Any]]:

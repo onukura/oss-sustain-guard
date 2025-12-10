@@ -55,7 +55,7 @@ class TestAnalyzePackage:
         cached_db = {
             "python:requests": {
                 "github_url": "https://github.com/psf/requests",
-                "total_score": 85,
+                "total_score": 85,  # Old score (will be recalculated)
                 "metrics": [
                     {
                         "name": "Contributor Redundancy",
@@ -72,7 +72,11 @@ class TestAnalyzePackage:
             result = analyze_package("requests", "python", cached_db)
             assert result is not None
             assert result.repo_url == "https://github.com/psf/requests"
-            assert result.total_score == 85
+            # Score is recalculated based on category weights (only 1/21 metrics = low score)
+            assert result.total_score > 0  # At least some score
+            assert (
+                result.total_score < 85
+            )  # Lower than cached due to incomplete metrics
 
     def test_analyze_unknown_ecosystem(self):
         """Test analyzing with unknown ecosystem."""

@@ -27,7 +27,6 @@
   "ecosystem": "python|javascript|go|rust|php|java|csharp|ruby",
   "package_name": "string",
   "github_url": "https://github.com/{owner}/{repo}",
-  "total_score": 0-100,
   "metrics": [
     {
       "name": "Contributor Redundancy",
@@ -56,7 +55,7 @@
 }
 ```
 
-**Note**: The database files (`data/latest/{language}.json`) now store both individual metrics and aggregated models. Fields like `funding_links` and `is_community_driven` are computed at runtime by the `analyze_repository()` function in `core.py` when needed for CLI display.
+**Note**: The database stores metrics and models. Scores are calculated at runtime based on the user's selected scoring profile.
 
 ## Field Descriptions
 
@@ -67,29 +66,37 @@
 | `ecosystem` | string | Ecosystem name: `python`, `javascript`, `go`, `rust`, `php`, `java`, `csharp`, `ruby` |
 | `package_name` | string | Package name within the ecosystem |
 | `github_url` | string | GitHub repository URL |
-| `total_score` | integer | Total score (0-100) |
-| `metrics` | array | Array of individual metrics |
+| `metrics` | array | Array of individual metrics (raw data for runtime scoring) |
 | `models` | array | Array of metric models (CHAOSS-aligned aggregations) |
 | `signals` | object | Raw signal values for transparency |
 
-### Runtime Fields (Not Stored in Database)
+### Runtime Fields (Computed When Needed)
 
-The following fields are computed at runtime by `analyze_repository()` in `core.py`:
+The following fields are computed at runtime based on the user's selected scoring profile:
 
-| Field | Type | Description |
-|----------|-----|------|
-| `funding_links` | array | List of funding platforms and URLs (computed from GitHub repository data) |
-| `is_community_driven` | boolean | Whether project is community-driven (vs corporate-backed) |
+| Field | Type | When Computed | Description |
+|----------|-------|--------------|------|
+| `total_score` | integer | CLI/API call | Calculated from metrics using the selected scoring profile |
+| `funding_links` | array | CLI/API call | Extracted from GitHub repository data |
+| `is_community_driven` | boolean | CLI/API call | Determined by ownership structure |
+
+**Important**: `total_score` is profile-dependent and not stored in the database. It is always calculated at runtime based on:
+
+- Selected scoring profile (`balanced`, `security_first`, `contributor_experience`, `long_term_stability`)
+- Available metrics in the database
+- Category weights from the selected profile
+
+This ensures the same raw metric data can produce different scores for different risk assessment priorities.
 
 ### Metrics
 
 | Field | Type | Description |
 |----------|-----|------|
-| `name` | string | Metric name |
+| `name` | string | Metric name (see [Metrics Reference](#metrics-reference)) |
 | `score` | integer | Score obtained |
 | `max_score` | integer | Maximum score |
 | `message` | string | Detailed message |
-| `risk` | string | Risk level |
+| `risk` | string | Risk level: `Critical`, `High`, `Medium`, `Low`, `None` |
 
 ### Metric Models
 
