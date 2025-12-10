@@ -117,7 +117,9 @@ def _get_repository_query() -> str:
                     author {
                       user {
                         login
+                        company
                       }
+                      email
                     }
                   }
                 }
@@ -148,6 +150,26 @@ def _get_repository_query() -> str:
             }
           }
         }
+        closedPullRequests: pullRequests(first: 50, states: CLOSED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+          totalCount
+          edges {
+            node {
+              closedAt
+              createdAt
+              merged
+              reviews(first: 1) {
+                edges {
+                  node {
+                    createdAt
+                  }
+                }
+              }
+            }
+          }
+        }
+        mergedPullRequestsCount: pullRequests(states: MERGED) {
+          totalCount
+        }
         releases(first: 10, orderBy: {field: CREATED_AT, direction: DESC}) {
           edges {
             node {
@@ -170,6 +192,15 @@ def _get_repository_query() -> str:
             }
           }
         }
+        closedIssues: issues(first: 50, states: CLOSED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+          totalCount
+          edges {
+            node {
+              createdAt
+              closedAt
+            }
+          }
+        }
         vulnerabilityAlerts(first: 10) {
           edges {
             node {
@@ -185,6 +216,43 @@ def _get_repository_query() -> str:
           platform
           url
         }
+        # New fields for additional metrics
+        hasWikiEnabled
+        hasIssuesEnabled
+        hasDiscussionsEnabled
+        codeOfConduct {
+          name
+          url
+        }
+        licenseInfo {
+          name
+          spdxId
+          url
+        }
+        stargazerCount
+        forkCount
+        watchers {
+          totalCount
+        }
+        forks(first: 10, orderBy: {field: CREATED_AT, direction: DESC}) {
+          edges {
+            node {
+              createdAt
+            }
+          }
+        }
+        object(expression: "HEAD:README.md") {
+          ... on Blob {
+            byteSize
+          }
+        }
+        contributingFile: object(expression: "HEAD:CONTRIBUTING.md") {
+          ... on Blob {
+            byteSize
+          }
+        }
+        description
+        homepageUrl
       }
     }
     """
@@ -1460,6 +1528,825 @@ def check_review_health(repo_data: dict[str, Any]) -> Metric:
     return Metric("Review Health", score, max_score, message, risk)
 
 
+# --- New Metrics (Phase 5) ---
+
+
+def check_documentation_presence(repo_data: dict[str, Any]) -> Metric:
+    """
+    Checks for presence of essential documentation files.
+
+    Evaluates:
+    - README.md existence and size
+    - CONTRIBUTING.md existence
+    - Wiki enabled
+    - Homepage/documentation link
+    - Description presence
+
+    Scoring:
+    - All docs present: 10/10
+    - README + some docs: 7/10
+    - Only README: 4/10
+    - No documentation: 0/10
+    """
+    max_score = 10
+
+    # Check README
+    readme = repo_data.get("object")  # HEAD:README.md
+    has_readme = readme is not None and readme.get("byteSize", 0) > 100
+
+    # Check CONTRIBUTING.md
+    contributing = repo_data.get("contributingFile")
+    has_contributing = contributing is not None
+
+    # Check Wiki
+    has_wiki = repo_data.get("hasWikiEnabled", False)
+
+    # Check Homepage URL
+    homepage = repo_data.get("homepageUrl")
+    has_homepage = bool(homepage and len(homepage) > 5)
+
+    # Check Description
+    description = repo_data.get("description")
+    has_description = bool(description and len(description) > 10)
+
+    # Count documentation signals
+    doc_signals = sum(
+        [has_readme, has_contributing, has_wiki, has_homepage, has_description]
+    )
+
+    # Scoring logic
+    if doc_signals >= 4:
+        score = max_score
+        risk = "None"
+        message = f"Excellent: {doc_signals}/5 documentation signals present."
+    elif doc_signals >= 3:
+        score = 7
+        risk = "Low"
+        message = f"Good: {doc_signals}/5 documentation signals present."
+    elif has_readme and doc_signals >= 2:
+        score = 5
+        risk = "Low"
+        message = (
+            f"Moderate: README present with {doc_signals}/5 documentation signals."
+        )
+    elif has_readme:
+        score = 4
+        risk = "Medium"
+        message = "Basic: Only README detected. Consider adding CONTRIBUTING.md."
+    else:
+        score = 0
+        risk = "High"
+        message = "Observe: No README or documentation found. Add documentation to help contributors."
+
+    return Metric("Documentation Presence", score, max_score, message, risk)
+
+
+def check_code_of_conduct(repo_data: dict[str, Any]) -> Metric:
+    """
+    Checks for presence of a Code of Conduct.
+
+    A Code of Conduct signals a welcoming, inclusive community.
+
+    Scoring:
+    - GitHub recognized CoC: 5/5
+    - No CoC: 0/5 (but low risk - informational)
+    """
+    max_score = 5
+
+    code_of_conduct = repo_data.get("codeOfConduct")
+
+    if code_of_conduct and code_of_conduct.get("name"):
+        coc_name = code_of_conduct.get("name", "Unknown")
+        score = max_score
+        risk = "None"
+        message = f"Excellent: Code of Conduct present ({coc_name})."
+    else:
+        score = 0
+        risk = "Low"
+        message = (
+            "Note: No Code of Conduct detected. Consider adding one for inclusivity."
+        )
+
+    return Metric("Code of Conduct", score, max_score, message, risk)
+
+
+def check_pr_acceptance_ratio(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates the Change Request Acceptance Ratio (CHAOSS metric).
+
+    Measures: merged PRs / (merged PRs + closed-without-merge PRs)
+
+    A high ratio indicates openness to external contributions.
+
+    Scoring:
+    - 80%+ acceptance: 10/10 (Very welcoming)
+    - 60-79%: 7/10 (Good)
+    - 40-59%: 4/10 (Moderate - may be selective)
+    - <40%: 0/10 (Needs attention)
+    """
+    max_score = 10
+
+    # Get merged count
+    merged_prs = repo_data.get("mergedPullRequestsCount", {})
+    merged_count = merged_prs.get("totalCount", 0)
+
+    # Get closed PRs (includes both merged and closed-without-merge)
+    closed_prs = repo_data.get("closedPullRequests", {})
+    closed_edges = closed_prs.get("edges", [])
+
+    # Count closed-without-merge
+    closed_without_merge = sum(
+        1 for edge in closed_edges if edge.get("node", {}).get("merged") is False
+    )
+
+    total_resolved = merged_count + closed_without_merge
+
+    if total_resolved == 0:
+        return Metric(
+            "PR Acceptance Ratio",
+            max_score // 2,
+            max_score,
+            "Note: No resolved pull requests to analyze.",
+            "None",
+        )
+
+    acceptance_ratio = merged_count / total_resolved
+    percentage = acceptance_ratio * 100
+
+    # Scoring logic
+    if acceptance_ratio >= 0.8:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Excellent: {percentage:.0f}% PR acceptance rate. "
+            f"Very welcoming to contributions ({merged_count} merged)."
+        )
+    elif acceptance_ratio >= 0.6:
+        score = 7
+        risk = "Low"
+        message = (
+            f"Good: {percentage:.0f}% PR acceptance rate. "
+            f"Open to external contributions ({merged_count} merged)."
+        )
+    elif acceptance_ratio >= 0.4:
+        score = 4
+        risk = "Medium"
+        message = (
+            f"Moderate: {percentage:.0f}% PR acceptance rate. "
+            f"May be selective about contributions."
+        )
+    else:
+        score = 0
+        risk = "Medium"
+        message = (
+            f"Observe: {percentage:.0f}% PR acceptance rate. "
+            f"High rejection rate may discourage contributors."
+        )
+
+    return Metric("PR Acceptance Ratio", score, max_score, message, risk)
+
+
+def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates Issue Resolution Duration (CHAOSS metric).
+
+    Measures average time to close issues.
+
+    Scoring:
+    - <7 days avg: 10/10 (Fast)
+    - 7-30 days: 7/10 (Good)
+    - 30-90 days: 4/10 (Moderate)
+    - >90 days: 0/10 (Slow)
+    """
+    from datetime import datetime
+
+    max_score = 10
+
+    closed_issues = repo_data.get("closedIssues", {})
+    edges = closed_issues.get("edges", [])
+
+    if not edges:
+        return Metric(
+            "Issue Resolution Duration",
+            max_score // 2,
+            max_score,
+            "Note: No closed issues to analyze.",
+            "None",
+        )
+
+    resolution_times: list[float] = []
+
+    for edge in edges:
+        node = edge.get("node", {})
+        created_at_str = node.get("createdAt")
+        closed_at_str = node.get("closedAt")
+
+        if not created_at_str or not closed_at_str:
+            continue
+
+        try:
+            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+            closed_at = datetime.fromisoformat(closed_at_str.replace("Z", "+00:00"))
+            resolution_days = (closed_at - created_at).total_seconds() / 86400
+            resolution_times.append(resolution_days)
+        except (ValueError, AttributeError):
+            pass
+
+    if not resolution_times:
+        return Metric(
+            "Issue Resolution Duration",
+            max_score // 2,
+            max_score,
+            "Note: Unable to calculate issue resolution times.",
+            "None",
+        )
+
+    avg_resolution = sum(resolution_times) / len(resolution_times)
+
+    # Scoring logic
+    if avg_resolution < 7:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Excellent: Avg issue resolution {avg_resolution:.1f} days. Fast response."
+        )
+    elif avg_resolution < 30:
+        score = 7
+        risk = "Low"
+        message = f"Good: Avg issue resolution {avg_resolution:.1f} days."
+    elif avg_resolution < 90:
+        score = 4
+        risk = "Medium"
+        message = f"Moderate: Avg issue resolution {avg_resolution:.1f} days. Consider improving."
+    else:
+        score = 0
+        risk = "High"
+        message = f"Observe: Avg issue resolution {avg_resolution:.1f} days. Issues may be backlogging."
+
+    return Metric("Issue Resolution Duration", score, max_score, message, risk)
+
+
+def check_organizational_diversity(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates Organizational Diversity (CHAOSS metric).
+
+    Measures diversity of contributor affiliations based on:
+    - Email domains (heuristic)
+    - Company field from GitHub profiles
+
+    A diverse contributor base reduces single-organization dependency risk.
+
+    Scoring:
+    - 5+ organizations: 10/10 (Highly diverse)
+    - 3-4 organizations: 7/10 (Good diversity)
+    - 2 organizations: 4/10 (Moderate)
+    - Single organization: 0/10 (Single-org risk)
+    """
+    max_score = 10
+
+    default_branch = repo_data.get("defaultBranchRef")
+    if not default_branch:
+        return Metric(
+            "Organizational Diversity",
+            max_score // 2,
+            max_score,
+            "Note: Commit history data not available.",
+            "None",
+        )
+
+    target = default_branch.get("target")
+    if not target:
+        return Metric(
+            "Organizational Diversity",
+            max_score // 2,
+            max_score,
+            "Note: Commit history data not available.",
+            "None",
+        )
+
+    history = target.get("history", {}).get("edges", [])
+    if not history:
+        return Metric(
+            "Organizational Diversity",
+            max_score // 2,
+            max_score,
+            "Note: No commit history for analysis.",
+            "None",
+        )
+
+    # Collect organization signals
+    organizations: set[str] = set()
+    email_domains: set[str] = set()
+
+    for edge in history:
+        node = edge.get("node", {})
+        author = node.get("author", {})
+
+        # Check company field
+        user = author.get("user")
+        if user:
+            company = user.get("company")
+            if company and len(company) > 1:
+                # Normalize company name
+                company_clean = company.strip().lower().replace("@", "")
+                if company_clean:
+                    organizations.add(company_clean)
+
+        # Check email domain
+        email = author.get("email")
+        if email and "@" in email:
+            domain = email.split("@")[-1].lower()
+            # Filter out common free email providers
+            free_providers = {
+                "gmail.com",
+                "yahoo.com",
+                "hotmail.com",
+                "outlook.com",
+                "users.noreply.github.com",
+                "localhost",
+            }
+            if domain not in free_providers and "." in domain:
+                email_domains.add(domain)
+
+    # Combine signals (prefer organizations, fall back to domains)
+    total_orgs = len(organizations)
+    total_domains = len(email_domains)
+    diversity_score = max(total_orgs, total_domains)
+
+    # Scoring logic
+    if diversity_score >= 5:
+        score = max_score
+        risk = "None"
+        message = f"Excellent: {diversity_score} organizations/domains detected. Highly diverse."
+    elif diversity_score >= 3:
+        score = 7
+        risk = "Low"
+        message = (
+            f"Good: {diversity_score} organizations/domains detected. Good diversity."
+        )
+    elif diversity_score >= 2:
+        score = 4
+        risk = "Medium"
+        message = f"Moderate: {diversity_score} organizations/domains detected. Consider expanding."
+    elif diversity_score == 1:
+        score = 2
+        risk = "High"
+        message = "Observe: Single organization dominates. Dependency risk exists."
+    else:
+        score = max_score // 2
+        risk = "None"
+        message = "Note: Unable to determine organizational diversity (personal project likely)."
+
+    return Metric("Organizational Diversity", score, max_score, message, risk)
+
+
+def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates fork activity as a signal of ecosystem health.
+
+    Considers:
+    - Total fork count
+    - Recent fork activity (last 3 months)
+
+    Active forking indicates:
+    - Community interest
+    - Potential future contributors
+    - Ecosystem adoption
+
+    Scoring:
+    - 100+ forks with recent activity: 5/5
+    - 50+ forks or recent activity: 4/5
+    - 10+ forks: 3/5
+    - 1-9 forks: 2/5
+    - 0 forks: 0/5
+    """
+    from datetime import datetime, timedelta, timezone
+
+    max_score = 5
+
+    fork_count = repo_data.get("forkCount", 0)
+    recent_forks = repo_data.get("forks", {}).get("edges", [])
+
+    # Check for recent forks (last 3 months)
+    now = datetime.now(timezone.utc)
+    three_months_ago = now - timedelta(days=90)
+    recent_fork_count = 0
+
+    for edge in recent_forks:
+        created_at_str = edge.get("node", {}).get("createdAt")
+        if created_at_str:
+            try:
+                created_at = datetime.fromisoformat(
+                    created_at_str.replace("Z", "+00:00")
+                )
+                if created_at >= three_months_ago:
+                    recent_fork_count += 1
+            except (ValueError, AttributeError):
+                pass
+
+    # Scoring logic
+    if fork_count >= 100 and recent_fork_count > 0:
+        score = max_score
+        risk = "None"
+        message = f"Excellent: {fork_count} forks, {recent_fork_count} recent. Active ecosystem."
+    elif fork_count >= 50 or recent_fork_count >= 3:
+        score = 4
+        risk = "None"
+        message = (
+            f"Good: {fork_count} forks, {recent_fork_count} recent. Healthy interest."
+        )
+    elif fork_count >= 10:
+        score = 3
+        risk = "None"
+        message = f"Moderate: {fork_count} forks. Growing community."
+    elif fork_count >= 1:
+        score = 2
+        risk = "Low"
+        message = f"Early: {fork_count} fork(s). Small but present community."
+    else:
+        score = 0
+        risk = "Low"
+        message = "Note: No forks yet. Project may be new or niche."
+
+    return Metric("Fork Activity", score, max_score, message, risk)
+
+
+def check_project_popularity(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates project popularity using GitHub signals.
+
+    Considers:
+    - Star count (primary indicator)
+    - Watcher count
+    - Fork count (as adoption signal)
+
+    Note: Popularity doesn't guarantee sustainability,
+    but indicates community interest and potential support.
+
+    Scoring:
+    - 1000+ stars: 10/10 (Very popular)
+    - 500-999 stars: 8/10 (Popular)
+    - 100-499 stars: 6/10 (Growing)
+    - 50-99 stars: 4/10 (Emerging)
+    - 10-49 stars: 2/10 (Early)
+    - <10 stars: 0/10 (New/niche)
+    """
+    max_score = 10
+
+    star_count = repo_data.get("stargazerCount", 0)
+    watcher_count = repo_data.get("watchers", {}).get("totalCount", 0)
+
+    # Primary scoring based on stars
+    if star_count >= 1000:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Excellent: ⭐ {star_count} stars, {watcher_count} watchers. Very popular."
+        )
+    elif star_count >= 500:
+        score = 8
+        risk = "None"
+        message = f"Popular: ⭐ {star_count} stars, {watcher_count} watchers."
+    elif star_count >= 100:
+        score = 6
+        risk = "None"
+        message = f"Growing: ⭐ {star_count} stars, {watcher_count} watchers. Active interest."
+    elif star_count >= 50:
+        score = 4
+        risk = "Low"
+        message = f"Emerging: ⭐ {star_count} stars. Building community."
+    elif star_count >= 10:
+        score = 2
+        risk = "Low"
+        message = f"Early: ⭐ {star_count} stars. New or niche project."
+    else:
+        score = 0
+        risk = "Low"
+        message = f"Note: ⭐ {star_count} stars. Very new or specialized project."
+
+    return Metric("Project Popularity", score, max_score, message, risk)
+
+
+def check_license_clarity(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates license clarity and OSI approval status.
+
+    A clear, OSI-approved license is essential for:
+    - Legal clarity
+    - Enterprise adoption
+    - Community trust
+
+    Scoring:
+    - OSI-approved license (MIT, Apache, GPL, etc.): 5/5
+    - Other recognized license: 3/5
+    - No license detected: 0/5 (High risk for users)
+    """
+    max_score = 5
+
+    license_info = repo_data.get("licenseInfo")
+
+    if not license_info:
+        return Metric(
+            "License Clarity",
+            0,
+            max_score,
+            "Attention: No license detected. Add a license for legal clarity.",
+            "High",
+        )
+
+    license_name = license_info.get("name", "Unknown")
+    spdx_id = license_info.get("spdxId")
+
+    # Common OSI-approved licenses
+    osi_approved = {
+        "MIT",
+        "Apache-2.0",
+        "GPL-2.0",
+        "GPL-3.0",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "ISC",
+        "MPL-2.0",
+        "LGPL-2.1",
+        "LGPL-3.0",
+        "EPL-2.0",
+        "AGPL-3.0",
+        "Unlicense",
+        "CC0-1.0",
+    }
+
+    if spdx_id and spdx_id in osi_approved:
+        score = max_score
+        risk = "None"
+        message = f"Excellent: {license_name} (OSI-approved). Clear licensing."
+    elif spdx_id:
+        score = 3
+        risk = "Low"
+        message = (
+            f"Good: {license_name} detected. Verify compatibility for your use case."
+        )
+    else:
+        score = 2
+        risk = "Medium"
+        message = (
+            f"Note: {license_name} detected but not recognized. Review license terms."
+        )
+
+    return Metric("License Clarity", score, max_score, message, risk)
+
+
+def check_pr_responsiveness(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates responsiveness to pull requests (first reaction time).
+
+    Distinct from Review Health - focuses on initial engagement speed.
+
+    Fast initial response encourages contributors to stay engaged.
+
+    Scoring:
+    - Avg first response <24h: 5/5 (Excellent)
+    - Avg first response <7d: 3/5 (Good)
+    - Avg first response >7d: 0/5 (Needs improvement)
+    """
+    from datetime import datetime
+
+    max_score = 5
+
+    # Check closed PRs for first response time
+    closed_prs = repo_data.get("closedPullRequests", {}).get("edges", [])
+
+    if not closed_prs:
+        return Metric(
+            "PR Responsiveness",
+            max_score // 2,
+            max_score,
+            "Note: No closed PRs to analyze responsiveness.",
+            "None",
+        )
+
+    response_times: list[float] = []
+
+    for edge in closed_prs:
+        node = edge.get("node", {})
+        created_at_str = node.get("createdAt")
+        reviews = node.get("reviews", {}).get("edges", [])
+
+        if not created_at_str or not reviews:
+            continue
+
+        first_review = reviews[0].get("node", {})
+        first_review_at_str = first_review.get("createdAt")
+
+        if not first_review_at_str:
+            continue
+
+        try:
+            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+            first_review_at = datetime.fromisoformat(
+                first_review_at_str.replace("Z", "+00:00")
+            )
+            response_hours = (first_review_at - created_at).total_seconds() / 3600
+            response_times.append(response_hours)
+        except (ValueError, AttributeError):
+            pass
+
+    if not response_times:
+        return Metric(
+            "PR Responsiveness",
+            2,
+            max_score,
+            "Note: Unable to measure PR response times.",
+            "None",
+        )
+
+    avg_response = sum(response_times) / len(response_times)
+
+    # Scoring logic
+    if avg_response < 24:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Excellent: Avg PR first response {avg_response:.1f}h. Very responsive."
+        )
+    elif avg_response < 168:  # 7 days
+        score = 3
+        risk = "Low"
+        message = f"Good: Avg PR first response {avg_response / 24:.1f}d."
+    else:
+        score = 0
+        risk = "Medium"
+        message = f"Observe: Avg PR first response {avg_response / 24:.1f}d. Contributors may wait long."
+
+    return Metric("PR Responsiveness", score, max_score, message, risk)
+
+
+# --- Scoring System ---
+
+# Category definitions for weighted scoring
+# Each category has metrics and a weight for the total score
+SCORING_CATEGORIES = {
+    "Maintainer Health": {
+        "weight": 0.25,  # 25% of total score
+        "description": "Measures contributor and maintainer sustainability",
+        "metrics": [
+            "Contributor Redundancy",
+            "Maintainer Retention",
+            "Contributor Attraction",
+            "Contributor Retention",
+            "Organizational Diversity",
+        ],
+    },
+    "Development Activity": {
+        "weight": 0.20,  # 20% of total score
+        "description": "Measures ongoing development and release health",
+        "metrics": [
+            "Recent Activity",
+            "Release Rhythm",
+            "Build Health",
+            "Change Request Resolution",
+        ],
+    },
+    "Community Engagement": {
+        "weight": 0.20,  # 20% of total score
+        "description": "Measures responsiveness and contributor experience",
+        "metrics": [
+            "Issue Responsiveness",
+            "PR Acceptance Ratio",
+            "PR Responsiveness",
+            "Review Health",
+            "Issue Resolution Duration",
+        ],
+    },
+    "Project Maturity": {
+        "weight": 0.15,  # 15% of total score
+        "description": "Measures documentation, governance, and adoption",
+        "metrics": [
+            "Documentation Presence",
+            "Code of Conduct",
+            "License Clarity",
+            "Project Popularity",
+            "Fork Activity",
+        ],
+    },
+    "Security & Funding": {
+        "weight": 0.20,  # 20% of total score
+        "description": "Measures security posture and financial sustainability",
+        "metrics": [
+            "Security Signals",
+            "Funding Signals",
+        ],
+    },
+}
+
+
+def compute_weighted_total_score(metrics: list[Metric]) -> int:
+    """
+    Computes a weighted total score based on sustainability categories.
+
+    The scoring system groups metrics into 5 categories:
+    1. Maintainer Health (25%): Bus factor, retention, diversity
+    2. Development Activity (20%): Releases, CI, activity
+    3. Community Engagement (20%): Responsiveness, PR handling
+    4. Project Maturity (15%): Docs, CoC, license, popularity
+    5. Security & Funding (20%): Security posture, funding
+
+    Each category score is normalized to 0-100, then weighted.
+
+    Args:
+        metrics: List of computed Metric instances
+
+    Returns:
+        Total score on 0-100 scale
+    """
+    metric_dict = {m.name: m for m in metrics}
+
+    category_scores: dict[str, float] = {}
+
+    for category_name, category_config in SCORING_CATEGORIES.items():
+        category_metrics = category_config["metrics"]
+        category_score = 0.0
+        category_max = 0.0
+
+        for metric_name in category_metrics:
+            if metric_name in metric_dict:
+                m = metric_dict[metric_name]
+                category_score += m.score
+                category_max += m.max_score
+
+        # Normalize category to 0-100 scale
+        if category_max > 0:
+            normalized = (category_score / category_max) * 100
+        else:
+            normalized = 0.0
+
+        category_scores[category_name] = normalized
+
+    # Apply category weights to compute final score
+    total_score = 0.0
+    for category_name, category_config in SCORING_CATEGORIES.items():
+        weight = category_config["weight"]
+        category_normalized = category_scores.get(category_name, 0)
+        total_score += category_normalized * weight
+
+    return int(round(total_score))
+
+
+def compute_category_breakdown(metrics: list[Metric]) -> dict[str, dict[str, Any]]:
+    """
+    Returns detailed breakdown of scores by category.
+
+    Useful for understanding which areas need attention.
+
+    Args:
+        metrics: List of computed Metric instances
+
+    Returns:
+        Dictionary with category names as keys, containing:
+        - score: normalized score (0-100)
+        - weight: category weight
+        - weighted_score: contribution to total
+        - metrics: individual metric scores in this category
+    """
+    metric_dict = {m.name: m for m in metrics}
+    breakdown: dict[str, dict[str, Any]] = {}
+
+    for category_name, category_config in SCORING_CATEGORIES.items():
+        category_metrics = category_config["metrics"]
+        metric_details = []
+        category_score = 0.0
+        category_max = 0.0
+
+        for metric_name in category_metrics:
+            if metric_name in metric_dict:
+                m = metric_dict[metric_name]
+                category_score += m.score
+                category_max += m.max_score
+                metric_details.append(
+                    {
+                        "name": metric_name,
+                        "score": m.score,
+                        "max_score": m.max_score,
+                        "percentage": (
+                            int((m.score / m.max_score) * 100) if m.max_score > 0 else 0
+                        ),
+                    }
+                )
+
+        # Normalize category
+        normalized = (category_score / category_max) * 100 if category_max > 0 else 0
+        weight = category_config["weight"]
+
+        breakdown[category_name] = {
+            "description": category_config["description"],
+            "score": int(normalized),
+            "weight": weight,
+            "weighted_contribution": int(normalized * weight),
+            "metrics": metric_details,
+        }
+
+    return breakdown
+
+
 # --- Metric Model Calculation Functions ---
 
 
@@ -1583,6 +2470,75 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
                 score=int(eng_score),
                 max_score=int(eng_max),
                 observation=eng_obs,
+            )
+        )
+
+    # Project Maturity Model (new): Documentation, Governance, Adoption
+    maturity_metrics = [
+        ("Documentation Presence", 0.30),
+        ("Code of Conduct", 0.15),
+        ("License Clarity", 0.20),
+        ("Project Popularity", 0.20),
+        ("Fork Activity", 0.15),
+    ]
+    mat_score = 0
+    mat_max = 0
+    mat_observations = []
+
+    for metric_name, weight in maturity_metrics:
+        if metric_name in metric_dict:
+            m = metric_dict[metric_name]
+            mat_score += m.score * weight
+            mat_max += m.max_score * weight
+            if m.score >= m.max_score * 0.8:  # Above 80%
+                mat_observations.append(f"{metric_name} is strong")
+
+    if mat_max > 0:
+        if not mat_observations:
+            mat_obs = "Project maturity signals need attention."
+        else:
+            mat_obs = "; ".join(mat_observations[:2]) + "."
+
+        models.append(
+            MetricModel(
+                name="Project Maturity Model",
+                score=int(mat_score),
+                max_score=int(mat_max),
+                observation=mat_obs,
+            )
+        )
+
+    # Contributor Experience Model (new): PR handling and responsiveness
+    exp_metrics = [
+        ("PR Acceptance Ratio", 0.30),
+        ("PR Responsiveness", 0.25),
+        ("Issue Resolution Duration", 0.25),
+        ("Review Health", 0.20),
+    ]
+    exp_score = 0
+    exp_max = 0
+    exp_observations = []
+
+    for metric_name, weight in exp_metrics:
+        if metric_name in metric_dict:
+            m = metric_dict[metric_name]
+            exp_score += m.score * weight
+            exp_max += m.max_score * weight
+            if m.score >= m.max_score * 0.8:
+                exp_observations.append(f"{metric_name} is excellent")
+
+    if exp_max > 0:
+        if not exp_observations:
+            exp_obs = "Contributor experience could be improved."
+        else:
+            exp_obs = "; ".join(exp_observations[:2]) + "."
+
+        models.append(
+            MetricModel(
+                name="Contributor Experience Model",
+                score=int(exp_score),
+                max_score=int(exp_max),
+                observation=exp_obs,
             )
         )
 
@@ -1880,15 +2836,152 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
                 )
             )
 
-        # Calculate raw total score
-        raw_total = sum(m.score for m in metrics)
-        max_possible = sum(m.max_score for m in metrics)
+        # New metrics (Phase 5)
+        try:
+            metrics.append(check_documentation_presence(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  Documentation presence check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Documentation Presence",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
 
-        # Normalize to 100-point scale
-        # max_possible varies based on project type:
-        # Community-driven: 20 + 10 + 20 + 10 + 5 + 10 + 10 + 15 + 5 = 105
-        # Corporate-backed: 20 + 10 + 20 + 10 + 5 + 5 + 10 + 15 + 5 = 100
-        total_score = int((raw_total / max_possible) * 100) if max_possible > 0 else 0
+        try:
+            metrics.append(check_code_of_conduct(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  Code of conduct check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Code of Conduct",
+                    0,
+                    5,
+                    f"Note: Analysis incomplete - {e}",
+                    "Low",
+                )
+            )
+
+        try:
+            metrics.append(check_pr_acceptance_ratio(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  PR acceptance ratio check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "PR Acceptance Ratio",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
+
+        try:
+            metrics.append(check_issue_resolution_duration(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  Issue resolution duration check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Issue Resolution Duration",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
+
+        try:
+            metrics.append(check_organizational_diversity(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  Organizational diversity check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Organizational Diversity",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
+
+        try:
+            metrics.append(check_fork_activity(repo_info))
+        except Exception as e:
+            console.print(f"  [yellow]⚠️  Fork activity check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric(
+                    "Fork Activity",
+                    0,
+                    5,
+                    f"Note: Analysis incomplete - {e}",
+                    "Low",
+                )
+            )
+
+        try:
+            metrics.append(check_project_popularity(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  Project popularity check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Project Popularity",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Low",
+                )
+            )
+
+        try:
+            metrics.append(check_license_clarity(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  License clarity check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "License Clarity",
+                    0,
+                    5,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
+
+        try:
+            metrics.append(check_pr_responsiveness(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  PR responsiveness check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "PR Responsiveness",
+                    0,
+                    5,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
+
+        # Calculate total score using category-weighted approach
+        # This provides a balanced view across sustainability dimensions
+        total_score = compute_weighted_total_score(metrics)
 
         console.print(
             f"Analysis complete for [bold cyan]{owner}/{name}[/bold cyan]. Score: {total_score}/100"

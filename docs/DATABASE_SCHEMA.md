@@ -107,29 +107,69 @@ The following fields are computed at runtime by `analyze_repository()` in `core.
 | `contributor_count` | integer | Number of unique contributors (recent history) |
 | `funding_link_count` | integer | Number of funding links detected |
 | `last_activity_days` | integer | Days since last repository activity |
-| `new_contributors_6mo` | integer | New contributors in last 6 months (Phase 4) |
-| `contributor_retention_rate` | integer | Contributor retention rate percentage (Phase 4) |
-| `avg_review_time_hours` | float | Average time to first PR review in hours (Phase 4) |
+| `new_contributors_6mo` | integer | New contributors in last 6 months |
+| `contributor_retention_rate` | integer | Contributor retention rate percentage |
+| `avg_review_time_hours` | float | Average time to first PR review in hours |
+| `organizational_diversity_count` | integer | Number of different organizations/domains |
+| `star_count` | integer | GitHub star count |
+| `fork_count` | integer | GitHub fork count |
+| `watcher_count` | integer | GitHub watcher count |
+| `pr_acceptance_rate` | float | Pull request acceptance ratio (0-100) |
+| `avg_issue_resolution_days` | float | Average issue resolution time in days |
+| `has_documentation` | boolean | Whether documentation is present |
+| `has_code_of_conduct` | boolean | Whether Code of Conduct is present |
+| `license_type` | string | License SPDX ID (e.g., "MIT", "Apache-2.0") |
 | _(extensible)_ | any | Additional raw signals as needed |
 
 ## Metrics Reference
 
-### 12 Sustainability Metrics (Phase 1-4)
+### 21 Sustainability Metrics (Complete System)
+
+#### Category: Maintainer Health (25% of total score)
 
 | Metric | Max Score | Risk Range | Description |
 |--------|----------|----------|------|
-| Contributor Redundancy | 20 | Low score is risky | Single maintainer dependency |
-| Maintainer Retention | 10 | Number of inactive maintainers | Long-inactive maintainers |
+| Contributor Redundancy | 20 | Low score is risky | Single maintainer dependency risk |
+| Maintainer Retention | 10 | Number of inactive maintainers | Active maintainer continuity |
+| Contributor Attraction | 10 | New contributor trend | New contributors in last 6 months |
+| Contributor Retention | 10 | Retention rate | Repeat contributors over 6 months |
+| Organizational Diversity | 10 | Single-org dominance | Multi-organization contribution diversity |
+
+#### Category: Development Activity (20% of total score)
+
+| Metric | Max Score | Risk Range | Description |
+|--------|----------|----------|------|
 | Recent Activity | 20 | Inactivity period | Days since last activity |
-| Change Request Resolution | 10 | Slow merge is risky | Average PR merge time |
-| Build Health | 5 | CI failure is risky | CI test execution status |
-| Funding Signals | 10 | Sponsorship status | Number of funding links |
 | Release Rhythm | 10 | Release frequency | Days since last release |
-| Security Signals | 15 | Security policy | Security policy, alert status |
+| Build Health | 5 | CI failure is risky | CI test execution status |
+| Change Request Resolution | 10 | Slow merge is risky | Average PR merge time |
+
+#### Category: Community Engagement (20% of total score)
+
+| Metric | Max Score | Risk Range | Description |
+|--------|----------|----------|------|
 | Issue Responsiveness | 5 | Issue response time | Average issue response time |
-| **Contributor Attraction** | **10** | **New contributor trend** | **New contributors in last 6 months (Phase 4)** |
-| **Contributor Retention** | **10** | **Retention rate** | **Repeat contributors over 6 months (Phase 4)** |
-| **Review Health** | **10** | **PR review quality** | **Time to first review & review count (Phase 4)** |
+| PR Acceptance Ratio | 10 | Low acceptance rate | Pull request acceptance rate |
+| PR Responsiveness | 5 | Slow first response | Time to first PR response |
+| Review Health | 10 | PR review quality | Time to first review & review count |
+| Issue Resolution Duration | 10 | Slow issue closure | Average time to close issues |
+
+#### Category: Project Maturity (15% of total score)
+
+| Metric | Max Score | Risk Range | Description |
+|--------|----------|----------|------|
+| Documentation Presence | 10 | Missing docs | README, CONTRIBUTING, Wiki, documentation |
+| Code of Conduct | 5 | No CoC | Community guidelines presence |
+| License Clarity | 5 | No/unclear license | OSI-approved license status |
+| Project Popularity | 10 | Low community interest | Stars, watchers, community adoption |
+| Fork Activity | 5 | No forks | Fork count and recent fork activity |
+
+#### Category: Security & Funding (20% of total score)
+
+| Metric | Max Score | Risk Range | Description |
+|--------|----------|----------|------|
+| Security Signals | 15 | Security policy | Security policy, vulnerability alerts |
+| Funding Signals | 10 (community) / 5 (corporate) | Sponsorship status | Number and type of funding links |
 
 ### Metric Models (CHAOSS-aligned)
 
@@ -137,11 +177,26 @@ The following fields are computed at runtime by `analyze_repository()` in `core.
 |-------|-------------|------------------|
 | Risk Model | Project stability and security | Contributor Redundancy (40%), Security Signals (30%), Change Request Resolution (20%), Issue Responsiveness (10%) |
 | Sustainability Model | Long-term viability | Funding Signals (30%), Maintainer Retention (25%), Release Rhythm (25%), Recent Activity (20%) |
-| **Community Engagement Model** | **Community health (Phase 4)** | **Contributor Attraction (30%), Contributor Retention (30%), Review Health (25%), Issue Responsiveness (15%)** |
+| Community Engagement Model | Community health and responsiveness | Contributor Attraction (30%), Contributor Retention (30%), Review Health (25%), Issue Responsiveness (15%) |
+| **Project Maturity Model** | **Documentation and governance** | **Documentation Presence (30%), Project Popularity (20%), License Clarity (20%), Code of Conduct (15%), Fork Activity (15%)** |
+| **Contributor Experience Model** | **PR handling and satisfaction** | **PR Acceptance Ratio (30%), PR Responsiveness (25%), Issue Resolution Duration (25%), Review Health (20%)** |
+
+### Scoring System
+
+The total score (0-100) is calculated using **category-weighted aggregation**:
+
+1. Each category's metrics are normalized to 0-100 scale
+2. Category scores are weighted:
+   - Maintainer Health: 25%
+   - Development Activity: 20%
+   - Community Engagement: 20%
+   - Project Maturity: 15%
+   - Security & Funding: 20%
+3. Final score = sum of (category_score × category_weight)
 
 ### Risk Levels
 
-```
+```text
 "Critical" - Critical risk (score < 20%)
 "High"     - High risk (score < 40%)
 "Medium"   - Medium risk (score < 70%)
@@ -216,7 +271,7 @@ The following fields are computed at runtime by `analyze_repository()` in `core.
 
 ## Score Ranges
 
-```
+```text
 0-49:   🔴 Critical   (Critical Risk)
 50-79:  🟡 Warning    (Warning)
 80-100: 🟢 Excellent  (Excellent)

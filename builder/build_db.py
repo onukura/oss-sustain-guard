@@ -4,13 +4,29 @@ Builds the static database of OSS sustainability metrics using Libraries.io.
 Architecture (Token-less Experience):
   1. Build phase (CI/CD, requires LIBRARIES_IO_API_KEY):
      - Libraries.io API → Package metadata (repo URL)
-     - GitHub GraphQL → Sustainability analysis
+     - GitHub GraphQL → Sustainability analysis (21 metrics + 5 models)
      - Save → data/latest/*.json + data/archive/YYYY-MM-DD/*.json
 
   2. User phase (Token-less):
      - CLI loads cached data/latest/*.json from GitHub
      - No API tokens required for users
      - Fallback to local cache if GitHub unavailable
+
+Sustainability Metrics (21 total):
+  Core Metrics (12):
+    - Contributor Redundancy, Maintainer Retention, Recent Activity
+    - Change Request Resolution, Build Health, Funding Signals
+    - Release Rhythm, Security Signals, Issue Responsiveness
+    - Contributor Attraction, Contributor Retention, Review Health
+
+  New Metrics (9):
+    - Documentation Presence, Code of Conduct, PR Acceptance Ratio
+    - Issue Resolution Duration, Organizational Diversity
+    - Fork Activity, Project Popularity, License Clarity, PR Responsiveness
+
+Metric Models (5 aggregated views):
+  - Risk Model, Sustainability Model, Community Engagement Model
+  - Project Maturity Model, Contributor Experience Model
 
 Environment variables:
   - LIBRARIES_IO_API_KEY: API key for Libraries.io (required for building)
@@ -335,7 +351,8 @@ async def process_package(
             },
         }
         console.print(
-            f"    [bold green]📊 Analysis complete. Score: {analysis_result.total_score}/100[/bold green]"
+            f"    [bold green]📊 Analysis complete. Score: {analysis_result.total_score}/100 "
+            f"({len(analysis_result.metrics)} metrics, {len(analysis_result.models)} models)[/bold green]"
         )
         return db_key, analysis_data
 
@@ -543,9 +560,19 @@ async def main(
     with open(DATABASE_PATH, "w", encoding="utf-8") as f:
         json.dump(merged_data, f, indent=2, ensure_ascii=False, sort_keys=True)
 
+    # Calculate metrics summary from first entry (for display)
+    sample_entry = next(iter(merged_data.values())) if merged_data else None
+    metrics_count = len(sample_entry.get("metrics", [])) if sample_entry else 0
+    models_count = len(sample_entry.get("models", [])) if sample_entry else 0
+
     console.print("[bold green]✨ Database build complete![/bold green]")
     console.print(f"  Total entries: {total_entries}")
     console.print(f"  Updated ecosystems: {', '.join(updated_ecosystems) or 'None'}")
+    if metrics_count > 0:
+        console.print(
+            f"  Metrics per package: {metrics_count} sustainability indicators"
+        )
+        console.print(f"  Models per package: {models_count} aggregated views")
     console.print("  Output:")
     console.print(f"    - Latest: {LATEST_DIR}")
     console.print(f"    - Archive: {ARCHIVE_DIR / snapshot_date}")

@@ -33,7 +33,9 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ## 🎯 Key Features
 
-- **9 Sustainability Metrics** - Bus Factor, Maintainer Drain, Release Cadence, Security, and more
+- **21 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security
+- **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
+- **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Fast & Cache-Based** - Pre-computed data for instant results
@@ -229,30 +231,74 @@ enabled = true
 
 ## 📊 Score Explanation
 
-Scores are evaluated in the range of 0-100:
+Scores are evaluated in the range of 0-100 using a **category-weighted approach** across 5 sustainability dimensions:
 
 - **80-100**: 🟢 **Excellent** - Healthy project
 - **50-79**: 🟡 **Monitor** - Areas to consider supporting
 - **0-49**: 🔴 **Needs Attention** - Needs support and improvement
 
-### Metrics Details
+### Scoring Categories (Total: 100%)
 
-| Metric | Max Score | Description |
-|--------|----------|------|
-| Bus Factor | 20 | Single maintainer dependency |
-| Maintainer Drain | 10 | Long-inactive maintainers |
-| Zombie Check | 20 | Repository activity assessment |
-| Merge Velocity | 10 | Merge processing speed |
-| CI Status | 5 | Automated test coverage |
-| Funding | 10 | Sponsorship status (more important for community-driven projects) |
-| Release Cadence | 10 | Release frequency |
-| Security Posture | 15 | Security configuration and alerts |
-| Community Health | 5 | Issue response time |
+| Category | Weight | Focus Areas |
+|----------|--------|-------------|
+| **Maintainer Health** | 25% | Contributor diversity, retention, organizational diversity |
+| **Development Activity** | 20% | Release rhythm, recent activity, build health, PR resolution |
+| **Community Engagement** | 20% | Issue responsiveness, PR acceptance, review quality |
+| **Project Maturity** | 15% | Documentation, governance, popularity, adoption |
+| **Security & Funding** | 20% | Security posture, financial sustainability |
 
-**Note on Funding Metric:** This metric is scored differently based on project type:
+### All 21 Sustainability Metrics
 
-- **Community-driven projects** (max 10 points): Funding sources are essential for sustainability. Projects with active funding (GitHub Sponsors, Patreon, Open Collective, etc.) score higher.
-- **Corporate-backed projects** (max 5 points): Funding is less important as corporate backing provides sustainability. The metric acknowledges organizational support.
+#### Maintainer Health (25%)
+
+- **Contributor Redundancy** (20pt) - Single maintainer dependency risk
+- **Maintainer Retention** (10pt) - Active maintainer continuity
+- **Contributor Attraction** (10pt) - New contributor onboarding (last 6 months)
+- **Contributor Retention** (10pt) - Repeat contributor engagement
+- **Organizational Diversity** (10pt) - Multi-organization contribution
+
+#### Development Activity (20%)
+
+- **Recent Activity** (20pt) - Repository activity recency
+- **Release Rhythm** (10pt) - Release frequency and consistency
+- **Build Health** (5pt) - CI/CD test status
+- **Change Request Resolution** (10pt) - Average PR merge time
+
+#### Community Engagement (20%)
+
+- **Issue Responsiveness** (5pt) - Issue response time
+- **PR Acceptance Ratio** (10pt) - Pull request acceptance rate
+- **PR Responsiveness** (5pt) - Time to first PR response
+- **Review Health** (10pt) - PR review quality and speed
+- **Issue Resolution Duration** (10pt) - Average time to close issues
+
+#### Project Maturity (15%)
+
+- **Documentation Presence** (10pt) - README, CONTRIBUTING, Wiki, docs
+- **Code of Conduct** (5pt) - Community guidelines presence
+- **License Clarity** (5pt) - OSI-approved license status
+- **Project Popularity** (10pt) - Stars, watchers, community interest
+- **Fork Activity** (5pt) - Fork count and recent activity
+
+#### Security & Funding (20%)
+
+- **Security Signals** (15pt) - Security policy, vulnerability alerts
+- **Funding Signals** (10pt) - Sponsorship/funding availability
+
+**Note on Funding Metric:** Scored differently by project type:
+
+- **Community-driven projects** (max 10pt): Funding is critical for sustainability
+- **Corporate-backed projects** (max 5pt): Corporate backing provides sustainability
+
+### CHAOSS-Aligned Metric Models
+
+Aggregated views for holistic assessment:
+
+1. **Risk Model** - Project stability and security risks
+2. **Sustainability Model** - Long-term viability indicators
+3. **Community Engagement Model** - Community health and responsiveness
+4. **Project Maturity Model** - Documentation, governance, adoption
+5. **Contributor Experience Model** - PR handling and contributor satisfaction
 
 ## ⚙️ Configuration
 
