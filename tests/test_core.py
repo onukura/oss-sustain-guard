@@ -275,7 +275,6 @@ def test_check_attraction_strong():
     from datetime import datetime, timedelta, timezone
 
     now = datetime.now(timezone.utc)
-    six_months_ago = now - timedelta(days=180)
     one_year_ago = now - timedelta(days=365)
 
     repo_data = {
