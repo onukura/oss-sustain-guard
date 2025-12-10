@@ -55,7 +55,8 @@ class RustResolver(LanguageResolver):
                 except (ValueError, IndexError):
                     return None
 
-        except (httpx.RequestError, httpx.HTTPStatusError):
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+            print(f"Error fetching Rust data for {package_name}: {e}")
             return None
 
         return None

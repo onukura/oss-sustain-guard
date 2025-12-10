@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import httpx
+import yaml
 
 from oss_sustain_guard.config import get_verify_ssl
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
@@ -74,7 +75,8 @@ class JavaScriptResolver(LanguageResolver):
                     except (ValueError, IndexError):
                         return None
 
-        except (httpx.RequestError, httpx.HTTPStatusError):
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+            print(f"Error fetching JavaScript data for {package_name}: {e}")
             return None
 
         return None
@@ -282,12 +284,6 @@ class JavaScriptResolver(LanguageResolver):
     @staticmethod
     def _parse_pnpm_lock(lockfile_path: Path) -> list[PackageInfo]:
         """Parse pnpm-lock.yaml file."""
-        try:
-            import yaml
-        except ImportError:
-            # Fallback if yaml is not available
-            return []
-
         try:
             with open(lockfile_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)

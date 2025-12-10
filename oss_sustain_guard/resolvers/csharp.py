@@ -73,7 +73,8 @@ class CSharpResolver(LanguageResolver):
                 return self._parse_github_url(repository_url)
 
             return None
-        except (httpx.RequestError, ValueError, KeyError):
+        except (httpx.RequestError, ValueError, KeyError) as e:
+            print(f"Error fetching NuGet data for {package_name}: {e}")
             return None
 
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:

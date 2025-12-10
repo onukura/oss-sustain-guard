@@ -70,7 +70,8 @@ class RubyResolver(LanguageResolver):
 
                 return None
 
-        except Exception:
+        except Exception as e:
+            print(f"Error fetching RubyGems data for {package_name}: {e}")
             return None
 
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:

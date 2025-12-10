@@ -75,7 +75,8 @@ class PythonResolver(LanguageResolver):
                 except (ValueError, IndexError):
                     return None
 
-        except (httpx.RequestError, httpx.HTTPStatusError):
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+            print(f"Error fetching PyPI data for {package_name}: {e}")
             return None
 
         return None

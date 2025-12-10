@@ -99,7 +99,8 @@ class JavaResolver(LanguageResolver):
                     return self._parse_github_url(github_match.group(0))
 
                 return None
-        except (httpx.RequestError, ValueError, KeyError):
+        except (httpx.RequestError, ValueError, KeyError) as e:
+            print(f"Error fetching Java data for {package_name}: {e}")
             return None
 
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:

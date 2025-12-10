@@ -72,10 +72,12 @@ class PhpResolver(LanguageResolver):
             return None
         except httpx.HTTPStatusError as e:
             # Return None for 404 errors (package not found)
+            print(f"Error fetching PHP data for {package_name}: {e}")
             if e.response.status_code == 404:
                 return None
             raise
-        except (httpx.RequestError, ValueError, KeyError):
+        except (httpx.RequestError, ValueError, KeyError) as e:
+            print(f"Error fetching PHP data for {package_name}: {e}")
             return None
 
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
