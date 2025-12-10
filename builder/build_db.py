@@ -324,6 +324,8 @@ async def process_package(
             "github_url": analysis_result.repo_url,
             "total_score": analysis_result.total_score,
             "metrics": [metric._asdict() for metric in analysis_result.metrics],
+            "models": [model._asdict() for model in analysis_result.models],
+            "signals": analysis_result.signals,
             "funding_links": analysis_result.funding_links,
             "is_community_driven": analysis_result.is_community_driven,
             "cache_metadata": {

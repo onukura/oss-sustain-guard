@@ -21,7 +21,11 @@ from oss_sustain_guard.config import (
     set_cache_ttl,
     set_verify_ssl,
 )
-from oss_sustain_guard.core import AnalysisResult, Metric, analyze_repository
+from oss_sustain_guard.core import (
+    AnalysisResult,
+    Metric,
+    analyze_repository,
+)
 from oss_sustain_guard.resolvers import detect_ecosystems, get_resolver
 from oss_sustain_guard.resolvers.python import (
     detect_lockfiles,
@@ -138,7 +142,7 @@ def load_database(use_cache: bool = True) -> dict:
     return merged
 
 
-def display_results(results: list[AnalysisResult]):
+def display_results(results: list[AnalysisResult], show_models: bool = False):
     """Display the analysis results in a rich table."""
     table = Table(title="OSS Sustain Guard Report")
     table.add_column("Package", justify="left", style="cyan", no_wrap=True)
@@ -196,8 +200,30 @@ def display_results(results: list[AnalysisResult]):
                 url = link.get("url", "")
                 console.print(f"   • {platform}: [link={url}]{url}[/link]")
 
+    # Display CHAOSS metric models if available and requested
+    if show_models:
+        for result in results:
+            if result.models:
+                console.print(
+                    f"\n📊 [bold cyan]{result.repo_url.replace('https://github.com/', '')}[/bold cyan] "
+                    f"- CHAOSS Metric Models:"
+                )
+                for model in result.models:
+                    # Color code based on model score
+                    model_color = "green"
+                    if model.score < 50:
+                        model_color = "red"
+                    elif model.score < 80:
+                        model_color = "yellow"
 
-def display_results_detailed(results: list[AnalysisResult]):
+                    console.print(
+                        f"   • {model.name}: [{model_color}]{model.score}/{model.max_score}[/{model_color}] - {model.observation}"
+                    )
+
+
+def display_results_detailed(
+    results: list[AnalysisResult], show_signals: bool = False, show_models: bool = False
+):
     """Display detailed analysis results with all metrics for each package."""
     for result in results:
         # Determine overall color
@@ -259,6 +285,44 @@ def display_results_detailed(results: list[AnalysisResult]):
             )
 
         console.print(metrics_table)
+
+        # Display CHAOSS metric models if available and requested
+        if show_models and result.models:
+            console.print("\n   📊 [bold magenta]CHAOSS Metric Models:[/bold magenta]")
+            models_table = Table(show_header=True, header_style="bold cyan")
+            models_table.add_column("Model", style="cyan", no_wrap=True)
+            models_table.add_column("Score", justify="center", style="magenta")
+            models_table.add_column("Max", justify="center", style="magenta")
+            models_table.add_column("Observation", justify="left")
+
+            for model in result.models:
+                # Color code based on model score
+                model_color = "green"
+                if model.score < 50:
+                    model_color = "red"
+                elif model.score < 80:
+                    model_color = "yellow"
+
+                models_table.add_row(
+                    model.name,
+                    f"[{model_color}]{model.score}[/{model_color}]",
+                    f"[cyan]{model.max_score}[/cyan]",
+                    model.observation,
+                )
+
+            console.print(models_table)
+
+        # Display raw signals if available and requested
+        if show_signals and result.signals:
+            console.print("\n   🔍 [bold magenta]Raw Signals:[/bold magenta]")
+            signals_table = Table(show_header=True, header_style="bold cyan")
+            signals_table.add_column("Signal", style="cyan", no_wrap=True)
+            signals_table.add_column("Value", justify="left")
+
+            for signal_name, signal_value in result.signals.items():
+                signals_table.add_row(signal_name, str(signal_value))
+
+            console.print(signals_table)
 
 
 @app.command()
@@ -355,6 +419,8 @@ def check_legacy(
                 ],
                 funding_links=cached_data.get("funding_links", []),
                 is_community_driven=cached_data.get("is_community_driven", False),
+                models=cached_data.get("models", []),
+                signals=cached_data.get("signals", {}),
             )
             results_to_display.append(result)
         else:
@@ -378,9 +444,11 @@ def check_legacy(
 
     if results_to_display:
         if verbose:
-            display_results_detailed(results_to_display)
+            display_results_detailed(
+                results_to_display, show_signals=verbose, show_models=False
+            )
         else:
-            display_results(results_to_display)
+            display_results(results_to_display, show_models=False)
         if excluded_count > 0:
             console.print(
                 f"\n⏭️  Skipped {excluded_count} excluded package(s).",
@@ -450,6 +518,8 @@ def analyze_package(
             ],
             funding_links=cached_data.get("funding_links", []),
             is_community_driven=cached_data.get("is_community_driven", False),
+            models=cached_data.get("models", []),
+            signals=cached_data.get("signals", {}),
         )
         return result
 
@@ -526,7 +596,13 @@ def check(
         False,
         "--verbose",
         "-v",
-        help="Display detailed metrics for each package.",
+        help="Display detailed metrics for each package, including raw signals.",
+    ),
+    show_models: bool = typer.Option(
+        False,
+        "--show-models",
+        "-M",
+        help="Display CHAOSS-aligned metric models (Risk Model, Sustainability Model).",
     ),
     insecure: bool = typer.Option(
         False,
@@ -791,9 +867,11 @@ def check(
 
     if results_to_display:
         if verbose:
-            display_results_detailed(results_to_display)
+            display_results_detailed(
+                results_to_display, show_signals=verbose, show_models=show_models
+            )
         else:
-            display_results(results_to_display)
+            display_results(results_to_display, show_models=show_models)
         if excluded_count > 0:
             console.print(
                 f"\n⏭️  Skipped {excluded_count} excluded package(s).",

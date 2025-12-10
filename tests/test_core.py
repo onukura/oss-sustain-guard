@@ -12,7 +12,10 @@ from oss_sustain_guard.core import (
     Metric,
     _query_github_graphql,
     analyze_repository,
+    check_attraction,
     check_funding,
+    check_retention,
+    check_review_health,
     is_corporate_backed,
 )
 
@@ -190,7 +193,7 @@ def test_check_funding_corporate_backed_with_funding():
         ],
     }
     metric = check_funding(repo_data)
-    assert metric.name == "Funding"
+    assert metric.name == "Funding Signals"
     assert metric.score == 5
     assert metric.max_score == 5
     assert metric.risk == "None"
@@ -210,7 +213,7 @@ def test_check_funding_corporate_backed_no_funding():
         "fundingLinks": [],
     }
     metric = check_funding(repo_data)
-    assert metric.name == "Funding"
+    assert metric.name == "Funding Signals"
     assert metric.score == 5
     assert metric.max_score == 5
     assert metric.risk == "None"
@@ -235,7 +238,7 @@ def test_check_funding_community_with_funding():
         ],
     }
     metric = check_funding(repo_data)
-    assert metric.name == "Funding"
+    assert metric.name == "Funding Signals"
     assert metric.score == 8
     assert metric.max_score == 10
     assert metric.risk == "None"
@@ -255,8 +258,207 @@ def test_check_funding_community_no_funding():
         "fundingLinks": [],
     }
     metric = check_funding(repo_data)
-    assert metric.name == "Funding"
+    assert metric.name == "Funding Signals"
     assert metric.score == 0
     assert metric.max_score == 10
     assert metric.risk == "Low"
     assert "No funding sources detected" in metric.message
+
+
+# --- Tests for Phase 4 New Metrics ---
+
+
+def test_check_attraction_strong():
+    """
+    Tests attraction metric with 5+ new contributors in last 6 months.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    six_months_ago = now - timedelta(days=180)
+    one_year_ago = now - timedelta(days=365)
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {
+                "history": {
+                    "edges": [
+                        # 5 new contributors in last 6 months
+                        {
+                            "node": {
+                                "authoredDate": (now - timedelta(days=30)).isoformat(),
+                                "author": {"user": {"login": "new1"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": (now - timedelta(days=60)).isoformat(),
+                                "author": {"user": {"login": "new2"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": (now - timedelta(days=90)).isoformat(),
+                                "author": {"user": {"login": "new3"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": (now - timedelta(days=120)).isoformat(),
+                                "author": {"user": {"login": "new4"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": (now - timedelta(days=150)).isoformat(),
+                                "author": {"user": {"login": "new5"}},
+                            }
+                        },
+                        # 2 old contributors
+                        {
+                            "node": {
+                                "authoredDate": one_year_ago.isoformat(),
+                                "author": {"user": {"login": "old1"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": one_year_ago.isoformat(),
+                                "author": {"user": {"login": "old2"}},
+                            }
+                        },
+                    ]
+                }
+            }
+        }
+    }
+    metric = check_attraction(repo_data)
+    assert metric.name == "Contributor Attraction"
+    assert metric.score == 10
+    assert metric.max_score == 10
+    assert metric.risk == "None"
+    assert "5 new contributors" in metric.message
+
+
+def test_check_retention_excellent():
+    """
+    Tests retention metric with 80%+ retention rate.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    two_months_ago = now - timedelta(days=60)
+    five_months_ago = now - timedelta(days=150)
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {
+                "history": {
+                    "edges": [
+                        # 4 contributors active in both periods (retained)
+                        {
+                            "node": {
+                                "authoredDate": two_months_ago.isoformat(),
+                                "author": {"user": {"login": "user1"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": five_months_ago.isoformat(),
+                                "author": {"user": {"login": "user1"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": two_months_ago.isoformat(),
+                                "author": {"user": {"login": "user2"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": five_months_ago.isoformat(),
+                                "author": {"user": {"login": "user2"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": two_months_ago.isoformat(),
+                                "author": {"user": {"login": "user3"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": five_months_ago.isoformat(),
+                                "author": {"user": {"login": "user3"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": two_months_ago.isoformat(),
+                                "author": {"user": {"login": "user4"}},
+                            }
+                        },
+                        {
+                            "node": {
+                                "authoredDate": five_months_ago.isoformat(),
+                                "author": {"user": {"login": "user4"}},
+                            }
+                        },
+                        # 1 contributor only in earlier period (not retained)
+                        {
+                            "node": {
+                                "authoredDate": five_months_ago.isoformat(),
+                                "author": {"user": {"login": "user5"}},
+                            }
+                        },
+                    ]
+                }
+            }
+        }
+    }
+    metric = check_retention(repo_data)
+    assert metric.name == "Contributor Retention"
+    assert metric.score == 10
+    assert metric.max_score == 10
+    assert metric.risk == "None"
+    assert "80%" in metric.message or "Excellent" in metric.message
+
+
+def test_check_review_health_excellent():
+    """
+    Tests review health metric with fast reviews and multiple reviews per PR.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    created = now - timedelta(hours=10)
+    reviewed = now - timedelta(hours=5)  # 5 hours after creation
+
+    repo_data = {
+        "pullRequests": {
+            "edges": [
+                {
+                    "node": {
+                        "createdAt": created.isoformat(),
+                        "reviews": {
+                            "totalCount": 3,
+                            "edges": [
+                                {"node": {"createdAt": reviewed.isoformat()}},
+                                {
+                                    "node": {
+                                        "createdAt": (
+                                            reviewed + timedelta(hours=1)
+                                        ).isoformat()
+                                    }
+                                },
+                            ],
+                        },
+                    }
+                }
+            ]
+        }
+    }
+    metric = check_review_health(repo_data)
+    assert metric.name == "Review Health"
+    assert metric.score >= 7  # Should be Good or Excellent
+    assert metric.max_score == 10

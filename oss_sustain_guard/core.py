@@ -33,6 +33,15 @@ class Metric(NamedTuple):
     risk: str  # "Critical", "High", "Medium", "Low", "None"
 
 
+class MetricModel(NamedTuple):
+    """A computed metric model (collection of metrics for specific purpose)."""
+
+    name: str
+    score: int
+    max_score: int
+    observation: str  # Supportive observation instead of "message"
+
+
 class AnalysisResult(NamedTuple):
     """The result of a repository analysis."""
 
@@ -41,6 +50,8 @@ class AnalysisResult(NamedTuple):
     metrics: list[Metric]
     funding_links: list[dict[str, str]] = []  # List of {"platform": str, "url": str}
     is_community_driven: bool = False  # True if project is community-driven
+    models: list[MetricModel] = []  # Optional metric models (CHAOSS-aligned)
+    signals: dict[str, Any] = {}  # Optional raw signals for transparency
 
 
 # --- Helper Functions ---
@@ -102,6 +113,7 @@ def _get_repository_query() -> str:
               history(first: 100) {
                 edges {
                   node {
+                    authoredDate
                     author {
                       user {
                         login
@@ -125,6 +137,14 @@ def _get_repository_query() -> str:
             node {
               mergedAt
               createdAt
+              reviews(first: 10) {
+                totalCount
+                edges {
+                  node {
+                    createdAt
+                  }
+                }
+              }
             }
           }
         }
@@ -194,7 +214,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
     default_branch = repo_data.get("defaultBranchRef")
     if not default_branch:
         return Metric(
-            "Bus Factor",
+            "Contributor Redundancy",
             0,
             max_score,
             "Note: Commit history data not available.",
@@ -204,7 +224,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
     target = default_branch.get("target")
     if not target:
         return Metric(
-            "Bus Factor",
+            "Contributor Redundancy",
             0,
             max_score,
             "Note: Commit history data not available.",
@@ -214,7 +234,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
     history = target.get("history", {}).get("edges", [])
     if not history:
         return Metric(
-            "Bus Factor",
+            "Contributor Redundancy",
             0,
             max_score,
             "No commit history available for analysis.",
@@ -235,7 +255,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
     total_commits = len(history)
     if total_commits == 0:
         return Metric(
-            "Bus Factor",
+            "Contributor Redundancy",
             0,
             max_score,
             "No commits found.",
@@ -302,7 +322,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
         risk = "None"
         message = f"Healthy: {num_contributors} active contributors."
 
-    return Metric("Bus Factor", score, max_score, message, risk)
+    return Metric("Contributor Redundancy", score, max_score, message, risk)
 
 
 def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
@@ -327,7 +347,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
     default_branch = repo_data.get("defaultBranchRef")
     if not default_branch:
         return Metric(
-            "Maintainer Drain",
+            "Maintainer Retention",
             max_score,
             max_score,
             "Note: Maintainer data not available for verification.",
@@ -337,7 +357,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
     target = default_branch.get("target")
     if not target:
         return Metric(
-            "Maintainer Drain",
+            "Maintainer Retention",
             max_score,
             max_score,
             "Note: Maintainer data not available for verification.",
@@ -348,7 +368,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
     if len(history) < 50:
         # If history is too short, cannot detect drain
         return Metric(
-            "Maintainer Drain",
+            "Maintainer Retention",
             max_score,
             max_score,
             "Insufficient commit history to detect drain.",
@@ -396,7 +416,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
     # If we have very few real contributors, cannot assess
     if not older_authors or not recent_authors:
         return Metric(
-            "Maintainer Drain",
+            "Maintainer Retention",
             max_score,
             max_score,
             "Insufficient human contributor data.",
@@ -437,7 +457,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
             f"No significant drain detected."
         )
 
-    return Metric("Maintainer Drain", score, max_score, message, risk)
+    return Metric("Maintainer Retention", score, max_score, message, risk)
 
 
 def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
@@ -463,7 +483,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     if is_archived:
         # Archived repos are intentional, not risky if properly maintained during lifecycle
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             10,  # Not 0 - archived is intentional, but needs monitoring
             max_score,
             "Repository is archived (intentional).",
@@ -473,7 +493,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     pushed_at_str = repo_data.get("pushedAt")
     if not pushed_at_str:
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             0,
             max_score,
             "Note: Last activity data not available.",
@@ -485,7 +505,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
         pushed_at = datetime.fromisoformat(pushed_at_str.replace("Z", "+00:00"))
     except (ValueError, AttributeError):
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             0,
             max_score,
             "Note: Activity timestamp format not recognized.",
@@ -498,7 +518,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     # Scoring logic with maturity consideration
     if days_since_last_push > 730:  # 2+ years
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             0,
             max_score,
             f"No activity for {days_since_last_push} days (2+ years). Project may be inactive.",
@@ -506,7 +526,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
         )
     elif days_since_last_push > 365:  # 1+ year
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             5,
             max_score,
             f"Last activity {days_since_last_push} days ago (1+ year). "
@@ -515,7 +535,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
         )
     elif days_since_last_push > 180:  # 6+ months
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             10,
             max_score,
             f"Last activity {days_since_last_push} days ago (6+ months).",
@@ -523,7 +543,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
         )
     elif days_since_last_push > 90:  # 3+ months
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             15,
             max_score,
             f"Last activity {days_since_last_push} days ago (3+ months).",
@@ -531,7 +551,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
         )
     else:
         return Metric(
-            "Zombie Check",
+            "Recent Activity",
             max_score,
             max_score,
             f"Recently active ({days_since_last_push} days ago).",
@@ -561,7 +581,7 @@ def check_merge_velocity(repo_data: dict[str, Any]) -> Metric:
     pull_requests = repo_data.get("pullRequests", {}).get("edges", [])
     if not pull_requests:
         return Metric(
-            "Merge Velocity",
+            "Change Request Resolution",
             max_score,
             max_score,
             "No merged PRs available for analysis.",
@@ -587,7 +607,7 @@ def check_merge_velocity(repo_data: dict[str, Any]) -> Metric:
 
     if not merge_times:
         return Metric(
-            "Merge Velocity",
+            "Change Request Resolution",
             max_score,
             max_score,
             "Unable to analyze merge velocity.",
@@ -626,7 +646,7 @@ def check_merge_velocity(repo_data: dict[str, Any]) -> Metric:
             f"Responsive to PRs."
         )
 
-    return Metric("Merge Velocity", score, max_score, message, risk)
+    return Metric("Change Request Resolution", score, max_score, message, risk)
 
 
 def check_ci_status(repo_data: dict[str, Any]) -> Metric:
@@ -647,7 +667,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
     is_archived = repo_data.get("isArchived", False)
     if is_archived:
         return Metric(
-            "CI Status",
+            "Build Health",
             max_score,
             max_score,
             "Repository archived (CI check skipped).",
@@ -658,7 +678,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
     default_branch = repo_data.get("defaultBranchRef")
     if not default_branch:
         return Metric(
-            "CI Status",
+            "Build Health",
             0,
             max_score,
             "Note: CI status data not available.",
@@ -668,7 +688,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
     target = default_branch.get("target")
     if not target:
         return Metric(
-            "CI Status",
+            "Build Health",
             0,
             max_score,
             "Note: CI status data not available.",
@@ -679,7 +699,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
 
     if not check_suites:
         return Metric(
-            "CI Status",
+            "Build Health",
             0,
             max_score,
             "No CI configuration detected.",
@@ -690,7 +710,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
     latest_suite = check_suites[0] if check_suites else None
     if not latest_suite or not isinstance(latest_suite, dict):
         return Metric(
-            "CI Status",
+            "Build Health",
             0,
             max_score,
             "No recent CI checks.",
@@ -732,7 +752,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
         risk = "Low"
         message = f"CI Status: Unknown ({conclusion or status})."
 
-    return Metric("CI Status", score, max_score, message, risk)
+    return Metric("Build Health", score, max_score, message, risk)
 
 
 def is_corporate_backed(repo_data: dict[str, Any]) -> bool:
@@ -808,7 +828,7 @@ def check_funding(repo_data: dict[str, Any]) -> Metric:
             risk = "Low"
             message = "No funding sources detected (risk for community projects)."
 
-    return Metric("Funding", score, max_score, message, risk)
+    return Metric("Funding Signals", score, max_score, message, risk)
 
 
 def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
@@ -837,14 +857,14 @@ def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
         is_archived = repo_data.get("isArchived", False)
         if is_archived:
             return Metric(
-                "Release Cadence",
+                "Release Rhythm",
                 max_score,
                 max_score,
                 "Archived repository (no releases expected).",
                 "None",
             )
         return Metric(
-            "Release Cadence",
+            "Release Rhythm",
             0,
             max_score,
             "No releases found. Project may not be user-ready.",
@@ -858,7 +878,7 @@ def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
 
     if not published_at_str:
         return Metric(
-            "Release Cadence",
+            "Release Rhythm",
             0,
             max_score,
             "Note: Release date information not available.",
@@ -869,7 +889,7 @@ def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
         published_at = datetime.fromisoformat(published_at_str.replace("Z", "+00:00"))
     except (ValueError, AttributeError):
         return Metric(
-            "Release Cadence",
+            "Release Rhythm",
             0,
             max_score,
             "Note: Release date format not recognized.",
@@ -906,7 +926,7 @@ def check_release_cadence(repo_data: dict[str, Any]) -> Metric:
             f"No releases in over a year."
         )
 
-    return Metric("Release Cadence", score, max_score, message, risk)
+    return Metric("Release Rhythm", score, max_score, message, risk)
 
 
 def check_security_posture(repo_data: dict[str, Any]) -> Metric:
@@ -984,7 +1004,7 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
         risk = "None"
         message = "Moderate: No security policy detected. Consider adding SECURITY.md."
 
-    return Metric("Security Posture", score, max_score, message, risk)
+    return Metric("Security Signals", score, max_score, message, risk)
 
 
 def check_community_health(repo_data: dict[str, Any]) -> Metric:
@@ -1010,7 +1030,7 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
 
     if not issues:
         return Metric(
-            "Community Health",
+            "Issue Responsiveness",
             max_score,
             max_score,
             "No open issues. Well-maintained or low activity.",
@@ -1046,7 +1066,7 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
 
     if not response_times:
         return Metric(
-            "Community Health",
+            "Issue Responsiveness",
             2,
             max_score,
             "Unable to assess: No responded issues in recent history.",
@@ -1084,7 +1104,573 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
             f"({avg_response_time / 24:.1f} days). Community response could be improved."
         )
 
-    return Metric("Community Health", score, max_score, message, risk)
+    return Metric("Issue Responsiveness", score, max_score, message, risk)
+
+
+def check_attraction(repo_data: dict[str, Any]) -> Metric:
+    """
+    Measures the project's ability to attract new contributors (CHAOSS Attraction metric).
+
+    Analyzes recent commit history to identify first-time contributors
+    in the last 6 months compared to earlier periods.
+
+    Scoring:
+    - 5+ new contributors in last 6 months: 10/10 (Strong attraction)
+    - 3-4 new contributors: 7/10 (Good attraction)
+    - 1-2 new contributors: 4/10 (Moderate attraction)
+    - 0 new contributors: 0/10 (Needs attention)
+    """
+    from datetime import datetime, timedelta, timezone
+
+    max_score = 10
+
+    default_branch = repo_data.get("defaultBranchRef")
+    if not default_branch:
+        return Metric(
+            "Contributor Attraction",
+            0,
+            max_score,
+            "Note: Commit history data not available.",
+            "Medium",
+        )
+
+    target = default_branch.get("target")
+    if not target:
+        return Metric(
+            "Contributor Attraction",
+            0,
+            max_score,
+            "Note: Commit history data not available.",
+            "Medium",
+        )
+
+    history = target.get("history", {}).get("edges", [])
+    if not history:
+        return Metric(
+            "Contributor Attraction",
+            0,
+            max_score,
+            "No commit history available for analysis.",
+            "Medium",
+        )
+
+    # Collect all contributors with their first commit date
+    contributor_first_seen: dict[str, datetime] = {}
+    now = datetime.now(timezone.utc)
+    six_months_ago = now - timedelta(days=180)
+
+    for edge in history:
+        node = edge.get("node", {})
+        author = node.get("author", {})
+        user = author.get("user")
+        authored_date_str = node.get("authoredDate")
+
+        if not user or not authored_date_str:
+            continue
+
+        login = user.get("login")
+        if not login:
+            continue
+
+        try:
+            authored_date = datetime.fromisoformat(
+                authored_date_str.replace("Z", "+00:00")
+            )
+        except (ValueError, AttributeError):
+            continue
+
+        # Track first appearance of each contributor
+        if login not in contributor_first_seen:
+            contributor_first_seen[login] = authored_date
+        else:
+            # Update if we found an earlier commit
+            if authored_date < contributor_first_seen[login]:
+                contributor_first_seen[login] = authored_date
+
+    # Count new contributors in the last 6 months
+    new_contributors = [
+        login
+        for login, first_date in contributor_first_seen.items()
+        if first_date >= six_months_ago
+    ]
+
+    new_count = len(new_contributors)
+    total_contributors = len(contributor_first_seen)
+
+    # Scoring logic
+    if new_count >= 5:
+        score = max_score
+        risk = "None"
+        message = f"Strong: {new_count} new contributors in last 6 months. Active community growth."
+    elif new_count >= 3:
+        score = 7
+        risk = "Low"
+        message = (
+            f"Good: {new_count} new contributors in last 6 months. Healthy attraction."
+        )
+    elif new_count >= 1:
+        score = 4
+        risk = "Medium"
+        message = f"Moderate: {new_count} new contributor(s) in last 6 months. Consider outreach efforts."
+    else:
+        score = 0
+        risk = "Medium"
+        message = (
+            f"Observe: No new contributors in last 6 months. "
+            f"Total: {total_contributors} contributor(s). Consider community engagement."
+        )
+
+    return Metric("Contributor Attraction", score, max_score, message, risk)
+
+
+def check_retention(repo_data: dict[str, Any]) -> Metric:
+    """
+    Measures contributor retention (CHAOSS Retention metric).
+
+    Analyzes whether contributors who were active 6+ months ago
+    are still contributing in recent months.
+
+    Scoring:
+    - 80%+ retention: 10/10 (Excellent retention)
+    - 60-79% retention: 7/10 (Good retention)
+    - 40-59% retention: 4/10 (Moderate retention)
+    - <40% retention: 0/10 (Needs attention)
+    """
+    from datetime import datetime, timedelta, timezone
+
+    max_score = 10
+
+    default_branch = repo_data.get("defaultBranchRef")
+    if not default_branch:
+        return Metric(
+            "Contributor Retention",
+            max_score // 2,
+            max_score,
+            "Note: Commit history data not available.",
+            "Medium",
+        )
+
+    target = default_branch.get("target")
+    if not target:
+        return Metric(
+            "Contributor Retention",
+            max_score // 2,
+            max_score,
+            "Note: Commit history data not available.",
+            "Medium",
+        )
+
+    history = target.get("history", {}).get("edges", [])
+    if not history:
+        return Metric(
+            "Contributor Retention",
+            max_score // 2,
+            max_score,
+            "No commit history available for analysis.",
+            "Medium",
+        )
+
+    # Track contributors by time period
+    now = datetime.now(timezone.utc)
+    three_months_ago = now - timedelta(days=90)
+    six_months_ago = now - timedelta(days=180)
+
+    recent_contributors: set[str] = set()  # Last 3 months
+    earlier_contributors: set[str] = set()  # 3-6 months ago
+
+    for edge in history:
+        node = edge.get("node", {})
+        author = node.get("author", {})
+        user = author.get("user")
+        authored_date_str = node.get("authoredDate")
+
+        if not user or not authored_date_str:
+            continue
+
+        login = user.get("login")
+        if not login:
+            continue
+
+        try:
+            authored_date = datetime.fromisoformat(
+                authored_date_str.replace("Z", "+00:00")
+            )
+        except (ValueError, AttributeError):
+            continue
+
+        # Categorize by time period
+        if authored_date >= three_months_ago:
+            recent_contributors.add(login)
+        elif authored_date >= six_months_ago:
+            earlier_contributors.add(login)
+
+    # Calculate retention: how many earlier contributors are still active?
+    if not earlier_contributors:
+        return Metric(
+            "Contributor Retention",
+            max_score,
+            max_score,
+            "New project: Not enough history to assess retention.",
+            "None",
+        )
+
+    retained_contributors = recent_contributors & earlier_contributors
+    retention_rate = len(retained_contributors) / len(earlier_contributors)
+    retention_percentage = retention_rate * 100
+
+    # Scoring logic
+    if retention_rate >= 0.8:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Excellent: {retention_percentage:.0f}% contributor retention. "
+            f"{len(retained_contributors)}/{len(earlier_contributors)} contributors remain active."
+        )
+    elif retention_rate >= 0.6:
+        score = 7
+        risk = "Low"
+        message = (
+            f"Good: {retention_percentage:.0f}% contributor retention. "
+            f"{len(retained_contributors)}/{len(earlier_contributors)} contributors remain active."
+        )
+    elif retention_rate >= 0.4:
+        score = 4
+        risk = "Medium"
+        message = (
+            f"Moderate: {retention_percentage:.0f}% contributor retention. "
+            f"{len(retained_contributors)}/{len(earlier_contributors)} contributors remain active. "
+            f"Consider engagement efforts."
+        )
+    else:
+        score = 0
+        risk = "High"
+        message = (
+            f"Needs attention: {retention_percentage:.0f}% contributor retention. "
+            f"Only {len(retained_contributors)}/{len(earlier_contributors)} earlier contributors remain active."
+        )
+
+    return Metric("Contributor Retention", score, max_score, message, risk)
+
+
+def check_review_health(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates pull request review health (CHAOSS Review Health metric).
+
+    Considers:
+    - Time to first review on merged PRs
+    - Review count per PR
+
+    Scoring:
+    - Avg first review <24h & 2+ reviews: 10/10 (Excellent)
+    - Avg first review <7d & 1+ reviews: 7/10 (Good)
+    - Avg first review >7d or 0 reviews: 0/10 (Needs improvement)
+    """
+    from datetime import datetime
+
+    max_score = 10
+
+    prs = repo_data.get("pullRequests", {}).get("edges", [])
+
+    if not prs:
+        return Metric(
+            "Review Health",
+            max_score // 2,
+            max_score,
+            "Note: No recent merged pull requests to analyze.",
+            "None",
+        )
+
+    review_times: list[float] = []
+    review_counts: list[int] = []
+
+    for edge in prs:
+        node = edge.get("node", {})
+        created_at_str = node.get("createdAt")
+        reviews = node.get("reviews", {})
+        review_edges = reviews.get("edges", [])
+        review_total = reviews.get("totalCount", 0)
+
+        if not created_at_str:
+            continue
+
+        review_counts.append(review_total)
+
+        # Calculate time to first review
+        if review_edges:
+            first_review = review_edges[0].get("node", {})
+            first_review_at_str = first_review.get("createdAt")
+
+            if first_review_at_str:
+                try:
+                    created_at = datetime.fromisoformat(
+                        created_at_str.replace("Z", "+00:00")
+                    )
+                    first_review_at = datetime.fromisoformat(
+                        first_review_at_str.replace("Z", "+00:00")
+                    )
+                    review_time_hours = (
+                        first_review_at - created_at
+                    ).total_seconds() / 3600
+                    review_times.append(review_time_hours)
+                except (ValueError, AttributeError):
+                    pass
+
+    if not review_times and not review_counts:
+        return Metric(
+            "Review Health",
+            0,
+            max_score,
+            "Observe: No review activity detected in recent PRs.",
+            "Medium",
+        )
+
+    avg_review_time = sum(review_times) / len(review_times) if review_times else 999
+    avg_review_count = sum(review_counts) / len(review_counts) if review_counts else 0
+
+    # Scoring logic
+    if avg_review_time < 24 and avg_review_count >= 2:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Excellent: Avg time to first review {avg_review_time:.1f}h. "
+            f"Avg {avg_review_count:.1f} reviews per PR."
+        )
+    elif avg_review_time < 168 and avg_review_count >= 1:  # <7 days
+        score = 7
+        risk = "Low"
+        message = (
+            f"Good: Avg time to first review {avg_review_time:.1f}h "
+            f"({avg_review_time / 24:.1f}d). Avg {avg_review_count:.1f} reviews per PR."
+        )
+    elif avg_review_time < 168:  # <7 days but low review count
+        score = 4
+        risk = "Medium"
+        message = (
+            f"Moderate: Avg time to first review {avg_review_time:.1f}h, "
+            f"but low review count ({avg_review_count:.1f} per PR)."
+        )
+    else:
+        score = 0
+        risk = "Medium"
+        message = (
+            f"Observe: Slow review process (avg {avg_review_time / 24:.1f}d to first review). "
+            f"Consider increasing reviewer engagement."
+        )
+
+    return Metric("Review Health", score, max_score, message, risk)
+
+
+# --- Metric Model Calculation Functions ---
+
+
+def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
+    """
+    Computes CHAOSS-aligned metric models from individual metrics.
+
+    Models provide aggregated views for specific use cases:
+    - Risk Model: focuses on project stability and security
+    - Sustainability Model: focuses on long-term viability
+    - Community Engagement Model: focuses on responsiveness and activity
+
+    Args:
+        metrics: List of computed individual metrics
+
+    Returns:
+        List of MetricModel instances
+    """
+    # Create a lookup dict for easy metric access
+    metric_dict = {m.name: m for m in metrics}
+
+    models = []
+
+    # Risk Model: weights Contributor Redundancy, Security Signals,
+    # Change Request Resolution, Issue Responsiveness
+    risk_metrics = [
+        ("Contributor Redundancy", 0.4),
+        ("Security Signals", 0.3),
+        ("Change Request Resolution", 0.2),
+        ("Issue Responsiveness", 0.1),
+    ]
+    risk_score = 0
+    risk_max = 0
+    risk_observations = []
+
+    for metric_name, weight in risk_metrics:
+        if metric_name in metric_dict:
+            m = metric_dict[metric_name]
+            risk_score += m.score * weight
+            risk_max += m.max_score * weight
+            if m.score < m.max_score * 0.7:  # Below 70%
+                risk_observations.append(f"{metric_name} needs attention")
+
+    if not risk_observations:
+        risk_obs = "All risk indicators are healthy."
+    else:
+        risk_obs = "; ".join(risk_observations[:2]) + "."  # Limit to 2
+
+    models.append(
+        MetricModel(
+            name="Risk Model",
+            score=int(risk_score),
+            max_score=int(risk_max),
+            observation=risk_obs,
+        )
+    )
+
+    # Sustainability Model: weights Funding Signals, Maintainer Retention,
+    # Release Rhythm, Recent Activity
+    sustainability_metrics = [
+        ("Funding Signals", 0.3),
+        ("Maintainer Retention", 0.25),
+        ("Release Rhythm", 0.25),
+        ("Recent Activity", 0.2),
+    ]
+    sus_score = 0
+    sus_max = 0
+    sus_observations = []
+
+    for metric_name, weight in sustainability_metrics:
+        if metric_name in metric_dict:
+            m = metric_dict[metric_name]
+            sus_score += m.score * weight
+            sus_max += m.max_score * weight
+            if m.score >= m.max_score * 0.8:  # Above 80%
+                sus_observations.append(f"{metric_name} is strong")
+
+    if not sus_observations:
+        sus_obs = "Sustainability signals need monitoring."
+    else:
+        sus_obs = "; ".join(sus_observations[:2]) + "."
+
+    models.append(
+        MetricModel(
+            name="Sustainability Model",
+            score=int(sus_score),
+            max_score=int(sus_max),
+            observation=sus_obs,
+        )
+    )
+
+    # Community Engagement Model: weights Contributor Attraction,
+    # Contributor Retention, Review Health, Issue Responsiveness
+    engagement_metrics = [
+        ("Contributor Attraction", 0.3),
+        ("Contributor Retention", 0.3),
+        ("Review Health", 0.25),
+        ("Issue Responsiveness", 0.15),
+    ]
+    eng_score = 0
+    eng_max = 0
+    eng_observations = []
+
+    for metric_name, weight in engagement_metrics:
+        if metric_name in metric_dict:
+            m = metric_dict[metric_name]
+            eng_score += m.score * weight
+            eng_max += m.max_score * weight
+            if m.score >= m.max_score * 0.8:  # Above 80%
+                eng_observations.append(f"{metric_name} is strong")
+
+    if eng_max > 0:  # Only add model if we have at least one engagement metric
+        if not eng_observations:
+            eng_obs = "Community engagement signals need monitoring."
+        else:
+            eng_obs = "; ".join(eng_observations[:2]) + "."
+
+        models.append(
+            MetricModel(
+                name="Community Engagement Model",
+                score=int(eng_score),
+                max_score=int(eng_max),
+                observation=eng_obs,
+            )
+        )
+
+    return models
+
+
+def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Extracts raw signal values for transparency and debugging.
+
+    Args:
+        metrics: List of computed metrics
+        repo_data: Raw repository data from GitHub API
+
+    Returns:
+        Dictionary of signal key-value pairs
+    """
+    signals = {}
+
+    # Extract some key signals (non-sensitive)
+    metric_dict = {m.name: m for m in metrics}
+
+    if "Funding Signals" in metric_dict:
+        funding_links = repo_data.get("fundingLinks", [])
+        signals["funding_link_count"] = len(funding_links)
+
+    if "Recent Activity" in metric_dict:
+        pushed_at = repo_data.get("pushedAt")
+        if pushed_at:
+            from datetime import datetime
+
+            try:
+                pushed = datetime.fromisoformat(pushed_at.replace("Z", "+00:00"))
+                now = datetime.now(pushed.tzinfo)
+                signals["last_activity_days"] = (now - pushed).days
+            except (ValueError, AttributeError):
+                pass
+
+    # Add contributor count if available
+    default_branch = repo_data.get("defaultBranchRef")
+    if default_branch:
+        target = default_branch.get("target")
+        if target:
+            history = target.get("history", {}).get("edges", [])
+            author_counts = {}
+            for edge in history:
+                node = edge.get("node", {})
+                author = node.get("author", {})
+                user = author.get("user")
+                if user:
+                    login = user.get("login")
+                    if login:
+                        author_counts[login] = author_counts.get(login, 0) + 1
+            if author_counts:
+                signals["contributor_count"] = len(author_counts)
+
+    # Add new contributor metrics (Phase 4)
+    if "Contributor Attraction" in metric_dict:
+        m = metric_dict["Contributor Attraction"]
+        # Extract new contributor count from message if available
+        if "new contributor" in m.message.lower():
+            import re
+
+            match = re.search(r"(\d+) new contributor", m.message)
+            if match:
+                signals["new_contributors_6mo"] = int(match.group(1))
+
+    if "Contributor Retention" in metric_dict:
+        m = metric_dict["Contributor Retention"]
+        # Extract retention percentage from message
+        if "%" in m.message:
+            import re
+
+            match = re.search(r"(\d+)%", m.message)
+            if match:
+                signals["contributor_retention_rate"] = int(match.group(1))
+
+    if "Review Health" in metric_dict:
+        m = metric_dict["Review Health"]
+        # Extract average review time from message
+        if "Avg time to first review" in m.message:
+            import re
+
+            match = re.search(r"(\d+\.?\d*)h", m.message)
+            if match:
+                signals["avg_review_time_hours"] = float(match.group(1))
+
+    return signals
 
 
 # --- Main Analysis Function ---
@@ -1128,20 +1714,28 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
         try:
             metrics.append(check_bus_factor(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Bus factor check incomplete: {e}[/yellow]")
+            console.print(
+                f"  [yellow]⚠️  Contributor redundancy check incomplete: {e}[/yellow]"
+            )
             metrics.append(
-                Metric("Bus Factor", 0, 20, f"Note: Analysis incomplete - {e}", "High")
+                Metric(
+                    "Contributor Redundancy",
+                    0,
+                    20,
+                    f"Note: Analysis incomplete - {e}",
+                    "High",
+                )
             )
 
         try:
             metrics.append(check_maintainer_drain(repo_info))
         except Exception as e:
             console.print(
-                f"  [yellow]⚠️  Maintainer drain check incomplete: {e}[/yellow]"
+                f"  [yellow]⚠️  Maintainer retention check incomplete: {e}[/yellow]"
             )
             metrics.append(
                 Metric(
-                    "Maintainer Drain",
+                    "Maintainer Retention",
                     0,
                     10,
                     f"Note: Analysis incomplete - {e}",
@@ -1152,48 +1746,58 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
         try:
             metrics.append(check_zombie_status(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Zombie status check incomplete: {e}[/yellow]")
+            console.print(
+                f"  [yellow]⚠️  Recent activity check incomplete: {e}[/yellow]"
+            )
             metrics.append(
                 Metric(
-                    "Zombie Status", 0, 20, f"Note: Analysis incomplete - {e}", "High"
+                    "Recent Activity", 0, 20, f"Note: Analysis incomplete - {e}", "High"
                 )
             )
 
         try:
             metrics.append(check_merge_velocity(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Merge velocity check incomplete: {e}[/yellow]")
+            console.print(
+                f"  [yellow]⚠️  Change request resolution check incomplete: {e}[/yellow]"
+            )
             metrics.append(
                 Metric(
-                    "Merge Velocity", 0, 10, f"Note: Analysis incomplete - {e}", "High"
+                    "Change Request Resolution",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "High",
                 )
             )
 
         try:
             metrics.append(check_ci_status(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  CI status check incomplete: {e}[/yellow]")
+            console.print(f"  [yellow]⚠️  Build health check incomplete: {e}[/yellow]")
             metrics.append(
-                Metric("CI Status", 0, 5, f"Note: Analysis incomplete - {e}", "High")
+                Metric("Build Health", 0, 5, f"Note: Analysis incomplete - {e}", "High")
             )
 
         try:
             metrics.append(check_funding(repo_info))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Funding check incomplete: {e}[/yellow]")
+            console.print(
+                f"  [yellow]⚠️  Funding signals check incomplete: {e}[/yellow]"
+            )
             metrics.append(
-                Metric("Funding", 0, 10, f"Note: Analysis incomplete - {e}", "High")
+                Metric(
+                    "Funding Signals", 0, 10, f"Note: Analysis incomplete - {e}", "High"
+                )
             )
 
         try:
             metrics.append(check_release_cadence(repo_info))
         except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Release cadence check incomplete: {e}[/yellow]"
-            )
+            console.print(f"  [yellow]⚠️  Release rhythm check incomplete: {e}[/yellow]")
             metrics.append(
                 Metric(
-                    "Release Cadence", 0, 10, f"Note: Analysis incomplete - {e}", "High"
+                    "Release Rhythm", 0, 10, f"Note: Analysis incomplete - {e}", "High"
                 )
             )
 
@@ -1201,11 +1805,11 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
             metrics.append(check_security_posture(repo_info))
         except Exception as e:
             console.print(
-                f"  [yellow]⚠️  Security posture check incomplete: {e}[/yellow]"
+                f"  [yellow]⚠️  Security signals check incomplete: {e}[/yellow]"
             )
             metrics.append(
                 Metric(
-                    "Security Posture",
+                    "Security Signals",
                     0,
                     15,
                     f"Note: Analysis incomplete - {e}",
@@ -1217,11 +1821,62 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
             metrics.append(check_community_health(repo_info))
         except Exception as e:
             console.print(
-                f"  [yellow]⚠️  Community health check incomplete: {e}[/yellow]"
+                f"  [yellow]⚠️  Issue responsiveness check incomplete: {e}[/yellow]"
             )
             metrics.append(
                 Metric(
-                    "Community Health", 0, 5, f"Note: Analysis incomplete - {e}", "High"
+                    "Issue Responsiveness",
+                    0,
+                    5,
+                    f"Note: Analysis incomplete - {e}",
+                    "High",
+                )
+            )
+
+        # New CHAOSS metrics (Phase 4)
+        try:
+            metrics.append(check_attraction(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  Contributor attraction check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Contributor Attraction",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
+
+        try:
+            metrics.append(check_retention(repo_info))
+        except Exception as e:
+            console.print(
+                f"  [yellow]⚠️  Contributor retention check incomplete: {e}[/yellow]"
+            )
+            metrics.append(
+                Metric(
+                    "Contributor Retention",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
+                )
+            )
+
+        try:
+            metrics.append(check_review_health(repo_info))
+        except Exception as e:
+            console.print(f"  [yellow]⚠️  Review health check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric(
+                    "Review Health",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Medium",
                 )
             )
 
@@ -1243,12 +1898,20 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
         funding_links = repo_info.get("fundingLinks", [])
         is_community_driven = not is_corporate_backed(repo_info)
 
+        # Compute metric models (CHAOSS-aligned aggregations)
+        models = compute_metric_models(metrics)
+
+        # Extract raw signals for transparency
+        signals = extract_signals(metrics, repo_info)
+
         return AnalysisResult(
             repo_url=f"https://github.com/{owner}/{name}",
             total_score=total_score,
             metrics=metrics,
             funding_links=funding_links,
             is_community_driven=is_community_driven,
+            models=models,
+            signals=signals,
         )
 
     except Exception as e:

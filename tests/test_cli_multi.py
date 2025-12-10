@@ -58,7 +58,7 @@ class TestAnalyzePackage:
                 "total_score": 85,
                 "metrics": [
                     {
-                        "name": "Bus Factor",
+                        "name": "Contributor Redundancy",
                         "score": 5,
                         "max_score": 10,
                         "message": "Good",
