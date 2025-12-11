@@ -37,10 +37,10 @@ def test_parse_gitignore_simple():
         f.write("\n")  # Empty line
         f.write("# Another comment\n")
         f.write("temp\n")
-        f.name_path = Path(f.name)
+        file_path = Path(f.name)
 
     try:
-        patterns = parse_gitignore(f.name_path)
+        patterns = parse_gitignore(file_path)
 
         assert "node_modules" in patterns
         assert "dist" in patterns
@@ -49,7 +49,7 @@ def test_parse_gitignore_simple():
         # File patterns should not be included
         assert "*.pyc" not in patterns
     finally:
-        f.name_path.unlink()
+        file_path.unlink()
 
 
 def test_parse_gitignore_with_paths():
@@ -58,10 +58,10 @@ def test_parse_gitignore_with_paths():
         f.write("src/build\n")  # Has path separator, should be skipped
         f.write("*/temp\n")  # Any temp directory
         f.write("cache\n")  # Simple pattern
-        f.name_path = Path(f.name)
+        file_path = Path(f.name)
 
     try:
-        patterns = parse_gitignore(f.name_path)
+        patterns = parse_gitignore(file_path)
 
         # Patterns with paths should not be included
         assert "src/build" not in patterns
@@ -77,15 +77,15 @@ def test_parse_gitignore_negations():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".gitignore", delete=False) as f:
         f.write("build\n")
         f.write("!build/important\n")  # Negation, should be skipped
-        f.name_path = Path(f.name)
+        file_path = Path(f.name)
 
     try:
-        patterns = parse_gitignore(f.name_path)
+        patterns = parse_gitignore(file_path)
 
         assert "build" in patterns
         assert "!build/important" not in patterns
     finally:
-        f.name_path.unlink()
+        file_path.unlink()
 
 
 def test_parse_gitignore_nonexistent():
