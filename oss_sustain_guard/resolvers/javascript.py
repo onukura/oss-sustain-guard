@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import httpx
-import yaml
 
 from oss_sustain_guard.config import get_verify_ssl
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
@@ -285,6 +284,8 @@ class JavaScriptResolver(LanguageResolver):
     def _parse_pnpm_lock(lockfile_path: Path) -> list[PackageInfo]:
         """Parse pnpm-lock.yaml file."""
         try:
+            import yaml
+
             with open(lockfile_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
