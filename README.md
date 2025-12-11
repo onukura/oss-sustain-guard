@@ -33,7 +33,8 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ## 🎯 Key Features
 
-- **21 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (+ optional downstream dependents analysis)
+- **21 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security
+- **Optional Dependents Analysis** - Downstream dependency metrics (informational, not affecting total score)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby
@@ -395,7 +396,12 @@ See [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) for detailed comp
 - **License Clarity** (5pt) - OSI-approved license status
 - **Project Popularity** (10pt) - Stars, watchers, community interest
 - **Fork Activity** (5pt) - Fork count and recent activity
-- **Downstream Dependents** (20pt) - Package adoption (requires Libraries.io API key + `--enable-dependents` flag)
+
+#### Optional Informational Metrics
+
+These metrics provide additional insights but do not affect the total score (0-100):
+
+- **Downstream Dependents** - Shows how many packages depend on this package (requires Libraries.io API key + `--enable-dependents` flag)
 
 #### Security & Funding (20%)
 
@@ -483,6 +489,7 @@ oss-guard check requests -D
 - Shows how many other packages depend on this package (downstream dependencies)
 - Indicates ecosystem importance and adoption
 - Helps identify critical infrastructure packages
+- **Informational only** - does not affect total score (0-100) to ensure consistency
 - **Opt-in only** - must use `--enable-dependents` flag to avoid rate limits
 
 **Getting a Libraries.io API Key:**
@@ -505,10 +512,22 @@ oss-guard check requests -D
 $ export LIBRARIESIO_API_KEY=your_key
 $ oss-guard check requests --enable-dependents
 
-# Output will include "Downstream Dependents" metric:
+# Output will include "Downstream Dependents" metric (informational):
 # 📦 500,000+ packages depend on this (150,000 repos)
 # Critical infrastructure: Essential to ecosystem
+# 
+# Note: This metric is displayed for information only and does not affect
+# the total score (0-100), ensuring consistent scoring whether or not
+# the --enable-dependents flag is used.
 ```
+
+**Why is it informational only?**
+
+To ensure fair and consistent scoring:
+
+- ✅ **Same score for same project** - Total score (0-100) remains identical whether or not `--enable-dependents` is used
+- ✅ **No API dependency** - Users without Libraries.io API key get complete, accurate scores
+- ✅ **Bonus insight** - When enabled, provides valuable ecosystem importance information without penalizing projects that don't enable it
 
 **Without the flag:**
 

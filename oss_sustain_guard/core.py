@@ -2370,7 +2370,9 @@ SCORING_CATEGORIES = {
             "License Clarity",
             "Project Popularity",
             "Fork Activity",
-            "Downstream Dependents",  # Optional: requires Libraries.io API key
+            # Note: "Downstream Dependents" is an optional informational metric
+            # and is NOT included in score calculation to ensure consistency
+            # whether or not --enable-dependents flag is used
         ],
     },
     "Security & Funding": {
