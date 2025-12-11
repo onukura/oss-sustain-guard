@@ -180,4 +180,23 @@ rm .oss-sustain-guard.toml
 ## References
 
 - [TOML Documentation](https://toml.io/)
-- [OSS Sustain Guard README](./README.md)
+- [Recursive Scanning Guide](./RECURSIVE_SCANNING_GUIDE.md) - Configure directory exclusions for recursive scanning
+- [OSS Sustain Guard README](../README.md)
+
+## Related: Directory Exclusions
+
+When using recursive scanning (`--recursive`), you can also configure which directories to exclude:
+
+```toml
+[tool.oss-sustain-guard.exclude-dirs]
+# Additional directory patterns to exclude
+patterns = ["custom_cache", "temp"]
+
+# Use default exclusions (node_modules, venv, etc.)
+use_defaults = true
+
+# Respect .gitignore patterns
+use_gitignore = true
+```
+
+See the [Recursive Scanning Guide](./RECURSIVE_SCANNING_GUIDE.md) for more details on directory exclusions.

@@ -131,7 +131,43 @@ oss-guard check --root-dir /path/to/project
 
 # Auto-detect with lock files
 oss-guard check --include-lock
+
+# Recursively scan subdirectories (great for monorepos!)
+oss-guard check --recursive
+
+# Limit recursion depth
+oss-guard check --recursive --depth 2
+
+# Recursive scan with lock files
+oss-guard check --recursive --include-lock --depth 3
 ```
+
+**Recursive Scanning for Monorepos:**
+
+Perfect for analyzing complex project structures with multiple subprojects:
+
+```bash
+# Project structure:
+# monorepo/
+#   ├── frontend/package.json
+#   ├── backend/requirements.txt
+#   └── services/rust-service/Cargo.toml
+
+cd monorepo
+oss-guard check --recursive        # Scan all subdirectories
+oss-guard check --recursive --depth 2  # Limit to 2 levels deep
+```
+
+**Note:** Common directories like `node_modules/`, `venv/`, `.git/`, etc. are automatically excluded. You can customize exclusions in `.oss-sustain-guard.toml`:
+
+```toml
+[tool.oss-sustain-guard.exclude-dirs]
+patterns = ["custom_cache"]  # Additional patterns
+use_defaults = true          # Use built-in exclusions
+use_gitignore = true         # Respect .gitignore
+```
+
+See [Recursive Scanning Guide](./docs/RECURSIVE_SCANNING_GUIDE.md) for detailed examples.
 
 **Supported Ecosystems:**
 

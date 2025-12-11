@@ -28,7 +28,12 @@ from oss_sustain_guard.core import (
     analyze_repository,
     compute_weighted_total_score,
 )
-from oss_sustain_guard.resolvers import detect_ecosystems, get_resolver
+from oss_sustain_guard.resolvers import (
+    detect_ecosystems,
+    find_lockfiles,
+    find_manifest_files,
+    get_resolver,
+)
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -529,6 +534,18 @@ def check(
         "-m",
         help="Path to a specific manifest file (e.g., package.json, requirements.txt, Cargo.toml). Overrides auto-detection.",
     ),
+    recursive: bool = typer.Option(
+        False,
+        "--recursive",
+        "-R",
+        help="Recursively scan subdirectories for manifest and lock files.",
+    ),
+    depth: int | None = typer.Option(
+        None,
+        "--depth",
+        "-d",
+        help="Maximum directory depth for recursive scanning (default: unlimited).",
+    ),
 ):
     """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)."""
     # Validate profile
@@ -640,39 +657,53 @@ def check(
             raise typer.Exit(code=1)
 
         # Auto-detect from manifest files in root_dir
-        console.print(
-            f"🔍 No packages specified. Auto-detecting from manifest files in {root_dir}..."
+        if recursive:
+            depth_msg = (
+                f" (depth: {depth})" if depth is not None else " (unlimited depth)"
+            )
+            console.print(
+                f"🔍 No packages specified. Recursively scanning {root_dir}{depth_msg}..."
+            )
+        else:
+            console.print(
+                f"🔍 No packages specified. Auto-detecting from manifest files in {root_dir}..."
+            )
+
+        detected_ecosystems = detect_ecosystems(
+            str(root_dir), recursive=recursive, max_depth=depth
         )
-        detected_ecosystems = detect_ecosystems(str(root_dir))
         if detected_ecosystems:
             console.print(f"✅ Detected ecosystems: {', '.join(detected_ecosystems)}")
-            for detected_eco in detected_ecosystems:
+
+            # Find all manifest files (recursively if requested)
+            manifest_files_dict = find_manifest_files(
+                str(root_dir), recursive=recursive, max_depth=depth
+            )
+
+            for detected_eco, manifest_paths in manifest_files_dict.items():
                 resolver = get_resolver(detected_eco)
                 if not resolver:
                     continue
 
-                # Check for manifest files only (ignore lockfiles in auto-detect mode)
-                for manifest_name in resolver.get_manifest_files():
-                    manifest_path = root_dir / manifest_name
-                    if manifest_path.exists():
-                        console.print(f"📋 Found manifest file: {manifest_name}")
-                        # Parse manifest to extract dependencies
-                        try:
-                            manifest_packages = resolver.parse_manifest(
-                                str(manifest_path)
-                            )
-                            console.print(
-                                f"   Found {len(manifest_packages)} package(s) in {manifest_name}"
-                            )
-                            for pkg_info in manifest_packages:
-                                packages_to_analyze.append(
-                                    (detected_eco, pkg_info.name)
-                                )
-                        except Exception as e:
-                            console.print(
-                                f"   [dim]Warning: Unable to parse {manifest_name} - {e}[/dim]"
-                            )
-                        break
+                for manifest_path in manifest_paths:
+                    relative_path = (
+                        manifest_path.relative_to(root_dir)
+                        if manifest_path.is_relative_to(root_dir)
+                        else manifest_path
+                    )
+                    console.print(f"📋 Found manifest file: {relative_path}")
+                    # Parse manifest to extract dependencies
+                    try:
+                        manifest_packages = resolver.parse_manifest(str(manifest_path))
+                        console.print(
+                            f"   Found {len(manifest_packages)} package(s) in {manifest_path.name}"
+                        )
+                        for pkg_info in manifest_packages:
+                            packages_to_analyze.append((detected_eco, pkg_info.name))
+                    except Exception as e:
+                        console.print(
+                            f"   [dim]Warning: Unable to parse {manifest_path.name} - {e}[/dim]"
+                        )
         else:
             # No manifest files found - silently exit (useful for pre-commit hooks)
             raise typer.Exit(code=0)
@@ -705,22 +736,41 @@ def check(
 
         # If --include-lock is explicitly specified, detect and add packages from lockfiles
         if include_lock:
-            detected_ecosystems = detect_ecosystems(str(root_dir))
+            if recursive:
+                depth_msg = (
+                    f" (depth: {depth})" if depth is not None else " (unlimited depth)"
+                )
+                console.print(f"🔒 Recursively scanning for lockfiles{depth_msg}...")
+
+            detected_ecosystems = detect_ecosystems(
+                str(root_dir), recursive=recursive, max_depth=depth
+            )
             if detected_ecosystems:
                 console.print(
                     f"🔍 Detected ecosystems: {', '.join(detected_ecosystems)}"
                 )
-                for detected_eco in detected_ecosystems:
+
+                # Find all lockfiles (recursively if requested)
+                lockfiles_dict = find_lockfiles(
+                    str(root_dir), recursive=recursive, max_depth=depth
+                )
+
+                for detected_eco, lockfile_paths in lockfiles_dict.items():
                     resolver = get_resolver(detected_eco)
                     if not resolver:
                         continue
 
-                    lockfiles = resolver.detect_lockfiles(str(root_dir))
-                    if lockfiles:
+                    if lockfile_paths:
+                        relative_names = [
+                            lf.relative_to(root_dir)
+                            if lf.is_relative_to(root_dir)
+                            else lf
+                            for lf in lockfile_paths
+                        ]
                         console.print(
-                            f"🔒 Found lockfile(s) for {detected_eco}: {', '.join(str(l.name) for l in lockfiles)}"
+                            f"🔒 Found lockfile(s) for {detected_eco}: {', '.join(str(l) for l in relative_names)}"
                         )
-                        for lockfile in lockfiles:
+                        for lockfile in lockfile_paths:
                             try:
                                 lock_packages = resolver.parse_lockfile(str(lockfile))
                                 console.print(
@@ -734,8 +784,8 @@ def check(
                                 console.print(
                                     f"   [yellow]Warning: Failed to parse {lockfile.name}: {e}[/yellow]"
                                 )
-        else:
-            console.print(f"   [dim]No lockfiles found in {root_dir}.[/dim]")
+            else:
+                console.print(f"   [dim]No lockfiles found in {root_dir}.[/dim]")
 
     # Remove duplicates while preserving order
     seen = set()

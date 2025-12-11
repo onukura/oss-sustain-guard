@@ -30,8 +30,8 @@ Priority = (100 - Health Score) + (20 - Contributor Redundancy) + (15 - Maintain
 
 Only projects that meet ALL of these criteria are shown:
 
-✅ **Community-driven** - Not corporate-backed (we respect different sustainability models)  
-✅ **Has funding links** - At least one way to support (GitHub Sponsors, Open Collective, Patreon, etc.)  
+✅ **Community-driven** - Not corporate-backed (we respect different sustainability models)
+✅ **Has funding links** - At least one way to support (GitHub Sponsors, Open Collective, Patreon, etc.)
 ✅ **In your dependencies** - Projects you actually use (from cached analysis)
 
 ## 📖 Usage
@@ -81,7 +81,7 @@ Top 3 projects that would appreciate your support:
       • GITHUB: https://github.com/tiangolo
 
 Would you like to open a funding link?
-Enter project number (1-3) to open funding link, or 'q' to quit: 
+Enter project number (1-3) to open funding link, or 'q' to quit:
 ```
 
 ### Interactive Actions

@@ -1,2 +1,16 @@
 [tool.oss-sustain-guard]
+# Exclude specific packages from analysis
 exclude = ["numpy", "requests"]
+
+# Directory exclusion settings for recursive scanning
+[tool.oss-sustain-guard.exclude-dirs]
+# Additional directory patterns to exclude (in addition to defaults)
+patterns = []
+
+# Use default exclusions (node_modules, venv, __pycache__, etc.)
+# Default: true
+use_defaults = true
+
+# Respect .gitignore patterns when scanning directories
+# Default: true
+use_gitignore = true

@@ -86,6 +86,186 @@ def is_package_excluded(package_name: str) -> bool:
     return package_name.lower() in [pkg.lower() for pkg in excluded]
 
 
+def get_default_exclusion_patterns() -> set[str]:
+    """
+    Get default directory exclusion patterns for recursive scanning.
+
+    These are common build outputs, caches, and virtual environments
+    that should typically be excluded from scanning.
+
+    Returns:
+        Set of directory names to exclude.
+    """
+    return {
+        # Node.js
+        "node_modules",
+        ".npm",
+        ".yarn",
+        # Python
+        "__pycache__",
+        "venv",
+        ".venv",
+        "env",
+        ".env",
+        ".virtualenv",
+        ".tox",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        "*.egg-info",
+        # Rust
+        "target",
+        # Go
+        "vendor",
+        # Java/Kotlin/Scala
+        ".gradle",
+        ".m2",
+        ".ivy2",
+        # PHP (uses same "vendor" as Go)
+        # Ruby
+        ".bundle",
+        # .NET/C#
+        "bin",
+        "obj",
+        "packages",
+        # Build outputs (general)
+        "build",
+        "dist",
+        "out",
+        ".output",
+        # Version control
+        ".git",
+        ".svn",
+        ".hg",
+        ".bzr",
+        # IDEs
+        ".idea",
+        ".vscode",
+        ".vs",
+        # OS
+        ".DS_Store",
+        "Thumbs.db",
+    }
+
+
+def get_exclusion_config() -> dict:
+    """
+    Load exclusion configuration from config files.
+
+    Returns:
+        Dictionary with exclusion settings.
+    """
+    config_defaults = {
+        "patterns": [],
+        "use_defaults": True,
+        "use_gitignore": True,
+    }
+
+    # Try .oss-sustain-guard.toml first (highest priority)
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        exclude_config = (
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude-dirs", {})
+        )
+        if exclude_config:
+            return {**config_defaults, **exclude_config}
+
+    # Try pyproject.toml (fallback)
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists():
+        config = load_config_file(pyproject_path)
+        exclude_config = (
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude-dirs", {})
+        )
+        if exclude_config:
+            return {**config_defaults, **exclude_config}
+
+    return config_defaults
+
+
+def parse_gitignore(gitignore_path: Path) -> set[str]:
+    """
+    Parse .gitignore file and extract directory patterns.
+
+    This is a simple parser that extracts directory names.
+    It does not support complex glob patterns or negation.
+
+    Args:
+        gitignore_path: Path to .gitignore file.
+
+    Returns:
+        Set of directory names to exclude.
+    """
+    if not gitignore_path.exists():
+        return set()
+
+    patterns = set()
+    try:
+        with open(gitignore_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                # Skip comments and empty lines
+                if not line or line.startswith("#"):
+                    continue
+                # Skip negations
+                if line.startswith("!"):
+                    continue
+
+                # Extract directory patterns
+                # Remove trailing slashes
+                pattern = line.rstrip("/")
+                # Remove leading slashes and wildcards for simple matching
+                pattern = pattern.lstrip("/")
+
+                # Only add simple directory names (no path separators, no complex globs)
+                if "/" not in pattern and "*" not in pattern:
+                    patterns.add(pattern)
+                # Also handle patterns like "*/dirname" which means any dirname
+                elif pattern.startswith("*/"):
+                    dir_name = pattern[2:]
+                    if "/" not in dir_name and "*" not in dir_name:
+                        patterns.add(dir_name)
+
+    except Exception:
+        # Silently ignore errors parsing .gitignore
+        pass
+
+    return patterns
+
+
+def get_exclusion_patterns(directory: Path | None = None) -> set[str]:
+    """
+    Get combined exclusion patterns from defaults, config, and .gitignore.
+
+    Args:
+        directory: Directory to check for .gitignore (defaults to PROJECT_ROOT).
+
+    Returns:
+        Set of directory names to exclude during recursive scanning.
+    """
+    if directory is None:
+        directory = PROJECT_ROOT
+
+    exclusion_config = get_exclusion_config()
+    patterns = set()
+
+    # Add default patterns if enabled
+    if exclusion_config.get("use_defaults", True):
+        patterns.update(get_default_exclusion_patterns())
+
+    # Add custom patterns from config
+    custom_patterns = exclusion_config.get("patterns", [])
+    patterns.update(custom_patterns)
+
+    # Add patterns from .gitignore if enabled
+    if exclusion_config.get("use_gitignore", True):
+        gitignore_path = Path(directory) / ".gitignore"
+        patterns.update(parse_gitignore(gitignore_path))
+
+    return patterns
+
+
 def set_verify_ssl(verify: bool) -> None:
     """
     Set the SSL verification setting globally.
