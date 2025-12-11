@@ -704,6 +704,53 @@ def check(
                         console.print(
                             f"   [dim]Warning: Unable to parse {manifest_path.name} - {e}[/dim]"
                         )
+
+            # If --include-lock is specified, also detect and parse lockfiles
+            if include_lock:
+                if recursive:
+                    depth_msg = (
+                        f" (depth: {depth})"
+                        if depth is not None
+                        else " (unlimited depth)"
+                    )
+                    console.print(
+                        f"🔒 Recursively scanning for lockfiles{depth_msg}..."
+                    )
+
+                # Find all lockfiles (recursively if requested)
+                lockfiles_dict = find_lockfiles(
+                    str(root_dir), recursive=recursive, max_depth=depth
+                )
+
+                for detected_eco, lockfile_paths in lockfiles_dict.items():
+                    resolver = get_resolver(detected_eco)
+                    if not resolver:
+                        continue
+
+                    if lockfile_paths:
+                        relative_names = [
+                            lf.relative_to(root_dir)
+                            if lf.is_relative_to(root_dir)
+                            else lf
+                            for lf in lockfile_paths
+                        ]
+                        console.print(
+                            f"🔒 Found lockfile(s) for {detected_eco}: {', '.join(str(l) for l in relative_names)}"
+                        )
+                        for lockfile in lockfile_paths:
+                            try:
+                                lock_packages = resolver.parse_lockfile(str(lockfile))
+                                console.print(
+                                    f"   Found {len(lock_packages)} package(s) in {lockfile.name}"
+                                )
+                                for pkg_info in lock_packages:
+                                    packages_to_analyze.append(
+                                        (detected_eco, pkg_info.name)
+                                    )
+                            except Exception as e:
+                                console.print(
+                                    f"   [yellow]Warning: Failed to parse {lockfile.name}: {e}[/yellow]"
+                                )
         else:
             # No manifest files found - silently exit (useful for pre-commit hooks)
             raise typer.Exit(code=0)
