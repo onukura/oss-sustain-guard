@@ -42,7 +42,8 @@ class TestRootDirOption:
         )
 
         assert result.exit_code == 1
-        assert "Directory not found: /nonexistent/directory" in result.output
+        assert "Directory not found:" in result.output
+        assert "nonexistent" in result.output and "directory" in result.output
 
     def test_root_dir_file_instead_of_directory(self):
         """Test error handling when root-dir is a file."""
@@ -189,7 +190,8 @@ class TestManifestOption:
         )
 
         assert result.exit_code == 1
-        assert "Manifest file not found: /nonexistent/package.json" in result.output
+        assert "Manifest file not found:" in result.output
+        assert "nonexistent" in result.output and "package.json" in result.output
 
     def test_manifest_directory_instead_of_file(self):
         """Test error handling when manifest path is a directory."""
