@@ -69,7 +69,7 @@ def test_parse_gitignore_with_paths():
         assert "temp" in patterns
         assert "cache" in patterns
     finally:
-        f.name_path.unlink()
+        file_path.unlink()
 
 
 def test_parse_gitignore_negations():
