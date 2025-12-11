@@ -820,5 +820,215 @@ def cache_stats(
         console.print(table)
 
 
+@app.command()
+def gratitude(
+    top_n: int = typer.Option(
+        3,
+        "--top",
+        "-t",
+        help="Number of top projects to display for gratitude.",
+    ),
+    insecure: bool = typer.Option(
+        False,
+        "--insecure",
+        help="Disable SSL certificate verification for development/testing.",
+    ),
+):
+    """
+    🎁 Gratitude Vending Machine - Support community-driven OSS projects.
+
+    Displays top community-driven projects that need support based on:
+    - Dependency impact (how many projects depend on it)
+    - Maintainer load (low bus factor, review backlog)
+    - Activity level (recent contributions)
+
+    Opens funding links so you can show your appreciation!
+    """
+    import webbrowser
+
+    # Set SSL verification flag
+    if insecure:
+        set_verify_ssl(False)
+
+    console.print("\n[bold cyan]🎁 Gratitude Vending Machine[/bold cyan]")
+    console.print(
+        "[dim]Loading community projects that could use your support...[/dim]\n"
+    )
+
+    # Load database
+    db = load_database(use_cache=True)
+
+    if not db:
+        console.print(
+            "[yellow]No database available. Please run analysis first.[/yellow]"
+        )
+        return
+
+    # Calculate support priority for each project
+    support_candidates = []
+
+    for key, data in db.items():
+        # Skip if no funding links
+        funding_links = data.get("funding_links", [])
+        if not funding_links:
+            continue
+
+        # Only show community-driven projects (not corporate-backed)
+        is_community = data.get("is_community_driven", False)
+        if not is_community:
+            continue
+
+        # Calculate support priority score
+        total_score = data.get("total_score", 0)
+        metrics = data.get("metrics", [])
+
+        # Find specific metrics that indicate need for support
+        bus_factor_score = 20  # Default max
+        maintainer_drain_score = 15  # Default max
+
+        for metric in metrics:
+            metric_name = metric.get("name", "")
+            if "Bus Factor" in metric_name or "Contributor Redundancy" in metric_name:
+                bus_factor_score = metric.get("score", 20)
+            elif "Maintainer" in metric_name and "Drain" in metric_name:
+                maintainer_drain_score = metric.get("score", 15)
+
+        # Priority = (100 - total_score) + (20 - bus_factor) + (15 - maintainer_drain)
+        # Higher priority = needs more support
+        priority = (
+            (100 - total_score)
+            + (20 - bus_factor_score)
+            + (15 - maintainer_drain_score)
+        )
+
+        support_candidates.append(
+            {
+                "key": key,
+                "repo_url": data.get("github_url", data.get("repo_url", "")),
+                "total_score": total_score,
+                "priority": priority,
+                "funding_links": funding_links,
+                "bus_factor_score": bus_factor_score,
+                "maintainer_drain_score": maintainer_drain_score,
+            }
+        )
+
+    if not support_candidates:
+        console.print(
+            "[yellow]No community-driven projects with funding links found.[/yellow]"
+        )
+        console.print("[dim]Try running analysis on more packages first.[/dim]")
+        return
+
+    # Sort by priority (higher = needs more support)
+    support_candidates.sort(key=lambda x: x["priority"], reverse=True)
+
+    # Display top N
+    top_projects = support_candidates[:top_n]
+
+    console.print(
+        f"[bold green]Top {len(top_projects)} projects that would appreciate your support:[/bold green]\n"
+    )
+
+    for i, project in enumerate(top_projects, 1):
+        ecosystem, package_name = project["key"].split(":", 1)
+        repo_url = project["repo_url"]
+        total_score = project["total_score"]
+
+        # Determine health status
+        if total_score >= 80:
+            status_color = "green"
+            status_text = "Healthy"
+        elif total_score >= 50:
+            status_color = "yellow"
+            status_text = "Monitor"
+        else:
+            status_color = "red"
+            status_text = "Needs attention"
+
+        console.print(f"[bold cyan]{i}. {package_name}[/bold cyan] ({ecosystem})")
+        console.print(f"   Repository: {repo_url}")
+        console.print(
+            f"   Health Score: [{status_color}]{total_score}/100[/{status_color}] ({status_text})"
+        )
+        console.print(f"   Contributor Redundancy: {project['bus_factor_score']}/20")
+        console.print(f"   Maintainer Drain: {project['maintainer_drain_score']}/15")
+
+        # Display funding links
+        funding_links = project["funding_links"]
+        console.print("   [bold magenta]💝 Support options:[/bold magenta]")
+        for link in funding_links:
+            platform = link.get("platform", "Unknown")
+            url = link.get("url", "")
+            console.print(f"      • {platform}: {url}")
+
+        console.print()
+
+    # Interactive prompt
+    console.print("[bold yellow]Would you like to open a funding link?[/bold yellow]")
+    console.print(
+        "Enter project number (1-{}) to open funding link, or 'q' to quit: ".format(
+            len(top_projects)
+        ),
+        end="",
+    )
+
+    try:
+        choice = input().strip().lower()
+
+        if choice == "q":
+            console.print(
+                "[dim]Thank you for considering supporting OSS maintainers! 🙏[/dim]"
+            )
+            return
+
+        try:
+            project_idx = int(choice) - 1
+            if 0 <= project_idx < len(top_projects):
+                selected_project = top_projects[project_idx]
+                funding_links = selected_project["funding_links"]
+
+                if len(funding_links) == 1:
+                    # Only one link, open it directly
+                    url = funding_links[0]["url"]
+                    console.print(
+                        f"\n[green]Opening {funding_links[0]['platform']}...[/green]"
+                    )
+                    webbrowser.open(url)
+                    console.print(
+                        "[dim]Thank you for supporting OSS maintainers! 🙏[/dim]"
+                    )
+                else:
+                    # Multiple links, ask which one
+                    console.print("\n[bold]Select funding platform:[/bold]")
+                    for i, link in enumerate(funding_links, 1):
+                        console.print(f"{i}. {link['platform']}")
+                    console.print("Enter platform number: ", end="")
+
+                    platform_choice = input().strip()
+                    platform_idx = int(platform_choice) - 1
+
+                    if 0 <= platform_idx < len(funding_links):
+                        url = funding_links[platform_idx]["url"]
+                        platform = funding_links[platform_idx]["platform"]
+                        console.print(f"\n[green]Opening {platform}...[/green]")
+                        webbrowser.open(url)
+                        console.print(
+                            "[dim]Thank you for supporting OSS maintainers! 🙏[/dim]"
+                        )
+                    else:
+                        console.print("[yellow]Invalid platform number.[/yellow]")
+            else:
+                console.print("[yellow]Invalid project number.[/yellow]")
+        except ValueError:
+            console.print(
+                "[yellow]Invalid input. Please enter a number or 'q'.[/yellow]"
+            )
+    except (KeyboardInterrupt, EOFError):
+        console.print(
+            "\n[dim]Cancelled. Thank you for considering supporting OSS maintainers! 🙏[/dim]"
+        )
+
+
 if __name__ == "__main__":
     app()

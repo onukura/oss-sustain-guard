@@ -199,6 +199,75 @@ pre-commit run oss-sustain-guard --all-files
 
 See [Pre-Commit Integration Guide](./docs/PRE_COMMIT_INTEGRATION.md) for details.
 
+## 🎁 Gratitude Vending Machine
+
+**Support the maintainers who keep your dependencies running!**
+
+The Gratitude Vending Machine is a unique feature that helps you discover and support community-driven OSS projects that need your help the most. It analyzes your dependencies and prioritizes projects based on:
+
+- **Impact & dependency load** - How many projects depend on it
+- **Maintainer capacity** - Low bus factor, high review backlog
+- **Community support** - Whether funding links are available
+
+### How to Use
+
+```bash
+# Discover top 3 projects that would appreciate your support
+oss-guard gratitude
+
+# See top 5 projects
+oss-guard gratitude --top 5
+```
+
+**Interactive Experience:**
+
+1. **Discover** - Shows top community-driven projects ranked by support priority
+2. **Learn** - Displays health scores, contributor metrics, and impact
+3. **Support** - Opens funding links (GitHub Sponsors, Open Collective, Patreon, etc.)
+4. **Give back** - Make a direct contribution with one click
+
+**Example Output:**
+
+```text
+🎁 Gratitude Vending Machine
+Loading community projects that could use your support...
+
+Top 3 projects that would appreciate your support:
+
+1. rich (python)
+   Repository: https://github.com/Textualize/rich
+   Health Score: 77/100 (Monitor)
+   Contributor Redundancy: 10/20
+   Maintainer Drain: 15/15
+   💝 Support options:
+      • GITHUB: https://github.com/willmcgugan
+
+2. pytest (python)
+   Repository: https://github.com/pytest-dev/pytest
+   Health Score: 78/100 (Monitor)
+   Contributor Redundancy: 15/20
+   Maintainer Drain: 15/15
+   💝 Support options:
+      • GITHUB: https://github.com/pytest-dev
+      • TIDELIFT: https://tidelift.com/funding/github/pypi/pytest
+      • OPEN_COLLECTIVE: https://opencollective.com/pytest
+
+Would you like to open a funding link?
+Enter project number (1-3) to open funding link, or 'q' to quit:
+```
+
+**What makes this special:**
+
+- 🎯 **Smart prioritization** - Not just popular projects, but ones that truly need support
+- 🤝 **Community focus** - Only shows community-driven projects (excludes corporate-backed)
+- 💝 **One-click support** - Opens funding links directly in your browser
+- 🌱 **Awareness** - Helps you understand the sustainability challenges maintainers face
+- 📊 **Transparency** - Shows health metrics so you can make informed decisions
+
+**Philosophy:**
+
+The Gratitude Vending Machine embodies our belief that open-source sustainability requires both awareness and action. By making it easy to discover and support the maintainers who keep your dependencies running, we hope to create a more sustainable OSS ecosystem—one small contribution at a time.
+
 ## 💾 Cache Management
 
 Caches analysis data locally (default: `~/.cache/oss-sustain-guard`, 7-day TTL).
