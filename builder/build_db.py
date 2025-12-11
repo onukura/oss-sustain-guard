@@ -2,7 +2,7 @@
 Builds the static database of OSS sustainability metrics using Libraries.io.
 
 Architecture (Token-less Experience):
-  1. Build phase (CI/CD, requires LIBRARIES_IO_API_KEY):
+  1. Build phase (CI/CD, requires LIBRARIESIO_API_KEY):
      - Libraries.io API → Package metadata (repo URL)
      - GitHub GraphQL → Sustainability analysis (21 metrics + 5 models)
      - Save → data/latest/*.json + data/archive/YYYY-MM-DD/*.json
@@ -29,7 +29,7 @@ Metric Models (5 aggregated views):
   - Project Maturity Model, Contributor Experience Model
 
 Environment variables:
-  - LIBRARIES_IO_API_KEY: API key for Libraries.io (required for building)
+  - LIBRARIESIO_API_KEY: API key for Libraries.io (required for building)
   - GITHUB_TOKEN: GitHub personal access token (required for analysis)
 """
 
@@ -61,7 +61,7 @@ DATABASE_PATH = project_root / "data" / "database.json"
 
 # Libraries.io API configuration
 LIBRARIES_IO_API_URL = "https://libraries.io/api"
-LIBRARIES_IO_API_KEY = os.getenv("LIBRARIES_IO_API_KEY")
+LIBRARIESIO_API_KEY = os.getenv("LIBRARIESIO_API_KEY")
 RATE_LIMIT_DELAY = 0.5  # 0.5 seconds between requests (faster, but within 60 req/min)
 
 # Mapping of ecosystem names (Libraries.io → project)
@@ -170,8 +170,8 @@ async def fetch_libraries_io_packages(
     Returns:
         List of package dicts with 'name' and 'repository_url' keys, or None on failure
     """
-    if not LIBRARIES_IO_API_KEY:
-        print("[WARNING] LIBRARIES_IO_API_KEY not set. Skipping API fetch.")
+    if not LIBRARIESIO_API_KEY:
+        print("[WARNING] LIBRARIESIO_API_KEY not set. Skipping API fetch.")
         return None
 
     try:
@@ -187,7 +187,7 @@ async def fetch_libraries_io_packages(
         print(
             f"  [DEBUG] Using Libraries.io API with ecosystem: {libraries_io_ecosystem}"
         )
-        print(f"  [DEBUG] API Key present: {bool(LIBRARIES_IO_API_KEY)}")
+        print(f"  [DEBUG] API Key present: {bool(LIBRARIESIO_API_KEY)}")
 
         async with httpx.AsyncClient(
             verify=get_verify_ssl(), timeout=60, headers=headers
@@ -199,7 +199,7 @@ async def fetch_libraries_io_packages(
                     "sort": "rank",  # Most popular first
                     "page": page,
                     "per_page": per_page,
-                    "api_key": LIBRARIES_IO_API_KEY,
+                    "api_key": LIBRARIESIO_API_KEY,
                 }
 
                 print(f"  [DEBUG] Fetching page {page}...")
@@ -485,9 +485,9 @@ async def main(
         )
         sys.exit(1)
 
-    if not LIBRARIES_IO_API_KEY:
+    if not LIBRARIESIO_API_KEY:
         console.print(
-            "[bold yellow]Warning: LIBRARIES_IO_API_KEY environment variable is not set.[/bold yellow]"
+            "[bold yellow]Warning: LIBRARIESIO_API_KEY environment variable is not set.[/bold yellow]"
         )
         console.print(
             "API-based fetching will not work. Attempting fallback packages if available."

@@ -37,7 +37,7 @@ jobs:
       - name: Run database builder for all ecosystems
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LIBRARIES_IO_API_KEY: ${{ secrets.LIBRARIES_IO_API_KEY }}
+          LIBRARIESIO_API_KEY: ${{ secrets.LIBRARIESIO_API_KEY }}
         run: |
           # Run ecosystems sequentially to respect Libraries.io rate limit (60 req/min)
           for ecosystem in python javascript ruby rust php java csharp go; do

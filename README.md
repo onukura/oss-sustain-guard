@@ -33,7 +33,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ## 🎯 Key Features
 
-- **21 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security
+- **21 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (+ optional downstream dependents analysis)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby
@@ -395,6 +395,7 @@ See [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) for detailed comp
 - **License Clarity** (5pt) - OSI-approved license status
 - **Project Popularity** (10pt) - Stars, watchers, community interest
 - **Fork Activity** (5pt) - Fork count and recent activity
+- **Downstream Dependents** (20pt) - Package adoption (requires Libraries.io API key + `--enable-dependents` flag)
 
 #### Security & Funding (20%)
 
@@ -459,6 +460,61 @@ oss-guard check requests django
 $ export GITHUB_TOKEN=ghp_xxxxxxxxxxxx
 $ oss-guard check my-private-package
 ```
+
+### Libraries.io API (Optional - Enhanced Dependents Analysis)
+
+For enhanced dependency analysis, you can optionally configure a free Libraries.io API key to get **downstream dependents count** - showing how many other packages depend on the packages you're analyzing.
+
+**⚠️ Important:** Due to API rate limits (10,000 requests/month), this feature is **opt-in** and requires the `--enable-dependents` flag.
+
+```bash
+# 1. Get free API key from https://libraries.io/api
+export LIBRARIESIO_API_KEY=your_api_key
+
+# 2. Enable dependents analysis with the flag
+oss-guard check requests --enable-dependents
+
+# Short form
+oss-guard check requests -D
+```
+
+**What is Dependents Analysis?**
+
+- Shows how many other packages depend on this package (downstream dependencies)
+- Indicates ecosystem importance and adoption
+- Helps identify critical infrastructure packages
+- **Opt-in only** - must use `--enable-dependents` flag to avoid rate limits
+
+**Getting a Libraries.io API Key:**
+
+1. Sign up at [libraries.io](https://libraries.io)
+2. Go to [Account Settings → API Key](https://libraries.io/account)
+3. Copy your free API key
+4. Set environment variable: `export LIBRARIESIO_API_KEY=your_api_key`
+
+**Benefits:**
+
+- ✅ Free API (10,000 requests/month)
+- ✅ Multi-language support (Python, JavaScript, Rust, Go, PHP, Java, C#, Ruby)
+- ✅ Shows adoption trends and ecosystem importance
+- ✅ Helps identify critical infrastructure packages
+
+**Example with dependents analysis:**
+
+```bash
+$ export LIBRARIESIO_API_KEY=your_key
+$ oss-guard check requests --enable-dependents
+
+# Output will include "Downstream Dependents" metric:
+# 📦 500,000+ packages depend on this (150,000 repos)
+# Critical infrastructure: Essential to ecosystem
+```
+
+**Without the flag:**
+
+- The tool works normally with all other 20+ metrics
+- Only the "Downstream Dependents" metric is skipped
+- No error messages - seamlessly handles missing API key
 
 ### SSL Verification
 

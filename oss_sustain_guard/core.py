@@ -14,12 +14,17 @@ from oss_sustain_guard.schema_migrations import normalize_metric_name
 
 # Load environment variables from .env file
 load_dotenv()
+console = Console()
 
 # --- Constants ---
 
 GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
+LIBRARIESIO_API_BASE = "https://libraries.io/api"
 # Using a personal access token from environment variables
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+LIBRARIESIO_API_KEY = os.getenv(
+    "LIBRARIESIO_API_KEY"
+)  # Optional: for dependents analysis
 
 # --- Data Structures ---
 
@@ -89,6 +94,46 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
                 response=response,
             )
     return data.get("data", {})
+
+
+def _query_librariesio_api(platform: str, package_name: str) -> dict[str, Any] | None:
+    """
+    Queries Libraries.io API for package information including dependents count.
+
+    Args:
+        platform: Package platform (e.g., 'pypi', 'npm', 'cargo', 'maven')
+        package_name: Package name
+
+    Returns:
+        Package information dict or None if API key not set or request fails
+
+    Note:
+        Requires LIBRARIESIO_API_KEY environment variable.
+        Get free API key at: https://libraries.io/api
+    """
+    api_key = os.getenv("LIBRARIESIO_API_KEY")
+    if not api_key:
+        return None
+
+    url = f"{LIBRARIESIO_API_BASE}/{platform}/{package_name}"
+    params = {"api_key": api_key}
+
+    try:
+        with httpx.Client(verify=get_verify_ssl()) as client:
+            response = client.get(url, params=params, timeout=10)
+            if response.status_code == 404:
+                console.print(
+                    f"Warning: Package {package_name} not found on Libraries.io."
+                )
+                return None
+            response.raise_for_status()
+            console.print(
+                f"Info: Queried Libraries.io for {package_name} on {platform}."
+            )
+            return response.json()
+    except httpx.RequestError:
+        console.print("Warning: Libraries.io API request failed.")
+        return None
 
 
 # --- GraphQL Query Templates ---
@@ -2181,6 +2226,104 @@ def check_pr_responsiveness(repo_data: dict[str, Any]) -> Metric:
     return Metric("PR Responsiveness", score, max_score, message, risk)
 
 
+def check_dependents_count(
+    repo_url: str, platform: str | None = None, package_name: str | None = None
+) -> Metric | None:
+    """
+    Evaluates package adoption by counting downstream dependents.
+
+    Uses Libraries.io API to determine how many other packages
+    depend on this package. High dependents count indicates:
+    - Wide adoption and trust
+    - Critical infrastructure importance
+    - Strong motivation for maintenance
+
+    Note:
+        Requires LIBRARIESIO_API_KEY environment variable.
+        Get free API key at: https://libraries.io/api
+
+    Args:
+        repo_url: GitHub repository URL
+        platform: Package platform (e.g., 'Pypi', 'NPM', 'Cargo')
+        package_name: Package name on the registry
+
+    Returns:
+        Metric with dependents count analysis, or None if API not configured
+
+    Scoring:
+        - 10000+ dependents: 20/20 (Critical infrastructure)
+        - 1000+ dependents: 18/20 (Widely adopted)
+        - 500+ dependents: 15/20 (Popular)
+        - 100+ dependents: 12/20 (Established)
+        - 50+ dependents: 9/20 (Growing adoption)
+        - 10+ dependents: 6/20 (Early adoption)
+        - 1+ dependents: 3/20 (Used by others)
+        - 0 dependents: 0/20 (No downstream dependencies)
+    """
+    max_score = 20
+
+    # Check if Libraries.io API is configured (check environment at runtime)
+    api_key = os.getenv("LIBRARIESIO_API_KEY")
+    if not api_key:
+        return None  # Skip metric if API key not available
+
+    # If platform or package_name not provided, cannot query
+    if not platform or not package_name:
+        return None
+
+    # Query Libraries.io API
+    package_info = _query_librariesio_api(platform, package_name)
+
+    if not package_info:
+        # API call failed or package not found
+        return Metric(
+            "Downstream Dependents",
+            0,
+            max_score,
+            f"ℹ️  Package not found on {platform} registry via Libraries.io.",
+            "Low",
+        )
+
+    dependents_count = package_info.get("dependents_count", 0)
+    dependent_repos_count = package_info.get("dependent_repos_count", 0)
+
+    # Score based on dependents count
+    if dependents_count >= 10000:
+        score = max_score
+        risk = "None"
+        message = f"Critical infrastructure: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos). Essential to ecosystem."
+    elif dependents_count >= 1000:
+        score = 18
+        risk = "None"
+        message = f"Widely adopted: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos)."
+    elif dependents_count >= 500:
+        score = 15
+        risk = "None"
+        message = f"Popular: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos)."
+    elif dependents_count >= 100:
+        score = 12
+        risk = "Low"
+        message = f"Established: 📦 {dependents_count} packages depend on this ({dependent_repos_count} repos)."
+    elif dependents_count >= 50:
+        score = 9
+        risk = "Low"
+        message = f"Growing adoption: 📦 {dependents_count} packages depend on this ({dependent_repos_count} repos)."
+    elif dependents_count >= 10:
+        score = 6
+        risk = "Low"
+        message = f"Early adoption: 📦 {dependents_count} packages depend on this ({dependent_repos_count} repos)."
+    elif dependents_count >= 1:
+        score = 3
+        risk = "Low"
+        message = f"Used by others: 📦 {dependents_count} package(s) depend on this ({dependent_repos_count} repo(s))."
+    else:
+        score = 0
+        risk = "Low"
+        message = "ℹ️  No downstream dependencies detected. May be early-stage or application-focused."
+
+    return Metric("Downstream Dependents", score, max_score, message, risk)
+
+
 # --- Scoring System ---
 
 # Category definitions for weighted scoring
@@ -2227,6 +2370,7 @@ SCORING_CATEGORIES = {
             "License Clarity",
             "Project Popularity",
             "Fork Activity",
+            "Downstream Dependents",  # Optional: requires Libraries.io API key
         ],
     },
     "Security & Funding": {
@@ -2762,7 +2906,12 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
 # --- Main Analysis Function ---
 
 
-def analyze_repository(owner: str, name: str) -> AnalysisResult:
+def analyze_repository(
+    owner: str,
+    name: str,
+    platform: str | None = None,
+    package_name: str | None = None,
+) -> AnalysisResult:
     """
     Performs a full sustainability analysis on a given repository.
 
@@ -2772,6 +2921,9 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
     Args:
         owner: GitHub repository owner (username or organization)
         name: GitHub repository name
+        platform: Optional package platform (e.g., 'Pypi', 'NPM', 'Cargo')
+                  for dependents analysis via Libraries.io
+        package_name: Optional package name on the registry for dependents analysis
 
     Returns:
         AnalysisResult containing repo_url, total_score, and list of metrics
@@ -2780,7 +2932,7 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
         ValueError: If GITHUB_TOKEN is not set
         httpx.HTTPStatusError: If GitHub API returns an error
     """
-    console = Console()
+
     console.print(f"Analyzing [bold cyan]{owner}/{name}[/bold cyan]...")
 
     try:
@@ -3108,6 +3260,20 @@ def analyze_repository(owner: str, name: str) -> AnalysisResult:
                     "Medium",
                 )
             )
+
+        # Optional: Check downstream dependents if Libraries.io API is configured
+        if platform and package_name:
+            try:
+                dependents_metric = check_dependents_count(
+                    f"https://github.com/{owner}/{name}", platform, package_name
+                )
+                if dependents_metric:
+                    metrics.append(dependents_metric)
+            except Exception as e:
+                console.print(
+                    f"  [yellow]⚠️  Downstream dependents check incomplete: {e}[/yellow]"
+                )
+                # Don't append a placeholder metric if API key is not configured
 
         # Calculate total score using category-weighted approach
         # This provides a balanced view across sustainability dimensions

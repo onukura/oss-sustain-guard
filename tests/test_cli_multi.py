@@ -126,7 +126,46 @@ class TestAnalyzePackage:
 
         result = analyze_package("requests", "python", {})
         assert result == mock_result
-        mock_analyze_repo.assert_called_once_with("psf", "requests")
+        # By default, enable_dependents=False, so platform and package_name should be None
+        mock_analyze_repo.assert_called_once_with(
+            "psf", "requests", platform=None, package_name=None
+        )
+
+    @patch("oss_sustain_guard.cli.save_cache")
+    @patch("oss_sustain_guard.cli.analyze_repository")
+    @patch("oss_sustain_guard.cli.get_resolver")
+    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
+    def test_analyze_package_with_dependents(
+        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
+    ):
+        """Test package analysis with dependents enabled."""
+        from oss_sustain_guard.core import AnalysisResult, Metric
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_github_url.return_value = ("psf", "requests")
+        mock_get_resolver.return_value = mock_resolver
+
+        mock_result = AnalysisResult(
+            repo_url="https://github.com/psf/requests",
+            total_score=85,
+            metrics=[
+                Metric(
+                    name="Test Metric",
+                    score=85,
+                    max_score=100,
+                    message="Package analyzed successfully",
+                    risk="Low",
+                )
+            ],
+        )
+        mock_analyze_repo.return_value = mock_result
+
+        result = analyze_package("requests", "python", {}, enable_dependents=True)
+        assert result == mock_result
+        # With enable_dependents=True, platform and package_name should be passed
+        mock_analyze_repo.assert_called_once_with(
+            "psf", "requests", platform="Pypi", package_name="requests"
+        )
 
     @patch("oss_sustain_guard.cli.save_cache")
     @patch("oss_sustain_guard.cli.analyze_repository")

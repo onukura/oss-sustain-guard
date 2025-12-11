@@ -361,6 +361,7 @@ def analyze_package(
     ecosystem: str,
     db: dict,
     profile: str = "balanced",
+    enable_dependents: bool = False,
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -370,6 +371,7 @@ def analyze_package(
         ecosystem: Ecosystem name (python, javascript, go, rust).
         db: Cached database dictionary.
         profile: Scoring profile to use for score calculation.
+        enable_dependents: Enable downstream dependents analysis via Libraries.io API.
 
     Returns:
         AnalysisResult if successful, None otherwise.
@@ -428,8 +430,29 @@ def analyze_package(
     owner, repo_name = repo_info
     console.print(f"  -> [bold yellow]{db_key}[/bold yellow] analyzing real-time...")
 
+    # Only enable dependents analysis if explicitly requested
+    platform = None
+    pkg_name = None
+    if enable_dependents:
+        # Map ecosystem to Libraries.io platform for dependents analysis
+        platform_map = {
+            "python": "Pypi",
+            "javascript": "NPM",
+            "rust": "Cargo",
+            "java": "Maven",
+            "php": "Packagist",
+            "ruby": "Rubygems",
+            "csharp": "Nuget",
+            "dotnet": "Nuget",
+            "go": "Go",
+        }
+        platform = platform_map.get(ecosystem.lower())
+        pkg_name = package_name
+
     try:
-        analysis_result = analyze_repository(owner, repo_name)
+        analysis_result = analyze_repository(
+            owner, repo_name, platform=platform, package_name=pkg_name
+        )
 
         # Save to cache for future use
         cache_entry = {
@@ -496,6 +519,12 @@ def check(
         "--profile",
         "-p",
         help="Scoring profile: balanced (default), security_first, contributor_experience, long_term_stability.",
+    ),
+    enable_dependents: bool = typer.Option(
+        False,
+        "--enable-dependents",
+        "-D",
+        help="Enable downstream dependents analysis via Libraries.io API (requires LIBRARIESIO_API_KEY).",
     ),
     insecure: bool = typer.Option(
         False,
@@ -803,7 +832,7 @@ def check(
             )
             continue
 
-        result = analyze_package(pkg_name, eco, db, profile)
+        result = analyze_package(pkg_name, eco, db, profile, enable_dependents)
         if result:
             results_to_display.append(result)
 
