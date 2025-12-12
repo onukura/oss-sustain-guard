@@ -2,6 +2,7 @@
 Tests for cache module.
 """
 
+import gzip
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -139,10 +140,10 @@ def test_save_cache_new_file(mock_cache_dir):
 
     cache.save_cache("python", data, merge=False)
 
-    cache_file = mock_cache_dir / "python.json"
+    cache_file = mock_cache_dir / "python.json.gz"
     assert cache_file.exists()
 
-    with open(cache_file, "r", encoding="utf-8") as f:
+    with gzip.open(cache_file, "rt", encoding="utf-8") as f:
         saved_data = json.load(f)
 
     assert "python:flask" in saved_data
@@ -152,8 +153,8 @@ def test_save_cache_new_file(mock_cache_dir):
 
 def test_save_cache_merge(mock_cache_dir, sample_cache_data):
     """Test merging new data with existing cache."""
-    cache_file = mock_cache_dir / "python.json"
-    with open(cache_file, "w", encoding="utf-8") as f:
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
         json.dump(sample_cache_data, f)
 
     new_data = {
@@ -168,7 +169,7 @@ def test_save_cache_merge(mock_cache_dir, sample_cache_data):
 
     cache.save_cache("python", new_data, merge=True)
 
-    with open(cache_file, "r", encoding="utf-8") as f:
+    with gzip.open(cache_file, "rt", encoding="utf-8") as f:
         saved_data = json.load(f)
 
     # Should have all three packages
@@ -179,8 +180,8 @@ def test_save_cache_merge(mock_cache_dir, sample_cache_data):
 
 def test_save_cache_no_merge(mock_cache_dir, sample_cache_data):
     """Test replacing cache without merge."""
-    cache_file = mock_cache_dir / "python.json"
-    with open(cache_file, "w", encoding="utf-8") as f:
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
         json.dump(sample_cache_data, f)
 
     new_data = {
@@ -195,7 +196,7 @@ def test_save_cache_no_merge(mock_cache_dir, sample_cache_data):
 
     cache.save_cache("python", new_data, merge=False)
 
-    with open(cache_file, "r", encoding="utf-8") as f:
+    with gzip.open(cache_file, "rt", encoding="utf-8") as f:
         saved_data = json.load(f)
 
     # Should only have flask
@@ -208,30 +209,30 @@ def test_clear_cache_specific_ecosystem(mock_cache_dir):
     """Test clearing cache for specific ecosystem."""
     # Create multiple cache files
     for ecosystem in ["python", "javascript", "rust"]:
-        cache_file = mock_cache_dir / f"{ecosystem}.json"
-        with open(cache_file, "w", encoding="utf-8") as f:
+        cache_file = mock_cache_dir / f"{ecosystem}.json.gz"
+        with gzip.open(cache_file, "wt", encoding="utf-8") as f:
             json.dump({}, f)
 
     cleared = cache.clear_cache("python")
     assert cleared == 1
-    assert not (mock_cache_dir / "python.json").exists()
-    assert (mock_cache_dir / "javascript.json").exists()
-    assert (mock_cache_dir / "rust.json").exists()
+    assert not (mock_cache_dir / "python.json.gz").exists()
+    assert (mock_cache_dir / "javascript.json.gz").exists()
+    assert (mock_cache_dir / "rust.json.gz").exists()
 
 
 def test_clear_cache_all_ecosystems(mock_cache_dir):
     """Test clearing cache for all ecosystems."""
     # Create multiple cache files
     for ecosystem in ["python", "javascript", "rust"]:
-        cache_file = mock_cache_dir / f"{ecosystem}.json"
-        with open(cache_file, "w", encoding="utf-8") as f:
+        cache_file = mock_cache_dir / f"{ecosystem}.json.gz"
+        with gzip.open(cache_file, "wt", encoding="utf-8") as f:
             json.dump({}, f)
 
     cleared = cache.clear_cache(None)
     assert cleared == 3
-    assert not (mock_cache_dir / "python.json").exists()
-    assert not (mock_cache_dir / "javascript.json").exists()
-    assert not (mock_cache_dir / "rust.json").exists()
+    assert not (mock_cache_dir / "python.json.gz").exists()
+    assert not (mock_cache_dir / "javascript.json.gz").exists()
+    assert not (mock_cache_dir / "rust.json.gz").exists()
 
 
 def test_clear_cache_nonexistent_dir():
@@ -251,8 +252,8 @@ def test_get_cache_stats_nonexistent_dir():
 
 def test_get_cache_stats_with_data(mock_cache_dir, sample_cache_data):
     """Test getting cache statistics."""
-    cache_file = mock_cache_dir / "python.json"
-    with open(cache_file, "w", encoding="utf-8") as f:
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
         json.dump(sample_cache_data, f)
 
     stats = cache.get_cache_stats()
@@ -264,8 +265,8 @@ def test_get_cache_stats_with_data(mock_cache_dir, sample_cache_data):
 
 def test_get_cache_stats_specific_ecosystem(mock_cache_dir, sample_cache_data):
     """Test getting stats for specific ecosystem."""
-    cache_file = mock_cache_dir / "python.json"
-    with open(cache_file, "w", encoding="utf-8") as f:
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
         json.dump(sample_cache_data, f)
 
     stats = cache.get_cache_stats("python")
@@ -291,8 +292,8 @@ def test_cache_metadata_auto_added(mock_cache_dir):
 
     cache.save_cache("python", data)
 
-    cache_file = mock_cache_dir / "python.json"
-    with open(cache_file, "r", encoding="utf-8") as f:
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "rt", encoding="utf-8") as f:
         saved_data = json.load(f)
 
     assert "cache_metadata" in saved_data["python:requests"]

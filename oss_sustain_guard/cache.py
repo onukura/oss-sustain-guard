@@ -4,6 +4,7 @@ Cache management for OSS Sustain Guard.
 Provides local caching of package analysis data to reduce network requests.
 """
 
+import gzip
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,8 +14,18 @@ from oss_sustain_guard.config import get_cache_dir, get_cache_ttl
 
 
 def _get_cache_path(ecosystem: str) -> Path:
-    """Get the cache file path for a specific ecosystem."""
-    return get_cache_dir() / f"{ecosystem}.json"
+    """Get the cache file path for a specific ecosystem.
+
+    Returns gzip path (.json.gz) by default, but checks for legacy .json files.
+    """
+    cache_dir = get_cache_dir()
+    gz_path = cache_dir / f"{ecosystem}.json.gz"
+    json_path = cache_dir / f"{ecosystem}.json"
+
+    # Prefer gzip, but return json path if it exists and gz doesn't
+    if json_path.exists() and not gz_path.exists():
+        return json_path
+    return gz_path
 
 
 def is_cache_valid(entry: dict[str, Any]) -> bool:
@@ -67,8 +78,13 @@ def load_cache(ecosystem: str) -> dict[str, Any]:
         return {}
 
     try:
-        with open(cache_path, "r", encoding="utf-8") as f:
-            raw_data = json.load(f)
+        # Try gzip first, then fallback to uncompressed
+        if cache_path.suffix == ".gz":
+            with gzip.open(cache_path, "rt", encoding="utf-8") as f:
+                raw_data = json.load(f)
+        else:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
 
         # Handle schema versions
         if isinstance(raw_data, dict) and "_schema_version" in raw_data:
@@ -108,8 +124,12 @@ def save_cache(ecosystem: str, data: dict[str, Any], merge: bool = True) -> None
     existing_data = {}
     if merge and cache_path.exists():
         try:
-            with open(cache_path, "r", encoding="utf-8") as f:
-                existing_data = json.load(f)
+            if cache_path.suffix == ".gz":
+                with gzip.open(cache_path, "rt", encoding="utf-8") as f:
+                    existing_data = json.load(f)
+            else:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    existing_data = json.load(f)
         except (json.JSONDecodeError, IOError):
             existing_data = {}
 
@@ -128,7 +148,13 @@ def save_cache(ecosystem: str, data: dict[str, Any], merge: bool = True) -> None
     # Merge and save
     merged_data = {**existing_data, **data}
 
-    with open(cache_path, "w", encoding="utf-8") as f:
+    # Always save as gzip
+    cache_path = (
+        cache_path.with_suffix(".json.gz")
+        if cache_path.suffix == ".json"
+        else cache_path
+    )
+    with gzip.open(cache_path, "wt", encoding="utf-8") as f:
         json.dump(merged_data, f, indent=2, ensure_ascii=False, sort_keys=True)
 
 
@@ -150,14 +176,17 @@ def clear_cache(ecosystem: str | None = None) -> int:
     cleared = 0
 
     if ecosystem:
-        # Clear specific ecosystem
-        cache_path = _get_cache_path(ecosystem)
-        if cache_path.exists():
-            cache_path.unlink()
-            cleared = 1
+        # Clear specific ecosystem (both .json.gz and .json)
+        for suffix in [".json.gz", ".json"]:
+            cache_path = get_cache_dir() / f"{ecosystem}{suffix}"
+            if cache_path.exists():
+                cache_path.unlink()
+                cleared += 1
     else:
-        # Clear all ecosystems
-        for cache_file in cache_dir.glob("*.json"):
+        # Clear all ecosystems (both .json.gz and .json)
+        for cache_file in list(cache_dir.glob("*.json.gz")) + list(
+            cache_dir.glob("*.json")
+        ):
             cache_file.unlink()
             cleared += 1
 
@@ -190,7 +219,13 @@ def get_cache_stats(ecosystem: str | None = None) -> dict[str, Any]:
     if ecosystem:
         ecosystems_to_check = [ecosystem]
     else:
-        ecosystems_to_check = [f.stem for f in cache_dir.glob("*.json")]
+        # Check both .json.gz and .json files
+        processed = set()
+        for f in list(cache_dir.glob("*.json.gz")) + list(cache_dir.glob("*.json")):
+            eco_name = f.name.replace(".json.gz", "").replace(".json", "")
+            if eco_name not in processed:
+                ecosystems_to_check.append(eco_name)
+                processed.add(eco_name)
 
     total_entries = 0
     valid_entries = 0
@@ -203,8 +238,12 @@ def get_cache_stats(ecosystem: str | None = None) -> dict[str, Any]:
             continue
 
         try:
-            with open(cache_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            if cache_path.suffix == ".gz":
+                with gzip.open(cache_path, "rt", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
 
             eco_total = len(data)
             eco_valid = sum(1 for entry in data.values() if is_cache_valid(entry))

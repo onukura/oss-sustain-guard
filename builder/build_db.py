@@ -35,6 +35,7 @@ Environment variables:
 
 import argparse
 import asyncio
+import gzip
 import json
 import os
 import sys
@@ -90,19 +91,32 @@ REVERSE_ECOSYSTEM_MAPPING = {v: k for k, v in ECOSYSTEM_MAPPING.items()}
 
 
 def load_existing_data(filepath: Path) -> dict:
-    """Load existing JSON data, return empty dict if not found or invalid."""
-    if filepath.exists():
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
+    """Load existing JSON data (gzip or uncompressed), return empty dict if not found or invalid."""
+    # Try gzip version first
+    gz_filepath = (
+        filepath.with_suffix(".json.gz") if filepath.suffix == ".json" else filepath
+    )
+    json_filepath = (
+        filepath.with_suffix(".json") if filepath.suffix == ".gz" else filepath
+    )
+
+    for path in [gz_filepath, json_filepath]:
+        if path.exists():
+            try:
+                if path.suffix == ".gz":
+                    with gzip.open(path, "rt", encoding="utf-8") as f:
+                        data = json.load(f)
+                else:
+                    with open(path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
                 return data if isinstance(data, dict) else {}
-        except (json.JSONDecodeError, IOError):
-            return {}
+            except (json.JSONDecodeError, IOError):
+                continue
     return {}
 
 
 def save_ecosystem_data(data: dict, ecosystem: str, is_latest: bool = True):
-    """Save ecosystem data to appropriate directory with schema metadata."""
+    """Save ecosystem data to appropriate directory with schema metadata as gzip."""
     if is_latest:
         output_dir = LATEST_DIR
     else:
@@ -110,7 +124,7 @@ def save_ecosystem_data(data: dict, ecosystem: str, is_latest: bool = True):
         output_dir = ARCHIVE_DIR / snapshot_date
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    filepath = output_dir / f"{ecosystem}.json"
+    filepath = output_dir / f"{ecosystem}.json.gz"
 
     # Wrap data with schema metadata
     wrapped_data = {
@@ -120,20 +134,34 @@ def save_ecosystem_data(data: dict, ecosystem: str, is_latest: bool = True):
         "packages": data,
     }
 
-    with open(filepath, "w", encoding="utf-8") as f:
+    with gzip.open(filepath, "wt", encoding="utf-8") as f:
         json.dump(wrapped_data, f, indent=2, ensure_ascii=False, sort_keys=True)
 
     return filepath
 
 
 def merge_ecosystem_files() -> dict:
-    """Merge all ecosystem JSON files from latest/ into single database.json."""
+    """Merge all ecosystem JSON files (gzip or uncompressed) from latest/ into single database.json."""
     merged = {}
 
     if not LATEST_DIR.exists():
         return merged
 
-    for ecosystem_file in LATEST_DIR.glob("*.json"):
+    # Process both .json.gz and .json files
+    processed_ecosystems = set()
+    for ecosystem_file in list(LATEST_DIR.glob("*.json.gz")) + list(
+        LATEST_DIR.glob("*.json")
+    ):
+        # Extract ecosystem name (handle both .json.gz and .json)
+        ecosystem_name = ecosystem_file.name.replace(".json.gz", "").replace(
+            ".json", ""
+        )
+
+        # Skip if already processed (prefer .json.gz)
+        if ecosystem_name in processed_ecosystems:
+            continue
+        processed_ecosystems.add(ecosystem_name)
+
         ecosystem_data = load_existing_data(ecosystem_file)
         # Handle both v1.x (flat dict) and v2.0 (wrapped with metadata)
         if "_schema_version" in ecosystem_data and "packages" in ecosystem_data:

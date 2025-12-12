@@ -1,3 +1,5 @@
 # Git LFS configuration for database files
 data/latest/*.json filter=lfs diff=lfs merge=lfs -text
 data/archive/**/*.json filter=lfs diff=lfs merge=lfs -text
+# gzip compressed files
+data/**/*.gz filter=lfs diff=lfs merge=lfs -text

@@ -2,6 +2,7 @@
 Command-line interface for OSS Sustain Guard.
 """
 
+import gzip
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -99,22 +100,41 @@ def load_database(use_cache: bool = True) -> dict:
     if ecosystems_to_fetch:
         github_success = False
         for ecosystem in ecosystems_to_fetch:
-            url = f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json"
-            try:
-                with httpx.Client(
-                    verify=get_verify_ssl(), follow_redirects=True
-                ) as client:
-                    response = client.get(url, timeout=10)
-                    response.raise_for_status()
-                    data = response.json()
-                    merged.update(data)
-                    github_success = True
-                    console.print(f"Loaded {ecosystem} data from GitHub.")
+            # Try gzip first, then fallback to uncompressed
+            urls = [
+                f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json.gz",
+                f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json",
+            ]
+            loaded = False
+            for url in urls:
+                try:
+                    with httpx.Client(
+                        verify=get_verify_ssl(), follow_redirects=True
+                    ) as client:
+                        response = client.get(url, timeout=10)
+                        response.raise_for_status()
 
-                    # Save to cache if enabled
-                    if is_cache_enabled():
-                        save_cache(ecosystem, data)
-            except Exception:
+                        # Decompress if gzip
+                        if url.endswith(".gz"):
+                            data = json.loads(
+                                gzip.decompress(response.content).decode("utf-8")
+                            )
+                        else:
+                            data = response.json()
+
+                        merged.update(data)
+                        github_success = True
+                        loaded = True
+                        console.print(f"Loaded {ecosystem} data from GitHub.")
+
+                        # Save to cache if enabled
+                        if is_cache_enabled():
+                            save_cache(ecosystem, data)
+                        break
+                except Exception:
+                    continue
+
+            if not loaded:
                 # Silently skip GitHub errors for now, will try local fallback
                 console.print(
                     f"[dim]Note: Using local data for {ecosystem} (GitHub unavailable)[/dim]"
@@ -123,11 +143,23 @@ def load_database(use_cache: bool = True) -> dict:
         # If GitHub loading failed, fall back to local data/latest/
         if not github_success and LATEST_DIR.exists():
             for ecosystem in ecosystems_to_fetch:
-                ecosystem_file = LATEST_DIR / f"{ecosystem}.json"
-                if ecosystem_file.exists():
-                    try:
-                        with open(ecosystem_file, "r", encoding="utf-8") as f:
-                            raw_data = json.load(f)
+                # Try gzip first, then fallback to uncompressed
+                ecosystem_files = [
+                    LATEST_DIR / f"{ecosystem}.json.gz",
+                    LATEST_DIR / f"{ecosystem}.json",
+                ]
+
+                for ecosystem_file in ecosystem_files:
+                    if ecosystem_file.exists():
+                        try:
+                            if ecosystem_file.suffix == ".gz":
+                                with gzip.open(
+                                    ecosystem_file, "rt", encoding="utf-8"
+                                ) as f:
+                                    raw_data = json.load(f)
+                            else:
+                                with open(ecosystem_file, "r", encoding="utf-8") as f:
+                                    raw_data = json.load(f)
 
                             # Handle schema versions
                             if (
@@ -148,10 +180,9 @@ def load_database(use_cache: bool = True) -> dict:
                             # Save to cache if enabled
                             if is_cache_enabled():
                                 save_cache(ecosystem, data)
-                    except Exception:
-                        console.print(
-                            f"[dim]Note: Could not load {ecosystem_file.name}[/dim]"
-                        )
+                            break
+                        except Exception:
+                            continue
 
     return merged
 
