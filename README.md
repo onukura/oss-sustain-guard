@@ -515,7 +515,7 @@ $ oss-guard check requests --enable-dependents
 # Output will include "Downstream Dependents" metric (informational):
 # 📦 500,000+ packages depend on this (150,000 repos)
 # Critical infrastructure: Essential to ecosystem
-# 
+#
 # Note: This metric is displayed for information only and does not affect
 # the total score (0-100), ensuring consistent scoring whether or not
 # the --enable-dependents flag is used.
