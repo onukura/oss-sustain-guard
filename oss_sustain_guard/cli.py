@@ -156,6 +156,35 @@ def load_database(use_cache: bool = True) -> dict:
     return merged
 
 
+def display_results_compact(results: list[AnalysisResult]):
+    """Display analysis results in compact format (CI/CD-friendly)."""
+    for result in results:
+        # Determine status icon and color
+        if result.total_score >= 80:
+            icon = "✓"
+            score_color = "green"
+            status = "Healthy"
+        elif result.total_score >= 50:
+            icon = "⚠"
+            score_color = "yellow"
+            status = "Needs attention"
+        else:
+            icon = "✗"
+            score_color = "red"
+            status = "Needs support"
+
+        # Extract package name from repo URL
+        package_name = result.repo_url.replace("https://github.com/", "")
+
+        # One-line output: icon package (score) - status
+        console.print(
+            f"[{score_color}]{icon}[/{score_color}] "
+            f"[cyan]{package_name}[/cyan] "
+            f"[{score_color}]({result.total_score}/100)[/{score_color}] - "
+            f"{status}"
+        )
+
+
 def display_results(results: list[AnalysisResult], show_models: bool = False):
     """Display the analysis results in a rich table."""
     table = Table(title="OSS Sustain Guard Report")
@@ -508,6 +537,12 @@ def check(
         "-v",
         help="Display detailed metrics for each package, including raw signals.",
     ),
+    compact: bool = typer.Option(
+        False,
+        "--compact",
+        "-c",
+        help="Display results in compact format (one line per package, ideal for CI/CD).",
+    ),
     show_models: bool = typer.Option(
         False,
         "--show-models",
@@ -837,7 +872,9 @@ def check(
             results_to_display.append(result)
 
     if results_to_display:
-        if verbose:
+        if compact:
+            display_results_compact(results_to_display)
+        elif verbose:
             display_results_detailed(
                 results_to_display, show_signals=verbose, show_models=show_models
             )
