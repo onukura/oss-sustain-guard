@@ -6,7 +6,7 @@
 
 **Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 9 key metrics including Bus Factor, Maintainer Activity, and Security Posture.
 
-✨ **No API tokens required** - Fast, cache-based evaluation for Python, JavaScript, Go, Rust, PHP, Java, C#, and Ruby packages.
+✨ **No API tokens required** - Fast, cache-based evaluation for Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby packages.
 
 > 📌 **Important Notes:**
 >
@@ -37,7 +37,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 - **Optional Dependents Analysis** - Downstream dependency metrics (informational, not affecting total score)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
-- **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby
+- **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Fast & Cache-Based** - Pre-computed data for instant results
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
@@ -114,6 +114,7 @@ oss-guard check ruby:rails             # Ruby
 oss-guard check go:github.com/gin-gonic/gin  # Go
 oss-guard check php:symfony/console    # PHP
 oss-guard check java:com.google.guava:guava  # Java
+oss-guard check kotlin:org.jetbrains.kotlin:kotlin-stdlib  # Kotlin
 oss-guard check csharp:Newtonsoft.Json # C#
 
 # Mix multiple ecosystems
@@ -181,6 +182,7 @@ See [Recursive Scanning Guide](./docs/RECURSIVE_SCANNING_GUIDE.md) for detailed 
 | Rust | `rust:crate` | `rust:tokio` |
 | PHP | `php:vendor/package` | `php:symfony/console` |
 | Java | `java:groupId:artifactId` | `java:com.google.guava:guava` |
+| Kotlin | `kotlin:groupId:artifactId` | `kotlin:org.jetbrains.kotlin:kotlin-stdlib` |
 | C# | `csharp:package`, `nuget:package` | `csharp:Serilog` |
 
 ### GitHub Actions
@@ -502,7 +504,7 @@ oss-guard check requests -D
 **Benefits:**
 
 - ✅ Free API (10,000 requests/month)
-- ✅ Multi-language support (Python, JavaScript, Rust, Go, PHP, Java, C#, Ruby)
+- ✅ Multi-language support (Python, JavaScript, Rust, Go, PHP, Java, Kotlin, C#, Ruby)
 - ✅ Shows adoption trends and ecosystem importance
 - ✅ Helps identify critical infrastructure packages
 

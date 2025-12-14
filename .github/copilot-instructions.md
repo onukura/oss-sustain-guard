@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**OSS Sustain Guard** is a multi-language package sustainability analyzer that evaluates repository health metrics (bus factor, maintainer drain, funding, etc.) rather than just CVEs. It supports PyPI (Python), npm (JavaScript), Cargo (Rust), Maven (Java), Packagist (PHP), RubyGems, NuGet (C#), Go modules, and provides holistic risk assessment via GitHub repository data.
+**OSS Sustain Guard** is a multi-language package sustainability analyzer that evaluates repository health metrics (bus factor, maintainer drain, funding, etc.) rather than just CVEs. It supports PyPI (Python), npm (JavaScript), Cargo (Rust), Maven (Java), Kotlin, Packagist (PHP), RubyGems, NuGet (C#), Go modules, and provides holistic risk assessment via GitHub repository data.
 
 **Key Philosophy:** "Token-less Experience" + "Static Snapshot API" model - precomputed JSON database (`data/latest/*.json` and `data/archive/`) eliminates need for user API tokens. Multi-language support with language-specific registry resolvers.
 

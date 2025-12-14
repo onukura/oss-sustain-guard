@@ -72,7 +72,17 @@ def load_database(use_cache: bool = True) -> dict:
         return merged
 
     # List of ecosystems to load
-    ecosystems = ["python", "javascript", "ruby", "rust", "php", "java", "csharp", "go"]
+    ecosystems = [
+        "python",
+        "javascript",
+        "ruby",
+        "rust",
+        "php",
+        "java",
+        "kotlin",
+        "csharp",
+        "go",
+    ]
 
     # Load from cache first if enabled
     if is_cache_enabled():

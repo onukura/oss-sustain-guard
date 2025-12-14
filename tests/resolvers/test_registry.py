@@ -145,10 +145,13 @@ class TestResolverRegistry:
         assert kotlin is not None
         assert scala is not None
         assert maven is not None
-        # All should be Java ecosystem
+        # Java ecosystem
         assert java.ecosystem_name == "java"
-        assert kotlin.ecosystem_name == "java"
+        # Kotlin has its own ecosystem but uses Maven Central
+        assert kotlin.ecosystem_name == "kotlin"
+        # Scala uses Java ecosystem (Maven Central/sbt)
         assert scala.ecosystem_name == "java"
+        # Maven alias points to Java
         assert maven.ecosystem_name == "java"
 
     def test_get_csharp_aliases(self):

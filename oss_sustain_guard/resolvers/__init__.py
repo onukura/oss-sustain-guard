@@ -10,6 +10,7 @@ from oss_sustain_guard.resolvers.csharp import CSharpResolver
 from oss_sustain_guard.resolvers.go import GoResolver
 from oss_sustain_guard.resolvers.java import JavaResolver
 from oss_sustain_guard.resolvers.javascript import JavaScriptResolver
+from oss_sustain_guard.resolvers.kotlin import KotlinResolver
 from oss_sustain_guard.resolvers.php import PhpResolver
 from oss_sustain_guard.resolvers.python import PythonResolver
 from oss_sustain_guard.resolvers.ruby import RubyResolver
@@ -36,7 +37,7 @@ def _initialize_resolvers() -> None:
         _RESOLVERS["php"] = PhpResolver()
         _RESOLVERS["composer"] = PhpResolver()  # Alias
         _RESOLVERS["java"] = JavaResolver()
-        _RESOLVERS["kotlin"] = JavaResolver()  # Alias (uses Maven Central)
+        _RESOLVERS["kotlin"] = KotlinResolver()
         _RESOLVERS["scala"] = JavaResolver()  # Alias (uses Maven Central/sbt)
         _RESOLVERS["maven"] = JavaResolver()  # Alias
         _RESOLVERS["csharp"] = CSharpResolver()
