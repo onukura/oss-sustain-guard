@@ -780,34 +780,175 @@ def test_check_organizational_diversity_single():
 
 
 def test_check_fork_activity_high():
-    """Tests fork activity with many forks."""
+    """Tests active fork analysis with many forks and low active ratio."""
     from datetime import datetime, timedelta, timezone
 
     now = datetime.now(timezone.utc)
     recent = now - timedelta(days=30)
+    old = now - timedelta(days=200)
 
     repo_data = {
         "forkCount": 150,
         "forks": {
             "edges": [
-                {"node": {"createdAt": recent.isoformat()}},
-                {"node": {"createdAt": (recent - timedelta(days=10)).isoformat()}},
+                {
+                    "node": {
+                        "createdAt": recent.isoformat(),
+                        "pushedAt": old.isoformat(),  # Not active
+                        "defaultBranchRef": {
+                            "target": {
+                                "history": {
+                                    "edges": [
+                                        {"node": {"committedDate": old.isoformat()}}
+                                    ]
+                                }
+                            }
+                        },
+                        "owner": {"login": "user1"},
+                    }
+                },
+                {
+                    "node": {
+                        "createdAt": (recent - timedelta(days=10)).isoformat(),
+                        "pushedAt": old.isoformat(),  # Not active
+                        "defaultBranchRef": {
+                            "target": {
+                                "history": {
+                                    "edges": [
+                                        {"node": {"committedDate": old.isoformat()}}
+                                    ]
+                                }
+                            }
+                        },
+                        "owner": {"login": "user2"},
+                    }
+                },
             ]
         },
     }
     metric = check_fork_activity(repo_data)
-    assert metric.name == "Fork Activity"
-    assert metric.score == 5  # 100+ forks with recent activity
+    assert metric.name == "Active Fork Analysis"
+    assert metric.score == 5  # 100+ forks with low active ratio (<20%)
     assert metric.risk == "None"
+    assert "Healthy ecosystem" in metric.message
 
 
 def test_check_fork_activity_none():
-    """Tests fork activity with no forks."""
+    """Tests active fork analysis with no forks."""
     repo_data = {"forkCount": 0, "forks": {"edges": []}}
     metric = check_fork_activity(repo_data)
-    assert metric.name == "Fork Activity"
+    assert metric.name == "Active Fork Analysis"
     assert metric.score == 0
     assert metric.risk == "Low"
+
+
+def test_check_fork_activity_high_divergence_risk():
+    """Tests active fork analysis with high active fork ratio (divergence risk)."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    recent = now - timedelta(days=30)
+
+    # Create 10 forks, 5 of which are active (50% active ratio)
+    fork_edges = []
+    for i in range(5):
+        # Active forks
+        fork_edges.append(
+            {
+                "node": {
+                    "createdAt": recent.isoformat(),
+                    "pushedAt": recent.isoformat(),
+                    "defaultBranchRef": {
+                        "target": {
+                            "history": {
+                                "edges": [
+                                    {"node": {"committedDate": recent.isoformat()}}
+                                ]
+                            }
+                        }
+                    },
+                    "owner": {"login": f"active_user{i}"},
+                }
+            }
+        )
+    for i in range(5):
+        # Inactive forks
+        old = now - timedelta(days=200)
+        fork_edges.append(
+            {
+                "node": {
+                    "createdAt": old.isoformat(),
+                    "pushedAt": old.isoformat(),
+                    "defaultBranchRef": {
+                        "target": {
+                            "history": {
+                                "edges": [{"node": {"committedDate": old.isoformat()}}]
+                            }
+                        }
+                    },
+                    "owner": {"login": f"inactive_user{i}"},
+                }
+            }
+        )
+
+    repo_data = {"forkCount": 120, "forks": {"edges": fork_edges}}
+    metric = check_fork_activity(repo_data)
+    assert metric.name == "Active Fork Analysis"
+    assert metric.score <= 2  # High divergence risk
+    assert metric.risk in ["Medium", "Low"]
+    assert "divergence" in metric.message.lower()
+
+
+def test_check_fork_activity_moderate():
+    """Tests active fork analysis with moderate number of forks."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    recent = now - timedelta(days=60)
+
+    repo_data = {
+        "forkCount": 25,
+        "forks": {
+            "edges": [
+                {
+                    "node": {
+                        "createdAt": recent.isoformat(),
+                        "pushedAt": recent.isoformat(),
+                        "defaultBranchRef": {
+                            "target": {
+                                "history": {
+                                    "edges": [
+                                        {"node": {"committedDate": recent.isoformat()}}
+                                    ]
+                                }
+                            }
+                        },
+                        "owner": {"login": "user1"},
+                    }
+                },
+                {
+                    "node": {
+                        "createdAt": recent.isoformat(),
+                        "pushedAt": recent.isoformat(),
+                        "defaultBranchRef": {
+                            "target": {
+                                "history": {
+                                    "edges": [
+                                        {"node": {"committedDate": recent.isoformat()}}
+                                    ]
+                                }
+                            }
+                        },
+                        "owner": {"login": "user2"},
+                    }
+                },
+            ]
+        },
+    }
+    metric = check_fork_activity(repo_data)
+    assert metric.name == "Active Fork Analysis"
+    assert metric.score >= 2  # Moderate activity
+    assert "community" in metric.message.lower() or "growing" in metric.message.lower()
 
 
 # --- Project Popularity Tests ---
