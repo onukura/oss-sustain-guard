@@ -38,6 +38,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
+- **Time Series Analysis** - Track package health trends over time, compare snapshots, generate reports
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Fast & Cache-Based** - Pre-computed data for instant results
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
@@ -237,6 +238,50 @@ pre-commit run oss-sustain-guard --all-files
 ```
 
 See [Pre-Commit Integration Guide](./docs/PRE_COMMIT_INTEGRATION.md) for details.
+
+### Time Series Analysis
+
+**Track package health evolution over time:**
+
+```bash
+# View package trend across all snapshots
+oss-guard trend Flask
+
+# Focus on specific metric
+oss-guard trend requests --metric "Contributor Redundancy"
+
+# Compare two specific dates
+oss-guard compare Django 2025-12-11 2025-12-12
+
+# List available snapshots
+oss-guard list-snapshots
+```
+
+**Example output:**
+
+```
+📊 Health Trend for Flask
+
+┌─────────────────┬──────────────────────────────────┐
+│ GitHub URL      │ https://github.com/pallets/flask │
+│ First Snapshot  │ 2025-12-11                       │
+│ Latest Snapshot │ 2025-12-12                       │
+│ First Score     │ 156/100                          │
+│ Latest Score    │ 156/100                          │
+│ Average Score   │ 156/100                          │
+│ Score Change    │ 0 (+0.0%)                        │
+│ Trend           │ ➡️  Stable                        │
+└─────────────────┴──────────────────────────────────┘
+```
+
+**Features:**
+- 📈 **Trend identification** - Automatically detect improving/stable/degrading patterns
+- 📊 **Score history** - Timeline view with change indicators
+- 🔍 **Metric-specific analysis** - Drill down into individual metrics
+- 📅 **Date comparison** - Generate detailed comparison reports
+- 🎯 **Visual indicators** - Color-coded status and emoji trends
+
+See [Trend Analysis Guide](./docs/TREND_ANALYSIS_GUIDE.md) for detailed workflows and examples.
 
 ## 🎁 Gratitude Vending Machine
 
@@ -554,6 +599,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code st
 ## 📝 Documentation
 
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
+- [Trend Analysis Guide](./docs/TREND_ANALYSIS_GUIDE.md) - Time series analysis and historical comparison
 - [Database Schema](./docs/DATABASE_SCHEMA.md) - JSON database format
 - [Pre-Commit Integration](./docs/PRE_COMMIT_INTEGRATION.md) - Hook configuration
 - [GitHub Actions Guide](./docs/GITHUB_ACTIONS_GUIDE.md) - CI/CD setup

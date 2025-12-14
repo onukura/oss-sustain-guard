@@ -35,6 +35,7 @@ from oss_sustain_guard.resolvers import (
     find_manifest_files,
     get_resolver,
 )
+from oss_sustain_guard.trend import ComparisonReport, TrendAnalyzer
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -1179,6 +1180,279 @@ def gratitude(
         console.print(
             "\n[dim]Cancelled. Thank you for considering supporting OSS maintainers! 🙏[/dim]"
         )
+
+
+@app.command()
+def trend(
+    package_name: str = typer.Argument(..., help="Package name to analyze trends for"),
+    ecosystem: str = typer.Option(
+        "python",
+        "--ecosystem",
+        "-e",
+        help="Package ecosystem (python, javascript, rust, etc.)",
+    ),
+    metric: str | None = typer.Option(
+        None,
+        "--metric",
+        "-m",
+        help="Focus on specific metric (optional)",
+    ),
+    archive_dir: Path = typer.Option(
+        project_root / "data" / "archive",
+        "--archive-dir",
+        help="Path to archive directory",
+    ),
+    include_latest: bool = typer.Option(
+        False,
+        "--include-latest",
+        help="Include real-time analysis if package not in archive",
+    ),
+) -> None:
+    """Display trend analysis for a package across historical snapshots.
+
+    This command shows how a package's health score and metrics have changed
+    over time by analyzing data from archived snapshots.
+
+    If --include-latest is specified and the package is not found in the archive,
+    a real-time analysis will be performed to get the current snapshot.
+
+    Examples:
+        oss-sustain-guard trend requests
+        oss-sustain-guard trend express --ecosystem javascript
+        oss-sustain-guard trend flask --metric "Bus Factor"
+        oss-sustain-guard trend newpackage --include-latest
+    """
+    console.print("\n[bold cyan]📊 Package Health Trend Analysis[/bold cyan]\n")
+
+    analyzer = TrendAnalyzer(archive_dir=archive_dir)
+
+    # Check if archive directory exists
+    if not archive_dir.exists():
+        console.print(f"[red]Archive directory not found: {archive_dir}[/red]")
+        console.print(
+            "[dim]Tip: Historical data is stored in data/archive/ directory.[/dim]"
+        )
+        return
+
+    # List available dates
+    available_dates = analyzer.list_available_dates()
+    if not available_dates:
+        console.print(
+            f"[yellow]No historical snapshots found in {archive_dir}[/yellow]"
+        )
+        return
+
+    console.print(
+        f"[dim]Found {len(available_dates)} snapshots: {', '.join(available_dates)}[/dim]\n"
+    )
+
+    # Load package history
+    history = analyzer.load_package_history(package_name, ecosystem)
+
+    if not history:
+        console.print(
+            f"[yellow]ℹ️  No historical data found for package: {ecosystem}:{package_name}[/yellow]"
+        )
+
+        if include_latest:
+            console.print(
+                "[dim]📡 Attempting real-time analysis to get current snapshot...[/dim]\n"
+            )
+
+            # Try to resolve package to GitHub repository
+            resolver = get_resolver(ecosystem)
+            if resolver:
+                repo_info = resolver.resolve_github_url(package_name)
+                if repo_info:
+                    owner, repo = repo_info
+                    try:
+                        # Perform real-time analysis
+                        import os
+
+                        if not os.getenv("GITHUB_TOKEN"):
+                            console.print(
+                                "[red]❌ GITHUB_TOKEN environment variable is required for real-time analysis[/red]"
+                            )
+                            console.print(
+                                "[dim]Set GITHUB_TOKEN or use archived data only.[/dim]"
+                            )
+                            return
+
+                        result = analyze_repository(owner, repo)
+
+                        # Create a current snapshot entry
+                        from oss_sustain_guard.trend import TrendData
+
+                        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+                        history = [
+                            TrendData(
+                                date=current_date,
+                                package_name=package_name,
+                                total_score=result.total_score,
+                                metrics=[m._asdict() for m in result.metrics],
+                                github_url=result.repo_url,
+                            )
+                        ]
+
+                        console.print(
+                            f"[green]✓ Real-time analysis complete for {result.repo_url}[/green]\n"
+                        )
+                        console.print(
+                            "[dim]Note: This is a single snapshot. Historical comparison requires archived data.[/dim]\n"
+                        )
+
+                    except Exception as e:
+                        console.print(f"[red]❌ Real-time analysis failed: {e}[/red]")
+                        console.print(
+                            "[dim]Package may not have a GitHub repository or API rate limit exceeded.[/dim]"
+                        )
+                        return
+                else:
+                    console.print(
+                        f"[red]❌ Could not resolve package '{package_name}' to GitHub repository[/red]"
+                    )
+                    console.print(
+                        "[dim]Package may not exist or doesn't have GitHub repository metadata.[/dim]"
+                    )
+                    return
+            else:
+                console.print(
+                    f"[red]❌ No resolver available for ecosystem: {ecosystem}[/red]"
+                )
+                return
+        else:
+            console.print(
+                "[dim]Package may not exist in snapshots or hasn't been analyzed yet.[/dim]"
+            )
+            console.print(
+                "[dim]💡 Tip: Use --include-latest flag to perform real-time analysis[/dim]"
+            )
+            return
+
+    # Display trend summary
+    analyzer.display_trend_table(package_name, history)
+
+    # Display metric-specific trends if requested
+    if metric:
+        console.print("\n")
+        analyzer.display_metric_comparison(package_name, history, metric)
+    else:
+        # Show all metrics in summary view
+        console.print("\n")
+        console.print(
+            "[dim]💡 Tip: Use --metric flag to see detailed trend for specific metric[/dim]"
+        )
+        console.print(
+            '[dim]   Example: oss-sustain-guard trend {} --metric "Bus Factor"[/dim]\n'.format(
+                package_name
+            )
+        )
+
+
+@app.command()
+def compare(
+    package_name: str = typer.Argument(..., help="Package name to compare"),
+    date1: str = typer.Argument(..., help="Earlier date (YYYY-MM-DD)"),
+    date2: str = typer.Argument(..., help="Later date (YYYY-MM-DD)"),
+    ecosystem: str = typer.Option(
+        "python",
+        "--ecosystem",
+        "-e",
+        help="Package ecosystem (python, javascript, rust, etc.)",
+    ),
+    archive_dir: Path = typer.Option(
+        project_root / "data" / "archive",
+        "--archive-dir",
+        help="Path to archive directory",
+    ),
+) -> None:
+    """Compare package health between two specific dates.
+
+    This command generates a detailed comparison report showing how a package's
+    metrics have changed between two snapshots.
+
+    Examples:
+        oss-sustain-guard compare requests 2025-12-11 2025-12-12
+        oss-sustain-guard compare express 2025-11-01 2025-12-01 --ecosystem javascript
+    """
+    console.print("\n[bold cyan]📊 Package Health Comparison Report[/bold cyan]\n")
+
+    analyzer = TrendAnalyzer(archive_dir=archive_dir)
+    reporter = ComparisonReport(analyzer)
+
+    # Validate dates
+    available_dates = analyzer.list_available_dates()
+    if not available_dates:
+        console.print(
+            f"[yellow]No historical snapshots found in {archive_dir}[/yellow]"
+        )
+        return
+
+    if date1 not in available_dates:
+        console.print(f"[red]Date {date1} not found in archive.[/red]")
+        console.print(f"Available dates: {', '.join(available_dates)}")
+        return
+
+    if date2 not in available_dates:
+        console.print(f"[red]Date {date2} not found in archive.[/red]")
+        console.print(f"Available dates: {', '.join(available_dates)}")
+        return
+
+    # Generate comparison
+    reporter.compare_dates(package_name, date1, date2, ecosystem)
+    console.print()
+
+
+@app.command()
+def list_snapshots(
+    archive_dir: Path = typer.Option(
+        project_root / "data" / "archive",
+        "--archive-dir",
+        help="Path to archive directory",
+    ),
+) -> None:
+    """List all available snapshot dates in the archive.
+
+    This command shows all dates for which historical data is available,
+    useful for determining valid date ranges for trend analysis.
+
+    Example:
+        oss-sustain-guard list-snapshots
+    """
+    console.print("\n[bold cyan]📅 Available Snapshot Dates[/bold cyan]\n")
+
+    analyzer = TrendAnalyzer(archive_dir=archive_dir)
+    available_dates = analyzer.list_available_dates()
+
+    if not available_dates:
+        console.print(
+            f"[yellow]No historical snapshots found in {archive_dir}[/yellow]"
+        )
+        console.print(
+            "[dim]Snapshots are automatically created by the build process.[/dim]"
+        )
+        return
+
+    # Display in a table
+    table = Table(title="Available Snapshots")
+    table.add_column("#", justify="right", style="cyan")
+    table.add_column("Date", style="white")
+    table.add_column("Files", justify="right", style="dim")
+
+    for idx, date in enumerate(available_dates, 1):
+        date_dir = archive_dir / date
+        # Count JSON files in the date directory
+        json_files = list(date_dir.glob("*.json"))
+        file_count = len(json_files)
+
+        table.add_row(str(idx), date, str(file_count))
+
+    console.print(table)
+    console.print(f"\n[dim]Total snapshots: {len(available_dates)}[/dim]")
+    console.print(
+        f"[dim]Date range: {available_dates[0]} to {available_dates[-1]}[/dim]\n"
+    )
 
 
 if __name__ == "__main__":
