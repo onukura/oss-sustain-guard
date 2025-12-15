@@ -2,6 +2,7 @@
 Tests for the core analysis logic.
 """
 
+import time
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -41,6 +42,16 @@ def mock_graphql_query():
     """Fixture to patch _query_github_graphql."""
     with patch("oss_sustain_guard.core._query_github_graphql") as mock_query:
         yield mock_query
+
+
+@pytest.fixture(autouse=True)
+def clear_graphql_cache():
+    """Reset the in-memory cache between tests."""
+
+    from oss_sustain_guard import core
+
+    core._graphql_cache.clear()
+    core._cache_loaded = False
 
 
 # --- Tests ---
@@ -134,6 +145,63 @@ def test_query_github_graphql_success(mock_post):
     # Assert
     assert data == {"repository": {"name": "test"}}
     mock_post.assert_called_once()
+
+
+@patch("oss_sustain_guard.core.GITHUB_TOKEN", "fake_token")
+@patch("httpx.Client.post")
+def test_query_github_graphql_uses_cache(mock_post):
+    """Ensures repeated queries reuse cached payloads."""
+
+    from oss_sustain_guard import core
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"data": {"repository": {"name": "cached"}}}
+    mock_post.return_value = mock_response
+
+    query = "query {}"
+    variables = {"owner": "octo", "name": "repo"}
+
+    first = _query_github_graphql(query, variables)
+    second = _query_github_graphql(query, variables)
+
+    cache_key = core._build_cache_key(query, variables)
+
+    assert first == {"repository": {"name": "cached"}}
+    assert second == first
+    assert mock_post.call_count == 1
+    assert "timestamp" in core._graphql_cache[cache_key]
+
+
+@patch("oss_sustain_guard.core.GITHUB_TOKEN", "fake_token")
+@patch("httpx.Client.post")
+def test_query_github_graphql_refreshes_stale_cache(mock_post):
+    """Stale cache entries should be refreshed when past the TTL."""
+
+    from oss_sustain_guard import core
+
+    fresh_response = MagicMock()
+    fresh_response.status_code = 200
+    fresh_response.json.return_value = {"data": {"repository": {"name": "fresh"}}}
+
+    updated_response = MagicMock()
+    updated_response.status_code = 200
+    updated_response.json.return_value = {"data": {"repository": {"name": "updated"}}}
+
+    mock_post.side_effect = [fresh_response, updated_response]
+
+    query = "query {}"
+    variables = {"owner": "octo", "name": "repo"}
+
+    initial = _query_github_graphql(query, variables)
+    cache_key = core._build_cache_key(query, variables)
+    core._graphql_cache[cache_key]["timestamp"] = time.time() - 100
+
+    refreshed = _query_github_graphql(query, variables, cache_ttl=1)
+
+    assert initial == {"repository": {"name": "fresh"}}
+    assert refreshed == {"repository": {"name": "updated"}}
+    assert mock_post.call_count == 2
 
 
 @patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)

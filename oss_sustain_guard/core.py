@@ -2,7 +2,10 @@
 Core analysis logic for OSS Sustain Guard.
 """
 
+import json
 import os
+import time
+from pathlib import Path
 from typing import Any, NamedTuple
 
 import httpx
@@ -25,6 +28,14 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 LIBRARIESIO_API_KEY = os.getenv(
     "LIBRARIESIO_API_KEY"
 )  # Optional: for dependents analysis
+
+# Optional GraphQL cache configuration
+OSS_SUSTAIN_GUARD_CACHE_PATH = os.getenv("OSS_SUSTAIN_GUARD_CACHE_PATH")
+OSS_SUSTAIN_GUARD_DISABLE_CACHE = os.getenv("OSS_SUSTAIN_GUARD_DISABLE_CACHE", "false").lower()
+
+_graphql_cache: dict[str, dict[str, Any]] = {}
+_cache_file_path = Path(OSS_SUSTAIN_GUARD_CACHE_PATH) if OSS_SUSTAIN_GUARD_CACHE_PATH else None
+_cache_loaded = False
 
 # --- Data Structures ---
 
@@ -63,9 +74,86 @@ class AnalysisResult(NamedTuple):
 # --- Helper Functions ---
 
 
-def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
+def _build_cache_key(query: str, variables: dict[str, Any]) -> str:
+    """Constructs a cache key using the query and repository coordinates."""
+
+    owner = variables.get("owner", "")
+    name = variables.get("name", "")
+    repo_identifier = f"{owner}/{name}" if owner or name else "global"
+    return f"{repo_identifier}|{query.strip()}"
+
+
+def _load_cache_from_disk() -> None:
+    """Loads the optional on-disk cache into memory once per session."""
+
+    global _cache_loaded
+    if _cache_loaded:
+        return
+
+    if not _cache_file_path:
+        _cache_loaded = True
+        return
+
+    if _cache_file_path.exists():
+        try:
+            content = json.loads(_cache_file_path.read_text())
+            if isinstance(content, dict):
+                _graphql_cache.update(content)
+        except (OSError, json.JSONDecodeError):
+            # Ignore cache load failures to keep analysis running smoothly
+            pass
+
+    _cache_loaded = True
+
+
+def _persist_cache_to_disk() -> None:
+    """Writes the in-memory cache to disk when configured."""
+
+    if not _cache_file_path:
+        return
+
+    try:
+        _cache_file_path.parent.mkdir(parents=True, exist_ok=True)
+        _cache_file_path.write_text(json.dumps(_graphql_cache, indent=2))
+    except OSError:
+        # Best-effort persistence; skip failures silently
+        pass
+
+
+def _get_cached_entry(cache_key: str) -> dict[str, Any] | None:
+    """Returns a cached GraphQL payload if available."""
+
+    _load_cache_from_disk()
+    return _graphql_cache.get(cache_key)
+
+
+def _store_cache_entry(cache_key: str, payload: dict[str, Any]) -> None:
+    """Stores a payload in the cache along with a timestamp."""
+
+    _graphql_cache[cache_key] = {
+        "timestamp": time.time(),
+        "data": payload,
+    }
+    _persist_cache_to_disk()
+
+
+def _query_github_graphql(
+    query: str,
+    variables: dict[str, Any],
+    *,
+    use_cache: bool = True,
+    force_refresh: bool = False,
+    cache_ttl: float | None = None,
+) -> dict[str, Any]:
     """
     Executes a GraphQL query against the GitHub API.
+
+    Args:
+        query: GraphQL document string.
+        variables: Variables for the query, expected to contain owner/name.
+        use_cache: Enable in-memory/disk caching for repeated queries.
+        force_refresh: Skip cached entries and refresh from the API.
+        cache_ttl: Maximum age (in seconds) before a cached entry is treated as stale.
 
     Raises:
         ValueError: If the GITHUB_TOKEN is not set.
@@ -73,6 +161,22 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
     """
     if not GITHUB_TOKEN:
         raise ValueError("GITHUB_TOKEN environment variable is not set.")
+
+    cache_enabled = use_cache and OSS_SUSTAIN_GUARD_DISABLE_CACHE not in (
+        "1",
+        "true",
+        "yes",
+    )
+    cache_key = _build_cache_key(query, variables)
+    if cache_enabled and not force_refresh:
+        cached_response = _get_cached_entry(cache_key)
+        if cached_response:
+            timestamp = cached_response.get("timestamp")
+            if cache_ttl is None or (
+                isinstance(timestamp, (int, float))
+                and (time.time() - timestamp) <= cache_ttl
+            ):
+                return cached_response.get("data", {})
 
     headers = {
         "Authorization": f"bearer {GITHUB_TOKEN}",
@@ -93,7 +197,12 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
                 request=response.request,
                 response=response,
             )
-    return data.get("data", {})
+    payload = data.get("data", {})
+
+    if cache_enabled:
+        _store_cache_entry(cache_key, payload)
+
+    return payload
 
 
 def _query_librariesio_api(platform: str, package_name: str) -> dict[str, Any] | None:
