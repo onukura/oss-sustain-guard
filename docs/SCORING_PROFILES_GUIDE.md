@@ -249,7 +249,7 @@ The current weights are based on CHAOSS metrics and sustainability best practice
 2. **Suggest new profiles** - For specific use cases (e.g., "academic research", "startup dependencies")
 3. **Contribute weight adjustments** - Based on data analysis
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to provide feedback.
+See [Contributing Guide](GETTING_STARTED.md) for how to provide feedback.
 
 ---
 

@@ -394,4 +394,4 @@ OSS Sustain Guard automatically skips directories it can't read. No configuratio
 
 - [TOML Documentation](https://toml.io/)
 - [Recursive Scanning Guide](./RECURSIVE_SCANNING_GUIDE.md) - More details on recursive scanning behavior
-- [OSS Sustain Guard README](../README.md)
+- [Getting Started](./GETTING_STARTED.md)

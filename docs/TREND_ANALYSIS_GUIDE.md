@@ -619,7 +619,7 @@ To improve time series analysis features:
 3. **Share workflow examples** for common use cases
 4. **Request export formats** (CSV, JSON, etc.)
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for details.
+See [Contributing Guide](GETTING_STARTED.md) for details.
 
 ---
 

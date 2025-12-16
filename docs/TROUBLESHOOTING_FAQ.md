@@ -343,4 +343,4 @@ export GITHUB_TOKEN="your_token"
 ## 🤝 Still Having Issues?
 
 - Report on GitHub Issues: [Issues](https://github.com/onukura/oss-sustain-guard/issues)
-- Contributing: [CONTRIBUTING.md](../CONTRIBUTING.md)
+- Contributing: [Contributing Guide](GETTING_STARTED.md)

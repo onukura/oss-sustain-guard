@@ -244,6 +244,6 @@ This updates `data/database.json` with the latest package scores.
 ## Related Documentation
 
 - [Pre-Commit Documentation](https://pre-commit.com/)
-- [OSS Sustain Guard README](../README.md)
+- [Getting Started](./GETTING_STARTED.md)
 - [Database Schema](./DATABASE_SCHEMA.md)
 - [GitHub Token Setup](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)

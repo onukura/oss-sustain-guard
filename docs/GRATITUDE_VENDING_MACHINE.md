@@ -244,12 +244,12 @@ Have ideas to improve the Gratitude Vending Machine?
 - **UI/UX**: Improve the interactive experience
 - **Documentation**: Help others discover and use this feature
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for details.
+See [Contributing Guide](GETTING_STARTED.md) for details.
 
 ## 📚 Related Documentation
 
-- [Project Philosophy](../README.md#-project-philosophy)
-- [Scoring System](../README.md#-score-explanation)
+- [Getting Started](GETTING_STARTED.md)
+- [Scoring Profiles](SCORING_PROFILES_GUIDE.md)
 - [CHAOSS Metrics Alignment](./CHAOSS_METRICS_ALIGNMENT_VALIDATION.md)
 
 ---

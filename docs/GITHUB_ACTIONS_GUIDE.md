@@ -381,5 +381,5 @@ jobs:
 For issues or questions:
 
 - [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues)
-- [Project README](../README.md)
+- [Getting Started](./GETTING_STARTED.md)
 - [Documentation](./DATABASE_SCHEMA.md)
