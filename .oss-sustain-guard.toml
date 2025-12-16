@@ -1,6 +1,6 @@
 [tool.oss-sustain-guard]
 # Exclude specific packages from analysis
-exclude = ["numpy", "requests"]
+exclude = []
 
 # Directory exclusion settings for recursive scanning
 [tool.oss-sustain-guard.exclude-dirs]
