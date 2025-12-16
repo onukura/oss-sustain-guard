@@ -626,7 +626,6 @@ See [Contributing Guide](GETTING_STARTED.md) for details.
 ## 📚 Additional Resources
 
 - **[Database Schema](DATABASE_SCHEMA.md)** - Understand data structure
-- **[CLI Validation Report](local/CLI_VALIDATION_REPORT.md)** - Command reference
 - **[CHAOSS Metrics](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md)** - Metric definitions
 
 ---

@@ -287,4 +287,3 @@ All profile weights must sum to 1.0 (validated in tests).
 
 - [Database Schema](DATABASE_SCHEMA.md) - Stored metric details
 - [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) - Metric definitions
-- [CLI Validation Report](local/CLI_VALIDATION_REPORT.md) - Usage examples
