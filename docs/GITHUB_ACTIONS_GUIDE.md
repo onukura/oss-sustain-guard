@@ -30,6 +30,19 @@ The fastest and most reliable way to use OSS Sustain Guard:
 - 🌍 **Complete** - All languages and ecosystems included
 - 🔒 **Secure** - Isolated container environment
 
+**💡 Tip: For CI/CD, use the compact output format**
+
+Add `--compact` to your command for cleaner workflow logs:
+
+```yaml
+- name: Check package sustainability
+  uses: onukura/oss-sustain-guard@main
+  with:
+    packages: 'requests django flask --compact'
+```
+
+This provides one-line-per-package output, perfect for logs and automated reporting.
+
 ### Option 2: Using the Reusable Workflow
 
 ```yaml
@@ -51,10 +64,12 @@ jobs:
 
 ## Real-World Examples
 
-### 1. Simple Python Package Check
+### 1. Auto-Detect and Check All Repository Dependencies (Recommended)
+
+The most common use case - automatically detect and analyze all dependencies in your repository:
 
 ```yaml
-name: Dependency Check
+name: Dependency Health Check
 
 on: [push, pull_request]
 
@@ -64,13 +79,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check core dependencies
+      - name: Check all repository dependencies
         uses: onukura/oss-sustain-guard@main
         with:
-          packages: 'flask django requests'
+          include-lock: 'true'
+          compact: 'true'
 ```
 
-### 2. Multi-Language Stack
+**Automatically detects from:**
+
+- `package-lock.json` / `yarn.lock` / `pnpm-lock.yaml` (JavaScript)
+- `requirements.txt` / `poetry.lock` / `uv.lock` (Python)
+- `Cargo.lock` (Rust)
+- `Gemfile.lock` (Ruby)
+- `composer.lock` (PHP)
+- `go.sum` (Go)
+- And more...
+
+### 2. Multi-Language Stack with Manifest Detection
+
+For projects with multiple package managers, auto-detect all ecosystems:
 
 ```yaml
 name: Multi-Language Sustainability Check
@@ -83,26 +111,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Analyze all dependencies
+      - name: Analyze all dependencies from manifests
         uses: onukura/oss-sustain-guard@main
         with:
-          packages: |
-            requests
-            django
-            npm:react
-            npm:express
-            rust:tokio
-            ruby:rails
-            java:org.springframework:spring-core
+          include-lock: 'true'
           verbose: 'true'
 ```
 
-### 3. Auto-Detect from Lock Files
+### 3. Check Specific Critical Packages
+
+For security audits or critical dependency reviews:
 
 ```yaml
-name: Check All Dependencies
+name: Critical Packages Check
 
-on: [push]
+on: [pull_request]
 
 jobs:
   check:
@@ -110,22 +133,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Auto-detect and check dependencies
+      - name: Check critical dependencies
         uses: onukura/oss-sustain-guard@main
         with:
-          packages: ''
-          include-lock: 'true'
-          verbose: 'true'
+          packages: 'flask django requests'
+          compact: 'true'
 ```
-
-**Detects from:**
-- `package-lock.json` / `yarn.lock` / `pnpm-lock.yaml` (JavaScript)
-- `requirements.txt` / `poetry.lock` / `uv.lock` (Python)
-- `Cargo.lock` (Rust)
-- `Gemfile.lock` (Ruby)
-- `composer.lock` (PHP)
-- `go.sum` (Go)
-- And more...
 
 ### 4. Fail on Critical Findings
 
@@ -168,8 +181,8 @@ jobs:
         id: analysis
         uses: onukura/oss-sustain-guard@main
         with:
-          packages: 'requests django'
-          verbose: 'true'
+          include-lock: 'true'
+          compact: 'true'
 
       - name: Comment on PR
         uses: actions/github-script@v7
@@ -183,7 +196,7 @@ jobs:
             })
 ```
 
-### 6. Scheduled Weekly Checks
+### 6. Scheduled Weekly Audits
 
 ```yaml
 name: Weekly Dependency Audit
@@ -202,7 +215,7 @@ jobs:
       - name: Run weekly audit
         uses: onukura/oss-sustain-guard@main
         with:
-          packages: 'flask django requests celery sqlalchemy'
+          include-lock: 'true'
           verbose: 'true'
 ```
 
@@ -320,10 +333,18 @@ For large-scale checks, ensure your GitHub token has sufficient permissions:
 
 ## Performance Tips
 
-1. **Reuse cached data** - First run caches package data for faster subsequent checks
-2. **Use `include-lock: 'true'`** - More efficient than listing individual packages
-3. **Split large checks** - Use matrix strategy for parallel execution
-4. **Schedule off-peak** - Run checks during low-traffic periods
+1. **Use `--compact` for CI/CD** - Compact output is more readable in logs and faster to process
+
+   ```yaml
+   - uses: onukura/oss-sustain-guard@main
+     with:
+       packages: 'requests django flask --compact'
+   ```
+
+2. **Reuse cached data** - First run caches package data for faster subsequent checks
+3. **Use `include-lock: 'true'`** - More efficient than listing individual packages
+4. **Split large checks** - Use matrix strategy for parallel execution
+5. **Schedule off-peak** - Run checks during low-traffic periods
 
 ## Security Considerations
 
@@ -358,6 +379,7 @@ jobs:
 ## Support
 
 For issues or questions:
+
 - [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues)
 - [Project README](../README.md)
 - [Documentation](./DATABASE_SCHEMA.md)

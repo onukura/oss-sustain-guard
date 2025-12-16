@@ -60,7 +60,8 @@ oss-guard check --recursive
 ```
 
 **Output:**
-```
+
+```shell
 🔍 No packages specified. Recursively scanning /path/to/monorepo (unlimited depth)...
 ✅ Detected ecosystems: javascript, python, rust
 📋 Found manifest file: frontend/package.json
