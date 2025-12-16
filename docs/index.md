@@ -4,6 +4,20 @@ OSS Sustain Guard is a multi-language package sustainability analyzer that helps
 
 ![CLI demo showing an analyzed package](assets/demo01.png)
 
+## 💡 Project Philosophy
+
+OSS Sustain Guard is designed to spark thoughtful conversations about open-source sustainability, not to pass judgment on projects. Our mission is to **raise awareness** about the challenges maintainers face and encourage the community to think together about how we can better support the open-source ecosystem.
+
+We believe that:
+
+- 🌱 **Sustainability matters** - Open-source projects need ongoing support to thrive
+- 🤝 **Community support is essential** - For community-driven projects, we highlight funding opportunities to help users give back
+- 📊 **Transparency helps everyone** - By providing objective metrics, we help maintainers and users make informed decisions
+- 🎯 **Respectful evaluation** - We distinguish between corporate-backed and community-driven projects, recognizing their different sustainability models
+- 💝 **Supporting maintainers** - When available, we display funding links for community projects to encourage direct support
+
+This tool is meant to be a conversation starter about OSS sustainability, not a judgment. Every project has unique circumstances, and metrics are just one part of the story.
+
 ## Why OSS Sustain Guard?
 
 - **Token-less experience:** Pre-computed cached snapshots for popular packages let you view sustainability insights instantly without any tokens.
