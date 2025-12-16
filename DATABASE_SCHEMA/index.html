@@ -1,0 +1,2567 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-language package sustainability guide and CLI documentation">
+      
+      
+      
+        <link rel="canonical" href="https://onukura.github.io/oss-sustain-guard/DATABASE_SCHEMA/">
+      
+      
+        <link rel="prev" href="../TROUBLESHOOTING_FAQ/">
+      
+      
+        <link rel="next" href="../SCHEMA_VERSION_MANAGEMENT/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Database Schema - OSS Sustain Guard</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#database-schema" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="OSS Sustain Guard" class="md-header__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OSS Sustain Guard
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Database Schema
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="OSS Sustain Guard" class="md-nav__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OSS Sustain Guard
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RECURSIVE_SCANNING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Scanning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TREND_ANALYSIS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Series Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GRATITUDE_VENDING_MACHINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gratitude Vending Machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXCLUDE_PACKAGES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exclude Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring & Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scoring & Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCORING_PROFILES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHAOSS_METRICS_ALIGNMENT_VALIDATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CHAOSS Metrics Alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GITHUB_ACTIONS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PRE_COMMIT_INTEGRATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-commit Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TROUBLESHOOTING_FAQ/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database Schema
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-specification-v20-multi-language-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema Specification (v2.0 - Multi-Language Support)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema Specification (v2.0 - Multi-Language Support)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#entry-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#field-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Descriptions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Field Descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-fields-computed-when-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Fields (Computed When Needed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metric-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metric Models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metrics Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-sustainability-metrics-complete-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21 Sustainability Metrics (Complete System)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="21 Sustainability Metrics (Complete System)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#category-maintainer-health-25-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Maintainer Health (25% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-development-activity-20-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Development Activity (20% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-community-engagement-20-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Community Engagement (20% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-project-maturity-15-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Project Maturity (15% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-security-funding-20-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Security &amp; Funding (20% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metric-models-chaoss-aligned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metric Models (CHAOSS-aligned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#python-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#javascript-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JavaScript Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rust-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rust Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#score-ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Score Ranges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-guide-v10-v20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Guide (v1.0 → v2.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Guide (v1.0 → v2.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v10-format-python-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.0 Format (Python Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v20-format-multi-language-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.0 Format (Multi-Language Support)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Generation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Database Generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automatic-updates-github-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Updates (GitHub Actions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version History
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Version History">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v20-current" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.0 (Current)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v10-initial-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.0 (Initial Release)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCHEMA_VERSION_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Version Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-specification-v20-multi-language-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema Specification (v2.0 - Multi-Language Support)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema Specification (v2.0 - Multi-Language Support)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#entry-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#field-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Descriptions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Field Descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-fields-computed-when-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Fields (Computed When Needed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metric-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metric Models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metrics Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-sustainability-metrics-complete-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21 Sustainability Metrics (Complete System)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="21 Sustainability Metrics (Complete System)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#category-maintainer-health-25-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Maintainer Health (25% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-development-activity-20-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Development Activity (20% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-community-engagement-20-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Community Engagement (20% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-project-maturity-15-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Project Maturity (15% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-security-funding-20-of-total-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category: Security &amp; Funding (20% of total score)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metric-models-chaoss-aligned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metric Models (CHAOSS-aligned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#python-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#javascript-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JavaScript Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rust-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rust Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#score-ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Score Ranges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-guide-v10-v20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Guide (v1.0 → v2.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Guide (v1.0 → v2.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v10-format-python-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.0 Format (Python Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v20-format-multi-language-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.0 Format (Multi-Language Support)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Generation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Database Generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automatic-updates-github-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Updates (GitHub Actions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version History
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Version History">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v20-current" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.0 (Current)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v10-initial-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.0 (Initial Release)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="database-schema">Database Schema<a class="headerlink" href="#database-schema" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p><code>data/latest/{language}.json</code> stores pre-computed sustainability analysis results, enabling fast lookups without real-time analysis. Each ecosystem maintains its own JSON file.</p>
+<h2 id="schema-specification-v20-multi-language-support">Schema Specification (v2.0 - Multi-Language Support)<a class="headerlink" href="#schema-specification-v20-multi-language-support" title="Permanent link">&para;</a></h2>
+<h3 id="top-level-structure">Top-Level Structure<a class="headerlink" href="#top-level-structure" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;python:requests&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;python:django&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;npm:react&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;go:github.com/golang/go&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;rust:tokio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Key Format</strong>: <code>{ecosystem}:{package_name}</code></p>
+<h3 id="entry-structure">Entry Structure<a class="headerlink" href="#entry-structure" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;ecosystem&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python|javascript|go|rust|php|java|csharp|ruby&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;package_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;github_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/{owner}/{repo}&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Contributor Redundancy&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;max_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;risk&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Critical|High|Medium|Low|None&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="err">...</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Risk Model&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;max_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;observation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="err">...</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;signals&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;contributor_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;funding_link_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;last_activity_days&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">    </span><span class="err">...</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Note</strong>: The database stores metrics and models. Scores are calculated at runtime based on the user's selected scoring profile.</p>
+<h2 id="field-descriptions">Field Descriptions<a class="headerlink" href="#field-descriptions" title="Permanent link">&para;</a></h2>
+<h3 id="top-level">Top-Level<a class="headerlink" href="#top-level" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ecosystem</code></td>
+<td>string</td>
+<td>Ecosystem name: <code>python</code>, <code>javascript</code>, <code>go</code>, <code>rust</code>, <code>php</code>, <code>java</code>, <code>csharp</code>, <code>ruby</code></td>
+</tr>
+<tr>
+<td><code>package_name</code></td>
+<td>string</td>
+<td>Package name within the ecosystem</td>
+</tr>
+<tr>
+<td><code>github_url</code></td>
+<td>string</td>
+<td>GitHub repository URL</td>
+</tr>
+<tr>
+<td><code>metrics</code></td>
+<td>array</td>
+<td>Array of individual metrics (raw data for runtime scoring)</td>
+</tr>
+<tr>
+<td><code>models</code></td>
+<td>array</td>
+<td>Array of metric models (CHAOSS-aligned aggregations)</td>
+</tr>
+<tr>
+<td><code>signals</code></td>
+<td>object</td>
+<td>Raw signal values for transparency</td>
+</tr>
+</tbody>
+</table>
+<h3 id="runtime-fields-computed-when-needed">Runtime Fields (Computed When Needed)<a class="headerlink" href="#runtime-fields-computed-when-needed" title="Permanent link">&para;</a></h3>
+<p>The following fields are computed at runtime based on the user's selected scoring profile:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>When Computed</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>total_score</code></td>
+<td>integer</td>
+<td>CLI/API call</td>
+<td>Calculated from metrics using the selected scoring profile</td>
+</tr>
+<tr>
+<td><code>funding_links</code></td>
+<td>array</td>
+<td>CLI/API call</td>
+<td>Extracted from GitHub repository data</td>
+</tr>
+<tr>
+<td><code>is_community_driven</code></td>
+<td>boolean</td>
+<td>CLI/API call</td>
+<td>Determined by ownership structure</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Important</strong>: <code>total_score</code> is profile-dependent and not stored in the database. It is always calculated at runtime based on:</p>
+<ul>
+<li>Selected scoring profile (<code>balanced</code>, <code>security_first</code>, <code>contributor_experience</code>, <code>long_term_stability</code>)</li>
+<li>Available metrics in the database</li>
+<li>Category weights from the selected profile</li>
+</ul>
+<p>This ensures the same raw metric data can produce different scores for different risk assessment priorities.</p>
+<h3 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Metric name (see <a href="#metrics-reference">Metrics Reference</a>)</td>
+</tr>
+<tr>
+<td><code>score</code></td>
+<td>integer</td>
+<td>Score obtained</td>
+</tr>
+<tr>
+<td><code>max_score</code></td>
+<td>integer</td>
+<td>Maximum score</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>string</td>
+<td>Detailed message</td>
+</tr>
+<tr>
+<td><code>risk</code></td>
+<td>string</td>
+<td>Risk level: <code>Critical</code>, <code>High</code>, <code>Medium</code>, <code>Low</code>, <code>None</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="metric-models">Metric Models<a class="headerlink" href="#metric-models" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Model name (e.g., "Risk Model", "Sustainability Model")</td>
+</tr>
+<tr>
+<td><code>score</code></td>
+<td>integer</td>
+<td>Aggregated score</td>
+</tr>
+<tr>
+<td><code>max_score</code></td>
+<td>integer</td>
+<td>Maximum aggregated score</td>
+</tr>
+<tr>
+<td><code>observation</code></td>
+<td>string</td>
+<td>Supportive observation about the model</td>
+</tr>
+</tbody>
+</table>
+<h3 id="signals">Signals<a class="headerlink" href="#signals" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>contributor_count</code></td>
+<td>integer</td>
+<td>Number of unique contributors (recent history)</td>
+</tr>
+<tr>
+<td><code>funding_link_count</code></td>
+<td>integer</td>
+<td>Number of funding links detected</td>
+</tr>
+<tr>
+<td><code>last_activity_days</code></td>
+<td>integer</td>
+<td>Days since last repository activity</td>
+</tr>
+<tr>
+<td><code>new_contributors_6mo</code></td>
+<td>integer</td>
+<td>New contributors in last 6 months</td>
+</tr>
+<tr>
+<td><code>contributor_retention_rate</code></td>
+<td>integer</td>
+<td>Contributor retention rate percentage</td>
+</tr>
+<tr>
+<td><code>avg_review_time_hours</code></td>
+<td>float</td>
+<td>Average time to first PR review in hours</td>
+</tr>
+<tr>
+<td><code>organizational_diversity_count</code></td>
+<td>integer</td>
+<td>Number of different organizations/domains</td>
+</tr>
+<tr>
+<td><code>star_count</code></td>
+<td>integer</td>
+<td>GitHub star count</td>
+</tr>
+<tr>
+<td><code>fork_count</code></td>
+<td>integer</td>
+<td>GitHub fork count</td>
+</tr>
+<tr>
+<td><code>watcher_count</code></td>
+<td>integer</td>
+<td>GitHub watcher count</td>
+</tr>
+<tr>
+<td><code>pr_acceptance_rate</code></td>
+<td>float</td>
+<td>Pull request acceptance ratio (0-100)</td>
+</tr>
+<tr>
+<td><code>avg_issue_resolution_days</code></td>
+<td>float</td>
+<td>Average issue resolution time in days</td>
+</tr>
+<tr>
+<td><code>has_documentation</code></td>
+<td>boolean</td>
+<td>Whether documentation is present</td>
+</tr>
+<tr>
+<td><code>has_code_of_conduct</code></td>
+<td>boolean</td>
+<td>Whether Code of Conduct is present</td>
+</tr>
+<tr>
+<td><code>license_type</code></td>
+<td>string</td>
+<td>License SPDX ID (e.g., "MIT", "Apache-2.0")</td>
+</tr>
+<tr>
+<td><em>(extensible)</em></td>
+<td>any</td>
+<td>Additional raw signals as needed</td>
+</tr>
+</tbody>
+</table>
+<h2 id="metrics-reference">Metrics Reference<a class="headerlink" href="#metrics-reference" title="Permanent link">&para;</a></h2>
+<h3 id="21-sustainability-metrics-complete-system">21 Sustainability Metrics (Complete System)<a class="headerlink" href="#21-sustainability-metrics-complete-system" title="Permanent link">&para;</a></h3>
+<h4 id="category-maintainer-health-25-of-total-score">Category: Maintainer Health (25% of total score)<a class="headerlink" href="#category-maintainer-health-25-of-total-score" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Max Score</th>
+<th>Risk Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contributor Redundancy</td>
+<td>20</td>
+<td>Low score is risky</td>
+<td>Single maintainer dependency risk</td>
+</tr>
+<tr>
+<td>Maintainer Retention</td>
+<td>10</td>
+<td>Number of inactive maintainers</td>
+<td>Active maintainer continuity</td>
+</tr>
+<tr>
+<td>Contributor Attraction</td>
+<td>10</td>
+<td>New contributor trend</td>
+<td>New contributors in last 6 months</td>
+</tr>
+<tr>
+<td>Contributor Retention</td>
+<td>10</td>
+<td>Retention rate</td>
+<td>Repeat contributors over 6 months</td>
+</tr>
+<tr>
+<td>Organizational Diversity</td>
+<td>10</td>
+<td>Single-org dominance</td>
+<td>Multi-organization contribution diversity</td>
+</tr>
+</tbody>
+</table>
+<h4 id="category-development-activity-20-of-total-score">Category: Development Activity (20% of total score)<a class="headerlink" href="#category-development-activity-20-of-total-score" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Max Score</th>
+<th>Risk Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recent Activity</td>
+<td>20</td>
+<td>Inactivity period</td>
+<td>Days since last activity</td>
+</tr>
+<tr>
+<td>Release Rhythm</td>
+<td>10</td>
+<td>Release frequency</td>
+<td>Days since last release</td>
+</tr>
+<tr>
+<td>Build Health</td>
+<td>5</td>
+<td>CI failure is risky</td>
+<td>CI test execution status</td>
+</tr>
+<tr>
+<td>Change Request Resolution</td>
+<td>10</td>
+<td>Slow merge is risky</td>
+<td>Average PR merge time</td>
+</tr>
+</tbody>
+</table>
+<h4 id="category-community-engagement-20-of-total-score">Category: Community Engagement (20% of total score)<a class="headerlink" href="#category-community-engagement-20-of-total-score" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Max Score</th>
+<th>Risk Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Issue Responsiveness</td>
+<td>5</td>
+<td>Issue response time</td>
+<td>Average issue response time</td>
+</tr>
+<tr>
+<td>PR Acceptance Ratio</td>
+<td>10</td>
+<td>Low acceptance rate</td>
+<td>Pull request acceptance rate</td>
+</tr>
+<tr>
+<td>PR Responsiveness</td>
+<td>5</td>
+<td>Slow first response</td>
+<td>Time to first PR response</td>
+</tr>
+<tr>
+<td>Review Health</td>
+<td>10</td>
+<td>PR review quality</td>
+<td>Time to first review &amp; review count</td>
+</tr>
+<tr>
+<td>Issue Resolution Duration</td>
+<td>10</td>
+<td>Slow issue closure</td>
+<td>Average time to close issues</td>
+</tr>
+</tbody>
+</table>
+<h4 id="category-project-maturity-15-of-total-score">Category: Project Maturity (15% of total score)<a class="headerlink" href="#category-project-maturity-15-of-total-score" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Max Score</th>
+<th>Risk Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Documentation Presence</td>
+<td>10</td>
+<td>Missing docs</td>
+<td>README, CONTRIBUTING, Wiki, documentation</td>
+</tr>
+<tr>
+<td>Code of Conduct</td>
+<td>5</td>
+<td>No CoC</td>
+<td>Community guidelines presence</td>
+</tr>
+<tr>
+<td>License Clarity</td>
+<td>5</td>
+<td>No/unclear license</td>
+<td>OSI-approved license status</td>
+</tr>
+<tr>
+<td>Project Popularity</td>
+<td>10</td>
+<td>Low community interest</td>
+<td>Stars, watchers, community adoption</td>
+</tr>
+<tr>
+<td>Fork Activity</td>
+<td>5</td>
+<td>No forks</td>
+<td>Fork count and recent fork activity</td>
+</tr>
+</tbody>
+</table>
+<h4 id="category-security-funding-20-of-total-score">Category: Security &amp; Funding (20% of total score)<a class="headerlink" href="#category-security-funding-20-of-total-score" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Max Score</th>
+<th>Risk Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Security Signals</td>
+<td>15</td>
+<td>Security policy</td>
+<td>Security policy, vulnerability alerts</td>
+</tr>
+<tr>
+<td>Funding Signals</td>
+<td>10 (community) / 5 (corporate)</td>
+<td>Sponsorship status</td>
+<td>Number and type of funding links</td>
+</tr>
+</tbody>
+</table>
+<h3 id="metric-models-chaoss-aligned">Metric Models (CHAOSS-aligned)<a class="headerlink" href="#metric-models-chaoss-aligned" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Description</th>
+<th>Weighted Metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Risk Model</td>
+<td>Project stability and security</td>
+<td>Contributor Redundancy (40%), Security Signals (30%), Change Request Resolution (20%), Issue Responsiveness (10%)</td>
+</tr>
+<tr>
+<td>Sustainability Model</td>
+<td>Long-term viability</td>
+<td>Funding Signals (30%), Maintainer Retention (25%), Release Rhythm (25%), Recent Activity (20%)</td>
+</tr>
+<tr>
+<td>Community Engagement Model</td>
+<td>Community health and responsiveness</td>
+<td>Contributor Attraction (30%), Contributor Retention (30%), Review Health (25%), Issue Responsiveness (15%)</td>
+</tr>
+<tr>
+<td><strong>Project Maturity Model</strong></td>
+<td><strong>Documentation and governance</strong></td>
+<td><strong>Documentation Presence (30%), Project Popularity (20%), License Clarity (20%), Code of Conduct (15%), Fork Activity (15%)</strong></td>
+</tr>
+<tr>
+<td><strong>Contributor Experience Model</strong></td>
+<td><strong>PR handling and satisfaction</strong></td>
+<td><strong>PR Acceptance Ratio (30%), PR Responsiveness (25%), Issue Resolution Duration (25%), Review Health (20%)</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="scoring-system">Scoring System<a class="headerlink" href="#scoring-system" title="Permanent link">&para;</a></h3>
+<p>The total score (0-100) is calculated using <strong>category-weighted aggregation</strong>:</p>
+<ol>
+<li>Each category's metrics are normalized to 0-100 scale</li>
+<li>Category scores are weighted:</li>
+<li>Maintainer Health: 25%</li>
+<li>Development Activity: 20%</li>
+<li>Community Engagement: 20%</li>
+<li>Project Maturity: 15%</li>
+<li>Security &amp; Funding: 20%</li>
+<li>Final score = sum of (category_score × category_weight)</li>
+</ol>
+<h3 id="risk-levels">Risk Levels<a class="headerlink" href="#risk-levels" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code>&quot;Critical&quot; - Critical risk (score &lt; 20%)
+&quot;High&quot;     - High risk (score &lt; 40%)
+&quot;Medium&quot;   - Medium risk (score &lt; 70%)
+&quot;Low&quot;      - Low risk (score &lt; 90%)
+&quot;None&quot;     - No risk (score &gt;= 90% or not applicable)
+</code></pre></div>
+
+<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
+<h3 id="python-package">Python Package<a class="headerlink" href="#python-package" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;ecosystem&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;package_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;requests&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;github_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/psf/requests&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Contributor Redundancy&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;max_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Healthy: 21 active contributors.&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;risk&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="err">...</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="javascript-package">JavaScript Package<a class="headerlink" href="#javascript-package" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;ecosystem&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;javascript&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;package_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;react&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;github_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/facebook/react&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Contributor Redundancy&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;max_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Healthy: 20 active contributors.&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;risk&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="err">...</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="rust-package">Rust Package<a class="headerlink" href="#rust-package" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;ecosystem&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rust&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;package_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tokio&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;github_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/tokio-rs/tokio&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">96</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Contributor Redundancy&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;max_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Healthy: 38 active contributors.&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;risk&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="err">...</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="score-ranges">Score Ranges<a class="headerlink" href="#score-ranges" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code>0-49:   🔴 Critical   (Critical Risk)
+50-79:  🟡 Warning    (Warning)
+80-100: 🟢 Excellent  (Excellent)
+</code></pre></div>
+
+<h2 id="migration-guide-v10-v20">Migration Guide (v1.0 → v2.0)<a class="headerlink" href="#migration-guide-v10-v20" title="Permanent link">&para;</a></h2>
+<h3 id="v10-format-python-only">v1.0 Format (Python Only)<a class="headerlink" href="#v10-format-python-only" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;requests&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;github_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;total_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="v20-format-multi-language-support">v2.0 Format (Multi-Language Support)<a class="headerlink" href="#v20-format-multi-language-support" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;python:requests&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;ecosystem&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;package_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;requests&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;github_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;total_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Update Steps</strong>:</p>
+<ol>
+<li>Add <code>ecosystem:</code> prefix to key names</li>
+<li>Add <code>ecosystem</code> field</li>
+<li>Add <code>package_name</code> field</li>
+</ol>
+<h2 id="database-generation">Database Generation<a class="headerlink" href="#database-generation" title="Permanent link">&para;</a></h2>
+<h3 id="development-environment">Development Environment<a class="headerlink" href="#development-environment" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Run builder/build_db.py</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>builder/build_db.py
+</code></pre></div>
+
+<h3 id="automatic-updates-github-actions">Automatic Updates (GitHub Actions)<a class="headerlink" href="#automatic-updates-github-actions" title="Permanent link">&para;</a></h3>
+<p>The database is automatically updated daily at UTC 00:00 via <code>.github/workflows/update_database.yml</code>.</p>
+<h2 id="version-history">Version History<a class="headerlink" href="#version-history" title="Permanent link">&para;</a></h2>
+<h3 id="v20-current">v2.0 (Current)<a class="headerlink" href="#v20-current" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Multi-language support (Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby)</li>
+<li>Separate files per ecosystem: <code>data/latest/{language}.json</code></li>
+<li>Key format: <code>{ecosystem}:{package_name}</code></li>
+<li>Added <code>ecosystem</code> and <code>package_name</code> fields</li>
+<li>Runtime computation of <code>funding_links</code> and <code>is_community_driven</code> in <code>core.py</code></li>
+</ul>
+<h3 id="v10-initial-release">v1.0 (Initial Release)<a class="headerlink" href="#v10-initial-release" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Python packages only</li>
+<li>Single database file</li>
+<li>Flat key structure without ecosystem prefix</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

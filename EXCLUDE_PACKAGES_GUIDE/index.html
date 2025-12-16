@@ -1,0 +1,2338 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-language package sustainability guide and CLI documentation">
+      
+      
+      
+        <link rel="canonical" href="https://onukura.github.io/oss-sustain-guard/EXCLUDE_PACKAGES_GUIDE/">
+      
+      
+        <link rel="prev" href="../GRATITUDE_VENDING_MACHINE/">
+      
+      
+        <link rel="next" href="../SCORING_PROFILES_GUIDE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Exclude Configuration - OSS Sustain Guard</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#oss-sustain-guard-exclude-packages-configuration-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="OSS Sustain Guard" class="md-header__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OSS Sustain Guard
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Exclude Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="OSS Sustain Guard" class="md-nav__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OSS Sustain Guard
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RECURSIVE_SCANNING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Scanning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TREND_ANALYSIS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Series Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GRATITUDE_VENDING_MACHINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gratitude Vending Machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exclude Configuration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exclude Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#method-1-oss-sustain-guardtoml-recommended-local-project-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Method 1: .oss-sustain-guard.toml (Recommended - Local Project Config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-2-pyprojecttoml-project-wide-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Method 2: pyproject.toml (Project-wide Config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Priority
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-checking-requirementstxt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Checking requirements.txt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-direct-package-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Direct Package Specification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#case-insensitive-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case-Insensitive Matching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-commit-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pre-Commit Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exclude-configuration-not-applied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exclude Configuration Not Applied
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reset Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-exclusions-recursive-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Exclusions (Recursive Scanning)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Directory Exclusions (Recursive Scanning)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-use-defaults-only-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Use Defaults Only (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-add-custom-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Add Custom Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-minimal-exclusions-experts-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: Minimal Exclusions (Experts Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-monorepo-with-shared-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Monorepo with Shared Cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-respect-gitignore-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Respect .gitignore Only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-custom-development-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3: Custom Development Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gitignore-integration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        .gitignore Integration Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=".gitignore Integration Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-gitignore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example .gitignore
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-science-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Science Projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microservices-monorepo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microservices Monorepo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-language-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Language Project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-your-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Your Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Your Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#verify-exclusions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify Exclusions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#too-many-directories-excluded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Too Many Directories Excluded
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unwanted-directories-scanned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unwanted Directories Scanned
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-practices_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring & Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scoring & Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCORING_PROFILES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHAOSS_METRICS_ALIGNMENT_VALIDATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CHAOSS Metrics Alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GITHUB_ACTIONS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PRE_COMMIT_INTEGRATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-commit Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TROUBLESHOOTING_FAQ/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DATABASE_SCHEMA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCHEMA_VERSION_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Version Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#method-1-oss-sustain-guardtoml-recommended-local-project-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Method 1: .oss-sustain-guard.toml (Recommended - Local Project Config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-2-pyprojecttoml-project-wide-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Method 2: pyproject.toml (Project-wide Config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Priority
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-checking-requirementstxt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Checking requirements.txt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-direct-package-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Direct Package Specification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#case-insensitive-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case-Insensitive Matching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-commit-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pre-Commit Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exclude-configuration-not-applied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exclude Configuration Not Applied
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reset Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-exclusions-recursive-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Exclusions (Recursive Scanning)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Directory Exclusions (Recursive Scanning)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-use-defaults-only-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Use Defaults Only (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-add-custom-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Add Custom Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-minimal-exclusions-experts-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: Minimal Exclusions (Experts Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-monorepo-with-shared-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Monorepo with Shared Cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-respect-gitignore-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Respect .gitignore Only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-custom-development-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3: Custom Development Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gitignore-integration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        .gitignore Integration Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=".gitignore Integration Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-gitignore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example .gitignore
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-science-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Science Projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microservices-monorepo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microservices Monorepo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-language-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Language Project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-your-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Your Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Your Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#verify-exclusions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify Exclusions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#too-many-directories-excluded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Too Many Directories Excluded
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unwanted-directories-scanned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unwanted Directories Scanned
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-practices_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="oss-sustain-guard-exclude-packages-configuration-guide">OSS Sustain Guard - Exclude Packages Configuration Guide<a class="headerlink" href="#oss-sustain-guard-exclude-packages-configuration-guide" title="Permanent link">&para;</a></h1>
+<p>The exclude packages feature allows you to exclude specific packages from sustainability checks.</p>
+<h2 id="configuration-methods">Configuration Methods<a class="headerlink" href="#configuration-methods" title="Permanent link">&para;</a></h2>
+<h3 id="method-1-oss-sustain-guardtoml-recommended-local-project-config">Method 1: <code>.oss-sustain-guard.toml</code> (Recommended - Local Project Config)<a class="headerlink" href="#method-1-oss-sustain-guardtoml-recommended-local-project-config" title="Permanent link">&para;</a></h3>
+<p>Create a <code>.oss-sustain-guard.toml</code> file in the project root:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard]</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;some-internal-package&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;legacy-dependency&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;proprietary-lib&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<h3 id="method-2-pyprojecttoml-project-wide-config">Method 2: <code>pyproject.toml</code> (Project-wide Config)<a class="headerlink" href="#method-2-pyprojecttoml-project-wide-config" title="Permanent link">&para;</a></h3>
+<p>Add the configuration to your existing <code>pyproject.toml</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard]</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;internal-package&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;legacy-dependency&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<h2 id="configuration-priority">Configuration Priority<a class="headerlink" href="#configuration-priority" title="Permanent link">&para;</a></h2>
+<p>Configuration files are loaded in the following priority order:</p>
+<ol>
+<li><strong><code>.oss-sustain-guard.toml</code></strong> (Highest Priority)</li>
+<li>Project-specific configuration</li>
+<li>
+<p>When <code>.oss-sustain-guard.toml</code> exists, only this file is used</p>
+</li>
+<li>
+<p><strong><code>pyproject.toml</code></strong> (Fallback)</p>
+</li>
+<li>Used only if <code>.oss-sustain-guard.toml</code> does not exist</li>
+</ol>
+<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
+<h3 id="example-1-checking-requirementstxt">Example 1: Checking requirements.txt<a class="headerlink" href="#example-1-checking-requirementstxt" title="Permanent link">&para;</a></h3>
+<p><code>requirements.txt</code>:</p>
+<div class="codehilite"><pre><span></span><code>flask
+django
+internal-lib
+</code></pre></div>
+
+<p><code>.oss-sustain-guard.toml</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard]</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;internal-lib&quot;</span><span class="p">]</span>
+</code></pre></div>
+
+<p>Run:</p>
+<div class="codehilite"><pre><span></span><code>oss-guard<span class="w"> </span>check<span class="w"> </span>requirements.txt
+</code></pre></div>
+
+<p>Output:</p>
+<div class="codehilite"><pre><span></span><code>🔍 Analyzing 3 package(s)...
+  -&gt; Found flask in cache.
+  -&gt; Found django in cache.
+  -&gt; Skipping internal-lib (excluded)
+
+⏭️  Skipped 1 excluded package(s).
+</code></pre></div>
+
+<h3 id="example-2-direct-package-specification">Example 2: Direct Package Specification<a class="headerlink" href="#example-2-direct-package-specification" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code>oss-guard<span class="w"> </span>check<span class="w"> </span>flask<span class="w"> </span>django<span class="w"> </span>internal-lib
+</code></pre></div>
+
+<p>Output:</p>
+<div class="codehilite"><pre><span></span><code>🔍 Analyzing 3 package(s)...
+  -&gt; Found flask in cache.
+  -&gt; Found django in cache.
+  -&gt; Skipping internal-lib (excluded)
+
+⏭️  Skipped 1 excluded package(s).
+</code></pre></div>
+
+<h2 id="case-insensitive-matching">Case-Insensitive Matching<a class="headerlink" href="#case-insensitive-matching" title="Permanent link">&para;</a></h2>
+<p>Package exclusion checks are <strong>case-insensitive</strong>.</p>
+<p>The following are all treated as the same package:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard]</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Flask&quot;</span><span class="p">]</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># All of these will be excluded</span>
+oss-guard<span class="w"> </span>check<span class="w"> </span>flask
+oss-guard<span class="w"> </span>check<span class="w"> </span>Flask
+oss-guard<span class="w"> </span>check<span class="w"> </span>FLASK
+</code></pre></div>
+
+<h2 id="pre-commit-integration">Pre-Commit Integration<a class="headerlink" href="#pre-commit-integration" title="Permanent link">&para;</a></h2>
+<p>When used with Pre-Commit hooks, excluded packages are automatically skipped:</p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>requirements.txt
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Update dependencies&quot;</span>
+<span class="c1"># Pre-Commit hook runs and skips excluded packages</span>
+</code></pre></div>
+
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Exclude Internal Packages</strong></li>
+</ol>
+<p><code>toml
+   exclude = ["my-company-lib", "internal-utils"]</code></p>
+<ol>
+<li><strong>Exclude Legacy Dependencies</strong></li>
+</ol>
+<p><code>toml
+   exclude = ["legacy-package", "deprecated-lib"]</code></p>
+<ol>
+<li><strong>Use <code>.oss-sustain-guard.toml</code> for Project-Specific Settings</strong></li>
+<li><code>pyproject.toml</code> is used for multiple purposes</li>
+<li><code>.oss-sustain-guard.toml</code> is dedicated to this tool</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="exclude-configuration-not-applied">Exclude Configuration Not Applied<a class="headerlink" href="#exclude-configuration-not-applied" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Verify file name</li>
+<li><code>.oss-sustain-guard.toml</code> (starts with a dot)</li>
+<li>
+<p><code>pyproject.toml</code></p>
+</li>
+<li>
+<p>Check TOML syntax</p>
+</li>
+</ol>
+<p><code>bash
+   # Validate TOML syntax with Python
+   python -c "import tomllib; print(tomllib.loads(open('.oss-sustain-guard.toml').read()))"</code></p>
+<ol>
+<li>Verify section structure</li>
+</ol>
+<p><code>toml
+   [tool.oss-sustain-guard]  # Required
+   exclude = [...]          # Must be a list</code></p>
+<h3 id="verify-configuration">Verify Configuration<a class="headerlink" href="#verify-configuration" title="Permanent link">&para;</a></h3>
+<p>Use verbose output to confirm:</p>
+<div class="codehilite"><pre><span></span><code>oss-guard<span class="w"> </span>check<span class="w"> </span>requirements.txt<span class="w"> </span>-v
+</code></pre></div>
+
+<h3 id="reset-configuration">Reset Configuration<a class="headerlink" href="#reset-configuration" title="Permanent link">&para;</a></h3>
+<p>Remove the configuration file:</p>
+<div class="codehilite"><pre><span></span><code>rm<span class="w"> </span>.oss-sustain-guard.toml
+</code></pre></div>
+
+<h2 id="directory-exclusions-recursive-scanning">Directory Exclusions (Recursive Scanning)<a class="headerlink" href="#directory-exclusions-recursive-scanning" title="Permanent link">&para;</a></h2>
+<p>When using recursive scanning (<code>--recursive</code>), you can also configure which directories to exclude. This section provides practical examples.</p>
+<h3 id="basic-configuration">Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permanent link">&para;</a></h3>
+<h4 id="option-1-use-defaults-only-recommended">Option 1: Use Defaults Only (Recommended)<a class="headerlink" href="#option-1-use-defaults-only-recommended" title="Permanent link">&para;</a></h4>
+<p>The simplest configuration - use all default exclusions:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># .oss-sustain-guard.toml</span>
+<span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="c1"># Nothing to configure - defaults are used automatically</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">use_gitignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div>
+
+<p>This excludes:</p>
+<ul>
+<li>36+ common directories (node_modules, venv, <strong>pycache</strong>, etc.)</li>
+<li>Patterns from your <code>.gitignore</code></li>
+</ul>
+<h4 id="option-2-add-custom-patterns">Option 2: Add Custom Patterns<a class="headerlink" href="#option-2-add-custom-patterns" title="Permanent link">&para;</a></h4>
+<p>Add your own patterns in addition to defaults:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;scratch&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;experiments&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;legacy&quot;</span><span class="p">]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">use_gitignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div>
+
+<p>Result: Excludes defaults + .gitignore + your custom patterns.</p>
+<h4 id="option-3-minimal-exclusions-experts-only">Option 3: Minimal Exclusions (Experts Only)<a class="headerlink" href="#option-3-minimal-exclusions-experts-only" title="Permanent link">&para;</a></h4>
+<p>Use only your custom patterns, disable defaults:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;my_cache&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;temp&quot;</span><span class="p">]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<span class="n">use_gitignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+</code></pre></div>
+
+<p><strong>Warning:</strong> This may scan build outputs and dependencies unnecessarily.</p>
+<h3 id="advanced-examples">Advanced Examples<a class="headerlink" href="#advanced-examples" title="Permanent link">&para;</a></h3>
+<h4 id="example-1-monorepo-with-shared-cache">Example 1: Monorepo with Shared Cache<a class="headerlink" href="#example-1-monorepo-with-shared-cache" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;shared_cache&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;common_builds&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;archived_projects&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">use_gitignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div>
+
+<h4 id="example-2-respect-gitignore-only">Example 2: Respect .gitignore Only<a class="headerlink" href="#example-2-respect-gitignore-only" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w">  </span><span class="c1"># Disable built-in patterns</span>
+<span class="n">use_gitignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1"># Only use .gitignore</span>
+</code></pre></div>
+
+<p>Useful when you have a comprehensive <code>.gitignore</code>.</p>
+<h4 id="example-3-custom-development-environment">Example 3: Custom Development Environment<a class="headerlink" href="#example-3-custom-development-environment" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;bazel-out&quot;</span><span class="p">,</span><span class="w">        </span><span class="c1"># Bazel build outputs</span>
+<span class="w">    </span><span class="s2">&quot;.pants.d&quot;</span><span class="p">,</span><span class="w">         </span><span class="c1"># Pants build system</span>
+<span class="w">    </span><span class="s2">&quot;buck-out&quot;</span><span class="p">,</span><span class="w">         </span><span class="c1"># Buck build outputs</span>
+<span class="w">    </span><span class="s2">&quot;cmake-build-*&quot;</span><span class="p">,</span><span class="w">    </span><span class="c1"># CMake builds</span>
+<span class="p">]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div>
+
+<h3 id="gitignore-integration-examples">.gitignore Integration Examples<a class="headerlink" href="#gitignore-integration-examples" title="Permanent link">&para;</a></h3>
+<h4 id="example-gitignore">Example .gitignore<a class="headerlink" href="#example-gitignore" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Build outputs</span>
+<span class="nf">dist</span>
+<span class="nf">build</span>
+<span class="err">*</span><span class="na">.pyc</span>
+
+<span class="c1"># Development</span>
+<span class="na">.vscode</span><span class="err">/</span>
+<span class="na">.idea</span><span class="err">/</span>
+
+<span class="c1"># Custom caches</span>
+<span class="nf">cache</span>
+<span class="nf">temp_data</span>
+<span class="nf">experimental</span>
+</code></pre></div>
+
+<p>With <code>use_gitignore = true</code>, the following will be excluded:</p>
+<ul>
+<li><code>dist</code></li>
+<li><code>build</code></li>
+<li><code>cache</code></li>
+<li><code>temp_data</code></li>
+<li><code>experimental</code></li>
+</ul>
+<p>Note: <code>*.pyc</code> is a file pattern and won't be used for directory exclusion.</p>
+<h3 id="common-use-cases">Common Use Cases<a class="headerlink" href="#common-use-cases" title="Permanent link">&para;</a></h3>
+<h4 id="data-science-projects">Data Science Projects<a class="headerlink" href="#data-science-projects" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;datasets&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;models&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;checkpoints&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;notebooks/.ipynb_checkpoints&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div>
+
+<h4 id="microservices-monorepo">Microservices Monorepo<a class="headerlink" href="#microservices-monorepo" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;archived-services&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;docker-volumes&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;k8s-temp&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">use_gitignore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div>
+
+<h4 id="multi-language-project">Multi-Language Project<a class="headerlink" href="#multi-language-project" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="k">[tool.oss-sustain-guard.exclude-dirs]</span>
+<span class="n">patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;cmake-build-debug&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;cmake-build-release&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.cargo&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;zig-cache&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">use_defaults</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1"># Already covers most languages</span>
+</code></pre></div>
+
+<h3 id="testing-your-configuration">Testing Your Configuration<a class="headerlink" href="#testing-your-configuration" title="Permanent link">&para;</a></h3>
+<h4 id="verify-exclusions">Verify Exclusions<a class="headerlink" href="#verify-exclusions" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Run with verbose to see what&#39;s being scanned</span>
+oss-guard<span class="w"> </span>check<span class="w"> </span>--recursive<span class="w"> </span>--verbose
+
+<span class="c1"># Check a specific directory</span>
+oss-guard<span class="w"> </span>check<span class="w"> </span>--root-dir<span class="w"> </span>./my-project<span class="w"> </span>--recursive
+</code></pre></div>
+
+<h4 id="debug-configuration">Debug Configuration<a class="headerlink" href="#debug-configuration" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">oss_sustain_guard.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_exclusion_patterns</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="c1"># Get all exclusion patterns for a directory</span>
+<span class="n">patterns</span> <span class="o">=</span> <span class="n">get_exclusion_patterns</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total patterns: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">patterns</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sample patterns: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">patterns</span><span class="p">))[:</span><span class="mi">20</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="troubleshooting_1">Troubleshooting<a class="headerlink" href="#troubleshooting_1" title="Permanent link">&para;</a></h3>
+<h4 id="too-many-directories-excluded">Too Many Directories Excluded<a class="headerlink" href="#too-many-directories-excluded" title="Permanent link">&para;</a></h4>
+<p>If scanning finds nothing:</p>
+<ol>
+<li>Check <code>.gitignore</code> - it might be too aggressive</li>
+<li>Set <code>use_gitignore = false</code> temporarily</li>
+<li>Review <code>patterns</code> list for accidental exclusions</li>
+</ol>
+<h4 id="unwanted-directories-scanned">Unwanted Directories Scanned<a class="headerlink" href="#unwanted-directories-scanned" title="Permanent link">&para;</a></h4>
+<p>If build directories are being scanned:</p>
+<ol>
+<li>Ensure <code>use_defaults = true</code></li>
+<li>Add specific patterns to <code>patterns</code></li>
+<li>Check if directory names match exclusion patterns exactly</li>
+</ol>
+<h4 id="permission-errors">Permission Errors<a class="headerlink" href="#permission-errors" title="Permanent link">&para;</a></h4>
+<p>OSS Sustain Guard automatically skips directories it can't read. No configuration needed.</p>
+<h3 id="best-practices_1">Best Practices<a class="headerlink" href="#best-practices_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Start with defaults:</strong> Always use <code>use_defaults = true</code> unless you have a specific reason not to</li>
+<li><strong>Leverage .gitignore:</strong> Set <code>use_gitignore = true</code> to automatically exclude ignored directories</li>
+<li><strong>Add project-specific patterns:</strong> Use <code>patterns</code> for directories unique to your project</li>
+<li><strong>Test before committing:</strong> Run with <code>--recursive</code> to verify the configuration works as expected</li>
+</ol>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://toml.io/">TOML Documentation</a></li>
+<li><a href="../RECURSIVE_SCANNING_GUIDE/">Recursive Scanning Guide</a> - More details on recursive scanning behavior</li>
+<li><a href="../GETTING_STARTED/">Getting Started</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

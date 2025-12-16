@@ -1,0 +1,2818 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-language package sustainability guide and CLI documentation">
+      
+      
+      
+        <link rel="canonical" href="https://onukura.github.io/oss-sustain-guard/TREND_ANALYSIS_GUIDE/">
+      
+      
+        <link rel="prev" href="../RECURSIVE_SCANNING_GUIDE/">
+      
+      
+        <link rel="next" href="../GRATITUDE_VENDING_MACHINE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Time Series Analysis - OSS Sustain Guard</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#time-series-analysis-trend-tracking-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="OSS Sustain Guard" class="md-header__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OSS Sustain Guard
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Time Series Analysis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="OSS Sustain Guard" class="md-nav__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OSS Sustain Guard
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RECURSIVE_SCANNING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Scanning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Series Analysis
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Series Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-monitor-package-health-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Monitor Package Health Evolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-compare-beforeafter-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Compare Before/After Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-track-metric-specific-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Track Metric-Specific Trends
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📅 Available Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📅 Available Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#list-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        list-snapshots
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        trend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compare
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-trend-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📈 Understanding Trend Indicators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📈 Understanding Trend Indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#trend-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trend Classification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visual-status-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual Status Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#score-colors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Score Colors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🗂️ Data Organization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🗂️ Data Organization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#archive-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archive Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snapshot-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshot Generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="💡 Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-regular-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Regular Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-automated-comparisons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Automated Comparisons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-metric-specific-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Metric-Specific Focus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-cross-ecosystem-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Cross-Ecosystem Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔍 Advanced Usage
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔍 Advanced Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-archive-locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Archive Locations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scripting-automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scripting &amp; Automation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Example Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📊 Example Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-1-weekly-dependency-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 1: Weekly Dependency Review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-2-pre-upgrade-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 2: Pre-Upgrade Assessment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-3-multi-ecosystem-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 3: Multi-Ecosystem Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Interpreting Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Interpreting Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positive-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positive Trends 📈
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stable-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stable Trends ➡️
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#degrading-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Degrading Trends 📉
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Related Features
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ❓ FAQ
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="❓ FAQ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q-how-often-are-snapshots-created" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: How often are snapshots created?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-can-i-create-custom-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: Can I create custom snapshots?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-what-if-a-package-doesnt-exist-in-older-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: What if a package doesn't exist in older snapshots?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-can-i-compare-non-adjacent-dates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: Can I compare non-adjacent dates?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-how-is-the-overall-trend-calculated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: How is the overall trend calculated?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-what-if-a-package-is-not-in-the-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: What if a package is not in the archive?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🛠️ Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue-no-historical-data-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "No historical data found"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-github_token-environment-variable-is-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "GITHUB_TOKEN environment variable is required"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-could-not-resolve-package-to-github-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "Could not resolve package to GitHub repository"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-date-not-found-in-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "Date not found in archive"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-empty-trend-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: Empty trend results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📝 Contributing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📚 Additional Resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GRATITUDE_VENDING_MACHINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gratitude Vending Machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXCLUDE_PACKAGES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exclude Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring & Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scoring & Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCORING_PROFILES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHAOSS_METRICS_ALIGNMENT_VALIDATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CHAOSS Metrics Alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GITHUB_ACTIONS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PRE_COMMIT_INTEGRATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-commit Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TROUBLESHOOTING_FAQ/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DATABASE_SCHEMA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCHEMA_VERSION_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Version Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-monitor-package-health-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Monitor Package Health Evolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-compare-beforeafter-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Compare Before/After Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-track-metric-specific-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Track Metric-Specific Trends
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📅 Available Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📅 Available Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#list-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        list-snapshots
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        trend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compare
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-trend-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📈 Understanding Trend Indicators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📈 Understanding Trend Indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#trend-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trend Classification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visual-status-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual Status Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#score-colors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Score Colors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🗂️ Data Organization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🗂️ Data Organization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#archive-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archive Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snapshot-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshot Generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="💡 Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-regular-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Regular Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-automated-comparisons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Automated Comparisons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-metric-specific-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Metric-Specific Focus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-cross-ecosystem-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Cross-Ecosystem Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔍 Advanced Usage
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔍 Advanced Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-archive-locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Archive Locations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scripting-automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scripting &amp; Automation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Example Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📊 Example Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-1-weekly-dependency-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 1: Weekly Dependency Review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-2-pre-upgrade-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 2: Pre-Upgrade Assessment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-3-multi-ecosystem-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 3: Multi-Ecosystem Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Interpreting Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Interpreting Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positive-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positive Trends 📈
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stable-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stable Trends ➡️
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#degrading-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Degrading Trends 📉
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Related Features
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ❓ FAQ
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="❓ FAQ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q-how-often-are-snapshots-created" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: How often are snapshots created?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-can-i-create-custom-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: Can I create custom snapshots?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-what-if-a-package-doesnt-exist-in-older-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: What if a package doesn't exist in older snapshots?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-can-i-compare-non-adjacent-dates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: Can I compare non-adjacent dates?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-how-is-the-overall-trend-calculated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: How is the overall trend calculated?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-what-if-a-package-is-not-in-the-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: What if a package is not in the archive?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🛠️ Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue-no-historical-data-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "No historical data found"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-github_token-environment-variable-is-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "GITHUB_TOKEN environment variable is required"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-could-not-resolve-package-to-github-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "Could not resolve package to GitHub repository"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-date-not-found-in-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "Date not found in archive"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-empty-trend-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: Empty trend results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📝 Contributing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📚 Additional Resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="time-series-analysis-trend-tracking-guide">Time Series Analysis &amp; Trend Tracking Guide<a class="headerlink" href="#time-series-analysis-trend-tracking-guide" title="Permanent link">&para;</a></h1>
+<p>OSS Sustain Guard provides powerful time series analysis capabilities to help you track how package health metrics evolve over time. This guide covers trend analysis, historical comparisons, and automated reporting features.</p>
+<h2 id="overview">📊 Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The time series analysis feature enables you to:</p>
+<ul>
+<li><strong>Track health score trends</strong> over time</li>
+<li><strong>Compare snapshots</strong> from different dates</li>
+<li><strong>Identify improvement/degradation patterns</strong></li>
+<li><strong>Generate detailed comparison reports</strong></li>
+<li><strong>Monitor specific metrics</strong> across historical data</li>
+</ul>
+<h2 id="use-cases">🎯 Use Cases<a class="headerlink" href="#use-cases" title="Permanent link">&para;</a></h2>
+<h3 id="1-monitor-package-health-evolution">1. Monitor Package Health Evolution<a class="headerlink" href="#1-monitor-package-health-evolution" title="Permanent link">&para;</a></h3>
+<p>Track how your dependencies improve or degrade over time:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># View trend for a specific package</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>Flask
+
+<span class="c1"># Focus on a specific ecosystem</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>express<span class="w"> </span>--ecosystem<span class="w"> </span>javascript
+</code></pre></div>
+
+<h3 id="2-compare-beforeafter-changes">2. Compare Before/After Changes<a class="headerlink" href="#2-compare-beforeafter-changes" title="Permanent link">&para;</a></h3>
+<p>Compare package health between specific dates:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Compare two snapshots</span>
+oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>requests<span class="w"> </span><span class="m">2025</span>-12-11<span class="w"> </span><span class="m">2025</span>-12-12
+
+<span class="c1"># Compare across different ecosystems</span>
+oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>lodash<span class="w"> </span><span class="m">2025</span>-11-01<span class="w"> </span><span class="m">2025</span>-12-01<span class="w"> </span>--ecosystem<span class="w"> </span>javascript
+</code></pre></div>
+
+<h3 id="3-track-metric-specific-trends">3. Track Metric-Specific Trends<a class="headerlink" href="#3-track-metric-specific-trends" title="Permanent link">&para;</a></h3>
+<p>Focus on specific health metrics:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Monitor bus factor trend</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>Flask<span class="w"> </span>--metric<span class="w"> </span><span class="s2">&quot;Contributor Redundancy&quot;</span>
+
+<span class="c1"># Track maintenance activity</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>Django<span class="w"> </span>--metric<span class="w"> </span><span class="s2">&quot;Recent Activity&quot;</span>
+</code></pre></div>
+
+<h2 id="available-commands">📅 Available Commands<a class="headerlink" href="#available-commands" title="Permanent link">&para;</a></h2>
+<h3 id="list-snapshots"><code>list-snapshots</code><a class="headerlink" href="#list-snapshots" title="Permanent link">&para;</a></h3>
+<p>List all available historical snapshot dates:</p>
+<div class="codehilite"><pre><span></span><code>oss-sustain-guard<span class="w"> </span>list-snapshots
+</code></pre></div>
+
+<p><strong>Output:</strong></p>
+<div class="codehilite"><pre><span></span><code>📅<span class="w"> </span>Available<span class="w"> </span>Snapshot<span class="w"> </span>Dates
+
+<span class="w">   </span>Available<span class="w"> </span>Snapshots
+┏━━━┳━━━━━━━━━━━━┳━━━━━━━┓
+┃<span class="w"> </span><span class="c1"># ┃ Date       ┃ Files ┃</span>
+┡━━━╇━━━━━━━━━━━━╇━━━━━━━┩
+│<span class="w"> </span><span class="m">1</span><span class="w"> </span>│<span class="w"> </span><span class="m">2025</span>-12-11<span class="w"> </span>│<span class="w">     </span><span class="m">2</span><span class="w"> </span>│
+│<span class="w"> </span><span class="m">2</span><span class="w"> </span>│<span class="w"> </span><span class="m">2025</span>-12-12<span class="w"> </span>│<span class="w">     </span><span class="m">2</span><span class="w"> </span>│
+│<span class="w"> </span><span class="m">3</span><span class="w"> </span>│<span class="w"> </span><span class="m">2025</span>-12-13<span class="w"> </span>│<span class="w">     </span><span class="m">2</span><span class="w"> </span>│
+└───┴────────────┴───────┘
+
+Total<span class="w"> </span>snapshots:<span class="w"> </span><span class="m">3</span>
+Date<span class="w"> </span>range:<span class="w"> </span><span class="m">2025</span>-12-11<span class="w"> </span>to<span class="w"> </span><span class="m">2025</span>-12-13
+</code></pre></div>
+
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>--archive-dir PATH</code> - Custom archive directory path (default: <code>data/archive</code>)</li>
+</ul>
+<hr />
+<h3 id="trend"><code>trend</code><a class="headerlink" href="#trend" title="Permanent link">&para;</a></h3>
+<p>Display comprehensive trend analysis for a package:</p>
+<div class="codehilite"><pre><span></span><code>oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>&lt;PACKAGE_NAME&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</code></pre></div>
+
+<p><strong>Arguments:</strong></p>
+<ul>
+<li><code>PACKAGE_NAME</code> - Name of the package to analyze</li>
+</ul>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>--ecosystem, -e TEXT</code> - Package ecosystem (default: <code>python</code>)</li>
+<li>Supported: <code>python</code>, <code>javascript</code>, <code>rust</code>, <code>java</code>, <code>kotlin</code>, <code>php</code>, <code>ruby</code>, <code>csharp</code>, <code>go</code></li>
+<li><code>--metric, -m TEXT</code> - Focus on specific metric (optional)</li>
+<li><code>--archive-dir PATH</code> - Custom archive directory path</li>
+<li><code>--include-latest</code> - Include real-time analysis if package not in archive (requires <code>GITHUB_TOKEN</code>)</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Basic trend analysis</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>requests
+
+<span class="c1"># JavaScript package</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>react<span class="w"> </span>--ecosystem<span class="w"> </span>javascript
+
+<span class="c1"># Focus on specific metric</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>Flask<span class="w"> </span>--metric<span class="w"> </span><span class="s2">&quot;Bus Factor&quot;</span>
+
+<span class="c1"># Real-time analysis for packages not in archive (requires GITHUB_TOKEN)</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>new-package<span class="w"> </span>--include-latest
+</code></pre></div>
+
+<p><strong>Behavior when package is not in archive:</strong></p>
+<ul>
+<li><strong>Without <code>--include-latest</code></strong>: Shows "No historical data found" message with helpful tip</li>
+<li><strong>With <code>--include-latest</code></strong>: Attempts real-time GitHub API analysis</li>
+<li>Resolves package name to GitHub repository</li>
+<li>Fetches current health metrics</li>
+<li>Displays single snapshot (no historical comparison)</li>
+<li>Requires <code>GITHUB_TOKEN</code> environment variable</li>
+<li>Subject to GitHub API rate limits</li>
+</ul>
+<p><strong>Output includes:</strong></p>
+<ol>
+<li><strong>Summary Table</strong></li>
+<li>GitHub repository URL</li>
+<li>First and latest snapshot dates</li>
+<li>Score progression (first, latest, average)</li>
+<li>
+<p>Overall trend indicator (improving 📈, stable ➡️, degrading 📉)</p>
+</li>
+<li>
+<p><strong>Score History Timeline</strong></p>
+</li>
+<li>Date-by-date score progression</li>
+<li>Change from previous snapshot</li>
+<li>
+<p>Visual status indicators</p>
+</li>
+<li>
+<p><strong>Metric-Specific Details</strong> (when using <code>--metric</code>)</p>
+</li>
+<li>Score evolution for specific metric</li>
+<li>Risk level changes</li>
+<li>Contextual notes</li>
+</ol>
+<hr />
+<h3 id="compare"><code>compare</code><a class="headerlink" href="#compare" title="Permanent link">&para;</a></h3>
+<p>Generate detailed comparison report between two dates:</p>
+<div class="codehilite"><pre><span></span><code>oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>&lt;PACKAGE_NAME&gt;<span class="w"> </span>&lt;DATE1&gt;<span class="w"> </span>&lt;DATE2&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</code></pre></div>
+
+<p><strong>Arguments:</strong></p>
+<ul>
+<li><code>PACKAGE_NAME</code> - Name of the package to compare</li>
+<li><code>DATE1</code> - Earlier date in YYYY-MM-DD format</li>
+<li><code>DATE2</code> - Later date in YYYY-MM-DD format</li>
+</ul>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>--ecosystem, -e TEXT</code> - Package ecosystem (default: <code>python</code>)</li>
+<li><code>--archive-dir PATH</code> - Custom archive directory path</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Compare two dates</span>
+oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>requests<span class="w"> </span><span class="m">2025</span>-12-11<span class="w"> </span><span class="m">2025</span>-12-12
+
+<span class="c1"># Compare JavaScript package</span>
+oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>lodash<span class="w"> </span><span class="m">2025</span>-11-01<span class="w"> </span><span class="m">2025</span>-12-01<span class="w"> </span>--ecosystem<span class="w"> </span>javascript
+</code></pre></div>
+
+<p><strong>Output includes:</strong></p>
+<ul>
+<li><strong>Overall score change</strong> with trend indicator</li>
+<li><strong>Per-metric comparison</strong> showing:</li>
+<li>Score on both dates</li>
+<li>Score delta</li>
+<li>Visual change indicator</li>
+<li><strong>New/removed metrics</strong> detection</li>
+</ul>
+<hr />
+<h2 id="understanding-trend-indicators">📈 Understanding Trend Indicators<a class="headerlink" href="#understanding-trend-indicators" title="Permanent link">&para;</a></h2>
+<h3 id="trend-classification">Trend Classification<a class="headerlink" href="#trend-classification" title="Permanent link">&para;</a></h3>
+<p>Trends are automatically classified based on score change:</p>
+<table>
+<thead>
+<tr>
+<th>Trend</th>
+<th>Score Change</th>
+<th>Indicator</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Improving</strong></td>
+<td>&gt; +5</td>
+<td>📈</td>
+<td>Health score is significantly improving</td>
+</tr>
+<tr>
+<td><strong>Stable</strong></td>
+<td>-5 to +5</td>
+<td>➡️</td>
+<td>Health score is relatively stable</td>
+</tr>
+<tr>
+<td><strong>Degrading</strong></td>
+<td>&lt; -5</td>
+<td>📉</td>
+<td>Health score is declining</td>
+</tr>
+</tbody>
+</table>
+<h3 id="visual-status-indicators">Visual Status Indicators<a class="headerlink" href="#visual-status-indicators" title="Permanent link">&para;</a></h3>
+<p>In timeline views:</p>
+<table>
+<thead>
+<tr>
+<th>Indicator</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🟢</td>
+<td>First data point (baseline)</td>
+</tr>
+<tr>
+<td>📈</td>
+<td>Score increased from previous</td>
+</tr>
+<tr>
+<td>➡️</td>
+<td>Score unchanged from previous</td>
+</tr>
+<tr>
+<td>📉</td>
+<td>Score decreased from previous</td>
+</tr>
+</tbody>
+</table>
+<h3 id="score-colors">Score Colors<a class="headerlink" href="#score-colors" title="Permanent link">&para;</a></h3>
+<p>Scores are color-coded for quick assessment:</p>
+<ul>
+<li><strong>Green (≥80)</strong>: Healthy status</li>
+<li><strong>Yellow (50-79)</strong>: Monitor status</li>
+<li><strong>Red (&lt;50)</strong>: Needs attention</li>
+</ul>
+<hr />
+<h2 id="data-organization">🗂️ Data Organization<a class="headerlink" href="#data-organization" title="Permanent link">&para;</a></h2>
+<h3 id="archive-structure">Archive Structure<a class="headerlink" href="#archive-structure" title="Permanent link">&para;</a></h3>
+<p>Historical data is stored in dated snapshots:</p>
+<div class="codehilite"><pre><span></span><code>data/
+<span class="w">  </span>archive/
+<span class="w">    </span><span class="m">2025</span>-12-11/
+<span class="w">      </span>python.json
+<span class="w">      </span>javascript.json
+<span class="w">      </span>rust.json
+<span class="w">      </span>...
+<span class="w">    </span><span class="m">2025</span>-12-12/
+<span class="w">      </span>python.json
+<span class="w">      </span>javascript.json
+<span class="w">      </span>rust.json
+<span class="w">      </span>...
+</code></pre></div>
+
+<h3 id="snapshot-generation">Snapshot Generation<a class="headerlink" href="#snapshot-generation" title="Permanent link">&para;</a></h3>
+<p>Snapshots are automatically created by the build process:</p>
+<ol>
+<li><strong>Automated builds</strong> generate snapshots daily/weekly</li>
+<li>Each snapshot contains <strong>complete package data</strong> for all ecosystems</li>
+<li>Data includes:</li>
+<li>Total health score</li>
+<li>Individual metric scores</li>
+<li>Risk assessments</li>
+<li>Funding information</li>
+<li>Repository metadata</li>
+</ol>
+<hr />
+<h2 id="best-practices">💡 Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="1-regular-monitoring">1. Regular Monitoring<a class="headerlink" href="#1-regular-monitoring" title="Permanent link">&para;</a></h3>
+<p>Set up periodic trend checks for critical dependencies:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Create a monitoring script</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>monitor_deps.sh<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<span class="s">#!/bin/bash</span>
+
+<span class="s">PACKAGES=&quot;requests Flask Django pytest&quot;</span>
+
+<span class="s">for pkg in $PACKAGES; do</span>
+<span class="s">    echo &quot;Checking trend for $pkg...&quot;</span>
+<span class="s">    oss-sustain-guard trend &quot;$pkg&quot;</span>
+<span class="s">    echo &quot;&quot;</span>
+<span class="s">done</span>
+<span class="s">EOF</span>
+
+chmod<span class="w"> </span>+x<span class="w"> </span>monitor_deps.sh
+./monitor_deps.sh
+</code></pre></div>
+
+<h3 id="2-automated-comparisons">2. Automated Comparisons<a class="headerlink" href="#2-automated-comparisons" title="Permanent link">&para;</a></h3>
+<p>Compare monthly snapshots to track long-term trends:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Compare month-over-month</span>
+oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>Flask<span class="w"> </span><span class="m">2025</span>-11-01<span class="w"> </span><span class="m">2025</span>-12-01
+</code></pre></div>
+
+<h3 id="3-metric-specific-focus">3. Metric-Specific Focus<a class="headerlink" href="#3-metric-specific-focus" title="Permanent link">&para;</a></h3>
+<p>Monitor specific areas of concern:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Track maintainer retention</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>mypackage<span class="w"> </span>--metric<span class="w"> </span><span class="s2">&quot;Maintainer Retention&quot;</span>
+
+<span class="c1"># Monitor contributor diversity</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>mypackage<span class="w"> </span>--metric<span class="w"> </span><span class="s2">&quot;Contributor Redundancy&quot;</span>
+</code></pre></div>
+
+<h3 id="4-cross-ecosystem-analysis">4. Cross-Ecosystem Analysis<a class="headerlink" href="#4-cross-ecosystem-analysis" title="Permanent link">&para;</a></h3>
+<p>Compare trends across different ecosystems:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Python</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>requests
+
+<span class="c1"># JavaScript equivalent</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>axios<span class="w"> </span>--ecosystem<span class="w"> </span>javascript
+</code></pre></div>
+
+<hr />
+<h2 id="advanced-usage">🔍 Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
+<h3 id="custom-archive-locations">Custom Archive Locations<a class="headerlink" href="#custom-archive-locations" title="Permanent link">&para;</a></h3>
+<p>Use custom archive directories:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Use CI/CD archive</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>Flask<span class="w"> </span>--archive-dir<span class="w"> </span>/path/to/custom/archive
+
+<span class="c1"># List custom archive snapshots</span>
+oss-sustain-guard<span class="w"> </span>list-snapshots<span class="w"> </span>--archive-dir<span class="w"> </span>/path/to/archive
+</code></pre></div>
+
+<h3 id="scripting-automation">Scripting &amp; Automation<a class="headerlink" href="#scripting-automation" title="Permanent link">&para;</a></h3>
+<p>Integrate trend analysis into CI/CD pipelines:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># GitHub Actions example</span>
+<span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Check Dependency Trends</span>
+<span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">    </span><span class="no">oss-sustain-guard list-snapshots</span>
+<span class="w">    </span><span class="no">oss-sustain-guard trend requests</span>
+<span class="w">    </span><span class="no">oss-sustain-guard compare Flask ${{ env.PREVIOUS_DATE }} ${{ env.CURRENT_DATE }}</span>
+</code></pre></div>
+
+<h3 id="data-export">Data Export<a class="headerlink" href="#data-export" title="Permanent link">&para;</a></h3>
+<p>Combine with other tools for advanced analysis:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Export trend data</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span>Flask<span class="w"> </span>&gt;<span class="w"> </span>flask_trend.txt
+
+<span class="c1"># Automated comparison</span>
+<span class="nv">PREV_DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;7 days ago&quot;</span><span class="w"> </span>+%Y-%m-%d<span class="k">)</span>
+<span class="nv">CURR_DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>
+oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>Flask<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PREV_DATE</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CURR_DATE</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="example-workflows">📊 Example Workflows<a class="headerlink" href="#example-workflows" title="Permanent link">&para;</a></h2>
+<h3 id="workflow-1-weekly-dependency-review">Workflow 1: Weekly Dependency Review<a class="headerlink" href="#workflow-1-weekly-dependency-review" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># weekly_review.sh</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;📊 Weekly Dependency Health Review&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;===================================&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+
+<span class="c1"># List available snapshots</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Available Snapshots:&quot;</span>
+oss-sustain-guard<span class="w"> </span>list-snapshots
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+
+<span class="c1"># Get dates for comparison (last week vs this week)</span>
+<span class="nv">LAST_WEEK</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;7 days ago&quot;</span><span class="w"> </span>+%Y-%m-%d<span class="k">)</span>
+<span class="nv">THIS_WEEK</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>
+
+<span class="c1"># Check critical dependencies</span>
+<span class="nv">CRITICAL_DEPS</span><span class="o">=</span><span class="s2">&quot;requests Flask Django celery&quot;</span>
+
+<span class="k">for</span><span class="w"> </span>dep<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nv">$CRITICAL_DEPS</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Analyzing </span><span class="nv">$dep</span><span class="s2">...&quot;</span>
+<span class="w">    </span>oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$dep</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<span class="k">done</span>
+</code></pre></div>
+
+<h3 id="workflow-2-pre-upgrade-assessment">Workflow 2: Pre-Upgrade Assessment<a class="headerlink" href="#workflow-2-pre-upgrade-assessment" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># pre_upgrade_check.sh</span>
+
+<span class="nv">PACKAGE</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nv">OLD_DATE</span><span class="o">=</span><span class="nv">$2</span>
+<span class="nv">NEW_DATE</span><span class="o">=</span><span class="nv">$3</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;📊 Pre-Upgrade Assessment for </span><span class="nv">$PACKAGE</span><span class="s2">&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;======================================&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+
+<span class="c1"># Show overall trend</span>
+oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PACKAGE</span><span class="s2">&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+
+<span class="c1"># Detailed comparison</span>
+oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PACKAGE</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OLD_DATE</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$NEW_DATE</span><span class="s2">&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+
+<span class="c1"># Check specific metrics</span>
+<span class="k">for</span><span class="w"> </span>metric<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;Contributor Redundancy&quot;</span><span class="w"> </span><span class="s2">&quot;Maintainer Retention&quot;</span><span class="w"> </span><span class="s2">&quot;Recent Activity&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Checking: </span><span class="nv">$metric</span><span class="s2">&quot;</span>
+<span class="w">    </span>oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PACKAGE</span><span class="s2">&quot;</span><span class="w"> </span>--metric<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$metric</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<span class="k">done</span>
+</code></pre></div>
+
+<h3 id="workflow-3-multi-ecosystem-monitoring">Workflow 3: Multi-Ecosystem Monitoring<a class="headerlink" href="#workflow-3-multi-ecosystem-monitoring" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># multi_ecosystem_monitor.sh</span>
+
+<span class="nb">declare</span><span class="w"> </span>-A<span class="w"> </span><span class="nv">PACKAGES</span><span class="o">=(</span>
+<span class="w">    </span><span class="o">[</span><span class="s2">&quot;python&quot;</span><span class="o">]=</span><span class="s2">&quot;requests Flask&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="s2">&quot;javascript&quot;</span><span class="o">]=</span><span class="s2">&quot;express react&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="s2">&quot;rust&quot;</span><span class="o">]=</span><span class="s2">&quot;serde tokio&quot;</span>
+<span class="o">)</span>
+
+<span class="k">for</span><span class="w"> </span>ecosystem<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="p">!PACKAGES[@]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;📦 </span><span class="nv">$ecosystem</span><span class="s2"> Packages&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;====================&quot;</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>pkg<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="si">${</span><span class="nv">PACKAGES</span><span class="p">[</span><span class="nv">$ecosystem</span><span class="p">]</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Trend for </span><span class="nv">$pkg</span><span class="s2">:&quot;</span>
+<span class="w">        </span>oss-sustain-guard<span class="w"> </span>trend<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$pkg</span><span class="s2">&quot;</span><span class="w"> </span>--ecosystem<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ecosystem</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<span class="w">    </span><span class="k">done</span>
+<span class="k">done</span>
+</code></pre></div>
+
+<hr />
+<h2 id="interpreting-results">🎯 Interpreting Results<a class="headerlink" href="#interpreting-results" title="Permanent link">&para;</a></h2>
+<h3 id="positive-trends">Positive Trends 📈<a class="headerlink" href="#positive-trends" title="Permanent link">&para;</a></h3>
+<p>When you see improving trends:</p>
+<ul>
+<li>✅ <strong>Maintainer engagement is increasing</strong></li>
+<li>✅ <strong>Contributor diversity is growing</strong></li>
+<li>✅ <strong>Response times are improving</strong></li>
+<li>✅ <strong>Release cadence is healthy</strong></li>
+</ul>
+<p><strong>Action</strong>: Continue monitoring, consider increased adoption</p>
+<h3 id="stable-trends">Stable Trends ➡️<a class="headerlink" href="#stable-trends" title="Permanent link">&para;</a></h3>
+<p>When trends are stable:</p>
+<ul>
+<li>ℹ️ <strong>Consistent maintenance patterns</strong></li>
+<li>ℹ️ <strong>Predictable release schedule</strong></li>
+<li>ℹ️ <strong>Steady contributor base</strong></li>
+</ul>
+<p><strong>Action</strong>: Monitor for changes, maintain current usage</p>
+<h3 id="degrading-trends">Degrading Trends 📉<a class="headerlink" href="#degrading-trends" title="Permanent link">&para;</a></h3>
+<p>When you see declining trends:</p>
+<ul>
+<li>⚠️ <strong>Reduced maintainer activity</strong></li>
+<li>⚠️ <strong>Increasing bus factor risk</strong></li>
+<li>⚠️ <strong>Slower response times</strong></li>
+<li>⚠️ <strong>Funding challenges</strong></li>
+</ul>
+<p><strong>Action</strong>:</p>
+<ol>
+<li>Investigate root causes</li>
+<li>Consider alternatives</li>
+<li>Support the project (funding, contributions)</li>
+<li>Plan migration if critical</li>
+</ol>
+<hr />
+<h2 id="related-features">🔗 Related Features<a class="headerlink" href="#related-features" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="../RECURSIVE_SCANNING_GUIDE/">Recursive Scanning</a></strong> - Analyze entire project dependencies</li>
+<li><strong><a href="../EXCLUDE_PACKAGES_GUIDE/">Exclude Packages</a></strong> - Filter packages from analysis</li>
+<li><strong><a href="../SCORING_PROFILES_GUIDE/">Scoring Profiles</a></strong> - Customize metric weights</li>
+<li><strong><a href="../GITHUB_ACTIONS_GUIDE/">GitHub Actions</a></strong> - Automate trend analysis in CI/CD</li>
+</ul>
+<hr />
+<h2 id="faq">❓ FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h2>
+<h3 id="q-how-often-are-snapshots-created">Q: How often are snapshots created?<a class="headerlink" href="#q-how-often-are-snapshots-created" title="Permanent link">&para;</a></h3>
+<p>A: Snapshots are created automatically by the build process. Check your CI/CD configuration or archive directory to see the frequency.</p>
+<h3 id="q-can-i-create-custom-snapshots">Q: Can I create custom snapshots?<a class="headerlink" href="#q-can-i-create-custom-snapshots" title="Permanent link">&para;</a></h3>
+<p>A: Yes! Run the database builder manually:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>builder
+python<span class="w"> </span>build_db.py
+</code></pre></div>
+
+<p>This creates a new snapshot in <code>data/archive/YYYY-MM-DD/</code>.</p>
+<h3 id="q-what-if-a-package-doesnt-exist-in-older-snapshots">Q: What if a package doesn't exist in older snapshots?<a class="headerlink" href="#q-what-if-a-package-doesnt-exist-in-older-snapshots" title="Permanent link">&para;</a></h3>
+<p>A: The trend analysis will only show data from snapshots where the package exists. The report will indicate the first available date.</p>
+<h3 id="q-can-i-compare-non-adjacent-dates">Q: Can I compare non-adjacent dates?<a class="headerlink" href="#q-can-i-compare-non-adjacent-dates" title="Permanent link">&para;</a></h3>
+<p>A: Yes! You can compare any two dates in the archive:</p>
+<div class="codehilite"><pre><span></span><code>oss-sustain-guard<span class="w"> </span>compare<span class="w"> </span>Flask<span class="w"> </span><span class="m">2025</span>-01-01<span class="w"> </span><span class="m">2025</span>-12-01
+</code></pre></div>
+
+<h3 id="q-how-is-the-overall-trend-calculated">Q: How is the overall trend calculated?<a class="headerlink" href="#q-how-is-the-overall-trend-calculated" title="Permanent link">&para;</a></h3>
+<p>A: Trends are based on total score change:</p>
+<ul>
+<li><strong>Improving</strong>: Final score &gt; Initial score + 5</li>
+<li><strong>Degrading</strong>: Final score &lt; Initial score - 5</li>
+<li><strong>Stable</strong>: Change within ±5 points</li>
+</ul>
+<h3 id="q-what-if-a-package-is-not-in-the-archive">Q: What if a package is not in the archive?<a class="headerlink" href="#q-what-if-a-package-is-not-in-the-archive" title="Permanent link">&para;</a></h3>
+<p>A: You have two options:</p>
+<ol>
+<li><strong>Wait for next snapshot</strong> - The package will appear in future archives once analyzed</li>
+<li><strong>Use <code>--include-latest</code> flag</strong> - Perform real-time analysis:</li>
+</ol>
+<p><code>bash
+   oss-sustain-guard trend mypackage --include-latest</code></p>
+<p><strong>Requirements</strong>:
+   - <code>GITHUB_TOKEN</code> environment variable must be set
+   - Package must have a GitHub repository
+   - Subject to GitHub API rate limits</p>
+<p><strong>Note</strong>: Real-time analysis provides a single snapshot only. Historical comparison requires archived data.</p>
+<hr />
+<h2 id="troubleshooting">🛠️ Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="issue-no-historical-data-found">Issue: "No historical data found"<a class="headerlink" href="#issue-no-historical-data-found" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Package may not exist in archive snapshots</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check available dates: <code>oss-sustain-guard list-snapshots</code></li>
+<li>Verify package name and ecosystem</li>
+<li>Use <code>--include-latest</code> flag for real-time analysis:</li>
+</ol>
+<p><code>bash
+   oss-sustain-guard trend mypackage --include-latest</code></p>
+<ol>
+<li>Ensure <code>GITHUB_TOKEN</code> is set if using real-time analysis</li>
+<li>Ensure archive directory contains data</li>
+</ol>
+<h3 id="issue-github_token-environment-variable-is-required">Issue: "GITHUB_TOKEN environment variable is required"<a class="headerlink" href="#issue-github_token-environment-variable-is-required" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Real-time analysis requires GitHub API access</p>
+<p><strong>Solution</strong>: Set your GitHub personal access token:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;your_token_here&quot;</span>
+</code></pre></div>
+
+<p>Get a token at: <a href="https://github.com/settings/tokens">https://github.com/settings/tokens</a></p>
+<h3 id="issue-could-not-resolve-package-to-github-repository">Issue: "Could not resolve package to GitHub repository"<a class="headerlink" href="#issue-could-not-resolve-package-to-github-repository" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Package doesn't have GitHub repository metadata or doesn't exist</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Verify package exists in the ecosystem registry (PyPI, npm, etc.)</li>
+<li>Check if package has GitHub repository link in its metadata</li>
+<li>Some packages may use non-GitHub hosting (GitLab, Bitbucket) - not currently supported for real-time analysis</li>
+</ol>
+<h3 id="issue-date-not-found-in-archive">Issue: "Date not found in archive"<a class="headerlink" href="#issue-date-not-found-in-archive" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Specified date doesn't exist in snapshots</p>
+<p><strong>Solution</strong>: Use <code>list-snapshots</code> to see available dates</p>
+<h3 id="issue-empty-trend-results">Issue: Empty trend results<a class="headerlink" href="#issue-empty-trend-results" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Package recently added, no historical data</p>
+<p><strong>Solution</strong>: Wait for more snapshots to be generated, or analyze newer packages separately</p>
+<hr />
+<h2 id="contributing">📝 Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
+<p>To improve time series analysis features:</p>
+<ol>
+<li><strong>Suggest new metrics</strong> for trend tracking</li>
+<li><strong>Report visualization improvements</strong></li>
+<li><strong>Share workflow examples</strong> for common use cases</li>
+<li><strong>Request export formats</strong> (CSV, JSON, etc.)</li>
+</ol>
+<p>See <a href="../GETTING_STARTED/">Contributing Guide</a> for details.</p>
+<hr />
+<h2 id="additional-resources">📚 Additional Resources<a class="headerlink" href="#additional-resources" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="../DATABASE_SCHEMA/">Database Schema</a></strong> - Understand data structure</li>
+<li><strong><a href="../CHAOSS_METRICS_ALIGNMENT_VALIDATION/">CHAOSS Metrics</a></strong> - Metric definitions</li>
+</ul>
+<hr />
+<p><strong>Remember</strong>: Time series analysis is most valuable when used consistently over time. Regular monitoring helps you make informed decisions about dependency health and sustainability.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

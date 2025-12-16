@@ -1,0 +1,1816 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-language package sustainability guide and CLI documentation">
+      
+      
+      
+        <link rel="canonical" href="https://onukura.github.io/oss-sustain-guard/SCORING_PROFILES_GUIDE/">
+      
+      
+        <link rel="prev" href="../EXCLUDE_PACKAGES_GUIDE/">
+      
+      
+        <link rel="next" href="../CHAOSS_METRICS_ALIGNMENT_VALIDATION/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Scoring Profiles - OSS Sustain Guard</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#scoring-profiles-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="OSS Sustain Guard" class="md-header__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OSS Sustain Guard
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Scoring Profiles
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="OSS Sustain Guard" class="md-nav__button md-logo" aria-label="OSS Sustain Guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OSS Sustain Guard
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/onukura/oss-sustain-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    onukura/oss-sustain-guard
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RECURSIVE_SCANNING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Scanning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TREND_ANALYSIS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Series Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GRATITUDE_VENDING_MACHINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gratitude Vending Machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXCLUDE_PACKAGES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exclude Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring & Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scoring & Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring Profiles
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Profiles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-balanced-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Balanced (Default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-security-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Security First
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-contributor-experience" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Contributor Experience
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-long-term-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Long-term Stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#python-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compare-all-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compare All Profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-the-right-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the Right Profile
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profile-comparison-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile Comparison Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-score-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Understanding Score Differences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage-custom-weights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Usage: Custom Weights
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tuning-and-feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning and Feedback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#category-breakdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category Breakdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#score-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Score Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHAOSS_METRICS_ALIGNMENT_VALIDATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CHAOSS Metrics Alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GITHUB_ACTIONS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PRE_COMMIT_INTEGRATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-commit Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TROUBLESHOOTING_FAQ/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DATABASE_SCHEMA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCHEMA_VERSION_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Version Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Profiles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-balanced-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Balanced (Default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-security-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Security First
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-contributor-experience" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Contributor Experience
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-long-term-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Long-term Stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#python-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compare-all-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compare All Profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-the-right-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the Right Profile
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profile-comparison-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile Comparison Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-score-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Understanding Score Differences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage-custom-weights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Usage: Custom Weights
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tuning-and-feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning and Feedback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#category-breakdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category Breakdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#score-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Score Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="scoring-profiles-guide">Scoring Profiles Guide<a class="headerlink" href="#scoring-profiles-guide" title="Permanent link">&para;</a></h1>
+<p>OSS Sustain Guard provides multiple <strong>scoring profiles</strong> to evaluate projects based on different priorities. Each profile adjusts the weight of sustainability categories to match specific use cases.</p>
+<h2 id="available-profiles">Available Profiles<a class="headerlink" href="#available-profiles" title="Permanent link">&para;</a></h2>
+<h3 id="1-balanced-default">1. <strong>Balanced</strong> (Default)<a class="headerlink" href="#1-balanced-default" title="Permanent link">&para;</a></h3>
+<p>A balanced view across all sustainability dimensions.</p>
+<p><strong>Category Weights:</strong></p>
+<ul>
+<li>Maintainer Health: 25%</li>
+<li>Development Activity: 20%</li>
+<li>Community Engagement: 20%</li>
+<li>Security &amp; Funding: 20%</li>
+<li>Project Maturity: 15%</li>
+</ul>
+<p><strong>Best for:</strong> General-purpose evaluation, understanding overall project health.</p>
+<hr />
+<h3 id="2-security-first">2. <strong>Security First</strong><a class="headerlink" href="#2-security-first" title="Permanent link">&para;</a></h3>
+<p>Prioritizes security and risk mitigation.</p>
+<p><strong>Category Weights:</strong></p>
+<ul>
+<li><strong>Security &amp; Funding: 40%</strong> ⬆️ (doubled)</li>
+<li>Maintainer Health: 20%</li>
+<li>Development Activity: 15%</li>
+<li>Project Maturity: 15%</li>
+<li>Community Engagement: 10%</li>
+</ul>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>Enterprise deployments</li>
+<li>Security-critical applications</li>
+<li>Compliance requirements</li>
+<li>Risk assessment for production systems</li>
+</ul>
+<p><strong>Example:</strong> If you're evaluating a cryptography library or authentication service, this profile emphasizes security posture and funding stability.</p>
+<hr />
+<h3 id="3-contributor-experience">3. <strong>Contributor Experience</strong><a class="headerlink" href="#3-contributor-experience" title="Permanent link">&para;</a></h3>
+<p>Focuses on community engagement and contributor-friendliness.</p>
+<p><strong>Category Weights:</strong></p>
+<ul>
+<li><strong>Community Engagement: 40%</strong> ⬆️ (doubled)</li>
+<li>Project Maturity: 20%</li>
+<li>Maintainer Health: 15%</li>
+<li>Development Activity: 15%</li>
+<li>Security &amp; Funding: 10%</li>
+</ul>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>First-time contributors looking for welcoming projects</li>
+<li>Evaluating community health</li>
+<li>Open-source mentorship programs</li>
+<li>Projects seeking contributor-friendly dependencies</li>
+</ul>
+<p><strong>Example:</strong> If you're looking for a project to contribute to, this profile highlights responsive maintainers and good PR acceptance rates.</p>
+<hr />
+<h3 id="4-long-term-stability">4. <strong>Long-term Stability</strong><a class="headerlink" href="#4-long-term-stability" title="Permanent link">&para;</a></h3>
+<p>Emphasizes maintainer health and sustainable development.</p>
+<p><strong>Category Weights:</strong></p>
+<ul>
+<li><strong>Maintainer Health: 35%</strong> ⬆️ (highest priority)</li>
+<li>Development Activity: 25%</li>
+<li>Community Engagement: 15%</li>
+<li>Project Maturity: 15%</li>
+<li>Security &amp; Funding: 10%</li>
+</ul>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>Long-term dependencies in critical infrastructure</li>
+<li>Evaluating bus factor and maintainer retention</li>
+<li>Projects with multi-year roadmaps</li>
+<li>Avoiding maintainer burnout risks</li>
+</ul>
+<p><strong>Example:</strong> If you're choosing a core framework for a 5-year project, this profile emphasizes contributor diversity and maintainer retention.</p>
+<hr />
+<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
+<h3 id="python-api">Python API<a class="headerlink" href="#python-api" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">oss_sustain_guard.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">analyze_repository</span><span class="p">,</span> <span class="n">compute_weighted_total_score</span>
+
+<span class="c1"># Analyze a repository</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">analyze_repository</span><span class="p">(</span><span class="s2">&quot;psf&quot;</span><span class="p">,</span> <span class="s2">&quot;requests&quot;</span><span class="p">)</span>
+
+<span class="c1"># Get score with different profiles</span>
+<span class="n">balanced_score</span> <span class="o">=</span> <span class="n">compute_weighted_total_score</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="s2">&quot;balanced&quot;</span><span class="p">)</span>
+<span class="n">security_score</span> <span class="o">=</span> <span class="n">compute_weighted_total_score</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="s2">&quot;security_first&quot;</span><span class="p">)</span>
+<span class="n">contributor_score</span> <span class="o">=</span> <span class="n">compute_weighted_total_score</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="s2">&quot;contributor_experience&quot;</span><span class="p">)</span>
+<span class="n">stability_score</span> <span class="o">=</span> <span class="n">compute_weighted_total_score</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="s2">&quot;long_term_stability&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Balanced: </span><span class="si">{</span><span class="n">balanced_score</span><span class="si">}</span><span class="s2">/100&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Security First: </span><span class="si">{</span><span class="n">security_score</span><span class="si">}</span><span class="s2">/100&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Contributor Experience: </span><span class="si">{</span><span class="n">contributor_score</span><span class="si">}</span><span class="s2">/100&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Long-term Stability: </span><span class="si">{</span><span class="n">stability_score</span><span class="si">}</span><span class="s2">/100&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="compare-all-profiles">Compare All Profiles<a class="headerlink" href="#compare-all-profiles" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">oss_sustain_guard.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">compare_scoring_profiles</span><span class="p">,</span> <span class="n">analyze_repository</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">analyze_repository</span><span class="p">(</span><span class="s2">&quot;django&quot;</span><span class="p">,</span> <span class="s2">&quot;django&quot;</span><span class="p">)</span>
+<span class="n">comparison</span> <span class="o">=</span> <span class="n">compare_scoring_profiles</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">profile_key</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">comparison</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">profile_key</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Score: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;total_score&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">/100&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Example Output:</strong></p>
+<div class="codehilite"><pre><span></span><code>Balanced<span class="w"> </span><span class="o">(</span>balanced<span class="o">)</span>
+<span class="w">  </span>Score:<span class="w"> </span><span class="m">85</span>/100
+<span class="w">  </span>Balanced<span class="w"> </span>view<span class="w"> </span>across<span class="w"> </span>all<span class="w"> </span>sustainability<span class="w"> </span>dimensions
+
+Security<span class="w"> </span>First<span class="w"> </span><span class="o">(</span>security_first<span class="o">)</span>
+<span class="w">  </span>Score:<span class="w"> </span><span class="m">88</span>/100
+<span class="w">  </span>Prioritizes<span class="w"> </span>security<span class="w"> </span>and<span class="w"> </span>risk<span class="w"> </span>mitigation
+
+Contributor<span class="w"> </span>Experience<span class="w"> </span><span class="o">(</span>contributor_experience<span class="o">)</span>
+<span class="w">  </span>Score:<span class="w"> </span><span class="m">90</span>/100
+<span class="w">  </span>Focuses<span class="w"> </span>on<span class="w"> </span>community<span class="w"> </span>engagement<span class="w"> </span>and<span class="w"> </span>contributor-friendliness
+
+Long-term<span class="w"> </span>Stability<span class="w"> </span><span class="o">(</span>long_term_stability<span class="o">)</span>
+<span class="w">  </span>Score:<span class="w"> </span><span class="m">83</span>/100
+<span class="w">  </span>Emphasizes<span class="w"> </span>maintainer<span class="w"> </span>health<span class="w"> </span>and<span class="w"> </span>sustainable<span class="w"> </span>development
+</code></pre></div>
+
+<hr />
+<h2 id="choosing-the-right-profile">Choosing the Right Profile<a class="headerlink" href="#choosing-the-right-profile" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Use Case</th>
+<th>Recommended Profile</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>General evaluation</strong></td>
+<td><code>balanced</code></td>
+<td>Provides holistic view</td>
+</tr>
+<tr>
+<td><strong>Security audit</strong></td>
+<td><code>security_first</code></td>
+<td>Highlights vulnerabilities and funding risks</td>
+</tr>
+<tr>
+<td><strong>Finding projects to contribute to</strong></td>
+<td><code>contributor_experience</code></td>
+<td>Shows responsive, welcoming communities</td>
+</tr>
+<tr>
+<td><strong>Choosing core dependencies</strong></td>
+<td><code>long_term_stability</code></td>
+<td>Emphasizes maintainer diversity and retention</td>
+</tr>
+<tr>
+<td><strong>Open-source program office</strong></td>
+<td>Compare all</td>
+<td>See different perspectives</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="profile-comparison-strategy">Profile Comparison Strategy<a class="headerlink" href="#profile-comparison-strategy" title="Permanent link">&para;</a></h2>
+<p>When evaluating a project, consider running <strong>multiple profiles</strong> to get different perspectives:</p>
+<ol>
+<li><strong>Start with <code>balanced</code></strong> - Get a general understanding</li>
+<li><strong>Apply domain-specific profile</strong> - Match your use case</li>
+<li><strong>Compare scores</strong> - Understand trade-offs</li>
+</ol>
+<p><strong>Example Scenario:</strong></p>
+<p>You're evaluating a web framework for a new project:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">comparison</span> <span class="o">=</span> <span class="n">compare_scoring_profiles</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">)</span>
+
+<span class="c1"># Django scores</span>
+<span class="c1"># balanced: 85/100</span>
+<span class="c1"># security_first: 88/100</span>
+<span class="c1"># contributor_experience: 90/100</span>
+<span class="c1"># long_term_stability: 83/100</span>
+
+<span class="c1"># Analysis:</span>
+<span class="c1"># ✅ Excellent security and community engagement</span>
+<span class="c1"># ⚠️  Slightly lower long-term stability score</span>
+<span class="c1"># → Check: maintainer diversity and retention metrics</span>
+</code></pre></div>
+
+<hr />
+<h2 id="understanding-score-differences">Understanding Score Differences<a class="headerlink" href="#understanding-score-differences" title="Permanent link">&para;</a></h2>
+<p>Different profiles can produce significantly different scores:</p>
+<table>
+<thead>
+<tr>
+<th>Project Type</th>
+<th>Balanced</th>
+<th>Security First</th>
+<th>Contributor Exp</th>
+<th>Long-term Stability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Corporate-backed</strong></td>
+<td>75</td>
+<td>85</td>
+<td>65</td>
+<td>70</td>
+</tr>
+<tr>
+<td><strong>Community-driven</strong></td>
+<td>80</td>
+<td>70</td>
+<td>90</td>
+<td>85</td>
+</tr>
+<tr>
+<td><strong>Security-focused</strong></td>
+<td>85</td>
+<td>95</td>
+<td>75</td>
+<td>80</td>
+</tr>
+<tr>
+<td><strong>New project</strong></td>
+<td>60</td>
+<td>55</td>
+<td>70</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li><strong>Corporate-backed</strong> projects score higher on security (resources for audits)</li>
+<li><strong>Community-driven</strong> projects excel in contributor experience (welcoming culture)</li>
+<li><strong>Security-focused</strong> libraries prioritize security metrics</li>
+<li><strong>New projects</strong> may lack history for long-term stability assessment</li>
+</ul>
+<hr />
+<h2 id="advanced-usage-custom-weights">Advanced Usage: Custom Weights<a class="headerlink" href="#advanced-usage-custom-weights" title="Permanent link">&para;</a></h2>
+<p>While not directly exposed in the API yet, you can modify <code>SCORING_PROFILES</code> in <code>core.py</code> to create custom profiles:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Future enhancement (not yet implemented)</span>
+<span class="n">SCORING_PROFILES</span><span class="p">[</span><span class="s2">&quot;custom_enterprise&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Enterprise Custom&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Custom profile for enterprise evaluation&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;weights&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;Maintainer Health&quot;</span><span class="p">:</span> <span class="mf">0.30</span><span class="p">,</span>
+        <span class="s2">&quot;Development Activity&quot;</span><span class="p">:</span> <span class="mf">0.20</span><span class="p">,</span>
+        <span class="s2">&quot;Community Engagement&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+        <span class="s2">&quot;Project Maturity&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+        <span class="s2">&quot;Security &amp; Funding&quot;</span><span class="p">:</span> <span class="mf">0.20</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2 id="integration-with-cli">Integration with CLI<a class="headerlink" href="#integration-with-cli" title="Permanent link">&para;</a></h2>
+<p>The CLI currently uses the <strong>balanced</strong> profile by default. Future enhancements will support profile selection:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Future feature (not yet implemented)</span>
+oss-sustain-guard<span class="w"> </span>check<span class="w"> </span>--profile<span class="w"> </span>security_first<span class="w"> </span>requests
+oss-sustain-guard<span class="w"> </span>check<span class="w"> </span>--compare-profiles<span class="w"> </span>django
+</code></pre></div>
+
+<hr />
+<h2 id="tuning-and-feedback">Tuning and Feedback<a class="headerlink" href="#tuning-and-feedback" title="Permanent link">&para;</a></h2>
+<p>The current weights are based on CHAOSS metrics and sustainability best practices. We welcome feedback:</p>
+<ol>
+<li><strong>Report score discrepancies</strong> - If a profile doesn't match your expectations</li>
+<li><strong>Suggest new profiles</strong> - For specific use cases (e.g., "academic research", "startup dependencies")</li>
+<li><strong>Contribute weight adjustments</strong> - Based on data analysis</li>
+</ol>
+<p>See <a href="../GETTING_STARTED/">Contributing Guide</a> for how to provide feedback.</p>
+<hr />
+<h2 id="technical-details">Technical Details<a class="headerlink" href="#technical-details" title="Permanent link">&para;</a></h2>
+<h3 id="category-breakdown">Category Breakdown<a class="headerlink" href="#category-breakdown" title="Permanent link">&para;</a></h3>
+<p>All profiles use the same <strong>5 categories</strong> with different weights:</p>
+<ol>
+<li><strong>Maintainer Health</strong> - Bus factor, retention, diversity</li>
+<li><strong>Development Activity</strong> - Releases, CI, recent activity</li>
+<li><strong>Community Engagement</strong> - Responsiveness, PR handling, issue resolution</li>
+<li><strong>Project Maturity</strong> - Documentation, governance, adoption</li>
+<li><strong>Security &amp; Funding</strong> - Security posture, funding signals</li>
+</ol>
+<h3 id="score-calculation">Score Calculation<a class="headerlink" href="#score-calculation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Each category is normalized to 0-100 scale</li>
+<li>Profile weights are applied to categories</li>
+<li>Weighted sum produces total score (0-100)</li>
+</ol>
+<p>Formula:</p>
+<div class="codehilite"><pre><span></span><code>Total<span class="w"> </span><span class="nv">Score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>Σ<span class="w"> </span><span class="o">(</span>Category_Score_normalized<span class="w"> </span>×<span class="w"> </span>Profile_Weight<span class="o">)</span>
+</code></pre></div>
+
+<h3 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h3>
+<p>All profile weights must sum to 1.0 (validated in tests).</p>
+<hr />
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../DATABASE_SCHEMA/">Database Schema</a> - Stored metric details</li>
+<li><a href="../CHAOSS_METRICS_ALIGNMENT_VALIDATION/">CHAOSS Metrics Alignment</a> - Metric definitions</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
