@@ -58,6 +58,9 @@ class AnalysisResult(NamedTuple):
     is_community_driven: bool = False  # True if project is community-driven
     models: list[MetricModel] = []  # Optional metric models (CHAOSS-aligned)
     signals: dict[str, Any] = {}  # Optional raw signals for transparency
+    dependency_scores: dict[
+        str, int
+    ] = {}  # Package name -> score mapping for dependencies
 
 
 # --- Helper Functions ---
@@ -3399,11 +3402,44 @@ def analyze_repository(
             is_community_driven=is_community_driven,
             models=models,
             signals=signals,
+            dependency_scores={},
         )
 
     except Exception as e:
         console.print(f"  [bold red]❌ Unable to complete analysis: {e}[/bold red]")
         raise
+
+
+def analyze_dependencies(
+    dependency_graph,
+    database: dict[str, Any],
+) -> dict[str, int]:
+    """
+    Analyze dependency packages and retrieve their scores.
+
+    Args:
+        dependency_graph: DependencyGraph object from dependency_graph module.
+        database: Cached package database keyed by "ecosystem:package_name".
+
+    Returns:
+        Dictionary mapping package names to their scores.
+    """
+    scores: dict[str, int] = {}
+    ecosystem = dependency_graph.ecosystem
+
+    # Analyze direct dependencies
+    for dep in dependency_graph.direct_dependencies:
+        db_key = f"{ecosystem}:{dep.name}"
+        if db_key in database:
+            try:
+                pkg_data = database[db_key]
+                score = pkg_data.get("total_score", 0)
+                scores[dep.name] = score
+            except (KeyError, TypeError):
+                # Skip if data format is unexpected
+                pass
+
+    return scores
 
 
 if __name__ == "__main__":

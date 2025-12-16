@@ -198,7 +198,9 @@ def load_database(use_cache: bool = True) -> dict:
     return merged
 
 
-def display_results_compact(results: list[AnalysisResult]):
+def display_results_compact(
+    results: list[AnalysisResult], show_dependencies: bool = False
+):
     """Display analysis results in compact format (CI/CD-friendly)."""
     for result in results:
         # Determine status icon and color
@@ -226,8 +228,23 @@ def display_results_compact(results: list[AnalysisResult]):
             f"{status}"
         )
 
+        # Show dependency scores summary if available and requested
+        if show_dependencies and result.dependency_scores:
+            scores = list(result.dependency_scores.values())
+            if scores:
+                avg_score = sum(scores) / len(scores)
+                min_score = min(scores)
+                max_score = max(scores)
+                console.print(
+                    f"  🔗 Dependencies: avg={avg_score:.0f}, min={min_score}, max={max_score}, count={len(scores)}"
+                )
 
-def display_results(results: list[AnalysisResult], show_models: bool = False):
+
+def display_results(
+    results: list[AnalysisResult],
+    show_models: bool = False,
+    show_dependencies: bool = False,
+):
     """Display the analysis results in a rich table."""
     table = Table(title="OSS Sustain Guard Report")
     table.add_column("Package", justify="left", style="cyan", no_wrap=True)
@@ -284,6 +301,39 @@ def display_results(results: list[AnalysisResult], show_models: bool = False):
                 platform = link.get("platform", "Unknown")
                 url = link.get("url", "")
                 console.print(f"   • {platform}: [link={url}]{url}[/link]")
+
+    # Display dependency scores if available and requested
+    if show_dependencies:
+        for result in results:
+            if result.dependency_scores:
+                console.print(
+                    f"\n🔗 [bold cyan]{result.repo_url.replace('https://github.com/', '')}[/bold cyan] "
+                    f"- Dependency Reference Scores (Top 10):"
+                )
+                # Sort by score descending
+                sorted_deps = sorted(
+                    result.dependency_scores.items(), key=lambda x: x[1], reverse=True
+                )
+                for dep_name, dep_score in sorted_deps[:10]:
+                    if dep_score >= 80:
+                        health = "[green]✓ Healthy[/green]"
+                    elif dep_score >= 50:
+                        health = "[yellow]⚠ Needs attention[/yellow]"
+                    else:
+                        health = "[red]✗ Needs support[/red]"
+                    score_color = (
+                        "green"
+                        if dep_score >= 80
+                        else ("yellow" if dep_score >= 50 else "red")
+                    )
+                    console.print(
+                        f"   • [{score_color}]{dep_name}[/{score_color}] "
+                        f"[{score_color}]{dep_score}/100[/{score_color}] {health}"
+                    )
+                if len(result.dependency_scores) > 10:
+                    console.print(
+                        f"   [dim]... and {len(result.dependency_scores) - 10} more dependencies[/dim]"
+                    )
 
     # Display CHAOSS metric models if available and requested
     if show_models:
@@ -426,6 +476,101 @@ def display_results_detailed(
 
             console.print(signals_table)
 
+        # Display dependency scores if available
+        if result.dependency_scores:
+            console.print(
+                "\n   🔗 [bold magenta]Dependency Reference Scores:[/bold magenta]"
+            )
+            deps_table = Table(show_header=True, header_style="bold cyan")
+            deps_table.add_column("Package", style="cyan", no_wrap=True)
+            deps_table.add_column("Score", justify="center", style="magenta")
+            deps_table.add_column("Health", justify="left")
+
+            # Sort by score descending
+            sorted_deps = sorted(
+                result.dependency_scores.items(), key=lambda x: x[1], reverse=True
+            )
+            for dep_name, dep_score in sorted_deps[:15]:  # Show top 15 dependencies
+                if dep_score >= 80:
+                    health = "[green]Healthy[/green]"
+                elif dep_score >= 50:
+                    health = "[yellow]Needs attention[/yellow]"
+                else:
+                    health = "[red]Needs support[/red]"
+
+                score_color = (
+                    "green"
+                    if dep_score >= 80
+                    else ("yellow" if dep_score >= 50 else "red")
+                )
+                deps_table.add_row(
+                    dep_name,
+                    f"[{score_color}]{dep_score}/100[/{score_color}]",
+                    health,
+                )
+
+            if len(result.dependency_scores) > 15:
+                deps_table.add_row(
+                    f"[dim]... and {len(result.dependency_scores) - 15} more[/dim]",
+                    "",
+                    "",
+                )
+
+            console.print(deps_table)
+
+
+def _analyze_dependencies_for_package(
+    ecosystem: str, lockfile_path: str | Path, db: dict
+) -> dict[str, int]:
+    """
+    Analyze dependencies from a lockfile and return their scores.
+
+    Args:
+        ecosystem: Ecosystem name (python, javascript, etc).
+        lockfile_path: Path to the lockfile.
+        db: Database dictionary with cached package scores.
+
+    Returns:
+        Dictionary mapping package names to their scores.
+    """
+    try:
+        from oss_sustain_guard.dependency_graph import (
+            filter_high_value_dependencies,
+            get_all_dependencies,
+        )
+
+        lockfile_path = Path(lockfile_path)
+        if not lockfile_path.exists():
+            return {}
+
+        graphs = get_all_dependencies([lockfile_path])
+        if not graphs:
+            return {}
+
+        dep_scores: dict[str, int] = {}
+
+        for graph in graphs:
+            if graph.ecosystem != ecosystem:
+                continue
+
+            # Get top dependencies
+            top_deps = filter_high_value_dependencies(graph, max_count=20)
+
+            for dep in top_deps:
+                db_key = f"{ecosystem}:{dep.name}"
+                if db_key in db:
+                    try:
+                        pkg_data = db[db_key]
+                        score = pkg_data.get("total_score", 0)
+                        dep_scores[dep.name] = score
+                    except (KeyError, TypeError):
+                        pass
+
+        return dep_scores
+    except Exception as e:
+        console.print(f"    [dim]Warning: Could not analyze dependencies: {e}[/dim]")
+        return {}
+
 
 def parse_package_spec(spec: str) -> tuple[str, str]:
     """
@@ -450,6 +595,8 @@ def analyze_package(
     db: dict,
     profile: str = "balanced",
     enable_dependents: bool = False,
+    show_dependencies: bool = False,
+    lockfile_path: str | Path | None = None,
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -458,11 +605,13 @@ def analyze_package(
         package_name: Name of the package.
         ecosystem: Ecosystem name (python, javascript, go, rust).
         db: Cached database dictionary.
-        profile: Scoring profile to use for score calculation.
-        enable_dependents: Enable downstream dependents analysis via Libraries.io API.
+        profile: Scoring profile name.
+        enable_dependents: Enable dependents analysis.
+        show_dependencies: Analyze and include dependency scores.
+        lockfile_path: Path to lockfile for dependency analysis.
 
     Returns:
-        AnalysisResult if successful, None otherwise.
+        AnalysisResult or None if analysis fails.
     """
     # Check if package is excluded
     if is_package_excluded(package_name):
@@ -497,7 +646,14 @@ def analyze_package(
             is_community_driven=cached_data.get("is_community_driven", False),
             models=cached_data.get("models", []),
             signals=cached_data.get("signals", {}),
+            dependency_scores={},  # Empty for cached results
         )
+
+        # If show_dependencies is requested, analyze dependencies
+        if show_dependencies and lockfile_path:
+            dep_scores = _analyze_dependencies_for_package(ecosystem, lockfile_path, db)
+            result = result._replace(dependency_scores=dep_scores)
+
         return result
 
     # Resolve GitHub URL using appropriate resolver
@@ -564,6 +720,11 @@ def analyze_package(
             save_cache(ecosystem, cache_entry)
             console.print("    [dim]💾 Cached for future use[/dim]")
 
+        # If show_dependencies is requested, analyze dependencies
+        if show_dependencies and lockfile_path:
+            dep_scores = _analyze_dependencies_for_package(ecosystem, lockfile_path, db)
+            analysis_result = analysis_result._replace(dependency_scores=dep_scores)
+
         return analysis_result
     except Exception as e:
         console.print(
@@ -608,6 +769,12 @@ def check(
         "-M",
         help="Display CHAOSS-aligned metric models (Risk Model, Sustainability Model).",
     ),
+    show_dependencies: bool = typer.Option(
+        False,
+        "--show-dependencies",
+        "-D",
+        help="Analyze and display dependency package scores (reference scores based on lockfile dependencies). Only works when lockfiles are present in the project directory (uv.lock, poetry.lock, package-lock.json, etc.).",
+    ),
     profile: str = typer.Option(
         "balanced",
         "--profile",
@@ -617,7 +784,7 @@ def check(
     enable_dependents: bool = typer.Option(
         False,
         "--enable-dependents",
-        "-D",
+        "-DD",
         help="Enable downstream dependents analysis via Libraries.io API (requires LIBRARIESIO_API_KEY).",
     ),
     insecure: bool = typer.Option(
@@ -916,6 +1083,24 @@ def check(
 
     console.print(f"🔍 Analyzing {len(packages_to_analyze)} package(s)...")
 
+    # Find lockfiles for dependency analysis (if requested)
+    lockfiles_map: dict[str, Path] = {}  # ecosystem -> lockfile path
+    if show_dependencies:
+        lockfiles_dict = find_lockfiles(str(root_dir), recursive=False, max_depth=0)
+        for detected_eco, lockfile_paths in lockfiles_dict.items():
+            if lockfile_paths:
+                lockfiles_map[detected_eco] = lockfile_paths[0]  # Use first found
+
+        # Warn if --show-dependencies was requested but no lockfiles found
+        if not lockfiles_map:
+            console.print(
+                "[yellow]ℹ️  --show-dependencies specified but no lockfiles found in [bold]"
+                f"{root_dir}[/bold][/yellow]"
+            )
+            console.print(
+                "[dim]   Dependency scores are only available when analyzing projects with lockfiles.[/dim]"
+            )
+
     excluded_count = 0
     for eco, pkg_name in packages_to_analyze:
         # Skip excluded packages
@@ -926,19 +1111,34 @@ def check(
             )
             continue
 
-        result = analyze_package(pkg_name, eco, db, profile, enable_dependents)
+        lockfile = lockfiles_map.get(eco) if show_dependencies else None
+        result = analyze_package(
+            pkg_name,
+            eco,
+            db,
+            profile,
+            enable_dependents,
+            show_dependencies,
+            lockfile,
+        )
         if result:
             results_to_display.append(result)
 
     if results_to_display:
         if compact:
-            display_results_compact(results_to_display)
+            display_results_compact(
+                results_to_display, show_dependencies=show_dependencies
+            )
         elif verbose:
             display_results_detailed(
                 results_to_display, show_signals=verbose, show_models=show_models
             )
         else:
-            display_results(results_to_display, show_models=show_models)
+            display_results(
+                results_to_display,
+                show_models=show_models,
+                show_dependencies=show_dependencies,
+            )
         if excluded_count > 0:
             console.print(
                 f"\n⏭️  Skipped {excluded_count} excluded package(s).",
