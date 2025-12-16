@@ -16,6 +16,7 @@
 > - **GitHub unavailable packages**: Cannot be evaluated (non-GitHub repositories or private packages not accessible via GitHub API)
 > - **SSL verification**: Use `--insecure` flag to disable SSL verification for development/testing only
 > - **Package resolution**: If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
+> - **Documentation site**: https://onukura.github.io/oss-sustain-guard/
 
 ## 💡 Project Philosophy
 

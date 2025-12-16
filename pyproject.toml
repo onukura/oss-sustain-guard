@@ -37,11 +37,13 @@ dev = [
     "pytest-cov>=6.0.0",
     "ruff>=0.14.8",
     "prek>=0.2.21",
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
 ]
 
 [project.urls]
 Repository = "https://github.com/onukura/oss-sustain-guard"
-Documentation = "https://github.com/onukura/oss-sustain-guard"
+Documentation = "https://onukura.github.io/oss-sustain-guard/"
 Releases = "https://github.com/onukura/oss-sustain-guard/releases"
 Issues = "https://github.com/onukura/oss-sustain-guard/issues"
 

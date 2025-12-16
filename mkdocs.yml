@@ -1,0 +1,36 @@
+site_name: OSS Sustain Guard
+site_description: Multi-language package sustainability guide and CLI documentation
+site_url: https://onukura.github.io/oss-sustain-guard/
+repo_url: https://github.com/onukura/oss-sustain-guard
+repo_name: onukura/oss-sustain-guard
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+  palette:
+    scheme: default
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - codehilite
+  - footnotes
+  - tables
+nav:
+  - Home: index.md
+  - Guides:
+      - CHAOSS Metrics Alignment: CHAOSS_METRICS_ALIGNMENT_VALIDATION.md
+      - Database Schema: DATABASE_SCHEMA.md
+      - Directory Exclusions: DIRECTORY_EXCLUSION_EXAMPLES.md
+      - Excluding Packages: EXCLUDE_PACKAGES_GUIDE.md
+      - GitHub Actions Integration: GITHUB_ACTIONS_GUIDE.md
+      - Recursive Scanning: RECURSIVE_SCANNING_GUIDE.md
+      - Scoring Profiles: SCORING_PROFILES_GUIDE.md
+      - Schema Version Management: SCHEMA_VERSION_MANAGEMENT.md
+      - Trend Analysis: TREND_ANALYSIS_GUIDE.md
+      - Pre-commit Integration: PRE_COMMIT_INTEGRATION.md
+      - Gratitude Vending Machine: GRATITUDE_VENDING_MACHINE.md
+  - Assets:
+      - Demo Screenshot: assets/demo01..png
