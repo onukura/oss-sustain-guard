@@ -5,6 +5,8 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/oss-sustain-guard)](https://pypi.org/project/oss-sustain-guard/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+![demo](./docs/assets/demo01.png)
+
 **Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 9 key metrics including Bus Factor, Maintainer Activity, and Security Posture.
 
 ✨ **Fast, Cache-Based** - Pre-computed data for instant evaluation of Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby packages.
