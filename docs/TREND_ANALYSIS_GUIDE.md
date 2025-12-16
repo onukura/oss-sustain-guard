@@ -102,7 +102,7 @@ oss-sustain-guard trend <PACKAGE_NAME> [OPTIONS]
   - Supported: `python`, `javascript`, `rust`, `java`, `kotlin`, `php`, `ruby`, `csharp`, `go`
 - `--metric, -m TEXT` - Focus on specific metric (optional)
 - `--archive-dir PATH` - Custom archive directory path
-- `--include-latest` - Include real-time analysis if package not in archive (requires `GITHUB_TOKEN`)
+- `--include-latest` - Include real-time analysis if package not in archive (only needed for uncached packages)
 
 **Examples:**
 
@@ -116,18 +116,19 @@ oss-sustain-guard trend react --ecosystem javascript
 # Focus on specific metric
 oss-sustain-guard trend Flask --metric "Bus Factor"
 
-# Real-time analysis for packages not in archive (requires GITHUB_TOKEN)
+# Real-time analysis for packages not in archive
+# Only needed if analyzing packages not in the cache
 oss-sustain-guard trend new-package --include-latest
 ```
 
 **Behavior when package is not in archive:**
 
 - **Without `--include-latest`**: Shows "No historical data found" message with helpful tip
-- **With `--include-latest`**: Attempts real-time GitHub API analysis
+- **With `--include-latest`**: Attempts real-time GitHub API analysis (only needed for uncached packages)
   - Resolves package name to GitHub repository
   - Fetches current health metrics
   - Displays single snapshot (no historical comparison)
-  - Requires `GITHUB_TOKEN` environment variable
+  - Requires `GITHUB_TOKEN` environment variable if analyzing uncached packages
   - Subject to GitHub API rate limits
 
 **Output includes:**

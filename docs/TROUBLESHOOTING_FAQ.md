@@ -12,25 +12,27 @@ This section covers common issues and solutions when using OSS Sustain Guard.
 ValueError: GitHub token not found. Set GITHUB_TOKEN environment variable.
 ```
 
-**Cause:** Attempting to analyze a new package not in cache without a GitHub token
+**When This Happens:** You're analyzing a package not in the cache without providing a GitHub token.
 
 **Solution:**
 
+Option A: Use cached packages (recommended, no token needed):
 ```bash
-# Set GitHub Personal Access Token
-export GITHUB_TOKEN="your_github_token_here"
-oss-guard check new-package
+oss-guard check requests  # Works instantly if in cache
+```
 
-# Or use cached packages (recommended)
-oss-guard check requests  # Works if package is cached
+Option B: Set a GitHub token to analyze new packages:
+```bash
+export GITHUB_TOKEN="your_github_token_here"
+oss-guard check new-package  # Analyzes uncached packages
 ```
 
 **How to Create a GitHub Token:**
 
 1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
 2. Click "Generate new token (classic)"
-3. Select `public_repo` scope
-4. Copy the token and set it as an environment variable
+3. Select `public_repo` scope (read-only, sufficient for analysis)
+4. Copy the token and set it: `export GITHUB_TOKEN="your_token"`
 
 ### 2. "Package not found" Error
 

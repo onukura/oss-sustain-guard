@@ -223,7 +223,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 ### Unique Contributions
 
 - 💡 **Funding Signals** - Project financial sustainability focus
-- 💡 **Pre-computed database** - Makes CHAOSS metrics accessible without API tokens
+- 💡 **Pre-computed database** - Makes CHAOSS metrics accessible instantly for popular packages
 - 💡 **Multi-language support** - Applies CHAOSS metrics across 8+ ecosystems
 - 💡 **Sustainability-focused scoring** - Actionable risk assessment
 

@@ -60,7 +60,7 @@ jobs:
 | `packages` | string | Yes | - | Space-separated package names (e.g., `"requests django npm:react"`) |
 | `include-lock` | boolean | No | `false` | Auto-detect packages from lock files in repository |
 | `verbose` | boolean | No | `false` | Show detailed metrics for each package |
-| `github-token` | string | No | `secrets.GITHUB_TOKEN` | GitHub API token for additional API calls |
+| `github-token` | string | No | `secrets.GITHUB_TOKEN` | GitHub API token for uncached packages (optional, only if analyzing new packages) |
 
 ## Real-World Examples
 
@@ -257,16 +257,19 @@ The action provides the `summary` output which can be used in subsequent steps.
 
 ### Default (Recommended)
 
-The action automatically uses `secrets.GITHUB_TOKEN`:
+Most popular packages are cached, so you don't need to configure anything. The action uses `secrets.GITHUB_TOKEN` automatically if needed:
 
 ```yaml
 - uses: onukura/oss-sustain-guard@main
   with:
     packages: 'flask'
-  # GITHUB_TOKEN is automatically available
+  # Works fine for cached packages
+  # GITHUB_TOKEN is automatically available if analyzing uncached packages
 ```
 
-### Custom Token
+### When You Need a Custom Token
+
+Only required if analyzing many new packages and hitting GitHub API rate limits:
 
 ```yaml
 - uses: onukura/oss-sustain-guard@main

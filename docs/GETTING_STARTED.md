@@ -96,9 +96,14 @@ oss-guard check requests --no-cache
 
 ## 💡 Key Concepts
 
-### Token-less Experience
+### When Do I Need a GitHub Token?
 
-OSS Sustain Guard uses **pre-computed caches** for popular packages, so you don't need a GitHub token for most analyses. Only set `GITHUB_TOKEN` if analyzing new packages or needing higher API limits.
+For most analysis of popular packages, you don't need a GitHub token—OSS Sustain Guard uses **pre-computed caches** for instant results. You'll only need `GITHUB_TOKEN` if:
+
+- Analyzing a new/uncommon package not in the cache
+- Analyzing frequently and hitting rate limits
+
+If you see "GitHub token not found" error, see [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md) for setup.
 
 ### CHAOSS-Aligned Metrics
 
@@ -176,9 +181,9 @@ For help, see [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md).
 
 ## 💡 Key Concepts
 
-### Token-less Experience
+### When Do I Need a GitHub Token?
 
-OSS Sustain Guard uses **pre-computed cached data** for popular packages, so you don't need a GitHub token for most analyses. Only set a token if you're analyzing new packages or need higher API rate limits.
+For most popular packages, OSS Sustain Guard uses **pre-computed cached data** without needing a token. You'll only need `GITHUB_TOKEN` if analyzing new packages not in the cache or if you hit GitHub API rate limits. See [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md) for details.
 
 ### CHAOSS Alignment
 

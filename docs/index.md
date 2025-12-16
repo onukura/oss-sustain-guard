@@ -20,7 +20,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ## Why OSS Sustain Guard?
 
-- **Token-less experience:** Pre-computed cached snapshots for popular packages let you view sustainability insights instantly without any tokens.
+- **Cache-based efficiency:** Pre-computed snapshots for popular packages provide instant results. GitHub token only needed for uncached packages.
 - **Multi-ecosystem support:** Analyze packages from Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby in one command.
 - **Actionable insights:** Metrics use empathetic language that encourages collaboration with maintainers rather than blame.
 - **Time-travel friendly:** Historical snapshots enable trend analysis and comparisons between releases.
