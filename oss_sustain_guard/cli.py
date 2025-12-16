@@ -345,9 +345,11 @@ def display_results_detailed(
         metrics_table.add_column("Observation", justify="left")
 
         for metric in result.metrics:
-            # Status color coding with supportive language
+            # Status color coding with supportive language based on both risk and score
             status_style = "green"
             status_text = "Good"
+
+            # Primary: use risk level if available
             if metric.risk in ("Critical", "High"):
                 status_style = "red"
                 status_text = "Needs attention"
@@ -357,7 +359,22 @@ def display_results_detailed(
             elif metric.risk == "Low":
                 status_style = "yellow"
                 status_text = "Consider improving"
-            else:  # None
+            elif metric.risk == "None":
+                # Secondary: check score ratio for "None" risk
+                score_ratio = (
+                    metric.score / metric.max_score if metric.max_score > 0 else 0
+                )
+                if score_ratio >= 0.8:
+                    status_style = "green"
+                    status_text = "Healthy"
+                elif score_ratio >= 0.5:
+                    status_style = "yellow"
+                    status_text = "Monitor"
+                else:
+                    status_style = "red"
+                    status_text = "Needs attention"
+            else:
+                # Default to green for unknown risk
                 status_style = "green"
                 status_text = "Healthy"
 

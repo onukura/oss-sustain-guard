@@ -677,7 +677,7 @@ def test_check_issue_resolution_duration_slow():
     }
     metric = check_issue_resolution_duration(repo_data)
     assert metric.name == "Issue Resolution Duration"
-    assert metric.score == 0  # >90 days
+    assert metric.score == 2  # 90-180 days (110 days)
     assert metric.risk == "High"
 
 

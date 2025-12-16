@@ -1779,7 +1779,8 @@ def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
     - <7 days avg: 10/10 (Fast)
     - 7-30 days: 7/10 (Good)
     - 30-90 days: 4/10 (Moderate)
-    - >90 days: 0/10 (Slow)
+    - 90-180 days: 2/10 (Slow)
+    - >180 days: 0/10 (Very slow)
     """
     from datetime import datetime
 
@@ -1826,7 +1827,7 @@ def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
 
     avg_resolution = sum(resolution_times) / len(resolution_times)
 
-    # Scoring logic
+    # Scoring logic - stricter thresholds
     if avg_resolution < 7:
         score = max_score
         risk = "None"
@@ -1841,10 +1842,16 @@ def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
         score = 4
         risk = "Medium"
         message = f"Moderate: Avg issue resolution {avg_resolution:.1f} days. Consider improving."
+    elif avg_resolution < 180:
+        score = 2
+        risk = "High"
+        message = (
+            f"Slow: Avg issue resolution {avg_resolution:.1f} days. Issues backlogging."
+        )
     else:
         score = 0
         risk = "High"
-        message = f"Observe: Avg issue resolution {avg_resolution:.1f} days. Issues may be backlogging."
+        message = f"Observe: Avg issue resolution {avg_resolution:.1f} days. Significant backlog detected."
 
     return Metric("Issue Resolution Duration", score, max_score, message, risk)
 
@@ -2439,14 +2446,13 @@ SCORING_CATEGORIES = {
         ],
     },
     "Community Engagement": {
-        "weight": 0.20,  # 20% of total score
+        "weight": 0.25,  # 25% of total score (increased from 20%)
         "description": "Measures responsiveness and contributor experience",
         "metrics": [
             "Issue Responsiveness",
             "PR Acceptance Ratio",
-            "PR Responsiveness",
             "Review Health",
-            "Issue Resolution Duration",
+            "Issue Resolution Duration",  # More important now
         ],
     },
     "Project Maturity": {
@@ -2464,7 +2470,7 @@ SCORING_CATEGORIES = {
         ],
     },
     "Security & Funding": {
-        "weight": 0.20,  # 20% of total score
+        "weight": 0.15,  # 15% of total score (decreased from 20%)
         "description": "Measures security posture and financial sustainability",
         "metrics": [
             "Security Signals",
@@ -2482,9 +2488,9 @@ SCORING_PROFILES = {
         "weights": {
             "Maintainer Health": 0.25,
             "Development Activity": 0.20,
-            "Community Engagement": 0.20,
+            "Community Engagement": 0.25,
             "Project Maturity": 0.15,
-            "Security & Funding": 0.20,
+            "Security & Funding": 0.15,
         },
     },
     "security_first": {
@@ -2493,9 +2499,9 @@ SCORING_PROFILES = {
         "weights": {
             "Maintainer Health": 0.20,
             "Development Activity": 0.15,
-            "Community Engagement": 0.10,
+            "Community Engagement": 0.20,
             "Project Maturity": 0.15,
-            "Security & Funding": 0.40,  # Doubled importance
+            "Security & Funding": 0.30,  # Increased importance
         },
     },
     "contributor_experience": {
@@ -2504,8 +2510,8 @@ SCORING_PROFILES = {
         "weights": {
             "Maintainer Health": 0.15,
             "Development Activity": 0.15,
-            "Community Engagement": 0.40,  # Doubled importance
-            "Project Maturity": 0.20,
+            "Community Engagement": 0.45,  # Doubled importance
+            "Project Maturity": 0.15,
             "Security & Funding": 0.10,
         },
     },
@@ -3335,21 +3341,23 @@ def analyze_repository(
                 )
             )
 
-        try:
-            metrics.append(check_pr_responsiveness(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  PR responsiveness check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "PR Responsiveness",
-                    0,
-                    5,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
+        # NOTE: PR Responsiveness metric removed (duplicate of Issue Responsiveness)
+        # Kept only Issue Resolution Duration in Community Engagement category
+        # try:
+        #     metrics.append(check_pr_responsiveness(repo_info))
+        # except Exception as e:
+        #     console.print(
+        #         f"  [yellow]⚠️  PR responsiveness check incomplete: {e}[/yellow]"
+        #     )
+        #     metrics.append(
+        #         Metric(
+        #             "PR Responsiveness",
+        #             0,
+        #             5,
+        #             f"Note: Analysis incomplete - {e}",
+        #             "Medium",
+        #         )
+        #     )
 
         # Optional: Check downstream dependents if Libraries.io API is configured
         if platform and package_name:
