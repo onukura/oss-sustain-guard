@@ -12,9 +12,9 @@ A balanced view across all sustainability dimensions.
 
 - Maintainer Health: 25%
 - Development Activity: 20%
-- Community Engagement: 20%
-- Security & Funding: 20%
+- Community Engagement: 25% ⬆️ (increased from 20%)
 - Project Maturity: 15%
+- Security & Funding: 15% ⬇️ (decreased from 20%)
 
 **Best for:** General-purpose evaluation, understanding overall project health.
 
@@ -26,11 +26,11 @@ Prioritizes security and risk mitigation.
 
 **Category Weights:**
 
-- **Security & Funding: 40%** ⬆️ (doubled)
+- **Security & Funding: 30%** ⬆️ (adjusted)
 - Maintainer Health: 20%
 - Development Activity: 15%
+- Community Engagement: 20%
 - Project Maturity: 15%
-- Community Engagement: 10%
 
 **Best for:**
 
@@ -49,8 +49,8 @@ Focuses on community engagement and contributor-friendliness.
 
 **Category Weights:**
 
-- **Community Engagement: 40%** ⬆️ (doubled)
-- Project Maturity: 20%
+- **Community Engagement: 45%** ⬆️ (highest priority)
+- Project Maturity: 15%
 - Maintainer Health: 15%
 - Development Activity: 15%
 - Security & Funding: 10%
