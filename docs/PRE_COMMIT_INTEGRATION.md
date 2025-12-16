@@ -67,6 +67,7 @@ git commit -m "Your message" --no-verify
 - **Trigger:** Automatically runs when `requirements.txt` is committed
 - **Files:** Only monitors `requirements.txt` (Python dependencies)
 - **Scope:** Analyzes all packages listed in the file
+- **💡 Tip:** Use the `--compact` format for cleaner pre-commit output
 
 ### Hook 2: Interactive Manual Check
 
@@ -84,7 +85,18 @@ pre-commit run oss-sustain-guard-pyproject --hook-stage manual
 Then provide package names as arguments:
 
 ```bash
-oss-guard check flask django numpy
+oss-guard check flask django numpy --compact
+```
+
+**Best Practice:** Add `--compact` to your hook configuration for readable output:
+
+```yaml
+repos:
+  - repo: https://github.com/onukura/oss-sustain-guard
+    rev: v0.1.0
+    hooks:
+      - id: oss-sustain-guard-requirements
+        args: ['--compact']
 ```
 
 ## Multi-Language Support
@@ -189,7 +201,20 @@ This updates `data/database.json` with the latest package scores.
 
 ## Best Practices
 
-1. **Keep Cache Updated**
+1. **Use `--compact` for better readability**
+
+   The compact format produces one-line-per-package output, perfect for pre-commit hooks:
+
+   ```yaml
+   repos:
+     - repo: https://github.com/onukura/oss-sustain-guard
+       rev: v0.1.0
+       hooks:
+         - id: oss-sustain-guard-requirements
+           args: ['--compact']
+   ```
+
+2. **Keep Cache Updated**
 
    Regularly update the database for latest metrics:
 
@@ -197,12 +222,12 @@ This updates `data/database.json` with the latest package scores.
    python builder/build_db.py
    ```
 
-2. **Handle Failures Gracefully**
+3. **Handle Failures Gracefully**
 
    - Network errors are handled gracefully and don't block commits
    - Use `--no-verify` to bypass hooks in emergencies
 
-3. **Multi-Stage Hooks**
+4. **Multi-Stage Hooks**
 
    Configure hooks to run at different stages:
 
@@ -212,7 +237,7 @@ This updates `data/database.json` with the latest package scores.
        stages: [commit, push, manual]
    ```
 
-4. **Exclude Problematic Packages**
+5. **Exclude Problematic Packages**
 
    Configure excluded packages in `oss_sustain_guard/config.py` if needed.
 

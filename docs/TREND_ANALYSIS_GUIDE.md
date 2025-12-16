@@ -65,7 +65,7 @@ oss-sustain-guard list-snapshots
 ```shell
 📅 Available Snapshot Dates
 
-   Available Snapshots    
+   Available Snapshots
 ┏━━━┳━━━━━━━━━━━━┳━━━━━━━┓
 ┃ # ┃ Date       ┃ Files ┃
 ┡━━━╇━━━━━━━━━━━━╇━━━━━━━┩
@@ -437,7 +437,7 @@ declare -A PACKAGES=(
 for ecosystem in "${!PACKAGES[@]}"; do
     echo "📦 $ecosystem Packages"
     echo "===================="
-    
+
     for pkg in ${PACKAGES[$ecosystem]}; do
         echo "Trend for $pkg:"
         oss-sustain-guard trend "$pkg" --ecosystem "$ecosystem"

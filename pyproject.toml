@@ -35,10 +35,10 @@ dependencies = [
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=6.0.0",
-    "ruff>=0.14.8",
-    "prek>=0.2.21",
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.5.0",
+    "ruff>=0.14.9",
+    "prek>=0.2.22",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.0",
 ]
 
 [project.urls]

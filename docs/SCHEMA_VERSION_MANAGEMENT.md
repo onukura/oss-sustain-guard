@@ -27,7 +27,9 @@ OSS Sustain Guard uses a schema version management system to ensure backward com
 ## Schema Versions
 
 ### v1.x (Legacy)
+
 Original schema with 9 simplified metric names:
+
 - Bus Factor
 - Maintainer Drain
 - Zombie Check
@@ -39,7 +41,9 @@ Original schema with 9 simplified metric names:
 - Community Health
 
 ### v2.0 (Current)
+
 CHAOSS-aligned schema with 21 metrics:
+
 - **Maintainer Health**: Contributor Redundancy, Maintainer Retention, Contributor Attraction, Contributor Retention, Organizational Diversity
 - **Development Activity**: Recent Activity, Release Rhythm, Build Health, Change Request Resolution
 - **Community Engagement**: Issue Responsiveness, PR Acceptance Ratio, PR Responsiveness, Review Health, Issue Resolution Duration
@@ -53,6 +57,7 @@ CHAOSS-aligned schema with 21 metrics:
 To add v3.0 with new metric names:
 
 1. **Update `schema_migrations.py`**:
+
 ```python
 CURRENT_SCHEMA_VERSION: Final[str] = "3.0"
 
@@ -69,6 +74,7 @@ METRIC_NAME_MIGRATIONS: Final[dict[str, dict[str, str]]] = {
 ```
 
 2. **Update `normalize_metric_name()`** (if needed):
+
 ```python
 def normalize_metric_name(metric_name: str, from_version: str = "2.x") -> str:
     # Function already supports multiple versions via METRIC_NAME_MIGRATIONS
@@ -76,6 +82,7 @@ def normalize_metric_name(metric_name: str, from_version: str = "2.x") -> str:
 ```
 
 3. **Update tests** in `tests/test_schema_migration.py`:
+
 ```python
 def test_v2_to_v3_migration():
     """Test v2.x to v3.0 metric name migration."""
@@ -109,6 +116,7 @@ info = get_migration_info("Bus Factor")
 ## Database Format
 
 ### v2.0+ Format (Recommended)
+
 ```json
 {
   "_schema_version": "2.0",
@@ -125,6 +133,7 @@ info = get_migration_info("Bus Factor")
 ```
 
 ### v1.x Format (Legacy, still supported)
+
 ```json
 {
   "python:requests": {
@@ -148,11 +157,13 @@ Both formats are automatically detected and handled by the loading functions.
 ## Testing
 
 Run schema migration tests:
+
 ```bash
 uv run pytest tests/test_schema_migration.py -v
 ```
 
 Current test coverage:
+
 - ✅ Metric name mapping verification
 - ✅ v1.x to v2.0 automatic conversion
 - ✅ Mixed version metric handling

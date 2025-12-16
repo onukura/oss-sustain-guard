@@ -1,103 +1,103 @@
 # OSS Sustain Guard Documentation
 
-OSS Sustain Guard is a multi-language package sustainability analyzer that helps you observe the health of your dependencies across ecosystems. The tool surfaces constructive insights about maintainer activity, community engagement, security posture, and funding signals so teams can support the projects they rely on.
+OSS Sustain Guard is a multi-language package sustainability analyzer that helps you understand the health of your dependencies across ecosystems. The tool provides constructive insights about maintainer activity, community engagement, security posture, and funding signals so teams can make informed decisions about the projects they rely on.
 
 ![CLI demo showing an analyzed package](assets/demo01..png)
 
 ## Why OSS Sustain Guard?
 
-- **Token-less experience:** Cached snapshots for popular packages let you view sustainability insights without any tokens.
-- **Multi-ecosystem awareness:** Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby package formats are supported.
-- **Actionable signals:** Metrics are grouped by sustainability dimensions with empathetic language that encourages collaboration with maintainers.
-- **Time-travel friendly:** Historical snapshots enable time-series analysis and comparisons between releases.
+- **Token-less experience:** Pre-computed cached snapshots for popular packages let you view sustainability insights instantly without any tokens.
+- **Multi-ecosystem support:** Analyze packages from Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby in one command.
+- **Actionable insights:** Metrics use empathetic language that encourages collaboration with maintainers rather than blame.
+- **Time-travel friendly:** Historical snapshots enable trend analysis and comparisons between releases.
+- **Sustainable by design:** Respects open-source sustainability models with funding awareness for community-driven projects.
+
+## Key Features
+
+### 🔍 Comprehensive Analysis
+
+- **CHAOSS-aligned metrics** measuring contributor health, development activity, community engagement, and project maturity
+- **Scoring profiles** optimized for different priorities (balanced, security-first, contributor-experience, long-term-stability)
+- **Transparent scoring** with detailed breakdowns of each metric
+
+### 📊 Time-Series & Trend Analysis
+
+- **Track changes** in package health over time
+- **Compare snapshots** between dates to identify improvement or degradation patterns
+- **Historical data** from pre-computed archives for popular packages
+
+### 🚀 Developer-Friendly Workflow
+
+- **Manifest auto-detection** from `requirements.txt`, `package.json`, `Cargo.toml`, and other formats
+- **Recursive scanning** for monorepos and multi-service projects
+- **Exclude configuration** for internal or legacy dependencies
+- **Integration-ready** for GitHub Actions, pre-commit hooks, and CI/CD pipelines
+
+### 💝 Gratitude Vending Machine
+
+- **Discover projects** that need your support most
+- **See funding links** for community-driven projects
+- **Make informed decisions** about where to contribute back
+
+## Quick Navigation
+
+### Just Getting Started?
+
+👉 **[Getting Started Guide](GETTING_STARTED.md)** - Installation, first steps, and basic usage in 5 minutes
+
+### Common Tasks
+
+**Usage:**
+
+- [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md) - Analyze entire projects and monorepos
+- [Time Series Analysis](TREND_ANALYSIS_GUIDE.md) - Track health evolution and compare snapshots
+- [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects to support
+
+**Configuration:**
+
+- [Exclude Configuration](EXCLUDE_PACKAGES_GUIDE.md) - Skip internal or legacy packages
+
+**Scoring & Metrics:**
+
+- [Scoring Profiles](SCORING_PROFILES_GUIDE.md) - Choose the right scoring model for your needs
+- [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) - Understanding our metrics
+
+**Integrations:**
+
+- [GitHub Actions](GITHUB_ACTIONS_GUIDE.md) - Automate checks in CI/CD
+- [Pre-commit Integration](PRE_COMMIT_INTEGRATION.md) - Run checks before commits
+
+**Support:**
+
+- [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md) - Common issues and solutions
+
+**Reference:**
+
+- [Database Schema](DATABASE_SCHEMA.md) - Understanding cached data format
+- [Schema Version Management](SCHEMA_VERSION_MANAGEMENT.md) - Schema evolution and migrations
 
 ## Installation
-
-Install from PyPI:
 
 ```bash
 pip install oss-sustain-guard
 ```
 
-If you plan to build the documentation locally, install the documentation extras:
+## Supported Ecosystems
 
-```bash
-pip install mkdocs mkdocs-material
-```
+- **Python** - PyPI
+- **JavaScript/TypeScript** - npm
+- **Rust** - Cargo
+- **Java** - Maven
+- **PHP** - Packagist
+- **Ruby** - RubyGems
+- **C# / .NET** - NuGet
+- **Go** - Go Modules
+- **Kotlin** - Maven
 
-## Quickstart
+## Community Standards
 
-Run a single package check:
+OSS Sustain Guard uses encouraging, respectful language across all surfaces. Our observations help teams collaborate with maintainers and improve sustainability together—not to judge or blame projects.
 
-```bash
-oss-guard check requests
-```
+## License
 
-Mix ecosystems in one command:
-
-```bash
-oss-guard check python:django npm:react rust:tokio
-```
-
-Auto-detect manifests and lockfiles in the current directory:
-
-```bash
-oss-guard check --include-lock
-```
-
-### GitHub token and caching
-
-- Cached packages are served instantly from `data/latest/*.json` and do not require network calls.
-- Uncached packages use the GitHub API for repository data. Set `GITHUB_TOKEN` in your environment to enable those lookups while staying within GitHub rate limits.
-- Use `--clear-cache` to refresh local cache entries when you need the latest snapshot.
-
-### Recursive and manifest-driven scanning
-
-Monorepos and multi-service codebases are supported through recursive scanning and manifest detection:
-
-```bash
-# Scan a project tree, respecting common exclusion defaults
-oss-guard check --recursive
-
-# Limit recursion depth and include lock files
-oss-guard check --recursive --include-lock --depth 2
-
-# Analyze a specific manifest file
-oss-guard check --manifest package.json
-```
-
-### Funding awareness
-
-When a community-driven project publishes funding links, OSS Sustain Guard highlights them with encouraging language so you can consider giving back. Corporate-backed projects skip funding prompts because they typically rely on other sustainability models.
-
-## GitHub Actions
-
-Automate checks in CI with the GitHub Action:
-
-```yaml
-- uses: onukura/oss-sustain-guard@main
-  with:
-    packages: "requests django"
-    verbose: "true"
-```
-
-See the [GitHub Actions Integration guide](GITHUB_ACTIONS_GUIDE.md) for configuration details and caching tips.
-
-## Additional Guides
-
-The documentation set includes focused guides for deeper exploration:
-
-- [CHAOSS Metrics Alignment Validation](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md)
-- [Database Schema](DATABASE_SCHEMA.md)
-- [Directory Exclusion Examples](DIRECTORY_EXCLUSION_EXAMPLES.md)
-- [Excluding Packages](EXCLUDE_PACKAGES_GUIDE.md)
-- [Pre-commit Integration](PRE_COMMIT_INTEGRATION.md)
-- [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md)
-- [Scoring Profiles](SCORING_PROFILES_GUIDE.md)
-- [Schema Version Management](SCHEMA_VERSION_MANAGEMENT.md)
-- [Trend Analysis](TREND_ANALYSIS_GUIDE.md)
-- [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md)
-
-## Community standards
-
-OSS Sustain Guard uses encouraging, respectful language across all user-facing surfaces. Observations are framed to help teams collaborate with maintainers and improve sustainability together.
+OSS Sustain Guard is open source and available under the MIT License.

@@ -12,6 +12,7 @@ OSS Sustain Guard implements 12 metrics that align well with CHAOSS standards. A
 ## CHAOSS Framework Overview
 
 CHAOSS organizes metrics into:
+
 - **Individual Metrics**: Answer single questions about community health
 - **Metrics Models**: Collections of metrics providing deeper context
 - **Focus Areas**: Common themes (Contributor, Lifecycle, Platform, etc.)
@@ -48,38 +49,47 @@ CHAOSS organizes metrics into:
 ## Metrics Models Alignment
 
 ### Risk Model
+
 **OSS Sustain Guard Components:**
+
 - Contributor Redundancy (40%)
 - Change Request Resolution (33%)
 - Issue Responsiveness (13%)
 - Security Signals (13%)
 
 **CHAOSS Alignment:** ✅ **Strong**
+
 - Maps to CHAOSS "Risk" focus area
 - Uses "Elephant Factor" (contributor concentration risk)
 - Incorporates "Contributor Absence Factor" concepts
 - **Recommendation:** Consider renaming to "Project Risk Model" to match CHAOSS terminology
 
 ### Sustainability Model
+
 **OSS Sustain Guard Components:**
+
 - Funding Signals (33%)
 - Maintainer Retention (33%)
 - Release Rhythm (33%)
 
 **CHAOSS Alignment:** ✅ **Strong**
+
 - Addresses long-term project viability
 - Aligns with CHAOSS [Project Burnout](https://chaoss.community/kb/metric-project-burnout/) concerns
 - Includes financial sustainability (unique to OSS Sustain Guard)
 - **Recommendation:** This model fills a gap in CHAOSS - financial sustainability is underrepresented
 
 ### Community Engagement Model
+
 **OSS Sustain Guard Components:**
+
 - Contributor Attraction (30%)
 - Contributor Retention (30%)
 - Review Health (25%)
 - Issue Responsiveness (15%)
 
 **CHAOSS Alignment:** ✅ **Perfect**
+
 - Direct mapping to CHAOSS "Community" focus area
 - Uses "New Contributors" and retention metrics
 - Measures "Newcomer Experience" through response times
@@ -90,16 +100,19 @@ CHAOSS organizes metrics into:
 Based on CHAOSS standards, these metrics would enhance our coverage:
 
 ### High Priority
+
 1. **[Contributor Absence Factor](https://chaoss.community/kb/metric-contributor-absence-factor/)** (Bus Factor equivalent) - We already implement this as "Contributor Redundancy"! ✅
 2. **[Libyears](https://chaoss.community/kb/metric-libyears/)** - Dependency freshness (already planned in Phase 4)
 3. **[Contributors](https://chaoss.community/kb/metric-contributors/)** - Total contributor count (we calculate this but don't surface as metric)
 
 ### Medium Priority
+
 4. **[Change Request Acceptance Ratio](https://chaoss.community/kb/metric-change-request-acceptance-ratio/)** - PR acceptance rate
 5. **[Burstiness](https://chaoss.community/kb/metric-burstiness/)** - Activity pattern regularity
 6. **[Project Velocity](https://chaoss.community/kb/metric-project-velocity/)** - Overall development pace
 
 ### Low Priority (Data-Intensive)
+
 7. **[Organizational Diversity](https://chaoss.community/kb/metric-organizational-diversity/)** - Company diversity in contributors
 8. **[Types of Contributions](https://chaoss.community/kb/metric-types-of-contributions/)** - Code vs. docs vs. issues
 
@@ -120,6 +133,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 | Community Health | **Issue Responsiveness** | ✅ Specific, measurable metric name |
 
 **Verdict:** All renamed metrics align with CHAOSS principles of:
+
 - Observation over judgment
 - Health-focused language
 - Measurable, data-driven indicators
@@ -127,20 +141,24 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 ## Scoring Methodology Alignment
 
 ### OSS Sustain Guard Approach
+
 - Weighted scoring (0-100 scale)
 - Risk levels: None, Low, Medium, High, Critical
 - Supportive messaging ("Needs attention" vs. "Critical failure")
 
 ### CHAOSS Approach
+
 - CHAOSS does not prescribe scoring - focuses on **measurement**
 - Metrics answer questions; interpretation is context-dependent
 - No universal "good" or "bad" thresholds
 
 **Alignment Analysis:** ⚠️ **Philosophical Difference**
+
 - CHAOSS: "Here's the data, you decide what it means"
 - OSS Sustain Guard: "Here's the data + our interpretation for sustainability risk"
 
 **Recommendation:**
+
 - ✅ Keep our scoring - it provides actionable insights
 - ✅ Add `--raw` flag to show CHAOSS-style uninterpreted metrics
 - ✅ Document our scoring methodology as "OSS Sustain Guard Risk Framework"
@@ -148,7 +166,8 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 ## Display Format Alignment
 
 ### Current Output (with `--show-models`)
-```
+
+```shell
 📦 Package Name
    Total Score: 74/100
 
@@ -164,6 +183,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 ```
 
 **CHAOSS Compatibility:** ✅ **Excellent**
+
 - Models section matches CHAOSS "Metrics Models" concept
 - Signals section provides raw data (CHAOSS principle)
 - Supportive language in observations
@@ -171,16 +191,19 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 ## Recommendations
 
 ### Immediate (No Code Changes)
+
 1. ✅ **Document CHAOSS alignment** - Add this report to docs
 2. ✅ **Reference CHAOSS metrics** - Link to CHAOSS KB in DATABASE_SCHEMA.md
 3. ✅ **Credit CHAOSS** - Add CHAOSS logo/link to README
 
 ### Short-term (Minor Enhancements)
+
 4. 📋 **Add `--raw` flag** - Output CHAOSS-style uninterpreted metrics
 5. 📋 **Export to CHAOSS JSON** - Provide CHAOSS-compatible output format
 6. 📋 **Contributor Count metric** - Surface existing calculation as standalone metric
 
 ### Long-term (New Features)
+
 7. 📋 **Libyears implementation** - Dependency freshness (already planned)
 8. 📋 **Change Request Acceptance Ratio** - PR acceptance rate
 9. 📋 **Organizational Diversity** - Company diversity analysis
@@ -190,6 +213,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 **OSS Sustain Guard is STRONGLY aligned with CHAOSS standards.**
 
 ### Strengths
+
 - ✅ 9/12 metrics have direct CHAOSS equivalents
 - ✅ Naming follows CHAOSS supportive, observation-focused principles
 - ✅ Metrics Models concept perfectly implemented
@@ -197,12 +221,14 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 - ✅ Fills CHAOSS gap in financial sustainability metrics
 
 ### Unique Contributions
+
 - 💡 **Funding Signals** - Project financial sustainability focus
 - 💡 **Pre-computed database** - Makes CHAOSS metrics accessible without API tokens
 - 💡 **Multi-language support** - Applies CHAOSS metrics across 8+ ecosystems
 - 💡 **Sustainability-focused scoring** - Actionable risk assessment
 
 ### Areas for Enhancement
+
 - ⚠️ Add optional raw/uninterpreted output mode
 - ⚠️ Consider CHAOSS JSON export format
 - ⚠️ Document scoring methodology as distinct from CHAOSS measurement
@@ -221,4 +247,3 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 - [Issue Response Time](https://chaoss.community/kb/metric-issue-response-time/)
 - [Change Request Review Duration](https://chaoss.community/kb/metric-change-request-review-duration/)
 - [Release Frequency](https://chaoss.community/kb/metric-release-frequency/)
-

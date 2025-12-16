@@ -20,17 +20,21 @@ markdown_extensions:
   - tables
 nav:
   - Home: index.md
-  - Guides:
-      - CHAOSS Metrics Alignment: CHAOSS_METRICS_ALIGNMENT_VALIDATION.md
-      - Database Schema: DATABASE_SCHEMA.md
-      - Directory Exclusions: DIRECTORY_EXCLUSION_EXAMPLES.md
-      - Excluding Packages: EXCLUDE_PACKAGES_GUIDE.md
-      - GitHub Actions Integration: GITHUB_ACTIONS_GUIDE.md
+  - Getting Started: GETTING_STARTED.md
+  - Usage:
       - Recursive Scanning: RECURSIVE_SCANNING_GUIDE.md
-      - Scoring Profiles: SCORING_PROFILES_GUIDE.md
-      - Schema Version Management: SCHEMA_VERSION_MANAGEMENT.md
-      - Trend Analysis: TREND_ANALYSIS_GUIDE.md
-      - Pre-commit Integration: PRE_COMMIT_INTEGRATION.md
+      - Time Series Analysis: TREND_ANALYSIS_GUIDE.md
       - Gratitude Vending Machine: GRATITUDE_VENDING_MACHINE.md
-  - Assets:
-      - Demo Screenshot: assets/demo01..png
+  - Configuration:
+      - Exclude Configuration: EXCLUDE_PACKAGES_GUIDE.md
+  - Scoring & Metrics:
+      - Scoring Profiles: SCORING_PROFILES_GUIDE.md
+      - CHAOSS Metrics Alignment: CHAOSS_METRICS_ALIGNMENT_VALIDATION.md
+  - Integrations:
+      - GitHub Actions: GITHUB_ACTIONS_GUIDE.md
+      - Pre-commit Integration: PRE_COMMIT_INTEGRATION.md
+  - Support:
+      - Troubleshooting & FAQ: TROUBLESHOOTING_FAQ.md
+  - Reference:
+      - Database Schema: DATABASE_SCHEMA.md
+      - Schema Version Management: SCHEMA_VERSION_MANAGEMENT.md
