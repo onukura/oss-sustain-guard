@@ -136,7 +136,7 @@ oss-guard check --show-dependencies --verbose
 
 # Results show:
 # ✓ my-project (85/100) - Healthy
-# 
+#
 # 🔗 Dependency Reference Scores (Top 10):
 #    • click 87/100 ✓ Healthy
 #    • charset-normalizer 80/100 ✓ Healthy
