@@ -63,7 +63,7 @@ jobs:
           # GitHub Actions will force-kill this step after 5 hours (300 minutes)
           for ecosystem in $ECOSYSTEM_BATCH; do
             echo "Processing $ecosystem..."
-            uv run python builder/build_db.py --ecosystems $ecosystem --limit 5000 --max-concurrent 5
+            uv run python builder/build_db.py --ecosystems $ecosystem --limit 5000 --max-concurrent 1
             # Check if this ecosystem changed
             if ! git diff --quiet HEAD -- data/latest/$ecosystem.json.gz data/archive/*/; then
               echo "Changes detected in $ecosystem, committing..."
