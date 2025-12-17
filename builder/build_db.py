@@ -564,9 +564,19 @@ async def process_ecosystem_packages(
     tasks = [process_with_semaphore(pkg) for pkg in packages]
     results = await asyncio.gather(*tasks, return_exceptions=False)
 
-    for db_key, data in results:
+    # Save progressively to ensure data persists even on timeout
+    # Batch size: save every 100 packages
+    batch_size = 100
+    for i, (db_key, data) in enumerate(results):
         if data is not None:
             ecosystem_data[db_key] = data
+
+        # Save periodically to ensure data persists even on timeout
+        if (i + 1) % batch_size == 0 or (i + 1) == len(results):
+            console.print(
+                f"[cyan]  📊 Intermediate save: {i + 1}/{len(results)} packages processed[/cyan]"
+            )
+            save_ecosystem_data(ecosystem_data, ecosystem, is_latest=True)
 
     return ecosystem_data
 
@@ -679,23 +689,19 @@ async def main(
     total_entries = 0
     updated_ecosystems = []
 
-    # Process all ecosystems concurrently
-    ecosystem_results = await asyncio.gather(
-        *[
-            process_ecosystem_packages(ecosystem, packages, max_concurrent, dry_run)
-            for ecosystem, packages in packages_by_ecosystem.items()
-        ],
-        return_exceptions=False,
-    )
+    # Process ecosystems sequentially (ensures each completed ecosystem is saved before timeout)
+    for ecosystem, packages in packages_by_ecosystem.items():
+        console.print(f"[bold cyan]📦 Processing {ecosystem}...[/bold cyan]")
 
-    for ecosystem_data, ecosystem in zip(
-        ecosystem_results, packages_by_ecosystem.keys(), strict=True
-    ):
+        ecosystem_data = await process_ecosystem_packages(
+            ecosystem, packages, max_concurrent, dry_run
+        )
+
         if not ecosystem_data:
             console.print(f"[yellow]⚠️  No data for {ecosystem}[/yellow]")
             continue
 
-        # Check for changes and save
+        # Check for changes and save immediately (before processing next ecosystem)
         old_data = load_existing_data(LATEST_DIR / f"{ecosystem}.json")
 
         if has_changes(old_data, ecosystem_data):
