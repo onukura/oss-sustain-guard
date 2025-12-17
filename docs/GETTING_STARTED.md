@@ -48,6 +48,16 @@ oss-guard check --recursive
 
 Recursively finds and analyzes all dependencies in subdirectories.
 
+### 5. Analyze Your Project's Dependencies
+
+```bash
+oss-guard check --show-dependencies
+```
+
+Displays health scores of all your project's dependencies (requires lockfiles like `uv.lock`, `package-lock.json`, etc.).
+
+See [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) for details.
+
 ## 📊 Understanding Scores
 
 Your results show:
@@ -111,6 +121,7 @@ All metrics follow [CHAOSS (Community Health Analytics in Open Source Software)]
 
 ## 📚 Next Steps
 
+- **Analyze your project's dependencies**: [Dependency Analysis](DEPENDENCY_ANALYSIS_GUIDE.md)
 - **Analyze entire projects**: [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md)
 - **Track changes over time**: [Time Series Analysis](TREND_ANALYSIS_GUIDE.md)
 - **Exclude packages**: [Exclude Configuration](EXCLUDE_PACKAGES_GUIDE.md)

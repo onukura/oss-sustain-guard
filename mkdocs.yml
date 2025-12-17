@@ -23,6 +23,7 @@ nav:
   - Getting Started: GETTING_STARTED.md
   - Usage:
       - Recursive Scanning: RECURSIVE_SCANNING_GUIDE.md
+      - Dependency Analysis: DEPENDENCY_ANALYSIS_GUIDE.md
       - Time Series Analysis: TREND_ANALYSIS_GUIDE.md
       - Gratitude Vending Machine: GRATITUDE_VENDING_MACHINE.md
   - Configuration:
