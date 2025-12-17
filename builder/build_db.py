@@ -753,13 +753,13 @@ if __name__ == "__main__":
         "--max-concurrent",
         type=int,
         default=5,
-        help="Maximum number of concurrent package processing tasks per ecosystem (default: 5)",
+        help="Maximum number of concurrent package processing tasks per ecosystem (default: 5 for GitHub Actions, use 1-2 for local development)",
     )
     parser.add_argument(
         "--limit",
         type=int,
-        default=5000,
-        help="Maximum number of packages to fetch per ecosystem from Libraries.io (default: 5000)",
+        default=1000,
+        help="Maximum number of packages to fetch per ecosystem from Libraries.io (default: 1000 for faster builds, use 5000 for comprehensive analysis)",
     )
     parser.add_argument(
         "--insecure",

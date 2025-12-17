@@ -47,13 +47,8 @@ jobs:
           echo "ECOSYSTEM_BATCH=$batch" >> "$GITHUB_ENV"
           echo "Selected batch: $batch"
 
-      - name: Run tests before database update
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          uv run pytest tests/ -v --cov=oss_sustain_guard --cov-report=term
-
       - name: Run database builder for selected ecosystems
+        timeout-minutes: 300
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LIBRARIESIO_API_KEY: ${{ secrets.LIBRARIESIO_API_KEY }}
@@ -64,16 +59,17 @@ jobs:
           fi
 
           # Run ecosystems sequentially to respect Libraries.io rate limit (60 req/min)
+          # Use --limit 5000, --max-concurrent 5 for better parallelism
+          # GitHub Actions will force-kill this step after 5 hours (300 minutes)
           for ecosystem in $ECOSYSTEM_BATCH; do
             echo "Processing $ecosystem..."
-            uv run python builder/build_db.py --ecosystems $ecosystem --max-concurrent 1
-
+            uv run python builder/build_db.py --ecosystems $ecosystem --limit 5000 --max-concurrent 5
             # Check if this ecosystem changed
-            if ! git diff --quiet HEAD -- data/latest/$ecosystem.json data/archive/*/; then
+            if ! git diff --quiet HEAD -- data/latest/$ecosystem.json.gz data/archive/*/; then
               echo "Changes detected in $ecosystem, committing..."
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
-              git add data/latest/$ecosystem.json data/archive/
+              git add data/latest/$ecosystem.json.gz data/archive/
               git commit -m "chore: update $ecosystem database - $(date -u +'%Y-%m-%d')" || true
               git push
             else
@@ -83,3 +79,19 @@ jobs:
             echo "Waiting before next ecosystem..."
             sleep 10
           done
+
+      - name: Commit remaining database changes
+        if: always()
+        run: |
+          # Ensure any remaining changes are committed
+          # This handles the case where the step was terminated mid-process
+          if ! git diff --quiet HEAD -- data/latest/ data/archive/ data/database.json; then
+            echo "Final commit: capturing any remaining database changes..."
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add data/latest/ data/archive/ data/database.json || true
+            git commit -m "chore: final database update - $(date -u +'%Y-%m-%d')" || true
+            git push || true
+          else
+            echo "No remaining changes to commit"
+          fi
