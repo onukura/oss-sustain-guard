@@ -42,7 +42,7 @@ import sys
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import httpx
 from dotenv import load_dotenv
@@ -64,6 +64,7 @@ DATABASE_PATH = project_root / "data" / "database.json"
 LIBRARIES_IO_API_URL = "https://libraries.io/api"
 LIBRARIESIO_API_KEY = os.getenv("LIBRARIESIO_API_KEY")
 RATE_LIMIT_DELAY = 0.5  # 0.5 seconds between requests (faster, but within 60 req/min)
+LIBRARIES_IO_META_SUFFIX = ".libraries_io.meta.json"
 
 # Mapping of ecosystem names (Libraries.io → project)
 ECOSYSTEM_MAPPING = {
@@ -88,6 +89,68 @@ ECOSYSTEM_MAPPING = {
 
 # Reverse mapping for lookups
 REVERSE_ECOSYSTEM_MAPPING = {v: k for k, v in ECOSYSTEM_MAPPING.items()}
+
+
+class LibrariesIoFetchResult(NamedTuple):
+    """Typed container for Libraries.io fetch outcomes."""
+
+    packages: list[dict] | None
+    etag: str | None
+    last_modified: str | None
+    not_modified: bool
+
+
+def load_libraries_io_headers(ecosystem: str) -> tuple[str | None, str | None]:
+    """Load cached ETag/Last-Modified for conditional requests."""
+
+    meta_path = LATEST_DIR / f"{ecosystem}{LIBRARIES_IO_META_SUFFIX}"
+    if not meta_path.exists():
+        return None, None
+
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("etag"), data.get("last_modified")
+    except (json.JSONDecodeError, IOError):
+        return None, None
+
+
+def save_libraries_io_headers(
+    ecosystem: str, etag: str | None, last_modified: str | None
+) -> None:
+    """Persist ETag/Last-Modified to reuse in the next run."""
+
+    meta_path = LATEST_DIR / f"{ecosystem}{LIBRARIES_IO_META_SUFFIX}"
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = {"etag": etag, "last_modified": last_modified}
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False, sort_keys=True)
+
+
+def existing_packages_from_latest(ecosystem: str) -> list[dict] | None:
+    """Build a fallback package list from the latest stored dataset."""
+
+    existing = load_existing_data(LATEST_DIR / f"{ecosystem}.json")
+
+    # Handle wrapped format {"packages": {...}}
+    if "packages" in existing and isinstance(existing["packages"], dict):
+        packages_dict = existing["packages"]
+    else:
+        packages_dict = existing if isinstance(existing, dict) else {}
+
+    if not packages_dict:
+        return None
+
+    packages: list[dict] = []
+    for entry in packages_dict.values():
+        github_url = entry.get("github_url")
+        package_name = entry.get("package_name") or entry.get("name")
+        if not (github_url and package_name):
+            continue
+        packages.append({"name": package_name, "repository_url": github_url})
+
+    return packages or None
 
 
 def load_existing_data(filepath: Path) -> dict:
@@ -186,8 +249,12 @@ def has_changes(old_data: dict, new_data: dict) -> bool:
 
 
 async def fetch_libraries_io_packages(
-    libraries_io_ecosystem: str, limit: int = 500
-) -> list[dict] | None:
+    libraries_io_ecosystem: str,
+    limit: int = 500,
+    etag: str | None = None,
+    last_modified: str | None = None,
+    fallback_packages: list[dict] | None = None,
+) -> LibrariesIoFetchResult:
     """
     Fetch packages from Libraries.io API.
 
@@ -200,7 +267,7 @@ async def fetch_libraries_io_packages(
     """
     if not LIBRARIESIO_API_KEY:
         print("[WARNING] LIBRARIESIO_API_KEY not set. Skipping API fetch.")
-        return None
+        return LibrariesIoFetchResult(None, etag, last_modified, False)
 
     try:
         headers = {
@@ -237,8 +304,29 @@ async def fetch_libraries_io_packages(
                 last_error = None
                 for attempt in range(max_retries):
                     try:
-                        response = await client.get(url, params=params)
+                        conditional_headers = {}
+                        if etag:
+                            conditional_headers["If-None-Match"] = etag
+                        if last_modified:
+                            conditional_headers["If-Modified-Since"] = last_modified
+
+                        response = await client.get(
+                            url, params=params, headers=conditional_headers or None
+                        )
+
+                        if response.status_code == httpx.codes.NOT_MODIFIED:
+                            print(
+                                "  [INFO] Libraries.io responded 304 Not Modified; using cached packages"
+                            )
+                            return LibrariesIoFetchResult(
+                                fallback_packages, etag, last_modified, True
+                            )
+
                         response.raise_for_status()
+                        etag = response.headers.get("etag", etag)
+                        last_modified = response.headers.get(
+                            "last-modified", last_modified
+                        )
                         print(f"  [DEBUG] Got response: {response.status_code}")
                         break
                     except (
@@ -264,8 +352,12 @@ async def fetch_libraries_io_packages(
                                 print(
                                     f"  [INFO] Returning {len(all_packages)} packages collected so far"
                                 )
-                                return all_packages[:limit]
-                            return None
+                                return LibrariesIoFetchResult(
+                                    all_packages[:limit], etag, last_modified, False
+                                )
+                            return LibrariesIoFetchResult(
+                                None, etag, last_modified, False
+                            )
 
                 if response is None:
                     raise last_error or Exception(
@@ -302,12 +394,17 @@ async def fetch_libraries_io_packages(
                 page += 1
 
         print(f"  [DEBUG] Total fetched: {len(all_packages)}")
-        return all_packages[:limit] if all_packages else None
+        return LibrariesIoFetchResult(
+            all_packages[:limit] if all_packages else None,
+            etag,
+            last_modified,
+            False,
+        )
 
     except Exception as e:
         print(f"[ERROR] Failed to fetch from Libraries.io: {type(e).__name__}: {e}")
         traceback.print_exc()
-        return None
+        return LibrariesIoFetchResult(None, etag, last_modified, False)
 
 
 def parse_github_url(github_url: str) -> tuple[str, str] | None:
@@ -551,12 +648,26 @@ async def main(
             f"[bold cyan]Fetching packages from Libraries.io for {ecosystem}...[/bold cyan]"
         )
 
-        packages = await fetch_libraries_io_packages(
-            libraries_io_ecosystem=libraries_io_name, limit=limit
+        cached_etag, cached_last_modified = load_libraries_io_headers(ecosystem)
+        fallback_packages = existing_packages_from_latest(ecosystem)
+
+        fetch_result = await fetch_libraries_io_packages(
+            libraries_io_ecosystem=libraries_io_name,
+            limit=limit,
+            etag=cached_etag,
+            last_modified=cached_last_modified,
+            fallback_packages=fallback_packages,
         )
-        if packages:
-            packages_by_ecosystem[ecosystem] = packages
-            console.print(f"  [cyan]✅ Fetched {len(packages)} packages[/cyan]")
+
+        if fetch_result.packages:
+            packages_by_ecosystem[ecosystem] = fetch_result.packages
+            console.print(
+                f"  [cyan]✅ Using {len(fetch_result.packages)} packages"
+                + (" (cached)" if fetch_result.not_modified else "")
+            )
+            save_libraries_io_headers(
+                ecosystem, fetch_result.etag, fetch_result.last_modified
+            )
         else:
             console.print(
                 "  [yellow]⚠️  Could not fetch packages (check API key and rate limit)[/yellow]"

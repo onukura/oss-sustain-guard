@@ -2,8 +2,12 @@ name: Update OSS Sustain Guard Database
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
+    - cron: '0 0 * * *'  # Daily at midnight UTC to spread load
   workflow_dispatch:
+
+concurrency:
+  group: update-database
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -28,19 +32,39 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Select ecosystem batch
+        run: |
+          day=$(date -u +%u)
+          case "$day" in
+            1) batch="python javascript";;
+            2) batch="ruby rust";;
+            3) batch="php java";;
+            4) batch="csharp go";;
+            5) batch="python javascript";;
+            6) batch="ruby rust";;
+            0) batch="php java";;
+          esac
+          echo "ECOSYSTEM_BATCH=$batch" >> "$GITHUB_ENV"
+          echo "Selected batch: $batch"
+
       - name: Run tests before database update
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           uv run pytest tests/ -v --cov=oss_sustain_guard --cov-report=term
 
-      - name: Run database builder for all ecosystems
+      - name: Run database builder for selected ecosystems
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LIBRARIESIO_API_KEY: ${{ secrets.LIBRARIESIO_API_KEY }}
         run: |
+          if [ -z "$ECOSYSTEM_BATCH" ]; then
+            echo "No ecosystems selected; exiting."
+            exit 0
+          fi
+
           # Run ecosystems sequentially to respect Libraries.io rate limit (60 req/min)
-          for ecosystem in python javascript ruby rust php java csharp go; do
+          for ecosystem in $ECOSYSTEM_BATCH; do
             echo "Processing $ecosystem..."
             uv run python builder/build_db.py --ecosystems $ecosystem --max-concurrent 1
 
