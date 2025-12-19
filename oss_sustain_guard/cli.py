@@ -22,6 +22,7 @@ from oss_sustain_guard.config import (
     set_cache_ttl,
     set_verify_ssl,
 )
+from oss_sustain_guard.contribution_validator import validate_contribution_file
 from oss_sustain_guard.core import (
     SCORING_PROFILES,
     AnalysisResult,
@@ -1670,6 +1671,227 @@ def list_snapshots(
     console.print(
         f"[dim]Date range: {available_dates[0]} to {available_dates[-1]}[/dim]\n"
     )
+
+
+@app.command()
+def validate_contribution(
+    file_path: Path = typer.Argument(
+        ...,
+        help="Path to contribution JSON file to validate",
+    ),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Enable strict validation mode",
+    ),
+) -> None:
+    """Validate a contribution file before submitting.
+
+    This command checks that a contribution file meets all requirements:
+    - Valid JSON structure
+    - Correct schema version
+    - Required fields present
+    - No security issues (tokens, paths)
+    - Valid package data
+
+    Examples:
+        oss-guard validate-contribution contribution-python-20251219.json
+        oss-guard validate-contribution my-contrib.json --strict
+    """
+    console.print(f"\n[bold cyan]🔍 Validating {file_path}...[/bold cyan]\n")
+
+    is_valid = validate_contribution_file(file_path, strict=strict)
+
+    if is_valid:
+        console.print("[green]✓ Ready to submit![/green]")
+        console.print(
+            "[dim]Next: Fork the repo and create a PR with this file in data/contributions/[/dim]"
+        )
+        console.print()
+    else:
+        console.print("[red]✗ Validation failed. Please fix the issues above.[/red]")
+        console.print()
+        raise typer.Exit(1)
+
+
+@app.command()
+def export(
+    ecosystem: str = typer.Argument(
+        ...,
+        help="Ecosystem to export (python, javascript, rust, go, php, java, kotlin, csharp, ruby)",
+    ),
+    output: Path = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file path (default: contribution-{ecosystem}-{timestamp}.json)",
+    ),
+    contributor: str = typer.Option(
+        None,
+        "--contributor",
+        help="Your GitHub username (for attribution)",
+    ),
+    exclude: list[str] = typer.Option(
+        [],
+        "--exclude",
+        help="Package names to exclude from export",
+    ),
+) -> None:
+    """Export analyzed packages for community contribution.
+
+    This command exports your local cache data in a format suitable for
+    contributing back to the community database.
+
+    The export is automatically sanitized to remove personal information,
+    API tokens, and local file paths.
+
+    Examples:
+        oss-guard export python
+        oss-guard export javascript --contributor myusername
+        oss-guard export rust --output my-contrib.json
+        oss-guard export python --exclude internal-package
+    """
+    # Validate ecosystem
+    valid_ecosystems = [
+        "python",
+        "javascript",
+        "rust",
+        "go",
+        "php",
+        "java",
+        "kotlin",
+        "csharp",
+        "ruby",
+    ]
+    if ecosystem not in valid_ecosystems:
+        console.print(
+            f"[red]Invalid ecosystem: {ecosystem}[/red]",
+        )
+        console.print(f"Valid ecosystems: {', '.join(valid_ecosystems)}")
+        raise typer.Exit(1)
+
+    console.print(f"\n[bold cyan]📦 Exporting {ecosystem} packages...[/bold cyan]\n")
+
+    # Load data from local cache
+    cache_data = load_cache(ecosystem)
+
+    if not cache_data:
+        console.print(
+            f"[yellow]No cached data found for {ecosystem}.[/yellow]",
+        )
+        console.print(
+            f"[dim]Analyze some {ecosystem} packages first with: oss-guard check[/dim]"
+        )
+        raise typer.Exit(1)
+
+    # Apply exclusions
+    excluded_packages = set(exclude)
+    # Also apply config-level exclusions
+    for pkg_name in list(cache_data.keys()):
+        simple_name = pkg_name.split(":")[-1]
+        if simple_name in excluded_packages or is_package_excluded(simple_name):
+            del cache_data[pkg_name]
+            console.print(f"  → Excluding [dim]{pkg_name}[/dim]")
+
+    if not cache_data:
+        console.print(
+            "[yellow]No packages remaining after applying exclusions.[/yellow]"
+        )
+        raise typer.Exit(1)
+
+    # Sanitize data (remove personal info)
+    sanitized_data = _sanitize_contribution_data(cache_data)
+
+    # Build contribution metadata
+    contribution_metadata = {
+        "schema_version": "2.0",
+        "contributor": contributor or "anonymous",
+        "contribution_date": datetime.now(timezone.utc).isoformat(),
+        "tool_version": "0.7.0",  # TODO: Get from package version
+        "ecosystem": ecosystem,
+        "package_count": len(sanitized_data),
+        "analysis_method": "github_graphql",
+    }
+
+    # Build final contribution structure
+    contribution = {
+        "_contribution_metadata": contribution_metadata,
+        "packages": sanitized_data,
+    }
+
+    # Determine output path
+    if output is None:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        output = Path.cwd() / f"contribution-{ecosystem}-{timestamp}.json"
+
+    # Write to file
+    with open(output, "w", encoding="utf-8") as f:
+        json.dump(contribution, f, indent=2, ensure_ascii=False, sort_keys=True)
+
+    console.print(
+        f"[green]✓[/green] Exported {len(sanitized_data)} package(s) to [bold]{output}[/bold]"
+    )
+    console.print()
+    console.print("[cyan]Next steps:[/cyan]")
+    console.print("  1. Review the export file to ensure it looks correct")
+    console.print("  2. Fork https://github.com/onukura/oss-sustain-guard")
+    console.print("  3. Copy the file to data/contributions/ in your fork")
+    console.print("  4. Create a Pull Request")
+    console.print()
+    console.print(
+        "[dim]See docs/COMMUNITY_CONTRIBUTION_GUIDE.md for detailed instructions.[/dim]"
+    )
+    console.print()
+
+
+def _sanitize_contribution_data(data: dict) -> dict:
+    """Sanitize contribution data to remove personal information.
+
+    Removes:
+    - Local file paths
+    - API tokens or credentials
+    - Personal identification information
+    - System-specific data
+
+    Args:
+        data: Raw cache data dictionary
+
+    Returns:
+        Sanitized data safe for public contribution
+    """
+    sanitized = {}
+
+    for key, entry in data.items():
+        # Create a clean copy
+        clean_entry = {}
+
+        # Safe fields to include
+        safe_fields = {
+            "ecosystem",
+            "package_name",
+            "github_url",
+            "metrics",
+            "models",
+            "signals",
+            "funding_links",
+            "is_community_driven",
+        }
+
+        for field in safe_fields:
+            if field in entry:
+                clean_entry[field] = entry[field]
+
+        # Update cache metadata to mark as user contribution
+        if "cache_metadata" in entry:
+            clean_entry["cache_metadata"] = {
+                "fetched_at": entry["cache_metadata"].get("fetched_at"),
+                "ttl_seconds": entry["cache_metadata"].get("ttl_seconds", 604800),
+                "source": "user_analysis",
+            }
+
+        sanitized[key] = clean_entry
+
+    return sanitized
 
 
 if __name__ == "__main__":

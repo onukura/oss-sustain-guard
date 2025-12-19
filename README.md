@@ -99,6 +99,25 @@ Evaluated across 5 categories:
 
 See [Database Schema](https://onukura.github.io/oss-sustain-guard/DATABASE_SCHEMA/) for complete metric details.
 
+### Community Contributions
+
+**Help expand the database!** Share your package analysis results with the community.
+
+```bash
+# Analyze packages locally
+oss-guard check requests flask django
+
+# Export your results
+oss-guard export python
+
+# Validate before submitting
+oss-guard validate-contribution contribution-python-*.json
+
+# Submit via Pull Request
+```
+
+See [Community Contribution Guide](https://onukura.github.io/oss-sustain-guard/COMMUNITY_CONTRIBUTION_GUIDE/) for detailed instructions.
+
 ### Special Features
 
 - **🎁 Gratitude Vending Machine** - Discover community projects that need support
@@ -122,6 +141,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code st
 
 ## 📝 Documentation
 
+- [Community Contribution Guide](./docs/COMMUNITY_CONTRIBUTION_GUIDE.md) - Share your analysis results
+- [Community Contribution Architecture](./docs/COMMUNITY_CONTRIBUTION_ARCHITECTURE.md) - Technical details
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
 - [Trend Analysis Guide](./docs/TREND_ANALYSIS_GUIDE.md) - Time series analysis and historical comparison
 - [Database Schema](./docs/DATABASE_SCHEMA.md) - JSON database format
