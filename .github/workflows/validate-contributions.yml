@@ -1,0 +1,89 @@
+name: Validate Community Contributions
+
+on:
+  pull_request:
+    paths:
+      - 'data/contributions/**/*.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate_contributions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+
+      - name: Find contribution files
+        id: find_files
+        run: |
+          # Find all JSON files in data/contributions/ (excluding README.md)
+          files=$(find data/contributions -name "*.json" -type f)
+          if [ -z "$files" ]; then
+            echo "No contribution files found"
+            echo "has_files=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found contribution files:"
+            echo "$files"
+            echo "has_files=true" >> $GITHUB_OUTPUT
+            # Save files to output (one per line)
+            echo "$files" > contribution_files.txt
+          fi
+
+      - name: Validate contribution files
+        if: steps.find_files.outputs.has_files == 'true'
+        run: |
+          EXIT_CODE=0
+          
+          # Read files from saved list
+          while IFS= read -r file; do
+            echo "=========================================="
+            echo "Validating: $file"
+            echo "=========================================="
+            
+            # Run validation command
+            if oss-guard validate-contribution "$file"; then
+              echo "✓ $file passed validation"
+            else
+              echo "✗ $file failed validation"
+              EXIT_CODE=1
+            fi
+            echo ""
+          done < contribution_files.txt
+          
+          exit $EXIT_CODE
+
+      - name: Comment on PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Contribution validation failed**\n\nPlease check the validation errors above and fix them. You can validate locally with:\n\n```bash\noss-guard validate-contribution <file>\n```\n\nSee the [Community Contribution Guide](https://github.com/onukura/oss-sustain-guard/blob/main/docs/COMMUNITY_CONTRIBUTION_GUIDE.md) for more information.'
+            })
+
+      - name: Comment on PR success
+        if: success() && steps.find_files.outputs.has_files == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ **Contribution validation passed!**\n\nThank you for your contribution! 🎉\n\nA maintainer will review your submission shortly.'
+            })

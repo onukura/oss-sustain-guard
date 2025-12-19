@@ -1,0 +1,77 @@
+{
+  "_contribution_metadata": {
+    "schema_version": "2.0",
+    "contributor": "example_user",
+    "contribution_date": "2025-12-19T21:00:00Z",
+    "tool_version": "0.7.0",
+    "ecosystem": "python",
+    "package_count": 2,
+    "analysis_method": "github_graphql"
+  },
+  "packages": {
+    "python:example-package": {
+      "ecosystem": "python",
+      "package_name": "example-package",
+      "github_url": "https://github.com/example/example-package",
+      "metrics": [
+        {
+          "name": "Contributor Redundancy",
+          "score": 15,
+          "max_score": 20,
+          "message": "Multiple active contributors",
+          "risk": "Low"
+        },
+        {
+          "name": "Recent Activity",
+          "score": 18,
+          "max_score": 20,
+          "message": "Active within last 30 days",
+          "risk": "Low"
+        }
+      ],
+      "models": [],
+      "signals": {
+        "contributor_count": 10,
+        "funding_link_count": 1,
+        "last_activity_days": 5
+      },
+      "cache_metadata": {
+        "fetched_at": "2025-12-19T20:00:00Z",
+        "ttl_seconds": 604800,
+        "source": "user_analysis"
+      }
+    },
+    "python:another-package": {
+      "ecosystem": "python",
+      "package_name": "another-package",
+      "github_url": "https://github.com/example/another-package",
+      "metrics": [
+        {
+          "name": "Contributor Redundancy",
+          "score": 12,
+          "max_score": 20,
+          "message": "Limited contributor diversity",
+          "risk": "Medium"
+        },
+        {
+          "name": "Recent Activity",
+          "score": 15,
+          "max_score": 20,
+          "message": "Active within last 60 days",
+          "risk": "Low"
+        }
+      ],
+      "models": [],
+      "signals": {
+        "contributor_count": 5,
+        "funding_link_count": 0,
+        "last_activity_days": 45
+      },
+      "cache_metadata": {
+        "fetched_at": "2025-12-19T20:00:00Z",
+        "ttl_seconds": 604800,
+        "source": "user_analysis"
+      }
+    }
+  }
+}
