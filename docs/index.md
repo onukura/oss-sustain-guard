@@ -20,7 +20,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ## Why OSS Sustain Guard?
 
-- **Cache-based efficiency:** Pre-computed snapshots for popular packages provide instant results. GitHub token only needed for uncached packages.
+- **Globally distributed cache:** Data stored in Cloudflare KV provides instant results worldwide. GitHub token only needed for uncached packages.
 - **Multi-ecosystem support:** Analyze packages from Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby in one command.
 - **Actionable insights:** Metrics use empathetic language that encourages collaboration with maintainers rather than blame.
 - **Time-travel friendly:** Historical snapshots enable trend analysis and comparisons between releases.

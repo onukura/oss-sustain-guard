@@ -10,6 +10,10 @@ __pycache__/
 # C extensions
 *.so
 
+# OSS Sustain Guard - Data directory (build artifacts, not committed)
+# All data is now served from Cloudflare KV cache
+data/
+
 # Distribution / packaging
 .Python
 build/

@@ -7,13 +7,13 @@
 
 ![demo](./docs/assets/demo01.png)
 
-**Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 9 key metrics including Bus Factor, Maintainer Activity, and Security Posture.
+**Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 21 metrics including Contributor Redundancy, Maintainer Retention, and Security Signals.
 
-✨ **Fast, Cache-Based** - Pre-computed data for instant evaluation of Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby packages.
+✨ **Globally Distributed Cache** - Instant results via Cloudflare KV with local fallback caching.
 
 > 📌 **Quick Notes:**
 >
-> - **Instant results** - Most popular packages are cached (no API calls needed)
+> - **Instant results** - Popular packages served from global Cloudflare KV cache (no API calls needed)
 > - **SSL verification** - Use `--insecure` flag to disable SSL verification for development/testing only
 > - **Package resolution** - If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
 > - **Full documentation** - https://onukura.github.io/oss-sustain-guard/
@@ -41,7 +41,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
 - **Time Series Analysis** - Track package health trends over time, compare snapshots, generate reports
 - **Community Support Awareness** - Displays funding links for community-driven projects
-- **Fast & Cache-Based** - Pre-computed data for instant results
+- **Globally Distributed Cache** - Cloudflare KV-based data delivery with local user cache fallback
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
 - **Zero Configuration** - Works out of the box
 

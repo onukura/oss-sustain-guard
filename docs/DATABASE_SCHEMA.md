@@ -2,7 +2,33 @@
 
 ## Overview
 
-`data/latest/{language}.json` stores pre-computed sustainability analysis results, enabling fast lookups without real-time analysis. Each ecosystem maintains its own JSON file.
+**Note**: As of v2.1+, package data is stored in **Cloudflare KV** for fast, distributed access worldwide. The data is no longer primarily served from git repository files.
+
+### Data Storage Architecture
+
+| Storage | Purpose | Access |
+|---------|---------|--------|
+| **Cloudflare KV** | Primary shared cache for all users | Public read, authenticated write |
+| **Local cache** (`~/.cache/oss-sustain-guard/`) | User-specific cache | Read/write |
+| **`data/` (build artifacts)** | Build-time temporary files (not committed to git) | CI/CD only |
+
+### Key Format
+
+Cloudflare KV uses content-addressable keys:
+```
+{schema_version}:{ecosystem}:{package_name}
+```
+
+Examples:
+- `2.0:python:requests`
+- `2.0:javascript:react`
+- `2.0:rust:tokio`
+
+### Data Loading Priority
+
+1. **Local cache** - Fastest, user-specific
+2. **Cloudflare KV** - Fast, globally distributed shared cache
+3. **Real-time analysis** - Slowest, used when cache misses
 
 ## Schema Specification (v2.0 - Multi-Language Support)
 
@@ -329,15 +355,22 @@ uv run python builder/build_db.py
 
 ### Automatic Updates (GitHub Actions)
 
-The database is automatically updated daily at UTC 00:00 via `.github/workflows/update_database.yml`.
+The database is automatically updated daily at UTC 00:00 via `.github/workflows/update_database.yml`. The workflow:
+
+1. Fetches the latest packages from each ecosystem (Libraries.io)
+2. Analyzes them using GitHub GraphQL API
+3. **Uploads directly to Cloudflare KV** (globally distributed cache)
+4. Stores build artifacts locally (not committed to git)
+
+This ensures all users get fresh data from the global cache without needing GitHub access.
 
 ## Version History
 
 ### v2.0 (Current)
 
 - Multi-language support (Python, JavaScript, Go, Rust, PHP, Java, C#, Ruby)
-- Separate files per ecosystem: `data/latest/{language}.json`
-- Key format: `{ecosystem}:{package_name}`
+- Cloudflare KV-based data distribution (v2.1+)
+- Key format: `{schema_version}:{ecosystem}:{package_name}` (e.g., `2.0:python:requests`)
 - Added `ecosystem` and `package_name` fields
 - Runtime computation of `funding_links` and `is_community_driven` in `core.py`
 

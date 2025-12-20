@@ -1,16 +1,17 @@
 """
 Builds the static database of OSS sustainability metrics using Libraries.io.
 
-Architecture (Token-less Experience):
-  1. Build phase (CI/CD, requires LIBRARIESIO_API_KEY):
+Architecture (Cloudflare KV-based):
+  1. Build phase (CI/CD, requires LIBRARIESIO_API_KEY + GITHUB_TOKEN):
      - Libraries.io API → Package metadata (repo URL)
      - GitHub GraphQL → Sustainability analysis (21 metrics + 5 models)
-     - Save → data/latest/*.json + data/archive/YYYY-MM-DD/*.json
+     - Upload → Cloudflare KV (globally distributed cache)
+     - Local save → data/latest/*.json + data/archive/YYYY-MM-DD/*.json (build artifacts, not committed)
 
   2. User phase (Token-less):
-     - CLI loads cached data/latest/*.json from GitHub
+     - CLI loads cached data from Cloudflare KV (shared remote cache)
+     - Fallback to local cache (~/.cache/oss-sustain-guard)
      - No API tokens required for users
-     - Fallback to local cache if GitHub unavailable
 
 Sustainability Metrics (21 total):
   Core Metrics (12):
@@ -50,6 +51,7 @@ from rich.console import Console
 
 from oss_sustain_guard.config import DEFAULT_CACHE_TTL, get_verify_ssl
 from oss_sustain_guard.core import analyze_repository
+from oss_sustain_guard.remote_cache import CloudflareKVClient
 from oss_sustain_guard.schema_migrations import CURRENT_SCHEMA_VERSION
 
 load_dotenv()
@@ -65,6 +67,10 @@ LIBRARIES_IO_API_URL = "https://libraries.io/api"
 LIBRARIESIO_API_KEY = os.getenv("LIBRARIESIO_API_KEY")
 RATE_LIMIT_DELAY = 0.5  # 0.5 seconds between requests (faster, but within 60 req/min)
 LIBRARIES_IO_META_SUFFIX = ".libraries_io.meta.json"
+
+# Cloudflare KV configuration
+CLOUDFLARE_WORKER_URL = os.getenv("CLOUDFLARE_WORKER_URL", "")
+CF_WRITE_SECRET = os.getenv("CF_WRITE_SECRET", "")
 
 # Mapping of ecosystem names (Libraries.io → project)
 ECOSYSTEM_MAPPING = {
@@ -178,8 +184,95 @@ def load_existing_data(filepath: Path) -> dict:
     return {}
 
 
-def save_ecosystem_data(data: dict, ecosystem: str, is_latest: bool = True):
-    """Save ecosystem data to appropriate directory with schema metadata as gzip."""
+def upload_to_cloudflare_kv(data: dict, ecosystem: str) -> int:
+    """
+    Upload ecosystem data to Cloudflare KV.
+
+    Only uploads packages that have changed (based on metrics comparison).
+
+    Args:
+        data: Dictionary of package data keyed by db_key (e.g., "python:requests").
+        ecosystem: Ecosystem name.
+
+    Returns:
+        Number of packages successfully uploaded.
+    """
+    if not CLOUDFLARE_WORKER_URL or not CF_WRITE_SECRET:
+        return 0
+
+    console = Console()
+    console.print("[cyan]☁️  Uploading to Cloudflare KV...[/cyan]")
+
+    try:
+        # Initialize client
+        client = CloudflareKVClient(
+            worker_url=CLOUDFLARE_WORKER_URL,
+            schema_version=CURRENT_SCHEMA_VERSION,
+        )
+
+        # Fetch existing data from KV to detect changes
+        package_list = [(ecosystem, key.split(":")[-1]) for key in data.keys()]
+        existing_kv_data = client.batch_get(package_list)
+
+        # Detect changes
+        entries_to_upload = {}
+        for _db_key, new_data in data.items():
+            kv_key = client._make_key(ecosystem, new_data["package_name"])
+            existing_data = existing_kv_data.get(kv_key)
+
+            # Upload if new or changed
+            if not existing_data or _has_metric_changes(existing_data, new_data):
+                entries_to_upload[kv_key] = new_data
+
+        if not entries_to_upload:
+            console.print("[yellow]  ℹ️  No changes detected, skipping upload[/yellow]")
+            return 0
+
+        # Upload in batches
+        uploaded = client.batch_put(entries_to_upload, CF_WRITE_SECRET)
+        console.print(
+            f"[bold green]  ✅ Uploaded {uploaded}/{len(entries_to_upload)} packages to Cloudflare KV[/bold green]"
+        )
+        return uploaded
+
+    except Exception as e:
+        console.print(f"[red]  ❌ Cloudflare KV upload failed: {e}[/red]")
+        return 0
+
+
+def _has_metric_changes(old_data: dict, new_data: dict) -> bool:
+    """
+    Compare metrics between two package data dictionaries.
+
+    Returns:
+        True if metrics have changed, False otherwise.
+    """
+    old_metrics = old_data.get("metrics", [])
+    new_metrics = new_data.get("metrics", [])
+
+    if len(old_metrics) != len(new_metrics):
+        return True
+
+    old_metric_scores = {m.get("name"): m.get("score") for m in old_metrics}
+    new_metric_scores = {m.get("name"): m.get("score") for m in new_metrics}
+
+    return old_metric_scores != new_metric_scores
+
+
+def save_ecosystem_data(
+    data: dict,
+    ecosystem: str,
+    is_latest: bool = True,
+    upload_to_cloudflare: bool = False,
+):
+    """Save ecosystem data to appropriate directory with schema metadata as gzip.
+
+    Args:
+        data: Dictionary of package data keyed by db_key (e.g., "python:requests").
+        ecosystem: Ecosystem name.
+        is_latest: If True, save to latest/ directory.
+        upload_to_cloudflare: If True, upload to Cloudflare KV.
+    """
     if is_latest:
         output_dir = LATEST_DIR
     else:
@@ -199,6 +292,13 @@ def save_ecosystem_data(data: dict, ecosystem: str, is_latest: bool = True):
 
     with gzip.open(filepath, "wt", encoding="utf-8") as f:
         json.dump(wrapped_data, f, indent=2, ensure_ascii=False, sort_keys=True)
+
+    # Upload to Cloudflare KV if enabled
+    if upload_to_cloudflare and CLOUDFLARE_WORKER_URL and CF_WRITE_SECRET:
+        try:
+            upload_to_cloudflare_kv(data, ecosystem)
+        except Exception as e:
+            print(f"[WARNING] Failed to upload to Cloudflare KV: {e}")
 
     return filepath
 
@@ -238,14 +338,33 @@ def merge_ecosystem_files() -> dict:
 
 
 def has_changes(old_data: dict, new_data: dict) -> bool:
-    """Check if ecosystem data has meaningful changes."""
+    """Check if ecosystem data has meaningful changes.
+
+    Note: Since total_score is profile-dependent and not stored in v2.0+,
+    we compare metrics instead.
+    """
     if len(old_data) != len(new_data):
         return True
 
-    old_scores = {k: v.get("total_score") for k, v in old_data.items()}
-    new_scores = {k: v.get("total_score") for k, v in new_data.items()}
+    # Compare metrics instead of total_score (which is profile-dependent)
+    for key in new_data:
+        if key not in old_data:
+            return True
 
-    return old_scores != new_scores
+        old_metrics = old_data[key].get("metrics", [])
+        new_metrics = new_data[key].get("metrics", [])
+
+        if len(old_metrics) != len(new_metrics):
+            return True
+
+        # Compare metric scores
+        old_metric_scores = {m.get("name"): m.get("score") for m in old_metrics}
+        new_metric_scores = {m.get("name"): m.get("score") for m in new_metrics}
+
+        if old_metric_scores != new_metric_scores:
+            return True
+
+    return False
 
 
 async def fetch_libraries_io_packages(
@@ -509,6 +628,7 @@ async def process_ecosystem_packages(
     packages: list[dict],
     max_concurrent: int = 1,
     dry_run: bool = False,
+    upload_to_cloudflare: bool = False,
 ) -> dict[str, Any]:
     """
     Process packages for an ecosystem with controlled concurrency.
@@ -518,6 +638,7 @@ async def process_ecosystem_packages(
         packages: List of dicts with 'name' and 'repository_url' keys
         max_concurrent: Maximum number of concurrent tasks
         dry_run: If True, only collect URLs without analyzing
+        upload_to_cloudflare: If True, upload to Cloudflare KV
 
     Returns:
         Dictionary of ecosystem data keyed by db_key
@@ -576,7 +697,12 @@ async def process_ecosystem_packages(
             console.print(
                 f"[cyan]  📊 Intermediate save: {i + 1}/{len(results)} packages processed[/cyan]"
             )
-            save_ecosystem_data(ecosystem_data, ecosystem, is_latest=True)
+            save_ecosystem_data(
+                ecosystem_data,
+                ecosystem,
+                is_latest=True,
+                upload_to_cloudflare=upload_to_cloudflare,
+            )
 
     return ecosystem_data
 
@@ -587,6 +713,7 @@ async def main(
     limit: int = 5000,
     verify_ssl: bool = True,
     dry_run: bool = False,
+    upload_to_cloudflare: bool = False,
 ):
     """
     Main function to build the database using Libraries.io.
@@ -597,6 +724,7 @@ async def main(
         limit: Maximum number of packages to fetch per ecosystem from Libraries.io.
         verify_ssl: If True, verify SSL certificates.
         dry_run: If True, only collect package URLs without analyzing via GitHub.
+        upload_to_cloudflare: If True, upload results to Cloudflare KV.
     """
     console = Console()
 
@@ -628,6 +756,26 @@ async def main(
             "API-based fetching will not work. Attempting fallback packages if available."
         )
         # Continue anyway, but don't try to fetch from APIs
+
+    # Check Cloudflare KV configuration if upload is requested
+    if upload_to_cloudflare:
+        if not CLOUDFLARE_WORKER_URL:
+            console.print(
+                "[bold red]Error: CLOUDFLARE_WORKER_URL environment variable is not set.[/bold red]"
+            )
+            console.print(
+                "Please set it to your Cloudflare Worker URL (e.g., https://your-worker.workers.dev)"
+            )
+            sys.exit(1)
+        if not CF_WRITE_SECRET:
+            console.print(
+                "[bold red]Error: CF_WRITE_SECRET environment variable is not set.[/bold red]"
+            )
+            console.print("Please set it to your Cloudflare Worker write secret.")
+            sys.exit(1)
+        console.print(
+            f"[bold cyan]☁️  Cloudflare KV upload enabled: {CLOUDFLARE_WORKER_URL}[/bold cyan]"
+        )
 
     console.print(
         "[bold yellow]🚀 Starting database build using Libraries.io...[/bold yellow]"
@@ -694,7 +842,7 @@ async def main(
         console.print(f"[bold cyan]📦 Processing {ecosystem}...[/bold cyan]")
 
         ecosystem_data = await process_ecosystem_packages(
-            ecosystem, packages, max_concurrent, dry_run
+            ecosystem, packages, max_concurrent, dry_run, upload_to_cloudflare
         )
 
         if not ecosystem_data:
@@ -705,8 +853,15 @@ async def main(
         old_data = load_existing_data(LATEST_DIR / f"{ecosystem}.json")
 
         if has_changes(old_data, ecosystem_data):
-            save_ecosystem_data(ecosystem_data, ecosystem, is_latest=True)
-            save_ecosystem_data(ecosystem_data, ecosystem, is_latest=False)
+            save_ecosystem_data(
+                ecosystem_data,
+                ecosystem,
+                is_latest=True,
+                upload_to_cloudflare=upload_to_cloudflare,
+            )
+            save_ecosystem_data(
+                ecosystem_data, ecosystem, is_latest=False, upload_to_cloudflare=False
+            )
             updated_ecosystems.append(ecosystem)
             console.print(
                 f"  [bold green]✨ Saved {len(ecosystem_data)} entries[/bold green]"
@@ -777,6 +932,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Collect package URLs without GitHub analysis (useful for testing)",
     )
+    parser.add_argument(
+        "--upload-to-cloudflare",
+        action="store_true",
+        help="Upload results to Cloudflare KV (requires CLOUDFLARE_WORKER_URL and CF_WRITE_SECRET)",
+    )
 
     args = parser.parse_args()
 
@@ -787,5 +947,6 @@ if __name__ == "__main__":
             limit=args.limit,
             verify_ssl=not args.insecure,
             dry_run=args.dry_run,
+            upload_to_cloudflare=args.upload_to_cloudflare,
         )
     )

@@ -2,12 +2,9 @@
 Command-line interface for OSS Sustain Guard.
 """
 
-import gzip
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-import httpx
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -15,7 +12,6 @@ from rich.table import Table
 from oss_sustain_guard.cache import clear_cache, get_cache_stats, load_cache, save_cache
 from oss_sustain_guard.config import (
     DEFAULT_CACHE_TTL,
-    get_verify_ssl,
     is_cache_enabled,
     is_package_excluded,
     set_cache_dir,
@@ -29,6 +25,7 @@ from oss_sustain_guard.core import (
     analyze_repository,
     compute_weighted_total_score,
 )
+from oss_sustain_guard.remote_cache import CloudflareKVClient
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     find_lockfiles,
@@ -41,7 +38,6 @@ from oss_sustain_guard.trend import ComparisonReport, TrendAnalyzer
 project_root = Path(__file__).resolve().parent.parent
 
 # --- Constants ---
-GITHUB_REPO_URL = "https://media.githubusercontent.com/media/onukura/oss-sustain-guard/refs/heads/main"
 LATEST_DIR = project_root / "data" / "latest"
 
 # --- Typer App ---
@@ -51,17 +47,17 @@ console = Console()
 # --- Helper Functions ---
 
 
-def load_database(use_cache: bool = True) -> dict:
+def load_database(use_cache: bool = True, use_local_cache: bool = True) -> dict:
     """Load the sustainability database with caching support.
 
     Loads data with the following priority:
     1. User cache (~/.cache/oss-sustain-guard/*.json) if enabled and valid
-    2. GitHub repository (remote)
-    3. Local data/latest/ directory (fallback)
+    2. Cloudflare KV (shared remote cache) - primary data source
+    3. Real-time analysis (if no cached data available)
 
     Args:
-        use_cache: If False, skip all cached data sources (user cache, GitHub, local files)
-                   and perform real-time analysis only.
+        use_cache: If False, skip all cached data sources and perform real-time analysis only.
+        use_local_cache: If False, skip local cache loading (only affects initial load).
 
     Returns:
         Dictionary of package data keyed by "ecosystem:package_name".
@@ -85,117 +81,80 @@ def load_database(use_cache: bool = True) -> dict:
         "go",
     ]
 
-    # Load from cache first if enabled
-    if is_cache_enabled():
+    # Load from local cache first if enabled
+    if use_local_cache and is_cache_enabled():
         for ecosystem in ecosystems:
             cached_data = load_cache(ecosystem)
             if cached_data:
                 merged.update(cached_data)
                 console.print(
-                    f"[dim]Loaded {len(cached_data)} entries from cache: {ecosystem}[/dim]"
+                    f"[dim]Loaded {len(cached_data)} entries from local cache: {ecosystem}[/dim]"
                 )
 
-    # Determine which ecosystems need fresh data
-    ecosystems_to_fetch = []
-    if not is_cache_enabled():
-        # Need all ecosystems if cache is disabled
-        ecosystems_to_fetch = ecosystems
-    else:
-        # Only fetch ecosystems that have no cache data
-        for ecosystem in ecosystems:
-            ecosystem_keys = [k for k in merged.keys() if k.startswith(f"{ecosystem}:")]
-            if not ecosystem_keys:
-                ecosystems_to_fetch.append(ecosystem)
-
-    # Try loading missing ecosystems from GitHub
-    if ecosystems_to_fetch:
-        github_success = False
-        for ecosystem in ecosystems_to_fetch:
-            # Try gzip first, then fallback to uncompressed
-            urls = [
-                f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json.gz",
-                f"{GITHUB_REPO_URL}/data/latest/{ecosystem}.json",
-            ]
-            loaded = False
-            for url in urls:
-                try:
-                    with httpx.Client(
-                        verify=get_verify_ssl(), follow_redirects=True
-                    ) as client:
-                        response = client.get(url, timeout=10)
-                        response.raise_for_status()
-
-                        # Decompress if gzip
-                        if url.endswith(".gz"):
-                            data = json.loads(
-                                gzip.decompress(response.content).decode("utf-8")
-                            )
-                        else:
-                            data = response.json()
-
-                        merged.update(data)
-                        github_success = True
-                        loaded = True
-                        console.print(f"Loaded {ecosystem} data from GitHub.")
-
-                        # Save to cache if enabled
-                        if is_cache_enabled():
-                            save_cache(ecosystem, data)
-                        break
-                except Exception:
-                    continue
-
-            if not loaded:
-                # Silently skip GitHub errors for now, will try local fallback
-                console.print(
-                    f"[dim]Note: Using local data for {ecosystem} (GitHub unavailable)[/dim]"
-                )
-
-        # If GitHub loading failed, fall back to local data/latest/
-        if not github_success and LATEST_DIR.exists():
-            for ecosystem in ecosystems_to_fetch:
-                # Try gzip first, then fallback to uncompressed
-                ecosystem_files = [
-                    LATEST_DIR / f"{ecosystem}.json.gz",
-                    LATEST_DIR / f"{ecosystem}.json",
-                ]
-
-                for ecosystem_file in ecosystem_files:
-                    if ecosystem_file.exists():
-                        try:
-                            if ecosystem_file.suffix == ".gz":
-                                with gzip.open(
-                                    ecosystem_file, "rt", encoding="utf-8"
-                                ) as f:
-                                    raw_data = json.load(f)
-                            else:
-                                with open(ecosystem_file, "r", encoding="utf-8") as f:
-                                    raw_data = json.load(f)
-
-                            # Handle schema versions
-                            if (
-                                isinstance(raw_data, dict)
-                                and "_schema_version" in raw_data
-                            ):
-                                # v2.0+ format with metadata
-                                data = raw_data.get("packages", {})
-                            else:
-                                # v1.x format (flat dict) - backward compatibility
-                                data = raw_data
-
-                            merged.update(data)
-                            console.print(
-                                f"Loaded {ecosystem} data from local fallback."
-                            )
-
-                            # Save to cache if enabled
-                            if is_cache_enabled():
-                                save_cache(ecosystem, data)
-                            break
-                        except Exception:
-                            continue
+    # Determine which packages need to be fetched from remote
+    # We'll collect package names from the check command and fetch only those
+    # For now, if cache is disabled, we skip remote fetching and go straight to real-time analysis
 
     return merged
+
+
+def load_packages_from_cloudflare(
+    packages: list[tuple[str, str]], verbose: bool = False
+) -> dict:
+    """Load specific packages from Cloudflare KV.
+
+    Args:
+        packages: List of (ecosystem, package_name) tuples to load.
+        verbose: If True, display cache source information.
+
+    Returns:
+        Dictionary of package data keyed by "ecosystem:package_name".
+    """
+    if not packages:
+        return {}
+
+    try:
+        client = CloudflareKVClient()
+        kv_data = client.batch_get(packages)
+
+        # Convert KV keys back to database keys (ecosystem:package_name)
+        result = {}
+        for kv_key, data in kv_data.items():
+            # KV key format: "2.0:python:requests"
+            # Extract ecosystem:package_name
+            parts = kv_key.split(":", 2)  # Split on first 2 colons
+            if len(parts) >= 3:
+                ecosystem = parts[1]
+                package_name = parts[2]
+                db_key = f"{ecosystem}:{package_name}"
+                result[db_key] = data
+
+        if result:
+            if verbose:
+                console.print(
+                    f"[dim]☁️  Loaded {len(result)} entries from Cloudflare KV[/dim]"
+                )
+
+            # Save to local cache if enabled
+            if is_cache_enabled():
+                # Group by ecosystem for caching
+                by_ecosystem = {}
+                for db_key, data in result.items():
+                    ecosystem = data.get("ecosystem")
+                    if ecosystem:
+                        if ecosystem not in by_ecosystem:
+                            by_ecosystem[ecosystem] = {}
+                        by_ecosystem[ecosystem][db_key] = data
+
+                for ecosystem, eco_data in by_ecosystem.items():
+                    save_cache(ecosystem, eco_data)
+
+        return result
+    except Exception as e:
+        console.print(
+            f"[dim]Note: Cloudflare KV unavailable ({type(e).__name__}), using local data[/dim]"
+        )
+        return {}
 
 
 def display_results_compact(
@@ -597,6 +556,9 @@ def analyze_package(
     enable_dependents: bool = False,
     show_dependencies: bool = False,
     lockfile_path: str | Path | None = None,
+    verbose: bool = False,
+    use_local_cache: bool = True,
+    use_remote_cache: bool = True,
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -609,6 +571,9 @@ def analyze_package(
         enable_dependents: Enable dependents analysis.
         show_dependencies: Analyze and include dependency scores.
         lockfile_path: Path to lockfile for dependency analysis.
+        verbose: If True, display cache source information.
+        use_local_cache: If False, skip local cache lookup.
+        use_remote_cache: If False, skip Cloudflare KV lookup.
 
     Returns:
         AnalysisResult or None if analysis fails.
@@ -620,9 +585,12 @@ def analyze_package(
     # Create database key
     db_key = f"{ecosystem}:{package_name}"
 
-    # Check cache first
+    # Check local cache first
     if db_key in db:
-        console.print(f"  -> Found [bold green]{db_key}[/bold green] in cache.")
+        if verbose:
+            console.print(
+                f"  -> 💾 Found [bold green]{db_key}[/bold green] in local cache"
+            )
         cached_data = db[db_key]
         # Reconstruct metrics from cached data
         metrics = [
@@ -656,6 +624,51 @@ def analyze_package(
 
         return result
 
+    # Try loading from Cloudflare KV
+    if use_remote_cache:
+        cloudflare_data = load_packages_from_cloudflare(
+            [(ecosystem, package_name)], verbose=verbose
+        )
+        if db_key in cloudflare_data:
+            if verbose:
+                console.print(
+                    f"  -> ☁️  Found [bold green]{db_key}[/bold green] in Cloudflare KV"
+                )
+            cached_data = cloudflare_data[db_key]
+            # Reconstruct metrics from cached data
+            metrics = [
+                Metric(
+                    m["name"],
+                    m["score"],
+                    m["max_score"],
+                    m["message"],
+                    m["risk"],
+                )
+                for m in cached_data.get("metrics", [])
+            ]
+            # Recalculate total score with selected profile
+            recalculated_score = compute_weighted_total_score(metrics, profile)
+            # Reconstruct AnalysisResult
+            result = AnalysisResult(
+                repo_url=cached_data.get("github_url", "unknown"),
+                total_score=recalculated_score,
+                metrics=metrics,
+                funding_links=cached_data.get("funding_links", []),
+                is_community_driven=cached_data.get("is_community_driven", False),
+                models=cached_data.get("models", []),
+                signals=cached_data.get("signals", {}),
+                dependency_scores={},  # Empty for cached results
+            )
+
+            # If show_dependencies is requested, analyze dependencies
+            if show_dependencies and lockfile_path:
+                dep_scores = _analyze_dependencies_for_package(
+                    ecosystem, lockfile_path, db
+                )
+                result = result._replace(dependency_scores=dep_scores)
+
+            return result
+
     # Resolve GitHub URL using appropriate resolver
     resolver = get_resolver(ecosystem)
     if not resolver:
@@ -672,7 +685,10 @@ def analyze_package(
         return None
 
     owner, repo_name = repo_info
-    console.print(f"  -> [bold yellow]{db_key}[/bold yellow] analyzing real-time...")
+    if verbose:
+        console.print(
+            f"  -> 🔍 [bold yellow]{db_key}[/bold yellow] analyzing real-time (no cache)..."
+        )
 
     # Only enable dependents analysis if explicitly requested
     platform = None
@@ -805,7 +821,17 @@ def check(
     no_cache: bool = typer.Option(
         False,
         "--no-cache",
-        help="Disable cache and load fresh data.",
+        help="Disable all caches (local and remote) and perform real-time analysis only.",
+    ),
+    no_local_cache: bool = typer.Option(
+        False,
+        "--no-local-cache",
+        help="Disable local cache (~/.cache/oss-sustain-guard). Remote cache (Cloudflare KV) will still be used.",
+    ),
+    no_remote_cache: bool = typer.Option(
+        False,
+        "--no-remote-cache",
+        help="Disable remote cache (Cloudflare KV). Local cache will still be used.",
     ),
     clear_cache_flag: bool = typer.Option(
         False,
@@ -861,7 +887,13 @@ def check(
         set_cache_ttl(cache_ttl)
 
     set_verify_ssl(not insecure)
-    db = load_database(use_cache=not no_cache)
+
+    # Determine cache usage flags
+    use_cache = not no_cache
+    use_local = use_cache and not no_local_cache
+    use_remote = use_cache and not no_remote_cache
+
+    db = load_database(use_cache=use_cache, use_local_cache=use_local)
     results_to_display = []
     packages_to_analyze: list[tuple[str, str]] = []  # (ecosystem, package_name)
 
@@ -1120,6 +1152,9 @@ def check(
             enable_dependents,
             show_dependencies,
             lockfile,
+            verbose,
+            use_local,
+            use_remote,
         )
         if result:
             results_to_display.append(result)

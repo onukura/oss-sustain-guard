@@ -4,7 +4,7 @@
 
 **OSS Sustain Guard** is a multi-language package sustainability analyzer that evaluates repository health metrics (bus factor, maintainer drain, funding, etc.) rather than just CVEs. It supports PyPI (Python), npm (JavaScript), Cargo (Rust), Maven (Java), Kotlin, Packagist (PHP), RubyGems, NuGet (C#), Go modules, and provides holistic risk assessment via GitHub repository data.
 
-**Key Philosophy:** "Token-less Experience" + "Static Snapshot API" model - precomputed JSON database (`data/latest/*.json` and `data/archive/`) eliminates need for user API tokens. Multi-language support with language-specific registry resolvers.
+**Key Philosophy:** "Token-less Experience" - Cloudflare KV provides globally distributed cache of precomputed sustainability metrics. Users get instant results without API tokens. Multi-language support with language-specific registry resolvers.
 
 ## 💡 Project Philosophy & Core Principles
 
@@ -118,19 +118,17 @@ This philosophy applies to:
 
 4. **`cli.py`** - User Interface (Typer + Rich)
    - Commands: `check` (packages/requirements.txt), `--insecure` flag for SSL override
-   - Loads cached data from language-specific files: `data/latest/{language}.json`
-   - Displays results in Rich-formatted tables with color-coded risk levels (green/yellow/red)
+   - Loads cached data: local cache → Cloudflare KV → real-time analysis
+   - Displays results in Rich-formatted tables with color-coded health status (green/yellow/red)
 
 ### Data Flow
 
 ```
-Package Name (any language) → Language-specific resolver → GitHub (owner/repo)
-                                                                 ↓
-                                                        core.py (GraphQL query)
-                                                                 ↓
-                                                        AnalysisResult
-                                                                 ↓
-                                                 cli.py → Rich table
+Package Name → Resolver → GitHub owner/repo → core.py (GraphQL) → AnalysisResult
+                                                       ↓
+                                    Save to Cloudflare KV (global cache)
+                                                       ↓
+CLI: local cache → Cloudflare KV → real-time → Rich output
 ```
 
 ## Development Conventions
@@ -217,25 +215,75 @@ Both language resolvers and `core.py` make HTTP requests. Patterns:
 
 ### Database Schema
 
-Cached data in `data/latest/{language}.json` and `data/archive/{date}/{language}.json`:
-```json
-{
-  "package_name": {
-    "repo_url": "https://github.com/owner/repo",
-    "total_score": 75,
-    "metrics": [{"name": "Bus Factor", "score": 5, ...}]
-  }
-}
+**Primary**: Cloudflare KV with keys `{schema_version}:{ecosystem}:{package_name}` (e.g., `2.0:python:requests`)
+
+**Local cache**: `~/.cache/oss-sustain-guard/{ecosystem}.json` (user-specific)
+
+**Build artifacts**: `data/latest/` and `data/archive/` (CI/CD only, not committed)
+
+### Cloudflare Worker API Integration
+
+**CRITICAL:** Maintaining consistency between Cloudflare Worker (`cloudflare/src/index.js`) and Python clients (`cli.py`, `build_db.py`, `remote_cache.py`) is essential for proper cache functionality.
+
+**Key Format Consistency:**
+- **Format:** `{schema_version}:{ecosystem}:{package_name}`
+- **Examples:**
+  - `2.0:python:requests`
+  - `2.0:javascript:@types/node` (npm scoped packages)
+  - `2.0:java:com.google.guava:guava` (Java artifacts with colons)
+  - `2.0:kotlin:org.jetbrains.kotlin:kotlin-stdlib`
+
+**Must Match Across All Components:**
+
+| Component | Location | What to Check |
+|-----------|----------|---------------|
+| **Ecosystem Names** | `index.js`: `VALID_ECOSYSTEMS` <br> `build_db.py`: `ECOSYSTEM_MAPPING` values <br> `cli.py`: `load_database()` ecosystems | Must contain same set: `python`, `javascript`, `rust`, `java`, `php`, `ruby`, `csharp`, `go`, `kotlin` |
+| **Key Format** | `index.js`: `KEY_FORMAT_REGEX` <br> `remote_cache.py`: `_make_key()` | Version:ecosystem:package (package may contain `:` for Java) |
+| **Batch Limits** | `index.js`: `batch_size = 100` <br> `remote_cache.py`: `batch_size = 100` | Must be identical |
+| **Endpoints** | `index.js`: routes <br> `remote_cache.py`: HTTP methods | `GET /{key}`, `POST /batch`, `PUT /{key}`, `PUT /batch` |
+| **Auth Header** | `index.js`: `Authorization` check <br> `remote_cache.py`: `headers` | Format: `Bearer {secret}` |
+
+**Package Name Special Cases:**
+- **Java:** `com.google.guava:guava` (contains colons) - Worker regex must allow `:`
+- **npm:** `@types/node` (contains `@` and `/`) - Worker regex must allow `@` and `/`
+- **URL-encoded:** May contain `%` characters - Worker regex must allow `%`
+
+**When Adding New Ecosystem:**
+1. Add to `ECOSYSTEM_MAPPING` in `build_db.py`
+2. Add to `VALID_ECOSYSTEMS` in `cloudflare/src/index.js`
+3. Add to ecosystems list in `cli.py` `load_database()`
+4. Create resolver in `oss_sustain_guard/resolvers/{ecosystem}.py`
+5. Create test in `tests/resolvers/test_{ecosystem}.py`
+6. Update `KEY_FORMAT_REGEX` if new special characters needed
+
+**Testing Integration:**
+```bash
+# Test key format validation
+# Java package with colons
+echo "2.0:java:com.google.guava:guava" should pass
+
+# npm scoped package
+echo "2.0:javascript:@types/node" should pass
+
+# Invalid ecosystem
+echo "2.0:invalid:package" should fail
 ```
 
-### Risk Levels
+**Common Integration Issues:**
+- ❌ Ecosystem name mismatch (e.g., `npm` vs `javascript`)
+- ❌ Regex doesn't handle special characters in package names
+- ❌ Different batch size limits causing truncation
+- ❌ Key parsing splits on all colons instead of first two (breaks Java packages)
+- ❌ Missing `kotlin` or other ecosystem in one component
+
+### Health Status Levels
 
 Metric risk values: `"Critical"`, `"High"`, `"Medium"`, `"Low"`, `"None"`
 
 CLI color mapping:
-- Score < 50 → Red (critical)
-- Score 50-79 → Yellow (warning)
-- Score ≥ 80 → Green (safe)
+- Score < 50 → 🔴 Red (needs support)
+- Score 50-79 → 🟡 Yellow (monitor)
+- Score ≥ 80 → 🟢 Green (healthy)
 
 ## File Organization
 
@@ -272,19 +320,8 @@ tests/
     test_csharp.py    # NuGet tests
     test_go.py        # Go modules tests
 data/
-  latest/             # Current snapshot (JSON files per language)
-    python.json
-    javascript.json
-    rust.json
-    java.json
-    php.json
-    ruby.json
-    csharp.json
-  archive/            # Historical snapshots (dated directories)
-    {YYYY-MM-DD}/
-      python.json
-      javascript.json
-      ...
+  latest/             # Build artifacts: current snapshot (not committed to git)
+  archive/            # Build artifacts: historical snapshots by date (not committed)
 builder/
   build_db.py      # GitHub Actions job to generate database.json files
 ```

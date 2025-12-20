@@ -1,0 +1,20 @@
+name = "oss-sustain-guard-cache"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+# KV Namespace binding
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "40af35d9ae914c3996c5a74f71985058"
+preview_id = "9dff44ef746b45c399882fc7fc0df2c4"
+
+# Environment variables (set via `wrangler secret put`)
+# - WRITE_SECRET: Secret for write operations
+
+[env.production]
+name = "oss-sustain-guard-cache"
+vars = { ENVIRONMENT = "production" }
+
+[env.staging]
+name = "oss-sustain-guard-cache-staging"
+vars = { ENVIRONMENT = "staging" }

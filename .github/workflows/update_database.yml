@@ -9,8 +9,9 @@ concurrency:
   group: update-database
   cancel-in-progress: false
 
-permissions:
-  contents: write
+# Note: contents:write permission no longer needed since we're using Cloudflare KV instead of git commits
+# permissions:
+#   contents: write
 
 jobs:
   update_database:
@@ -52,6 +53,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LIBRARIESIO_API_KEY: ${{ secrets.LIBRARIESIO_API_KEY }}
+          CLOUDFLARE_WORKER_URL: ${{ secrets.CLOUDFLARE_WORKER_URL }}
+          CF_WRITE_SECRET: ${{ secrets.CF_WRITE_SECRET }}
         run: |
           if [ -z "$ECOSYSTEM_BATCH" ]; then
             echo "No ecosystems selected; exiting."
@@ -59,39 +62,35 @@ jobs:
           fi
 
           # Run ecosystems sequentially to respect Libraries.io rate limit (60 req/min)
-          # Use --limit 5000, --max-concurrent 5 for better parallelism
+          # Use --limit 5000, --max-concurrent 1 for rate limit compliance
+          # Results are uploaded to Cloudflare KV instead of git commits
           # GitHub Actions will force-kill this step after 5 hours (300 minutes)
           for ecosystem in $ECOSYSTEM_BATCH; do
             echo "Processing $ecosystem..."
-            uv run python builder/build_db.py --ecosystems $ecosystem --limit 5000 --max-concurrent 1
-            # Check if this ecosystem changed
-            if ! git diff --quiet HEAD -- data/latest/$ecosystem.json.gz data/archive/*/; then
-              echo "Changes detected in $ecosystem, committing..."
-              git config --local user.email "action@github.com"
-              git config --local user.name "GitHub Action"
-              git add data/latest/$ecosystem.json.gz data/archive/
-              git commit -m "chore: update $ecosystem database - $(date -u +'%Y-%m-%d')" || true
-              git push
-            else
-              echo "No changes in $ecosystem"
-            fi
+            uv run python builder/build_db.py \
+              --ecosystems $ecosystem \
+              --limit 5000 \
+              --max-concurrent 1 \
+              --upload-to-cloudflare
 
             echo "Waiting before next ecosystem..."
             sleep 10
           done
 
-      - name: Commit remaining database changes
-        if: always()
-        run: |
-          # Ensure any remaining changes are committed
-          # This handles the case where the step was terminated mid-process
-          if ! git diff --quiet HEAD -- data/latest/ data/archive/ data/database.json; then
-            echo "Final commit: capturing any remaining database changes..."
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add data/latest/ data/archive/ data/database.json || true
-            git commit -m "chore: final database update - $(date -u +'%Y-%m-%d')" || true
-            git push || true
-          else
-            echo "No remaining changes to commit"
-          fi
+          echo "✅ Database build complete. Results uploaded to Cloudflare KV."
+
+      # Note: With Cloudflare KV, we no longer commit data/latest/ to git
+      # Data is served directly from Cloudflare KV for faster, distributed access
+      # Uncomment below if you want to keep git backup of data/latest/
+      #
+      # - name: Commit database changes (optional backup)
+      #   if: always()
+      #   run: |
+      #     if ! git diff --quiet HEAD -- data/latest/ data/archive/; then
+      #       echo "Backing up database changes to git..."
+      #       git config --local user.email "action@github.com"
+      #       git config --local user.name "GitHub Action"
+      #       git add data/latest/ data/archive/ || true
+      #       git commit -m "chore: database backup - $(date -u +'%Y-%m-%d')" || true
+      #       git push || true
+      #     fi
