@@ -12,5 +12,8 @@ test:
 test-build-db:
 	uv run python builder/build_db.py --ecosystems python --limit 5 --upload-to-cloudflare
 
+test-check:
+	uv run oss-guard check requests -v
+
 deploy-cf-workers:
 	cd cloudflare && wrangler deploy

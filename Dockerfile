@@ -19,7 +19,6 @@ WORKDIR /app
 # Copy only necessary files
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY oss_sustain_guard ./oss_sustain_guard
-COPY data ./data
 
 # Install Python dependencies with uv
 RUN uv sync --no-dev --frozen
