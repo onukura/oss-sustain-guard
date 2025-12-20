@@ -6,7 +6,7 @@ Architecture (Cloudflare KV-based):
      - Libraries.io API → Package metadata (repo URL)
      - GitHub GraphQL → Sustainability analysis (21 metrics + 5 models)
      - Upload → Cloudflare KV (globally distributed cache)
-     - Local save → data/latest/*.json + data/archive/YYYY-MM-DD/*.json (build artifacts, not committed)
+     - Local save → data/latest/*.json (build artifacts, not committed)
 
   2. User phase (Token-less):
      - CLI loads cached data from Cloudflare KV (shared remote cache)
@@ -59,7 +59,6 @@ load_dotenv()
 # Output paths
 project_root = Path(__file__).resolve().parent.parent
 LATEST_DIR = project_root / "data" / "latest"
-ARCHIVE_DIR = project_root / "data" / "archive"
 DATABASE_PATH = project_root / "data" / "database.json"
 
 # Libraries.io API configuration
@@ -184,24 +183,35 @@ def load_existing_data(filepath: Path) -> dict:
     return {}
 
 
-def upload_to_cloudflare_kv(data: dict, ecosystem: str) -> int:
+def upload_to_cloudflare_kv(
+    data: dict, ecosystem: str, snapshot_date: str | None = None
+) -> int:
     """
     Upload ecosystem data to Cloudflare KV.
+
+    Uploads both latest data and historical snapshots:
+    - Latest data: {schema}:{ecosystem}:{package} (always updated)
+    - Historical data: {schema}:{ecosystem}:{package}:{date} (for trend analysis)
 
     Only uploads packages that have changed (based on metrics comparison).
 
     Args:
         data: Dictionary of package data keyed by db_key (e.g., "python:requests").
         ecosystem: Ecosystem name.
+        snapshot_date: Date string (YYYY-MM-DD) for historical snapshot. If None, uses today.
 
     Returns:
-        Number of packages successfully uploaded.
+        Number of packages successfully uploaded (counting both latest and historical).
     """
     if not CLOUDFLARE_WORKER_URL or not CF_WRITE_SECRET:
         return 0
 
     console = Console()
     console.print("[cyan]☁️  Uploading to Cloudflare KV...[/cyan]")
+
+    # Use provided date or today
+    if snapshot_date is None:
+        snapshot_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     try:
         # Initialize client
@@ -214,29 +224,46 @@ def upload_to_cloudflare_kv(data: dict, ecosystem: str) -> int:
         package_list = [(ecosystem, key.split(":")[-1]) for key in data.keys()]
         existing_kv_data = client.batch_get(package_list)
 
-        # Detect changes
-        entries_to_upload = {}
+        # Detect changes and prepare upload entries
+        latest_entries = {}  # Latest data (no date suffix)
+        historical_entries = {}  # Historical data (with date suffix)
+
         for _db_key, new_data in data.items():
-            kv_key = client._make_key(ecosystem, new_data["package_name"])
-            existing_data = existing_kv_data.get(kv_key)
+            package_name = new_data["package_name"]
+            latest_key = client._make_key(ecosystem, package_name)
+            historical_key = client._make_key(ecosystem, package_name, snapshot_date)
+            existing_data = existing_kv_data.get(latest_key)
 
             # Upload if new or changed
             if not existing_data or _has_metric_changes(existing_data, new_data):
-                entries_to_upload[kv_key] = new_data
+                latest_entries[latest_key] = new_data
+                historical_entries[historical_key] = new_data
 
-        if not entries_to_upload:
+        if not latest_entries:
             console.print("[yellow]  ℹ️  No changes detected, skipping upload[/yellow]")
             return 0
 
-        # Upload in batches
-        uploaded = client.batch_put(entries_to_upload, CF_WRITE_SECRET)
+        # Upload latest data in batches
+        uploaded_latest = client.batch_put(latest_entries, CF_WRITE_SECRET)
         console.print(
-            f"[bold green]  ✅ Uploaded {uploaded}/{len(entries_to_upload)} packages to Cloudflare KV[/bold green]"
+            f"[green]  ✅ Uploaded {uploaded_latest}/{len(latest_entries)} latest packages[/green]"
         )
-        return uploaded
+
+        # Upload historical data in batches
+        uploaded_historical = client.batch_put(historical_entries, CF_WRITE_SECRET)
+        console.print(
+            f"[green]  ✅ Uploaded {uploaded_historical}/{len(historical_entries)} historical snapshots ({snapshot_date})[/green]"
+        )
+
+        total_uploaded = uploaded_latest + uploaded_historical
+        console.print(
+            f"[bold green]  ✅ Total uploaded: {total_uploaded} entries to Cloudflare KV[/bold green]"
+        )
+        return total_uploaded
 
     except Exception as e:
         console.print(f"[red]  ❌ Cloudflare KV upload failed: {e}[/red]")
+        traceback.print_exc()
         return 0
 
 
@@ -264,6 +291,7 @@ def save_ecosystem_data(
     ecosystem: str,
     is_latest: bool = True,
     upload_to_cloudflare: bool = False,
+    snapshot_date: str | None = None,
 ):
     """Save ecosystem data to appropriate directory with schema metadata as gzip.
 
@@ -272,13 +300,9 @@ def save_ecosystem_data(
         ecosystem: Ecosystem name.
         is_latest: If True, save to latest/ directory.
         upload_to_cloudflare: If True, upload to Cloudflare KV.
+        snapshot_date: Date string (YYYY-MM-DD) for historical snapshot. If None, uses today.
     """
-    if is_latest:
-        output_dir = LATEST_DIR
-    else:
-        snapshot_date = datetime.now().strftime("%Y-%m-%d")
-        output_dir = ARCHIVE_DIR / snapshot_date
-
+    output_dir = LATEST_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     filepath = output_dir / f"{ecosystem}.json.gz"
 
@@ -293,10 +317,10 @@ def save_ecosystem_data(
     with gzip.open(filepath, "wt", encoding="utf-8") as f:
         json.dump(wrapped_data, f, indent=2, ensure_ascii=False, sort_keys=True)
 
-    # Upload to Cloudflare KV if enabled
+    # Upload to Cloudflare KV if enabled (with historical snapshot support)
     if upload_to_cloudflare and CLOUDFLARE_WORKER_URL and CF_WRITE_SECRET:
         try:
-            upload_to_cloudflare_kv(data, ecosystem)
+            upload_to_cloudflare_kv(data, ecosystem, snapshot_date)
         except Exception as e:
             print(f"[WARNING] Failed to upload to Cloudflare KV: {e}")
 
@@ -895,7 +919,7 @@ async def main(
         console.print(f"  Models per package: {models_count} aggregated views")
     console.print("  Output:")
     console.print(f"    - Latest: {LATEST_DIR}")
-    console.print(f"    - Archive: {ARCHIVE_DIR / snapshot_date}")
+    console.print("    - Historical: Cloudflare KV")
     console.print(f"    - Compatibility: {DATABASE_PATH}")
 
 

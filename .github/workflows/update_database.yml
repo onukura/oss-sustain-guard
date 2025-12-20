@@ -86,11 +86,11 @@ jobs:
       # - name: Commit database changes (optional backup)
       #   if: always()
       #   run: |
-      #     if ! git diff --quiet HEAD -- data/latest/ data/archive/; then
+      #     if ! git diff --quiet HEAD -- data/latest/; then
       #       echo "Backing up database changes to git..."
       #       git config --local user.email "action@github.com"
       #       git config --local user.name "GitHub Action"
-      #       git add data/latest/ data/archive/ || true
+      #       git add data/latest/ || true
       #       git commit -m "chore: database backup - $(date -u +'%Y-%m-%d')" || true
       #       git push || true
       #     fi

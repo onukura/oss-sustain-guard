@@ -4,12 +4,20 @@ Command-line interface for OSS Sustain Guard.
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from oss_sustain_guard.cache import clear_cache, get_cache_stats, load_cache, save_cache
+from oss_sustain_guard.cache import (
+    clear_cache,
+    get_cache_stats,
+    list_history_dates,
+    load_cache,
+    save_cache,
+    save_to_history,
+)
 from oss_sustain_guard.config import (
     DEFAULT_CACHE_TTL,
     is_cache_enabled,
@@ -838,6 +846,11 @@ def check(
         "--clear-cache",
         help="Clear cache and exit.",
     ),
+    save_history: bool = typer.Option(
+        True,
+        "--save-history/--no-save-history",
+        help="Automatically save snapshot to local history for trend analysis.",
+    ),
     root_dir: Path = typer.Option(
         Path("."),
         "--root-dir",
@@ -1179,6 +1192,28 @@ def check(
                 f"\n⏭️  Skipped {excluded_count} excluded package(s).",
                 style="yellow",
             )
+
+        # Save to history if enabled
+        if save_history and use_cache:
+            # Group analyzed packages by ecosystem for history saving
+            ecosystem_snapshots: dict[str, dict[str, Any]] = {}
+            for eco, pkg_name in packages_to_analyze:
+                if is_package_excluded(pkg_name):
+                    continue
+                db_key = f"{eco}:{pkg_name}"
+                if db_key in db:
+                    if eco not in ecosystem_snapshots:
+                        ecosystem_snapshots[eco] = {}
+                    ecosystem_snapshots[eco][db_key] = db[db_key]
+
+            # Save each ecosystem's snapshot
+            for eco, snapshot_data in ecosystem_snapshots.items():
+                if snapshot_data:
+                    saved = save_to_history(eco, snapshot_data)
+                    if saved:
+                        console.print(
+                            f"[dim]💾 Saved snapshot to local history: {eco}[/dim]"
+                        )
     else:
         console.print("No results to display.")
 
@@ -1449,23 +1484,25 @@ def trend(
         "-m",
         help="Focus on specific metric (optional)",
     ),
-    archive_dir: Path = typer.Option(
-        project_root / "data" / "archive",
-        "--archive-dir",
-        help="Path to archive directory",
-    ),
     include_latest: bool = typer.Option(
         False,
         "--include-latest",
-        help="Include real-time analysis if package not in archive",
+        help="Include real-time analysis if package not found in history",
+    ),
+    use_remote: bool = typer.Option(
+        True,
+        "--use-remote/--no-remote",
+        help="Load historical data from Cloudflare KV (default: True)",
     ),
 ) -> None:
-    """Display trend analysis for a package across historical snapshots.
+    """Display trend analysis for a package.
 
     This command shows how a package's health score and metrics have changed
-    over time by analyzing data from archived snapshots.
+    over time by analyzing historical data from:
+    1. Cloudflare KV (remote historical cache) - if --use-remote (default)
+    2. Local cache history (~/.cache/oss-sustain-guard/history/)
 
-    If --include-latest is specified and the package is not found in the archive,
+    If --include-latest is specified and the package is not found in history,
     a real-time analysis will be performed to get the current snapshot.
 
     Examples:
@@ -1473,30 +1510,28 @@ def trend(
         oss-sustain-guard trend express --ecosystem javascript
         oss-sustain-guard trend flask --metric "Bus Factor"
         oss-sustain-guard trend newpackage --include-latest
+        oss-sustain-guard trend requests --no-remote  # Use local data only
     """
     console.print("\n[bold cyan]📊 Package Health Trend Analysis[/bold cyan]\n")
 
-    analyzer = TrendAnalyzer(archive_dir=archive_dir)
+    analyzer = TrendAnalyzer(use_remote=use_remote)
 
-    # Check if archive directory exists
-    if not archive_dir.exists():
-        console.print(f"[red]Archive directory not found: {archive_dir}[/red]")
-        console.print(
-            "[dim]Tip: Historical data is stored in data/archive/ directory.[/dim]"
-        )
-        return
-
-    # List available dates
-    available_dates = analyzer.list_available_dates()
+    # List available dates for this ecosystem
+    available_dates = analyzer.list_available_dates(ecosystem)
     if not available_dates:
         console.print(
-            f"[yellow]No historical snapshots found in {archive_dir}[/yellow]"
+            f"[yellow]No historical snapshots found for ecosystem: {ecosystem}[/yellow]"
         )
-        return
+        console.print(
+            "[dim]Tip: Historical data is automatically saved when you run 'oss-sustain-guard check' command.[/dim]"
+        )
+        if not include_latest:
+            return
 
-    console.print(
-        f"[dim]Found {len(available_dates)} snapshots: {', '.join(available_dates)}[/dim]\n"
-    )
+    if available_dates:
+        console.print(
+            f"[dim]Found {len(available_dates)} snapshots: {', '.join(available_dates)}[/dim]\n"
+        )
 
     # Load package history
     history = analyzer.load_package_history(package_name, ecosystem)
@@ -1613,10 +1648,10 @@ def compare(
         "-e",
         help="Package ecosystem (python, javascript, rust, etc.)",
     ),
-    archive_dir: Path = typer.Option(
-        project_root / "data" / "archive",
-        "--archive-dir",
-        help="Path to archive directory",
+    use_remote: bool = typer.Option(
+        True,
+        "--use-remote/--no-remote",
+        help="Load historical data from Cloudflare KV (default: True)",
     ),
 ) -> None:
     """Compare package health between two specific dates.
@@ -1624,20 +1659,28 @@ def compare(
     This command generates a detailed comparison report showing how a package's
     metrics have changed between two snapshots.
 
+    Data sources:
+    1. Cloudflare KV (remote historical cache) - if --use-remote (default)
+    2. Local cache history (~/.cache/oss-sustain-guard/history/)
+
     Examples:
         oss-sustain-guard compare requests 2025-12-11 2025-12-12
         oss-sustain-guard compare express 2025-11-01 2025-12-01 --ecosystem javascript
+        oss-sustain-guard compare requests 2025-11-01 2025-12-01 --no-remote
     """
     console.print("\n[bold cyan]📊 Package Health Comparison Report[/bold cyan]\n")
 
-    analyzer = TrendAnalyzer(archive_dir=archive_dir)
+    analyzer = TrendAnalyzer(use_remote=use_remote)
     reporter = ComparisonReport(analyzer)
 
     # Validate dates
-    available_dates = analyzer.list_available_dates()
+    available_dates = analyzer.list_available_dates(ecosystem)
     if not available_dates:
         console.print(
-            f"[yellow]No historical snapshots found in {archive_dir}[/yellow]"
+            f"[yellow]No historical snapshots found for ecosystem: {ecosystem}[/yellow]"
+        )
+        console.print(
+            "[dim]Tip: Historical data is automatically saved when you run 'oss-sustain-guard check' command.[/dim]"
         )
         return
 
@@ -1658,53 +1701,76 @@ def compare(
 
 @app.command()
 def list_snapshots(
-    archive_dir: Path = typer.Option(
-        project_root / "data" / "archive",
-        "--archive-dir",
-        help="Path to archive directory",
+    ecosystem: str | None = typer.Argument(
+        None,
+        help="Ecosystem to list snapshots for (python, javascript, etc.). If omitted, lists all ecosystems.",
+    ),
+    use_remote: bool = typer.Option(
+        True,
+        "--use-remote/--no-remote",
+        help="Check Cloudflare KV for available dates (default: True)",
     ),
 ) -> None:
-    """List all available snapshot dates in the archive.
+    """List all available snapshot dates.
 
     This command shows all dates for which historical data is available,
     useful for determining valid date ranges for trend analysis.
 
-    Example:
+    Data sources:
+    1. Cloudflare KV (remote historical cache) - if --use-remote (default)
+    2. Local cache history (~/.cache/oss-sustain-guard/history/)
+
+    Examples:
         oss-sustain-guard list-snapshots
+        oss-sustain-guard list-snapshots python
+        oss-sustain-guard list-snapshots javascript --no-remote
     """
     console.print("\n[bold cyan]📅 Available Snapshot Dates[/bold cyan]\n")
 
-    analyzer = TrendAnalyzer(archive_dir=archive_dir)
-    available_dates = analyzer.list_available_dates()
+    # List of all ecosystems to check
+    ecosystems_to_check = [
+        "python",
+        "javascript",
+        "rust",
+        "java",
+        "php",
+        "ruby",
+        "csharp",
+        "go",
+        "kotlin",
+    ]
 
-    if not available_dates:
+    if ecosystem:
+        ecosystems_to_check = [ecosystem]
+
+    # Collect all snapshot dates across ecosystems
+    ecosystem_dates: dict[str, list[str]] = {}
+    for eco in ecosystems_to_check:
+        dates = list_history_dates(eco)
+        if dates:
+            ecosystem_dates[eco] = dates
+
+    if not ecosystem_dates:
+        console.print("[yellow]No historical snapshots found in local cache.[/yellow]")
         console.print(
-            f"[yellow]No historical snapshots found in {archive_dir}[/yellow]"
-        )
-        console.print(
-            "[dim]Snapshots are automatically created by the build process.[/dim]"
+            "[dim]Tip: Historical data is automatically saved when you run 'oss-sustain-guard check' command.[/dim]"
         )
         return
 
     # Display in a table
-    table = Table(title="Available Snapshots")
-    table.add_column("#", justify="right", style="cyan")
-    table.add_column("Date", style="white")
-    table.add_column("Files", justify="right", style="dim")
+    table = Table(title="Available Snapshots by Ecosystem")
+    table.add_column("Ecosystem", style="cyan")
+    table.add_column("Snapshots", justify="right", style="white")
+    table.add_column("Date Range", style="dim")
 
-    for idx, date in enumerate(available_dates, 1):
-        date_dir = archive_dir / date
-        # Count JSON files in the date directory
-        json_files = list(date_dir.glob("*.json"))
-        file_count = len(json_files)
-
-        table.add_row(str(idx), date, str(file_count))
+    total_snapshots = 0
+    for eco, dates in sorted(ecosystem_dates.items()):
+        date_range = f"{dates[0]} to {dates[-1]}" if len(dates) > 1 else dates[0]
+        table.add_row(eco, str(len(dates)), date_range)
+        total_snapshots += len(dates)
 
     console.print(table)
-    console.print(f"\n[dim]Total snapshots: {len(available_dates)}[/dim]")
-    console.print(
-        f"[dim]Date range: {available_dates[0]} to {available_dates[-1]}[/dim]\n"
-    )
+    console.print(f"\n[dim]Total snapshots: {total_snapshots}[/dim]\n")
 
 
 if __name__ == "__main__":

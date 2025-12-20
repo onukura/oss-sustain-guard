@@ -42,21 +42,29 @@ class CloudflareKVClient:
         self.timeout = timeout
         self.verify_ssl = get_verify_ssl()
 
-    def _make_key(self, ecosystem: str, package_name: str) -> str:
+    def _make_key(
+        self, ecosystem: str, package_name: str, date: str | None = None
+    ) -> str:
         """
         Generate cache key.
 
-        Format: {schema_version}:{ecosystem}:{package_name}
-        Example: 2.0:python:requests
+        Format: {schema_version}:{ecosystem}:{package_name}[:{date}]
+        Examples:
+            - 2.0:python:requests (latest data)
+            - 2.0:python:requests:2025-12-20 (historical snapshot)
 
         Args:
             ecosystem: Ecosystem name (python, javascript, etc.).
             package_name: Package name.
+            date: Optional date string in YYYY-MM-DD format for historical data.
 
         Returns:
             Cache key string.
         """
-        return f"{self.schema_version}:{ecosystem}:{package_name}"
+        base_key = f"{self.schema_version}:{ecosystem}:{package_name}"
+        if date:
+            return f"{base_key}:{date}"
+        return base_key
 
     def get(self, ecosystem: str, package_name: str) -> dict[str, Any] | None:
         """
@@ -200,6 +208,117 @@ class CloudflareKVClient:
                 continue
 
         return total_written
+
+    def list_history_dates(self, ecosystem: str, package_name: str) -> list[str] | None:
+        """
+        List available historical snapshot dates for a package.
+
+        Args:
+            ecosystem: Ecosystem name.
+            package_name: Package name.
+
+        Returns:
+            List of date strings (YYYY-MM-DD) in descending order (newest first),
+            or None if error/not found.
+        """
+        url = f"{self.worker_url}/history/{ecosystem}/{package_name}?list"
+
+        try:
+            with httpx.Client(verify=self.verify_ssl) as client:
+                response = client.get(url, timeout=self.timeout)
+
+                if response.status_code == 404:
+                    return None
+
+                response.raise_for_status()
+                data = response.json()
+                return data.get("dates", [])
+
+        except (httpx.HTTPError, json.JSONDecodeError):
+            return None
+
+    def get_history(
+        self,
+        ecosystem: str,
+        package_name: str,
+        from_date: str | None = None,
+        to_date: str | None = None,
+    ) -> dict[str, dict[str, Any]] | None:
+        """
+        Get historical data for a package across multiple dates.
+
+        Args:
+            ecosystem: Ecosystem name.
+            package_name: Package name.
+            from_date: Start date (YYYY-MM-DD), inclusive. Optional.
+            to_date: End date (YYYY-MM-DD), inclusive. Optional.
+
+        Returns:
+            Dictionary mapping dates to package data:
+            {
+                "2025-12-20": {...package data...},
+                "2025-12-19": {...package data...},
+                ...
+            }
+            Returns None if error occurs.
+        """
+        url = f"{self.worker_url}/history/{ecosystem}/{package_name}"
+        params = {}
+        if from_date:
+            params["from"] = from_date
+        if to_date:
+            params["to"] = to_date
+
+        try:
+            with httpx.Client(verify=self.verify_ssl) as client:
+                response = client.get(url, params=params, timeout=self.timeout * 2)
+
+                if response.status_code == 404:
+                    return None
+
+                response.raise_for_status()
+                return response.json()
+
+        except (httpx.HTTPError, json.JSONDecodeError):
+            return None
+
+    def put_with_date(
+        self,
+        ecosystem: str,
+        package_name: str,
+        data: dict[str, Any],
+        date: str,
+        secret: str,
+    ) -> bool:
+        """
+        Store package data with a specific date (historical snapshot).
+
+        Args:
+            ecosystem: Ecosystem name.
+            package_name: Package name.
+            data: Package data to store.
+            date: Date string in YYYY-MM-DD format.
+            secret: Write secret for authentication.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        key = self._make_key(ecosystem, package_name, date)
+        url = f"{self.worker_url}/{key}"
+
+        try:
+            with httpx.Client(verify=self.verify_ssl) as client:
+                response = client.put(
+                    url,
+                    json=data,
+                    headers={"Authorization": f"Bearer {secret}"},
+                    timeout=30,  # Longer timeout for writes
+                )
+                response.raise_for_status()
+                return True
+
+        except httpx.HTTPError:
+            return False
 
 
 def get_default_client() -> CloudflareKVClient:

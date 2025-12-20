@@ -1,4 +1,4 @@
-.PHONY: lint doc-serve test
+.PHONY: lint doc-serve test test-build-db deploy-cf-workers
 
 lint:
 	uv run prek run --all-files
@@ -11,3 +11,6 @@ test:
 
 test-build-db:
 	uv run python builder/build_db.py --ecosystems python --limit 5 --upload-to-cloudflare
+
+deploy-cf-workers:
+	cd cloudflare && wrangler deploy

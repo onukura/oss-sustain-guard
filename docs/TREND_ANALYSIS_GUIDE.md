@@ -6,11 +6,20 @@ OSS Sustain Guard provides powerful time series analysis capabilities to help yo
 
 The time series analysis feature enables you to:
 
-- **Track health score trends** over time
+- **Track health score trends** over time from **Cloudflare KV** (global historical cache) or local sources
 - **Compare snapshots** from different dates
 - **Identify improvement/degradation patterns**
 - **Generate detailed comparison reports**
 - **Monitor specific metrics** across historical data
+
+## 🔄 Data Sources
+
+OSS Sustain Guard loads historical data from multiple sources (in priority order):
+
+1. **Cloudflare KV** (remote historical cache) - Default, provides global access to historical snapshots
+2. **Local cache history** (`~/.cache/oss-sustain-guard/history/`) - Automatically saved when running `check` command
+
+You can control the data source using the `--use-remote/--no-remote` flag on trend commands.
 
 ## 🎯 Use Cases
 
@@ -57,7 +66,15 @@ oss-sustain-guard trend Django --metric "Recent Activity"
 List all available historical snapshot dates:
 
 ```bash
+# List snapshots for default ecosystem (python)
 oss-sustain-guard list-snapshots
+
+# List snapshots for specific ecosystem
+oss-sustain-guard list-snapshots python
+oss-sustain-guard list-snapshots javascript
+
+# Use local data only (skip Cloudflare KV)
+oss-sustain-guard list-snapshots --no-remote
 ```
 
 **Output:**
@@ -80,7 +97,8 @@ Date range: 2025-12-11 to 2025-12-13
 
 **Options:**
 
-- `--archive-dir PATH` - Custom archive directory path (default: `data/archive`)
+- `--use-remote/--no-remote` - Load historical data from Cloudflare KV (default: True)
+- `-e, --ecosystem TEXT` - Ecosystem name (default: python)
 
 ---
 
@@ -101,13 +119,13 @@ oss-sustain-guard trend <PACKAGE_NAME> [OPTIONS]
 - `--ecosystem, -e TEXT` - Package ecosystem (default: `python`)
   - Supported: `python`, `javascript`, `rust`, `java`, `kotlin`, `php`, `ruby`, `csharp`, `go`
 - `--metric, -m TEXT` - Focus on specific metric (optional)
-- `--archive-dir PATH` - Custom archive directory path
-- `--include-latest` - Include real-time analysis if package not in archive (only needed for uncached packages)
+- `--use-remote/--no-remote` - Load historical data from Cloudflare KV (default: True)
+- `--include-latest` - Include real-time analysis if package not in history (requires GITHUB_TOKEN)
 
 **Examples:**
 
 ```bash
-# Basic trend analysis
+# Basic trend analysis (uses Cloudflare KV by default)
 oss-sustain-guard trend requests
 
 # JavaScript package
@@ -116,19 +134,26 @@ oss-sustain-guard trend react --ecosystem javascript
 # Focus on specific metric
 oss-sustain-guard trend Flask --metric "Bus Factor"
 
-# Real-time analysis for packages not in archive
-# Only needed if analyzing packages not in the cache
+# Use local data only (skip Cloudflare KV)
+oss-sustain-guard trend requests --no-remote
+
+# Real-time analysis for packages not in history
 oss-sustain-guard trend new-package --include-latest
 ```
 
-**Behavior when package is not in archive:**
+**Data Source Priority:**
+
+1. **Cloudflare KV** (if `--use-remote`, default) - Globally distributed historical cache
+2. **Local cache history** (`~/.cache/oss-sustain-guard/history/`) - Automatically saved by `check` command
+
+**Behavior when package is not in history:**
 
 - **Without `--include-latest`**: Shows "No historical data found" message with helpful tip
-- **With `--include-latest`**: Attempts real-time GitHub API analysis (only needed for uncached packages)
+- **With `--include-latest`**: Attempts real-time GitHub API analysis
   - Resolves package name to GitHub repository
   - Fetches current health metrics
   - Displays single snapshot (no historical comparison)
-  - Requires `GITHUB_TOKEN` environment variable if analyzing uncached packages
+  - Requires `GITHUB_TOKEN` environment variable
   - Subject to GitHub API rate limits
 
 **Output includes:**
@@ -168,7 +193,7 @@ oss-sustain-guard compare <PACKAGE_NAME> <DATE1> <DATE2> [OPTIONS]
 **Options:**
 
 - `--ecosystem, -e TEXT` - Package ecosystem (default: `python`)
-- `--archive-dir PATH` - Custom archive directory path
+- `--use-remote/--no-remote` - Load historical data from Cloudflare KV (default: True)
 
 **Examples:**
 
@@ -226,37 +251,38 @@ Scores are color-coded for quick assessment:
 
 ## 🗂️ Data Organization
 
-### Archive Structure
+### Data Sources
 
-Historical data is stored in dated snapshots:
+Historical data is accessible from multiple locations:
 
-```shell
-data/
-  archive/
-    2025-12-11/
-      python.json
-      javascript.json
-      rust.json
-      ...
-    2025-12-12/
-      python.json
-      javascript.json
-      rust.json
-      ...
-```
+1. **Cloudflare KV** (Primary, Global)
+   - Globally distributed cache of historical snapshots
+   - Accessible from anywhere without local files
+   - Updated automatically by CI/CD builds
+   - Retention: 90 days (configurable)
+   - Key format: `2.0:python:requests:2025-12-20` (includes date suffix)
+
+2. **Local Cache History** (`~/.cache/oss-sustain-guard/history/`)
+   - Automatically saved when running `check` command
+   - User-specific, persists across runs
+   - Provides fallback when Cloudflare KV is unavailable
 
 ### Snapshot Generation
 
-Snapshots are automatically created by the build process:
+**Cloudflare KV (Primary Method):**
 
-1. **Automated builds** generate snapshots daily/weekly
-2. Each snapshot contains **complete package data** for all ecosystems
-3. Data includes:
-   - Total health score
-   - Individual metric scores
-   - Risk assessments
-   - Funding information
-   - Repository metadata
+Snapshots are automatically uploaded to Cloudflare KV by CI/CD builds:
+
+1. GitHub Actions runs `build_db.py` on schedule or manual trigger
+2. For each analyzed package, two keys are created:
+   - `2.0:python:requests` (latest data, always overwritten)
+   - `2.0:python:requests:2025-12-20` (historical snapshot, date-stamped)
+3. Historical snapshots are retained for 90 days
+4. Users access data via `trend` commands with `--use-remote` (default)
+
+**Local Cache (Automatic):**
+
+When running the `check` command, analysis results are automatically saved to local cache history for future trend analysis.
 
 ---
 
@@ -320,18 +346,6 @@ oss-sustain-guard trend axios --ecosystem javascript
 ---
 
 ## 🔍 Advanced Usage
-
-### Custom Archive Locations
-
-Use custom archive directories:
-
-```bash
-# Use CI/CD archive
-oss-sustain-guard trend Flask --archive-dir /path/to/custom/archive
-
-# List custom archive snapshots
-oss-sustain-guard list-snapshots --archive-dir /path/to/archive
-```
 
 ### Scripting & Automation
 
@@ -503,18 +517,16 @@ When you see declining trends:
 
 ### Q: How often are snapshots created?
 
-A: Snapshots are created automatically by the build process. Check your CI/CD configuration or archive directory to see the frequency.
+A: Snapshots are created automatically by the CI/CD build process and stored in Cloudflare KV with 90-day retention.
 
 ### Q: Can I create custom snapshots?
 
-A: Yes! Run the database builder manually:
+A: Yes! Run the database builder manually to upload custom snapshots to Cloudflare KV:
 
 ```bash
 cd builder
 python build_db.py
 ```
-
-This creates a new snapshot in `data/archive/YYYY-MM-DD/`.
 
 ### Q: What if a package doesn't exist in older snapshots?
 
@@ -522,7 +534,7 @@ A: The trend analysis will only show data from snapshots where the package exist
 
 ### Q: Can I compare non-adjacent dates?
 
-A: Yes! You can compare any two dates in the archive:
+A: Yes! You can compare any two dates available in Cloudflare KV:
 
 ```bash
 oss-sustain-guard compare Flask 2025-01-01 2025-12-01
@@ -536,11 +548,11 @@ A: Trends are based on total score change:
 - **Degrading**: Final score < Initial score - 5
 - **Stable**: Change within ±5 points
 
-### Q: What if a package is not in the archive?
+### Q: What if a package doesn't have historical data?
 
 A: You have two options:
 
-1. **Wait for next snapshot** - The package will appear in future archives once analyzed
+1. **Wait for next snapshot** - The package will appear in Cloudflare KV once analyzed
 2. **Use `--include-latest` flag** - Perform real-time analysis:
 
    ```bash
@@ -552,7 +564,7 @@ A: You have two options:
    - Package must have a GitHub repository
    - Subject to GitHub API rate limits
 
-   **Note**: Real-time analysis provides a single snapshot only. Historical comparison requires archived data.
+   **Note**: Real-time analysis provides a single snapshot only. Historical comparison requires data in Cloudflare KV.
 
 ---
 
@@ -560,7 +572,7 @@ A: You have two options:
 
 ### Issue: "No historical data found"
 
-**Cause**: Package may not exist in archive snapshots
+**Cause**: Package may not exist in Cloudflare KV historical snapshots
 
 **Solution**:
 
@@ -573,7 +585,6 @@ A: You have two options:
    ```
 
 4. Ensure `GITHUB_TOKEN` is set if using real-time analysis
-5. Ensure archive directory contains data
 
 ### Issue: "GITHUB_TOKEN environment variable is required"
 
@@ -597,9 +608,9 @@ Get a token at: <https://github.com/settings/tokens>
 2. Check if package has GitHub repository link in its metadata
 3. Some packages may use non-GitHub hosting (GitLab, Bitbucket) - not currently supported for real-time analysis
 
-### Issue: "Date not found in archive"
+### Issue: "Date not found in historical data"
 
-**Cause**: Specified date doesn't exist in snapshots
+**Cause**: Specified date doesn't exist in Cloudflare KV snapshots
 
 **Solution**: Use `list-snapshots` to see available dates
 

@@ -215,11 +215,11 @@ Both language resolvers and `core.py` make HTTP requests. Patterns:
 
 ### Database Schema
 
-**Primary**: Cloudflare KV with keys `{schema_version}:{ecosystem}:{package_name}` (e.g., `2.0:python:requests`)
+**Primary**: Cloudflare KV with keys `{schema_version}:{ecosystem}:{package_name}[:{date}]` (e.g., `2.0:python:requests` or `2.0:python:requests:2025-12-20`)
 
 **Local cache**: `~/.cache/oss-sustain-guard/{ecosystem}.json` (user-specific)
 
-**Build artifacts**: `data/latest/` and `data/archive/` (CI/CD only, not committed)
+**Build artifacts**: `data/latest/` (CI/CD only, not committed)
 
 ### Cloudflare Worker API Integration
 
@@ -321,9 +321,8 @@ tests/
     test_go.py        # Go modules tests
 data/
   latest/             # Build artifacts: current snapshot (not committed to git)
-  archive/            # Build artifacts: historical snapshots by date (not committed)
 builder/
-  build_db.py      # GitHub Actions job to generate database.json files
+  build_db.py      # GitHub Actions job to generate database.json files and upload to Cloudflare KV
 ```
 
 ## Key Dependencies

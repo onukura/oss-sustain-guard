@@ -4,17 +4,22 @@
  * Provides shared cache for package sustainability analysis results.
  *
  * Endpoints:
- *   GET  /{key}        - Get single package data
- *   POST /batch        - Get multiple packages (JSON body: {"keys": [...]})
- *   PUT  /{key}        - Store single package (requires auth)
- *   PUT  /batch        - Store multiple packages (requires auth)
+ *   GET  /{key}              - Get single package data
+ *   POST /batch              - Get multiple packages (JSON body: {"keys": [...]})
+ *   PUT  /{key}              - Store single package (requires auth)
+ *   PUT  /batch              - Store multiple packages (requires auth)
+ *   GET  /history/{ecosystem}/{package} - List available dates for package
+ *   GET  /history/{ecosystem}/{package}?from=YYYY-MM-DD&to=YYYY-MM-DD - Get historical data
  *
- * Key format: {schema_version}:{ecosystem}:{package_name}
- * Example: 2.0:python:requests
+ * Key format: {schema_version}:{ecosystem}:{package_name}[:{date}]
+ * Examples:
+ *   - 2.0:python:requests (latest data)
+ *   - 2.0:python:requests:2025-12-20 (historical snapshot)
  */
 
 const CACHE_TTL = 3600; // 1 hour CDN cache
 const KV_TTL = 31536000; // 365 days
+const HISTORY_RETENTION_DAYS = 90; // Keep historical data for 90 days
 const RATE_LIMIT_PER_MIN = 100;
 const RATE_LIMIT_WINDOW = 60; // seconds
 const MAX_KEY_LENGTH = 256; // Maximum key length
@@ -26,11 +31,12 @@ const VALID_ECOSYSTEMS = new Set([
   'python', 'javascript', 'rust', 'java', 'php', 'ruby', 'csharp', 'go', 'kotlin'
 ]);
 
-// Key format regex: {version}:{ecosystem}:{package_name}
+// Key format regex: {version}:{ecosystem}:{package_name}[:{date}]
 // Package names can include: letters, numbers, @, /, _, -, ., :
+// Optional date suffix format: YYYY-MM-DD
 // Note: Java packages use format like "com.google.guava:guava" (contains colons)
 // Note: npm scoped packages use format like "@types/node"
-const KEY_FORMAT_REGEX = /^[\d.]+:[a-z]+:[a-zA-Z0-9@/_.:%-]+$/;
+const KEY_FORMAT_REGEX = /^[\d.]+:[a-z]+:[a-zA-Z0-9@/_.:%-]+(:\d{4}-\d{2}-\d{2})?$/;
 
 export default {
   async fetch(request, env, ctx) {
@@ -88,6 +94,10 @@ export default {
 
     try {
       // Route handling
+      if (request.method === 'GET' && path.startsWith('/history/')) {
+        return await handleHistoryGet(request, env, ctx, securityHeaders);
+      }
+
       if (request.method === 'GET' && path !== '/batch') {
         return await handleGet(request, env, ctx, securityHeaders);
       }
@@ -143,8 +153,9 @@ async function checkRateLimit(kv, key, weight, ctx) {
 }
 
 /**
- * Validate key format: {version}:{ecosystem}:{package_name}
+ * Validate key format: {version}:{ecosystem}:{package_name}[:{date}]
  * Package name itself may contain colons (e.g., Java "com.google.guava:guava")
+ * Optional date suffix in YYYY-MM-DD format
  */
 function validateKey(key) {
   if (!key || key.length > MAX_KEY_LENGTH) {
@@ -156,12 +167,12 @@ function validateKey(key) {
   }
 
   // Split only on first two colons to extract version and ecosystem
-  // Format: {version}:{ecosystem}:{package_name_which_may_contain_colons}
+  // Format: {version}:{ecosystem}:{package_name_which_may_contain_colons}[:{date}]
   const firstColon = key.indexOf(':');
   const secondColon = key.indexOf(':', firstColon + 1);
 
   if (firstColon === -1 || secondColon === -1) {
-    return { valid: false, error: 'Key must have format version:ecosystem:package' };
+    return { valid: false, error: 'Key must have format version:ecosystem:package[:date]' };
   }
 
   const ecosystem = key.substring(firstColon + 1, secondColon);
@@ -169,7 +180,132 @@ function validateKey(key) {
     return { valid: false, error: `Invalid ecosystem: ${ecosystem}` };
   }
 
+  // Check if date suffix is present and valid
+  const remainder = key.substring(secondColon + 1);
+  const dateSuffixMatch = remainder.match(/:(\d{4}-\d{2}-\d{2})$/);
+  if (dateSuffixMatch) {
+    // Validate date format
+    const dateStr = dateSuffixMatch[1];
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return { valid: false, error: 'Invalid date format' };
+    }
+  }
+
   return { valid: true };
+}
+
+/**
+ * GET /history/{ecosystem}/{package} - Get historical data
+ * Query params:
+ *   - from: Start date (YYYY-MM-DD) - optional
+ *   - to: End date (YYYY-MM-DD) - optional
+ *   - list: If present, only return list of available dates
+ *
+ * Returns:
+ *   - If list=true: { "dates": ["2025-12-20", "2025-12-19", ...] }
+ *   - Otherwise: { "2025-12-20": {...}, "2025-12-19": {...}, ... }
+ */
+async function handleHistoryGet(request, env, ctx, securityHeaders) {
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split('/').filter(p => p);
+
+  // Expected path: /history/{ecosystem}/{package}
+  if (pathParts.length < 3) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid path. Expected: /history/{ecosystem}/{package}' }),
+      { status: 400, headers: { ...securityHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const ecosystem = pathParts[1];
+  const packageName = decodeURIComponent(pathParts.slice(2).join('/'));
+
+  // Validate ecosystem
+  if (!VALID_ECOSYSTEMS.has(ecosystem)) {
+    return new Response(
+      JSON.stringify({ error: `Invalid ecosystem: ${ecosystem}` }),
+      { status: 400, headers: { ...securityHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Parse query parameters
+  const fromDate = url.searchParams.get('from');
+  const toDate = url.searchParams.get('to');
+  const listOnly = url.searchParams.has('list');
+
+  // Get schema version (assume 2.0 for now, could be configurable)
+  const schemaVersion = '2.0';
+  const baseKey = `${schemaVersion}:${ecosystem}:${packageName}`;
+
+  try {
+    // List all keys with this prefix
+    const listResult = await env.CACHE_KV.list({ prefix: `${baseKey}:` });
+
+    // Extract dates from keys
+    const dateRegex = /:(\d{4}-\d{2}-\d{2})$/;
+    const availableDates = listResult.keys
+      .map(item => {
+        const match = item.name.match(dateRegex);
+        return match ? match[1] : null;
+      })
+      .filter(date => date !== null)
+      .sort()
+      .reverse(); // Most recent first
+
+    // Filter by date range if specified
+    let filteredDates = availableDates;
+    if (fromDate || toDate) {
+      filteredDates = availableDates.filter(date => {
+        if (fromDate && date < fromDate) return false;
+        if (toDate && date > toDate) return false;
+        return true;
+      });
+    }
+
+    // If list only, return dates
+    if (listOnly) {
+      return new Response(
+        JSON.stringify({ dates: filteredDates }),
+        {
+          headers: {
+            ...securityHeaders,
+            'Content-Type': 'application/json',
+            'Cache-Control': `public, max-age=${CACHE_TTL}`
+          }
+        }
+      );
+    }
+
+    // Fetch data for all filtered dates
+    const historyData = {};
+    await Promise.all(
+      filteredDates.map(async (date) => {
+        const key = `${baseKey}:${date}`;
+        const value = await env.CACHE_KV.get(key);
+        if (value) {
+          historyData[date] = JSON.parse(value);
+        }
+      })
+    );
+
+    return new Response(
+      JSON.stringify(historyData),
+      {
+        headers: {
+          ...securityHeaders,
+          'Content-Type': 'application/json',
+          'Cache-Control': `public, max-age=${CACHE_TTL}`
+        }
+      }
+    );
+  } catch (error) {
+    console.error('History fetch error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch history' }),
+      { status: 500, headers: { ...securityHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 }
 
 /**

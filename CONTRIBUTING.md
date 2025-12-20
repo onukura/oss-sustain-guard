@@ -357,14 +357,10 @@ builder/
   fallback_packages.py           # Fallback package definitions
 
 data/
-  latest/                        # Current snapshot
+  latest/                        # Current snapshot (build artifacts, not committed)
     python.json
     javascript.json
     ...
-  archive/                       # Historical snapshots
-    {YYYY-MM-DD}/
-      python.json
-      ...
 
 tests/
   resolvers/                     # Resolver unit tests

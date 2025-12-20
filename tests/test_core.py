@@ -1320,3 +1320,1127 @@ def test_category_scores_consistent_across_profiles():
 
     for profile_data in comparison.values():
         assert profile_data["category_scores"] == category_scores
+
+
+# --- Tests for _query_librariesio_api ---
+
+
+@patch.dict("os.environ", {}, clear=True)
+def test_query_librariesio_api_no_api_key():
+    """Test that _query_librariesio_api returns None when API key is not set."""
+    from oss_sustain_guard.core import _query_librariesio_api
+
+    result = _query_librariesio_api("pypi", "requests")
+    assert result is None
+
+
+@patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
+@patch("httpx.Client.get")
+def test_query_librariesio_api_success(mock_get):
+    """Test successful Libraries.io API query."""
+    from oss_sustain_guard.core import _query_librariesio_api
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "name": "requests",
+        "dependents_count": 1000,
+    }
+    mock_get.return_value = mock_response
+
+    result = _query_librariesio_api("pypi", "requests")
+
+    assert result is not None
+    assert result["name"] == "requests"
+    assert result["dependents_count"] == 1000
+    mock_get.assert_called_once()
+
+
+@patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
+@patch("httpx.Client.get")
+def test_query_librariesio_api_not_found(mock_get):
+    """Test Libraries.io API returns None for 404."""
+    from oss_sustain_guard.core import _query_librariesio_api
+
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+    mock_get.return_value = mock_response
+
+    result = _query_librariesio_api("pypi", "nonexistent-package")
+    assert result is None
+
+
+@patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
+@patch("httpx.Client.get")
+def test_query_librariesio_api_request_error(mock_get):
+    """Test Libraries.io API handles request errors."""
+    from oss_sustain_guard.core import _query_librariesio_api
+
+    mock_get.side_effect = httpx.RequestError("Network error")
+
+    result = _query_librariesio_api("pypi", "requests")
+    assert result is None
+
+
+# --- Tests for check_maintainer_drain ---
+
+
+def test_check_maintainer_drain_no_default_branch():
+    """Test maintainer drain when no default branch data."""
+    from oss_sustain_guard.core import check_maintainer_drain
+
+    repo_data = {}
+    result = check_maintainer_drain(repo_data)
+
+    assert result.name == "Maintainer Retention"
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "not available" in result.message
+
+
+def test_check_maintainer_drain_insufficient_history():
+    """Test maintainer drain with insufficient commit history."""
+    from oss_sustain_guard.core import check_maintainer_drain
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {
+                "history": {
+                    "edges": [
+                        {"node": {"author": {"user": {"login": "user1"}}}}
+                        for _ in range(30)  # Less than 50
+                    ]
+                }
+            }
+        }
+    }
+
+    result = check_maintainer_drain(repo_data)
+    assert result.score == result.max_score
+    assert "Insufficient" in result.message
+
+
+def test_check_maintainer_drain_critical_reduction():
+    """Test maintainer drain with 90%+ reduction (high risk)."""
+    from oss_sustain_guard.core import check_maintainer_drain
+
+    # Create history with 10 authors in older commits, 1 in recent (90% reduction)
+    # Need at least 50 commits total
+    older_authors = [f"user{i}" for i in range(10)]
+    recent_author = "user0"
+
+    # Generate exactly 50 commits: 25 recent + 25 older
+    recent_commits = [
+        {"node": {"author": {"user": {"login": recent_author}}}} for _ in range(25)
+    ]
+
+    # Older commits: distribute 25 commits among 10 different authors
+    older_commits = []
+    for i in range(25):
+        author = older_authors[i % 10]
+        older_commits.append({"node": {"author": {"user": {"login": author}}}})
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {"history": {"edges": recent_commits + older_commits}}
+        }
+    }
+
+    result = check_maintainer_drain(repo_data)
+    # 90% reduction (1/10) results in High risk with score 3
+    assert result.score == 3
+    assert result.risk == "High"
+    assert "reduction" in result.message.lower()
+
+
+def test_check_maintainer_drain_stable():
+    """Test maintainer drain with stable contributor count."""
+    from oss_sustain_guard.core import check_maintainer_drain
+
+    authors = [f"user{i}" for i in range(5)]
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {
+                "history": {
+                    "edges": [
+                        {"node": {"author": {"user": {"login": author}}}}
+                        for author in authors
+                        for _ in range(10)
+                    ]
+                }
+            }
+        }
+    }
+
+    result = check_maintainer_drain(repo_data)
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "Stable" in result.message
+
+
+def test_check_maintainer_drain_excludes_bots():
+    """Test that bot accounts are excluded from drain calculation."""
+    from oss_sustain_guard.core import check_maintainer_drain
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {
+                "history": {
+                    "edges": [
+                        # Recent: 2 humans + bots
+                        *[
+                            {"node": {"author": {"user": {"login": "user1"}}}}
+                            for _ in range(10)
+                        ],
+                        *[
+                            {"node": {"author": {"user": {"login": "user2"}}}}
+                            for _ in range(10)
+                        ],
+                        *[
+                            {"node": {"author": {"user": {"login": "dependabot[bot]"}}}}
+                            for _ in range(5)
+                        ],
+                        # Older: 2 humans + bots
+                        *[
+                            {"node": {"author": {"user": {"login": "user1"}}}}
+                            for _ in range(10)
+                        ],
+                        *[
+                            {"node": {"author": {"user": {"login": "user2"}}}}
+                            for _ in range(10)
+                        ],
+                        *[
+                            {
+                                "node": {
+                                    "author": {"user": {"login": "github-actions[bot]"}}
+                                }
+                            }
+                            for _ in range(5)
+                        ],
+                    ]
+                }
+            }
+        }
+    }
+
+    result = check_maintainer_drain(repo_data)
+    # Both recent and older have 2 human contributors, so should be stable
+    assert result.score == result.max_score
+    assert result.risk == "None"
+
+
+# --- Tests for check_zombie_status ---
+
+
+def test_check_zombie_status_archived():
+    """Test zombie status for archived repository."""
+    from oss_sustain_guard.core import check_zombie_status
+
+    repo_data = {"isArchived": True}
+    result = check_zombie_status(repo_data)
+
+    assert result.name == "Recent Activity"
+    assert result.score == 10
+    assert result.risk == "Medium"
+    assert "archived" in result.message.lower()
+
+
+def test_check_zombie_status_no_pushed_at():
+    """Test zombie status when pushedAt is not available."""
+    from oss_sustain_guard.core import check_zombie_status
+
+    repo_data = {"isArchived": False}
+    result = check_zombie_status(repo_data)
+
+    assert result.score == 0
+    assert result.risk == "High"
+    assert "not available" in result.message
+
+
+def test_check_zombie_status_critical_inactive():
+    """Test zombie status for 2+ years of inactivity (critical)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_zombie_status
+
+    old_date = (datetime.now(timezone.utc) - timedelta(days=800)).isoformat()
+    repo_data = {"isArchived": False, "pushedAt": old_date}
+
+    result = check_zombie_status(repo_data)
+    assert result.score == 0
+    assert result.risk == "Critical"
+    assert "2+ years" in result.message
+
+
+def test_check_zombie_status_high_inactive():
+    """Test zombie status for 1+ year of inactivity (high)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_zombie_status
+
+    old_date = (datetime.now(timezone.utc) - timedelta(days=400)).isoformat()
+    repo_data = {"isArchived": False, "pushedAt": old_date}
+
+    result = check_zombie_status(repo_data)
+    assert result.score == 5
+    assert result.risk == "High"
+    assert "1+ year" in result.message
+
+
+def test_check_zombie_status_medium_inactive():
+    """Test zombie status for 6+ months of inactivity (medium)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_zombie_status
+
+    old_date = (datetime.now(timezone.utc) - timedelta(days=200)).isoformat()
+    repo_data = {"isArchived": False, "pushedAt": old_date}
+
+    result = check_zombie_status(repo_data)
+    assert result.score == 10
+    assert result.risk == "Medium"
+
+
+def test_check_zombie_status_recently_active():
+    """Test zombie status for recently active repository."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_zombie_status
+
+    recent_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    repo_data = {"isArchived": False, "pushedAt": recent_date}
+
+    result = check_zombie_status(repo_data)
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "Recently active" in result.message
+
+
+# --- Tests for check_merge_velocity ---
+
+
+def test_check_merge_velocity_no_pull_requests():
+    """Test merge velocity when no pull requests exist."""
+    from oss_sustain_guard.core import check_merge_velocity
+
+    repo_data = {"pullRequests": {"edges": []}}
+    result = check_merge_velocity(repo_data)
+
+    # Check that a result is returned with proper structure
+    assert result.score == result.max_score
+    assert (
+        "No merged PRs" in result.message
+        or "Insufficient" in result.message
+        or "available" in result.message
+    )
+
+
+def test_check_merge_velocity_fast():
+    """Test merge velocity with fast turnaround (< 7 days)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_merge_velocity
+
+    now = datetime.now(timezone.utc)
+    prs = [
+        {
+            "node": {
+                "createdAt": (now - timedelta(days=5)).isoformat(),
+                "mergedAt": (now - timedelta(days=3)).isoformat(),
+            }
+        }
+        for _ in range(10)
+    ]
+
+    repo_data = {"pullRequests": {"edges": prs}}
+    result = check_merge_velocity(repo_data)
+
+    assert result.score == result.max_score
+    assert result.risk == "None"
+
+
+def test_check_merge_velocity_slow():
+    """Test merge velocity with slow turnaround (> 30 days)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_merge_velocity
+
+    now = datetime.now(timezone.utc)
+    prs = [
+        {
+            "node": {
+                "createdAt": (now - timedelta(days=50)).isoformat(),
+                "mergedAt": (now - timedelta(days=10)).isoformat(),
+            }
+        }
+        for _ in range(10)
+    ]
+
+    repo_data = {"pullRequests": {"edges": prs}}
+    result = check_merge_velocity(repo_data)
+
+    assert result.score < result.max_score
+    assert result.risk in ["High", "Critical", "Medium"]
+
+
+# --- Tests for check_ci_status ---
+
+
+def test_check_ci_status_no_default_branch():
+    """Test CI status when no default branch data."""
+    from oss_sustain_guard.core import check_ci_status
+
+    repo_data = {}
+    result = check_ci_status(repo_data)
+
+    assert result.name == "Build Health"
+    assert result.score == 0
+    assert result.risk == "High"
+
+
+def test_check_ci_status_archived():
+    """Test CI status for archived repository."""
+    from oss_sustain_guard.core import check_ci_status
+
+    repo_data = {"isArchived": True}
+    result = check_ci_status(repo_data)
+
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "archived" in result.message.lower()
+
+
+def test_check_ci_status_no_ci():
+    """Test CI status when no CI configuration detected."""
+    from oss_sustain_guard.core import check_ci_status
+
+    repo_data = {
+        "isArchived": False,
+        "defaultBranchRef": {"target": {"checkSuites": {"nodes": []}}},
+    }
+    result = check_ci_status(repo_data)
+
+    assert result.score == 0
+    assert result.risk == "High"
+    assert "No CI" in result.message
+
+
+def test_check_ci_status_success():
+    """Test CI status with successful build."""
+    from oss_sustain_guard.core import check_ci_status
+
+    repo_data = {
+        "isArchived": False,
+        "defaultBranchRef": {
+            "target": {
+                "checkSuites": {
+                    "nodes": [{"conclusion": "SUCCESS", "status": "COMPLETED"}]
+                }
+            }
+        },
+    }
+    result = check_ci_status(repo_data)
+
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "passed" in result.message.lower()
+
+
+def test_check_ci_status_failure():
+    """Test CI status with failed build."""
+    from oss_sustain_guard.core import check_ci_status
+
+    repo_data = {
+        "isArchived": False,
+        "defaultBranchRef": {
+            "target": {
+                "checkSuites": {
+                    "nodes": [{"conclusion": "FAILURE", "status": "COMPLETED"}]
+                }
+            }
+        },
+    }
+    result = check_ci_status(repo_data)
+
+    assert result.score == 0
+    assert result.risk == "Medium"
+    assert "failed" in result.message.lower()
+
+
+def test_check_ci_status_in_progress():
+    """Test CI status with in-progress build."""
+    from oss_sustain_guard.core import check_ci_status
+
+    repo_data = {
+        "isArchived": False,
+        "defaultBranchRef": {
+            "target": {
+                "checkSuites": {
+                    "nodes": [{"conclusion": None, "status": "IN_PROGRESS"}]
+                }
+            }
+        },
+    }
+    result = check_ci_status(repo_data)
+
+    assert result.score == 3
+    assert result.risk == "Low"
+    assert "progress" in result.message.lower()
+
+
+# --- Tests for check_release_cadence ---
+
+
+def test_check_release_cadence_no_releases():
+    """Test release cadence when no releases exist."""
+    from oss_sustain_guard.core import check_release_cadence
+
+    repo_data = {"releases": {"edges": []}, "isArchived": False}
+    result = check_release_cadence(repo_data)
+
+    assert result.name == "Release Rhythm"
+    assert result.score == 0
+    assert result.risk == "High"
+    assert "No releases" in result.message
+
+
+def test_check_release_cadence_archived_no_releases():
+    """Test release cadence for archived repo with no releases."""
+    from oss_sustain_guard.core import check_release_cadence
+
+    repo_data = {"releases": {"edges": []}, "isArchived": True}
+    result = check_release_cadence(repo_data)
+
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "Archived" in result.message
+
+
+def test_check_release_cadence_recent():
+    """Test release cadence with recent release (< 3 months)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_release_cadence
+
+    recent_date = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
+    repo_data = {
+        "releases": {
+            "edges": [
+                {
+                    "node": {
+                        "publishedAt": recent_date,
+                        "tagName": "v1.2.3",
+                    }
+                }
+            ]
+        },
+        "isArchived": False,
+    }
+
+    result = check_release_cadence(repo_data)
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "Active" in result.message
+
+
+def test_check_release_cadence_moderate():
+    """Test release cadence with 3-6 months since release."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_release_cadence
+
+    old_date = (datetime.now(timezone.utc) - timedelta(days=120)).isoformat()
+    repo_data = {
+        "releases": {
+            "edges": [
+                {
+                    "node": {
+                        "publishedAt": old_date,
+                        "tagName": "v1.0.0",
+                    }
+                }
+            ]
+        },
+        "isArchived": False,
+    }
+
+    result = check_release_cadence(repo_data)
+    assert result.score == 7
+    assert result.risk == "Low"
+    assert "Moderate" in result.message
+
+
+def test_check_release_cadence_old():
+    """Test release cadence with > 12 months since release."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_release_cadence
+
+    old_date = (datetime.now(timezone.utc) - timedelta(days=400)).isoformat()
+    repo_data = {
+        "releases": {
+            "edges": [
+                {
+                    "node": {
+                        "publishedAt": old_date,
+                        "tagName": "v0.1.0",
+                    }
+                }
+            ]
+        },
+        "isArchived": False,
+    }
+
+    result = check_release_cadence(repo_data)
+    assert result.score == 0
+    assert result.risk == "High"
+
+
+# --- Tests for check_security_posture ---
+
+
+def test_check_security_posture_excellent():
+    """Test security posture with policy and no alerts."""
+    from oss_sustain_guard.core import check_security_posture
+
+    repo_data = {
+        "isSecurityPolicyEnabled": True,
+        "vulnerabilityAlerts": {"edges": []},
+    }
+    result = check_security_posture(repo_data)
+
+    assert result.name == "Security Signals"
+    assert result.score == result.max_score
+    assert result.risk == "None"
+
+
+def test_check_security_posture_critical_alerts():
+    """Test security posture with critical unresolved alerts."""
+    from oss_sustain_guard.core import check_security_posture
+
+    repo_data = {
+        "isSecurityPolicyEnabled": True,
+        "vulnerabilityAlerts": {
+            "edges": [
+                {
+                    "node": {
+                        "dismissedAt": None,
+                        "securityVulnerability": {"severity": "CRITICAL"},
+                    }
+                }
+            ]
+        },
+    }
+    result = check_security_posture(repo_data)
+
+    assert result.score == 0
+    assert result.risk == "Critical"
+    assert "CRITICAL" in result.message or "vulnerability" in result.message.lower()
+
+
+def test_check_security_posture_dismissed_alerts():
+    """Test security posture with dismissed alerts."""
+    from oss_sustain_guard.core import check_security_posture
+
+    repo_data = {
+        "isSecurityPolicyEnabled": True,
+        "vulnerabilityAlerts": {
+            "edges": [
+                {
+                    "node": {
+                        "dismissedAt": "2024-01-01T00:00:00Z",
+                        "securityVulnerability": {"severity": "CRITICAL"},
+                    }
+                }
+            ]
+        },
+    }
+    result = check_security_posture(repo_data)
+
+    # Dismissed alerts should not count against the score
+    assert result.score == result.max_score
+    assert result.risk == "None"
+
+
+def test_check_security_posture_no_policy():
+    """Test security posture with no security policy."""
+    from oss_sustain_guard.core import check_security_posture
+
+    repo_data = {
+        "isSecurityPolicyEnabled": False,
+        "vulnerabilityAlerts": {"edges": []},
+    }
+    result = check_security_posture(repo_data)
+
+    assert result.score == 8
+    assert "No security policy" in result.message or "Moderate" in result.message
+
+
+# --- Tests for check_community_health ---
+
+
+def test_check_community_health_no_issues():
+    """Test community health when no open issues."""
+    from oss_sustain_guard.core import check_community_health
+
+    repo_data = {"issues": {"edges": []}}
+    result = check_community_health(repo_data)
+
+    assert result.name == "Issue Responsiveness"
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "No open issues" in result.message
+
+
+def test_check_community_health_excellent():
+    """Test community health with fast response time (<24h)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_community_health
+
+    now = datetime.now(timezone.utc)
+    issues = [
+        {
+            "node": {
+                "createdAt": (now - timedelta(hours=48)).isoformat(),
+                "comments": {
+                    "edges": [
+                        {"node": {"createdAt": (now - timedelta(hours=46)).isoformat()}}
+                    ]
+                },
+            }
+        }
+        for _ in range(5)
+    ]
+
+    repo_data = {"issues": {"edges": issues}}
+    result = check_community_health(repo_data)
+
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "Excellent" in result.message
+
+
+def test_check_community_health_slow():
+    """Test community health with slow response time (>30d)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_community_health
+
+    now = datetime.now(timezone.utc)
+    issues = [
+        {
+            "node": {
+                "createdAt": (now - timedelta(days=60)).isoformat(),
+                "comments": {
+                    "edges": [
+                        {"node": {"createdAt": (now - timedelta(days=25)).isoformat()}}
+                    ]
+                },
+            }
+        }
+        for _ in range(5)
+    ]
+
+    repo_data = {"issues": {"edges": issues}}
+    result = check_community_health(repo_data)
+
+    assert result.score == 0
+    assert result.risk == "High"
+
+
+def test_check_community_health_no_comments():
+    """Test community health when issues have no comments."""
+    from datetime import datetime, timezone
+
+    from oss_sustain_guard.core import check_community_health
+
+    now = datetime.now(timezone.utc)
+    issues = [
+        {
+            "node": {
+                "createdAt": now.isoformat(),
+                "comments": {"edges": []},
+            }
+        }
+        for _ in range(5)
+    ]
+
+    repo_data = {"issues": {"edges": issues}}
+    result = check_community_health(repo_data)
+
+    assert result.score == 2
+    assert result.risk == "Medium"
+    assert "Unable to assess" in result.message
+
+
+# --- Tests for check_fork_activity ---
+
+
+def test_check_fork_activity_no_forks():
+    """Test fork activity when no forks exist."""
+    from oss_sustain_guard.core import check_fork_activity
+
+    repo_data = {"forkCount": 0, "forks": {"edges": []}}
+    result = check_fork_activity(repo_data)
+
+    assert result.name == "Active Fork Analysis"
+    assert result.score == 0
+    assert result.risk == "Low"
+    assert "No forks" in result.message
+
+
+def test_check_fork_activity_healthy_large():
+    """Test fork activity with healthy large ecosystem (>100 forks, low active ratio)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_fork_activity
+
+    now = datetime.now(timezone.utc)
+    old_date = (now - timedelta(days=200)).isoformat()
+
+    # Simulate 20 forks in sample, 2 active (10% active ratio)
+    forks = [
+        {
+            "node": {
+                "createdAt": old_date,
+                "pushedAt": old_date,
+                "defaultBranchRef": {
+                    "target": {
+                        "history": {"edges": [{"node": {"committedDate": old_date}}]}
+                    }
+                },
+            }
+        }
+        for _ in range(18)
+    ]
+
+    # Add 2 active forks
+    recent_date = (now - timedelta(days=30)).isoformat()
+    forks.extend(
+        [
+            {
+                "node": {
+                    "createdAt": recent_date,
+                    "pushedAt": recent_date,
+                    "defaultBranchRef": {
+                        "target": {
+                            "history": {
+                                "edges": [{"node": {"committedDate": recent_date}}]
+                            }
+                        }
+                    },
+                }
+            }
+            for _ in range(2)
+        ]
+    )
+
+    repo_data = {"forkCount": 150, "forks": {"edges": forks}}
+    result = check_fork_activity(repo_data)
+
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "Excellent" in result.message or "Healthy" in result.message
+
+
+def test_check_fork_activity_high_divergence_risk():
+    """Test fork activity with high divergence risk (>40% active)."""
+    from datetime import datetime, timedelta, timezone
+
+    from oss_sustain_guard.core import check_fork_activity
+
+    now = datetime.now(timezone.utc)
+    recent_date = (now - timedelta(days=30)).isoformat()
+
+    # All forks are active (100% active ratio)
+    forks = [
+        {
+            "node": {
+                "createdAt": recent_date,
+                "pushedAt": recent_date,
+                "defaultBranchRef": {
+                    "target": {
+                        "history": {"edges": [{"node": {"committedDate": recent_date}}]}
+                    }
+                },
+            }
+        }
+        for _ in range(20)
+    ]
+
+    repo_data = {"forkCount": 150, "forks": {"edges": forks}}
+    result = check_fork_activity(repo_data)
+
+    assert result.score <= 2
+    assert result.risk in ["Medium", "Low"]
+    assert "Needs attention" in result.message or "divergence" in result.message.lower()
+
+
+# --- Tests for check_license_clarity ---
+
+
+def test_check_license_clarity_no_license():
+    """Test license clarity when no license detected."""
+    from oss_sustain_guard.core import check_license_clarity
+
+    repo_data = {}
+    result = check_license_clarity(repo_data)
+
+    assert result.name == "License Clarity"
+    assert result.score == 0
+    assert result.risk == "High"
+    assert "No license" in result.message
+
+
+def test_check_license_clarity_osi_approved():
+    """Test license clarity with OSI-approved license."""
+    from oss_sustain_guard.core import check_license_clarity
+
+    repo_data = {
+        "licenseInfo": {
+            "name": "MIT License",
+            "spdxId": "MIT",
+            "url": "https://opensource.org/licenses/MIT",
+        }
+    }
+    result = check_license_clarity(repo_data)
+
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "OSI-approved" in result.message or "Excellent" in result.message
+
+
+def test_check_license_clarity_recognized():
+    """Test license clarity with recognized but non-OSI license."""
+    from oss_sustain_guard.core import check_license_clarity
+
+    repo_data = {
+        "licenseInfo": {
+            "name": "Custom License",
+            "spdxId": "CUSTOM-1.0",
+            "url": "https://example.com/license",
+        }
+    }
+    result = check_license_clarity(repo_data)
+
+    assert result.score == 3
+    assert result.risk == "Low"
+    assert "Good" in result.message
+
+
+def test_check_license_clarity_unknown():
+    """Test license clarity with unrecognized license."""
+    from oss_sustain_guard.core import check_license_clarity
+
+    repo_data = {
+        "licenseInfo": {
+            "name": "Unknown License",
+            "spdxId": None,
+        }
+    }
+    result = check_license_clarity(repo_data)
+
+    assert result.score == 2
+    assert result.risk == "Medium"
+    assert "not recognized" in result.message
+
+
+# --- Tests for check_dependents_count ---
+
+
+@patch.dict("os.environ", {}, clear=True)
+def test_check_dependents_count_no_api_key():
+    """Test dependents count returns None when API key is not set."""
+    from oss_sustain_guard.core import check_dependents_count
+
+    result = check_dependents_count(
+        "https://github.com/test/repo", "pypi", "test-package"
+    )
+    assert result is None
+
+
+@patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
+@patch("oss_sustain_guard.core._query_librariesio_api")
+def test_check_dependents_count_critical_infrastructure(mock_api):
+    """Test dependents count for critical infrastructure (10000+ dependents)."""
+    from oss_sustain_guard.core import check_dependents_count
+
+    mock_api.return_value = {
+        "dependents_count": 15000,
+        "dependent_repos_count": 5000,
+    }
+
+    result = check_dependents_count("https://github.com/test/repo", "pypi", "requests")
+    assert result is not None
+    assert result.name == "Downstream Dependents"
+    assert result.score == result.max_score
+    assert result.risk == "None"
+    assert "Critical infrastructure" in result.message
+
+
+@patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
+@patch("oss_sustain_guard.core._query_librariesio_api")
+def test_check_dependents_count_no_dependents(mock_api):
+    """Test dependents count with no dependents."""
+    from oss_sustain_guard.core import check_dependents_count
+
+    mock_api.return_value = {
+        "dependents_count": 0,
+        "dependent_repos_count": 0,
+    }
+
+    result = check_dependents_count(
+        "https://github.com/test/repo", "pypi", "new-package"
+    )
+    assert result is not None
+    assert result.score == 0
+    assert result.risk == "Low"
+    assert "No downstream" in result.message
+
+
+@patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
+@patch("oss_sustain_guard.core._query_librariesio_api")
+def test_check_dependents_count_package_not_found(mock_api):
+    """Test dependents count when package not found."""
+    from oss_sustain_guard.core import check_dependents_count
+
+    mock_api.return_value = None
+
+    result = check_dependents_count(
+        "https://github.com/test/repo", "pypi", "nonexistent"
+    )
+    assert result is not None
+    assert result.score == 0
+    assert "not found" in result.message
+
+
+def test_check_dependents_count_no_platform():
+    """Test dependents count returns None when platform not provided."""
+    from oss_sustain_guard.core import check_dependents_count
+
+    result = check_dependents_count("https://github.com/test/repo", None, "package")
+    assert result is None
+
+
+# --- Tests for extract_signals ---
+
+
+def test_extract_signals_basic():
+    """Test extract_signals with basic metrics and repo data."""
+    from oss_sustain_guard.core import Metric, extract_signals
+
+    metrics = [
+        Metric("Funding Signals", 10, 10, "Test", "None"),
+        Metric("Recent Activity", 20, 20, "Test", "None"),
+    ]
+
+    repo_data = {
+        "fundingLinks": [
+            {"platform": "github", "url": "https://github.com/sponsors/test"}
+        ],
+        "pushedAt": "2024-12-01T00:00:00Z",
+    }
+
+    signals = extract_signals(metrics, repo_data)
+
+    assert "funding_link_count" in signals
+    assert signals["funding_link_count"] == 1
+    assert "last_activity_days" in signals
+
+
+def test_extract_signals_contributor_count():
+    """Test extract_signals extracts contributor count."""
+    from oss_sustain_guard.core import Metric, extract_signals
+
+    metrics = [Metric("Test", 10, 10, "Test", "None")]
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {
+                "history": {
+                    "edges": [
+                        {"node": {"author": {"user": {"login": "user1"}}}},
+                        {"node": {"author": {"user": {"login": "user2"}}}},
+                        {"node": {"author": {"user": {"login": "user1"}}}},
+                    ]
+                }
+            }
+        }
+    }
+
+    signals = extract_signals(metrics, repo_data)
+
+    assert "contributor_count" in signals
+    assert signals["contributor_count"] == 2
+
+
+def test_extract_signals_new_contributors():
+    """Test extract_signals extracts new contributor data."""
+    from oss_sustain_guard.core import Metric, extract_signals
+
+    metrics = [
+        Metric(
+            "Contributor Attraction",
+            10,
+            10,
+            "Excellent: 5 new contributors in last 6 months",
+            "None",
+        )
+    ]
+
+    repo_data = {}
+    signals = extract_signals(metrics, repo_data)
+
+    assert "new_contributors_6mo" in signals
+    assert signals["new_contributors_6mo"] == 5
+
+
+def test_extract_signals_retention_rate():
+    """Test extract_signals extracts retention rate."""
+    from oss_sustain_guard.core import Metric, extract_signals
+
+    metrics = [
+        Metric("Contributor Retention", 10, 10, "Excellent: 80% retention rate", "None")
+    ]
+
+    repo_data = {}
+    signals = extract_signals(metrics, repo_data)
+
+    assert "contributor_retention_rate" in signals
+    assert signals["contributor_retention_rate"] == 80
+
+
+def test_extract_signals_review_time():
+    """Test extract_signals extracts review time."""
+    from oss_sustain_guard.core import Metric, extract_signals
+
+    metrics = [
+        Metric(
+            "Review Health",
+            10,
+            10,
+            "Excellent: Avg time to first review 2.5h",
+            "None",
+        )
+    ]
+
+    repo_data = {}
+    signals = extract_signals(metrics, repo_data)
+
+    assert "avg_review_time_hours" in signals
+    assert signals["avg_review_time_hours"] == 2.5
+
+
+# --- Tests for analyze_repository error handling ---
+
+
+def test_analyze_repository_not_found(mock_graphql_query):
+    """Test analyze_repository raises error for non-existent repository."""
+    from oss_sustain_guard.core import analyze_repository
+
+    mock_graphql_query.return_value = {}
+
+    with pytest.raises(ValueError, match="not found or is inaccessible"):
+        analyze_repository("nonexistent", "repo")
