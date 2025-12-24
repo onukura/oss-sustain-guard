@@ -223,10 +223,10 @@ cache
 
 ### Verification
 
-To verify which directories are being scanned, use the `--verbose` flag:
+To verify which directories are being scanned, use the `-v` (verbose) flag:
 
 ```bash
-oss-guard check --recursive --verbose
+oss-guard check --recursive -v
 ```
 
 This will show which directories were found and which packages were detected.
@@ -238,7 +238,7 @@ This will show which directories were found and which packages were detected.
 ```bash
 # Scan entire monorepo with unlimited depth
 cd /path/to/monorepo
-oss-guard check --recursive --verbose
+oss-guard check --recursive
 ```
 
 ### Example 2: Shallow Scan for Quick Check
@@ -265,8 +265,8 @@ oss-guard check --root-dir ./projects --recursive --depth 2
 ### Example 5: Export Results for All Packages
 
 ```bash
-# Scan recursively and show detailed metrics
-oss-guard check --recursive --verbose --show-models
+# Scan recursively and show detailed metrics with models
+oss-guard check --recursive --show-models -o detail
 ```
 
 ## Performance Considerations
@@ -285,8 +285,9 @@ oss-guard check \
   --recursive \
   --depth 2 \
   --include-lock \
-  --verbose \
+  -v \
   --show-models \
+  -o detail \
   --profile security_first
 
 # Cache-free recursive scan

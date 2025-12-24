@@ -2,24 +2,52 @@
 
 ## Overview
 
-OSS Sustain Guard uses a schema version management system to ensure backward compatibility as metrics evolve. This allows old cached data to work seamlessly with new code versions.
+OSS Sustain Guard uses a **dual version management system** to ensure backward compatibility:
+
+1. **Schema Version** (`_schema_version`) - Tracks changes to data structure and metric names
+2. **Analysis Version** (`analysis_version`) - Tracks changes to scoring/calculation logic
+
+This allows old cached data to work seamlessly with new code versions while invalidating cache when computation logic changes.
+
+## Version Types
+
+### Schema Version (`_schema_version`)
+
+- **Purpose**: Tracks changes to data structure (field names, metric names, data format)
+- **Location**: Top-level wrapper metadata in database files
+- **Current**: `"2.0"`
+- **Backward Compatibility**: Automatic migration via `normalize_metric_name()`
+- **Example Change**: Renaming "Bus Factor" → "Contributor Redundancy"
+
+### Analysis Version (`analysis_version`)
+
+- **Purpose**: Tracks changes to scoring/calculation logic that affect computed values
+- **Location**: Per-package entry in cached data
+- **Current**: `"1.0"`
+- **Cache Invalidation**: Mismatched versions cause cache entries to be skipped
+- **Example Change**: Changing category weights (25%→30%) or metric scoring formulas
+
+**Key Difference**: Schema changes allow migration (old names work), but analysis changes require re-computation (cache must be refreshed).
 
 ## Architecture
 
 ### Core Components
 
 1. **`oss_sustain_guard/schema_migrations.py`** - Central migration registry
-   - `CURRENT_SCHEMA_VERSION`: Current schema version constant
+   - `CURRENT_SCHEMA_VERSION`: Current schema version constant (`"2.0"`)
+   - `ANALYSIS_VERSION`: Current analysis version constant (`"1.0"`)
    - `METRIC_NAME_MIGRATIONS`: Version-specific metric name mappings
+   - `is_analysis_version_compatible()`: Check if cached data is compatible with current analysis version
    - Helper functions for metric name normalization
 
 2. **`oss_sustain_guard/core.py`** - Automatic migration in scoring
    - Uses `normalize_metric_name()` to convert legacy names
    - Transparent backward compatibility in `compute_weighted_total_score()`
 
-3. **`builder/build_db.py`** - Schema metadata in database
-   - Wraps package data with schema version information
-   - Format: `{"_schema_version": "2.0", "_generated_at": "...", "packages": {...}}`
+3. **`builder/build_db.py`** - Schema and analysis metadata in database
+   - Wraps package data with schema version information at top-level
+   - Embeds analysis version in each package entry
+   - Format: `{"_schema_version": "2.0", "_generated_at": "...", "packages": {"python:requests": {"analysis_version": "1.0", ...}, ...}}`
 
 4. **`oss_sustain_guard/cache.py`** & **`cli.py`** - Multi-version data loading
    - Automatically detects and handles v1.x (flat dict) and v2.0+ (wrapped) formats
@@ -148,11 +176,56 @@ Both formats are automatically detected and handled by the loading functions.
 
 ## Benefits
 
-1. **Backward Compatibility**: Old cache data works with new code
-2. **Gradual Migration**: No need to update all databases at once
-3. **Transparent**: Users don't need to know about schema versions
-4. **Future-Proof**: Easy to add new versions as metrics evolve
-5. **Centralized**: All migration logic in one file
+1. **Backward Compatibility**: Old cache data works with new code (schema changes)
+2. **Cache Invalidation**: Automatic refresh when scoring logic changes (analysis version)
+3. **Gradual Migration**: No need to update all databases at once
+4. **Transparent**: Users don't need to know about version management
+5. **Future-Proof**: Easy to add new versions as metrics evolve
+6. **Centralized**: All version logic in one file
+
+## Usage Examples
+
+### Checking Analysis Version Compatibility
+
+```python
+from oss_sustain_guard.schema_migrations import (
+    ANALYSIS_VERSION,
+    is_analysis_version_compatible,
+)
+
+# Load cached data
+cached_data = load_from_cache("python:requests")
+payload_version = cached_data.get("analysis_version")
+
+# Check compatibility
+if not is_analysis_version_compatible(payload_version, ANALYSIS_VERSION):
+    print(f"Cache outdated (version {payload_version}), performing real-time analysis...")
+    # Skip cache, perform fresh analysis
+else:
+    print("Using cached data")
+    # Use cached metrics
+```
+
+### When to Update Analysis Version
+
+Update `ANALYSIS_VERSION` in `schema_migrations.py` when:
+
+1. ✅ **Changing category weights** (e.g., Maintainer Health: 25% → 30%)
+2. ✅ **Modifying metric scoring formulas** (e.g., changing how Contributor Redundancy is calculated)
+3. ✅ **Altering aggregation logic** (e.g., changing how models compute scores)
+4. ❌ **Renaming metrics** (use `METRIC_NAME_MIGRATIONS` instead)
+5. ❌ **Adding new metrics** (backward compatible, no version bump needed)
+
+### Example: Updating Analysis Version
+
+```python
+# schema_migrations.py
+ANALYSIS_VERSION: Final[str] = "2.0"  # Increment when scoring logic changes
+
+# After updating, rebuild database and clear caches:
+# 1. Run: python builder/build_db.py
+# 2. Run: oss-guard check --clear-cache
+```
 
 ## Testing
 
@@ -169,7 +242,10 @@ Current test coverage:
 - ✅ Mixed version metric handling
 - ✅ All scoring profiles with legacy names
 - ✅ Helper function correctness
-- ✅ 10 comprehensive tests
+- ✅ Analysis version compatibility checks
+- ✅ Legacy payload handling (None version)
+- ✅ Version mismatch detection
+- ✅ 14 comprehensive tests
 
 ## Maintenance
 

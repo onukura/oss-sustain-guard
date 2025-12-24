@@ -52,7 +52,7 @@ from rich.console import Console
 from oss_sustain_guard.config import DEFAULT_CACHE_TTL, get_verify_ssl
 from oss_sustain_guard.core import analyze_repository
 from oss_sustain_guard.remote_cache import CloudflareKVClient
-from oss_sustain_guard.schema_migrations import CURRENT_SCHEMA_VERSION
+from oss_sustain_guard.schema_migrations import ANALYSIS_VERSION, CURRENT_SCHEMA_VERSION
 
 load_dotenv()
 
@@ -628,6 +628,7 @@ async def process_package(
             "signals": analysis_result.signals,
             "funding_links": analysis_result.funding_links,
             "is_community_driven": analysis_result.is_community_driven,
+            "analysis_version": ANALYSIS_VERSION,
             "cache_metadata": {
                 "fetched_at": now,
                 "ttl_seconds": DEFAULT_CACHE_TTL,
@@ -689,6 +690,7 @@ async def process_ecosystem_packages(
                     "github_url": f"https://github.com/{owner}/{name}",
                     "total_score": 0,  # Placeholder
                     "metrics": [],  # Placeholder
+                    "analysis_version": ANALYSIS_VERSION,
                 }
                 console.print(f"  [{i + 1}/10] {pkg['name']} -> {owner}/{name}")
         return ecosystem_data

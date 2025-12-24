@@ -15,6 +15,10 @@ from rich.table import Table
 
 from oss_sustain_guard.cache import list_history_dates, load_history
 from oss_sustain_guard.core import Metric, compute_weighted_total_score
+from oss_sustain_guard.schema_migrations import (
+    ANALYSIS_VERSION,
+    is_analysis_version_compatible,
+)
 
 
 class TrendData:
@@ -116,6 +120,20 @@ class TrendAnalyzer:
 
                 if kv_history:
                     for date, snapshot in kv_history.items():
+                        payload_version = snapshot.get("analysis_version")
+                        if not is_analysis_version_compatible(
+                            payload_version, ANALYSIS_VERSION
+                        ):
+                            self.console.print(
+                                f"[dim]Note: Skipping {package_name} snapshot on {date} "
+                                f"(analysis version {payload_version or 'unknown'} "
+                                f"!= {ANALYSIS_VERSION})[/dim]"
+                            )
+                            continue
+                        if payload_version is None:
+                            self.console.print(
+                                "[dim]Note: Using legacy snapshot without analysis version tag.[/dim]"
+                            )
                         # Get total_score, calculate if not present
                         total_score = snapshot.get("total_score")
                         if total_score is None:
@@ -164,6 +182,20 @@ class TrendAnalyzer:
         if package_key in history_data:
             for snapshot in history_data[package_key]:
                 date = snapshot.get("date", "")
+                payload_version = snapshot.get("analysis_version")
+                if not is_analysis_version_compatible(
+                    payload_version, ANALYSIS_VERSION
+                ):
+                    self.console.print(
+                        f"[dim]Note: Skipping local snapshot for {package_name} on {date} "
+                        f"(analysis version {payload_version or 'unknown'} "
+                        f"!= {ANALYSIS_VERSION})[/dim]"
+                    )
+                    continue
+                if payload_version is None:
+                    self.console.print(
+                        "[dim]Note: Using legacy snapshot without analysis version tag.[/dim]"
+                    )
 
                 # Get total_score, calculate if not present
                 total_score = snapshot.get("total_score")

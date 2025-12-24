@@ -8,6 +8,7 @@ set -e
 PACKAGES="${INPUT_PACKAGES}"
 ECOSYSTEM="${INPUT_ECOSYSTEM:-auto}"
 INCLUDE_LOCK="${INPUT_INCLUDE_LOCK:-false}"
+OUTPUT_STYLE="${INPUT_OUTPUT_STYLE:-normal}"
 VERBOSE="${INPUT_VERBOSE:-false}"
 INSECURE="${INPUT_INSECURE:-false}"
 GITHUB_TOKEN="${GITHUB_TOKEN}"
@@ -30,9 +31,14 @@ if [ "${INCLUDE_LOCK}" = "true" ]; then
     CMD="${CMD} --include-lock"
 fi
 
-# Add verbose option
+# Add output style option
+if [ "${OUTPUT_STYLE}" != "normal" ]; then
+    CMD="${CMD} -o ${OUTPUT_STYLE}"
+fi
+
+# Add verbose logging option
 if [ "${VERBOSE}" = "true" ]; then
-    CMD="${CMD} --verbose"
+    CMD="${CMD} -v"
 fi
 
 # Add insecure SSL option

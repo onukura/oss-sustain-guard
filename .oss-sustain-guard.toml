@@ -2,6 +2,12 @@
 # Exclude specific packages from analysis
 exclude = []
 
+# Default output format style: "compact", "normal", or "detail"
+# output_style = "normal"
+
+# Enable verbose logging by default
+# verbose = false
+
 # Directory exclusion settings for recursive scanning
 [tool.oss-sustain-guard.exclude-dirs]
 # Additional directory patterns to exclude (in addition to defaults)

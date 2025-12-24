@@ -77,12 +77,12 @@ Output:
   🔗 Dependencies: avg=75, min=45, max=92, count=23
 ```
 
-### Verbose Format
+### Detail Format
 
 Display detailed dependency tables:
 
 ```bash
-oss-guard check --show-dependencies --verbose
+oss-guard check --show-dependencies -o detail
 ```
 
 Output:
@@ -132,7 +132,7 @@ Dependency scores use the same 0-100 scale as primary packages:
 ```bash
 # Analyze your project with dependency insights
 cd my-python-project
-oss-guard check --show-dependencies --verbose
+oss-guard check --show-dependencies
 
 # Results show:
 # ✓ my-project (85/100) - Healthy

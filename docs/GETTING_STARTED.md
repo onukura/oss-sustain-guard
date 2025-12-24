@@ -71,16 +71,22 @@ Your results show:
 ### Evaluate a New Library
 
 ```bash
-oss-guard check library-name --verbose
+oss-guard check library-name --output-style detail
 ```
 
-The `--verbose` flag shows all metrics and detailed signals.
+The `--output-style detail` (or `-o detail`) shows all metrics in a detailed table format.
+
+For verbose logging (cache operations, metric reconstruction):
+
+```bash
+oss-guard check library-name -v
+```
 
 ### Check Your Project's Dependencies
 
 ```bash
 cd /path/to/project
-oss-guard check --include-lock --verbose
+oss-guard check --include-lock
 ```
 
 ### Use Different Scoring Profiles
@@ -139,10 +145,32 @@ All metrics follow [CHAOSS (Community Health Analytics in Open Source Software)]
 
 ## 🔧 Useful Options
 
-### View Detailed Information
+### Output Formats
+
+Control how results are displayed:
 
 ```bash
-oss-guard check requests --verbose
+# Compact output (one line per package, ideal for CI/CD)
+oss-guard check requests -o compact
+
+# Normal output (default, table with key observations)
+oss-guard check requests -o normal
+
+# Detail output (full metrics table with all signals)
+oss-guard check requests -o detail
+```
+
+### Verbose Logging
+
+Enable detailed logging for debugging and cache operations:
+
+```bash
+# Show cache operations and metric reconstruction
+oss-guard check requests -v
+
+# Combine with any output style
+oss-guard check requests -v -o compact
+oss-guard check requests -v -o detail
 ```
 
 ### Use a Different Scoring Profile

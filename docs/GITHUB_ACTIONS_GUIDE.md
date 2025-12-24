@@ -32,13 +32,13 @@ The fastest and most reliable way to use OSS Sustain Guard:
 
 **💡 Tip: For CI/CD, use the compact output format**
 
-Add `--compact` to your command for cleaner workflow logs:
+Add `-o compact` to your command for cleaner workflow logs:
 
 ```yaml
 - name: Check package sustainability
   uses: onukura/oss-sustain-guard@main
   with:
-    packages: 'requests django flask --compact'
+    packages: 'requests django flask -o compact'
 ```
 
 This provides one-line-per-package output, perfect for logs and automated reporting.
@@ -336,12 +336,12 @@ For large-scale checks, ensure your GitHub token has sufficient permissions:
 
 ## Performance Tips
 
-1. **Use `--compact` for CI/CD** - Compact output is more readable in logs and faster to process
+1. **Use `-o compact` for CI/CD** - Compact output is more readable in logs and faster to process
 
    ```yaml
    - uses: onukura/oss-sustain-guard@main
      with:
-       packages: 'requests django flask --compact'
+       packages: 'requests django flask -o compact'
    ```
 
 2. **Reuse cached data** - First run caches package data for faster subsequent checks

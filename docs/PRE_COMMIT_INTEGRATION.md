@@ -67,7 +67,7 @@ git commit -m "Your message" --no-verify
 - **Trigger:** Automatically runs when `requirements.txt` is committed
 - **Files:** Only monitors `requirements.txt` (Python dependencies)
 - **Scope:** Analyzes all packages listed in the file
-- **💡 Tip:** Use the `--compact` format for cleaner pre-commit output
+- **💡 Tip:** Use the `--output-style compact` (or `-o compact`) format for cleaner pre-commit output
 
 ### Hook 2: Interactive Manual Check
 
@@ -85,10 +85,10 @@ pre-commit run oss-sustain-guard-pyproject --hook-stage manual
 Then provide package names as arguments:
 
 ```bash
-oss-guard check flask django numpy --compact
+oss-guard check flask django numpy --output-style compact
 ```
 
-**Best Practice:** Add `--compact` to your hook configuration for readable output:
+**Best Practice:** Add `-o compact` to your hook configuration for readable output:
 
 ```yaml
 repos:
@@ -96,7 +96,7 @@ repos:
     rev: v0.1.0
     hooks:
       - id: oss-sustain-guard-requirements
-        args: ['--compact']
+        args: ['-o', 'compact']
 ```
 
 ## Multi-Language Support
@@ -201,7 +201,7 @@ This updates `data/database.json` with the latest package scores.
 
 ## Best Practices
 
-1. **Use `--compact` for better readability**
+1. **Use `-o compact` for better readability**
 
    The compact format produces one-line-per-package output, perfect for pre-commit hooks:
 
@@ -211,7 +211,7 @@ This updates `data/database.json` with the latest package scores.
        rev: v0.1.0
        hooks:
          - id: oss-sustain-guard-requirements
-           args: ['--compact']
+           args: ['-o', 'compact']
    ```
 
 2. **Keep Cache Updated**

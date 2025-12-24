@@ -199,3 +199,57 @@ def test_get_migration_info():
     # Non-legacy metric should return None
     assert get_migration_info("Contributor Redundancy") is None
     assert get_migration_info("Unknown Metric") is None
+
+
+# --- Tests for analysis version compatibility ---
+
+
+def test_is_analysis_version_compatible_exact_match():
+    """Test analysis version compatibility with exact match."""
+    from oss_sustain_guard.schema_migrations import (
+        ANALYSIS_VERSION,
+        is_analysis_version_compatible,
+    )
+
+    # Exact match should be compatible
+    assert is_analysis_version_compatible(ANALYSIS_VERSION) is True
+    assert is_analysis_version_compatible("1.0", "1.0") is True
+    assert is_analysis_version_compatible("2.0", "2.0") is True
+
+
+def test_is_analysis_version_compatible_legacy():
+    """Test that None (legacy) payloads are allowed."""
+    from oss_sustain_guard.schema_migrations import is_analysis_version_compatible
+
+    # None (legacy payloads without version tag) should be allowed
+    assert is_analysis_version_compatible(None) is True
+    assert is_analysis_version_compatible(None, "1.0") is True
+
+
+def test_is_analysis_version_compatible_mismatch():
+    """Test analysis version incompatibility detection."""
+    from oss_sustain_guard.schema_migrations import (
+        ANALYSIS_VERSION,
+        is_analysis_version_compatible,
+    )
+
+    # Mismatch should be incompatible
+    assert is_analysis_version_compatible("2.0", "1.0") is False
+    assert is_analysis_version_compatible("0.9", "1.0") is False
+
+    # If current version is "1.0", other versions should fail
+    if ANALYSIS_VERSION == "1.0":
+        assert is_analysis_version_compatible("2.0") is False
+        assert is_analysis_version_compatible("0.9") is False
+
+
+def test_is_analysis_version_compatible_default_expected():
+    """Test that default expected version is ANALYSIS_VERSION."""
+    from oss_sustain_guard.schema_migrations import (
+        ANALYSIS_VERSION,
+        is_analysis_version_compatible,
+    )
+
+    # Should use ANALYSIS_VERSION as default
+    assert is_analysis_version_compatible(ANALYSIS_VERSION) is True
+    assert is_analysis_version_compatible("different_version") is False

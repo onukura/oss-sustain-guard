@@ -14,6 +14,11 @@ Future versions should add new mappings here.
 
 from typing import Final
 
+# Analysis version for computed metrics.
+# Update this when the scoring/metric calculation logic changes in a
+# backward-incompatible way.
+ANALYSIS_VERSION: Final[str] = "1.0"
+
 # Current schema version
 CURRENT_SCHEMA_VERSION: Final[str] = "2.0"
 
@@ -122,3 +127,22 @@ def get_migration_info(metric_name: str) -> dict[str, str] | None:
                 "current_version": CURRENT_SCHEMA_VERSION,
             }
     return None
+
+
+def is_analysis_version_compatible(
+    payload_version: str | None, expected: str = ANALYSIS_VERSION
+) -> bool:
+    """
+    Check whether a cached payload's analysis version matches the expected value.
+
+    Args:
+        payload_version: Version string stored alongside cached metrics.
+        expected: Expected analysis version.
+
+    Returns:
+        True if the payload version is None (legacy) or matches the expected version.
+    """
+    if payload_version is None:
+        # Legacy payloads did not embed an analysis version; allow with a warning.
+        return True
+    return payload_version == expected

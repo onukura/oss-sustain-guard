@@ -275,7 +275,7 @@ See [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) for details.
 
 ```bash
 # Display detailed metrics
-oss-guard check requests --verbose
+oss-guard check requests -v
 
 # Display debug information
 export RUST_LOG=debug
@@ -311,11 +311,11 @@ oss-guard check requests --no-cache
 # 1. Enable cache and retry
 oss-guard check requests  # Uses cache
 
-# 2. Skip unnecessary details
-oss-guard check requests  # Remove --verbose
+# 2. Skip verbose logging
+oss-guard check requests  # Remove -v flag
 
 # 3. Use compact output
-oss-guard check requests --compact
+oss-guard check requests -o compact
 
 # 4. Set GitHub token (improves rate limits)
 export GITHUB_TOKEN="your_token"

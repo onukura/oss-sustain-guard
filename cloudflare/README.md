@@ -109,10 +109,18 @@ curl https://your-worker.workers.dev/2.0:python:requests
   "ecosystem": "python",
   "package_name": "requests",
   "github_url": "https://github.com/psf/requests",
+  "analysis_version": "1.0",
   "metrics": [...],
+  "cache_metadata": {
+    "fetched_at": "2025-12-24T10:00:00Z",
+    "ttl_seconds": 604800,
+    "source": "cloudflare_kv"
+  },
   ...
 }
 ```
+
+**Note**: The `analysis_version` field indicates the version of the scoring/calculation logic used. Clients should check compatibility before using cached data.
 
 ### POST `/batch` - Get multiple packages in batch
 

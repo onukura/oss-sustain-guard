@@ -8,6 +8,14 @@ exclude = [
     "legacy-dependency",
 ]
 
+# Default output format style: "compact", "normal", or "detail"
+# Can be overridden with -o/--output-style CLI option
+# output_style = "normal"
+
+# Enable verbose logging by default (cache operations, metric reconstruction)
+# Can be overridden with -v/--verbose CLI option
+# verbose = false
+
 [tool.oss-sustain-guard.cache]
 
 # Cache directory (default: ~/.cache/oss-sustain-guard)

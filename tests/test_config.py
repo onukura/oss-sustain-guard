@@ -11,8 +11,10 @@ from oss_sustain_guard.config import (
     get_cache_dir,
     get_cache_ttl,
     get_excluded_packages,
+    get_output_style,
     is_cache_enabled,
     is_package_excluded,
+    is_verbose_enabled,
     set_cache_dir,
     set_cache_ttl,
 )
@@ -241,3 +243,78 @@ enabled = false
     )
 
     assert is_cache_enabled() is False
+
+
+def test_get_output_style_default():
+    """Test default output style is 'normal'."""
+    assert get_output_style() == "normal"
+
+
+def test_get_output_style_from_local_config(temp_project_root):
+    """Test loading output style from .oss-sustain-guard.toml."""
+    config_file = temp_project_root / ".oss-sustain-guard.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+output_style = "compact"
+"""
+    )
+
+    assert get_output_style() == "compact"
+
+
+def test_get_output_style_from_pyproject(temp_project_root):
+    """Test loading output style from pyproject.toml."""
+    config_file = temp_project_root / "pyproject.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+output_style = "detail"
+"""
+    )
+
+    assert get_output_style() == "detail"
+
+
+def test_get_output_style_invalid_falls_back_to_default(temp_project_root):
+    """Test invalid output style falls back to 'normal'."""
+    config_file = temp_project_root / ".oss-sustain-guard.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+output_style = "invalid"
+"""
+    )
+
+    assert get_output_style() == "normal"
+
+
+def test_is_verbose_enabled_default():
+    """Test default verbose is False."""
+    assert is_verbose_enabled() is False
+
+
+def test_is_verbose_enabled_from_local_config(temp_project_root):
+    """Test loading verbose from .oss-sustain-guard.toml."""
+    config_file = temp_project_root / ".oss-sustain-guard.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+verbose = true
+"""
+    )
+
+    assert is_verbose_enabled() is True
+
+
+def test_is_verbose_enabled_from_pyproject(temp_project_root):
+    """Test loading verbose from pyproject.toml."""
+    config_file = temp_project_root / "pyproject.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+verbose = false
+"""
+    )
+
+    assert is_verbose_enabled() is False

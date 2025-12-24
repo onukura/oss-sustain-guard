@@ -53,6 +53,7 @@ Examples:
   "ecosystem": "python|javascript|go|rust|php|java|csharp|ruby",
   "package_name": "string",
   "github_url": "https://github.com/{owner}/{repo}",
+  "analysis_version": "1.0",
   "metrics": [
     {
       "name": "Contributor Redundancy",
@@ -77,6 +78,11 @@ Examples:
     "funding_link_count": integer,
     "last_activity_days": integer,
     ...
+  },
+  "cache_metadata": {
+    "fetched_at": "ISO8601 timestamp",
+    "ttl_seconds": integer,
+    "source": "realtime|cloudflare_kv|local_cache"
   }
 }
 ```
@@ -92,9 +98,11 @@ Examples:
 | `ecosystem` | string | Ecosystem name: `python`, `javascript`, `go`, `rust`, `php`, `java`, `csharp`, `ruby` |
 | `package_name` | string | Package name within the ecosystem |
 | `github_url` | string | GitHub repository URL |
+| `analysis_version` | string | Analysis version for computed metrics (e.g., `"1.0"`). Used to invalidate cache when scoring logic changes. |
 | `metrics` | array | Array of individual metrics (raw data for runtime scoring) |
 | `models` | array | Array of metric models (CHAOSS-aligned aggregations) |
 | `signals` | object | Raw signal values for transparency |
+| `cache_metadata` | object | Cache control metadata (fetched_at, ttl_seconds, source) |
 
 ### Runtime Fields (Computed When Needed)
 

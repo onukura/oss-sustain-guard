@@ -343,7 +343,7 @@ use_defaults = true  # Already covers most languages
 
 ```bash
 # Run with verbose to see what's being scanned
-oss-guard check --recursive --verbose
+oss-guard check --recursive -v
 
 # Check a specific directory
 oss-guard check --root-dir ./my-project --recursive

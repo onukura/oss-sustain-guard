@@ -411,3 +411,71 @@ def is_cache_enabled() -> bool:
 
     # Default: enabled
     return True
+
+
+def get_output_style() -> str:
+    """
+    Get the default output style from configuration.
+
+    Priority:
+    1. .oss-sustain-guard.toml config
+    2. pyproject.toml config
+    3. Default: "normal"
+
+    Returns:
+        Output style: "compact", "normal", or "detail".
+    """
+    # Try .oss-sustain-guard.toml first
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        output_style = (
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("output_style")
+        )
+        if output_style in ["compact", "normal", "detail"]:
+            return output_style
+
+    # Try pyproject.toml (fallback)
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists():
+        config = load_config_file(pyproject_path)
+        output_style = (
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("output_style")
+        )
+        if output_style in ["compact", "normal", "detail"]:
+            return output_style
+
+    # Default
+    return "normal"
+
+
+def is_verbose_enabled() -> bool:
+    """
+    Check if verbose logging is enabled by default in configuration.
+
+    Priority:
+    1. .oss-sustain-guard.toml config
+    2. pyproject.toml config
+    3. Default: False
+
+    Returns:
+        Whether verbose logging is enabled by default.
+    """
+    # Try .oss-sustain-guard.toml first
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        verbose = config.get("tool", {}).get("oss-sustain-guard", {}).get("verbose")
+        if verbose is not None:
+            return bool(verbose)
+
+    # Try pyproject.toml (fallback)
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists():
+        config = load_config_file(pyproject_path)
+        verbose = config.get("tool", {}).get("oss-sustain-guard", {}).get("verbose")
+        if verbose is not None:
+            return bool(verbose)
+
+    # Default: disabled
+    return False

@@ -20,8 +20,10 @@ from oss_sustain_guard.cache import (
 )
 from oss_sustain_guard.config import (
     DEFAULT_CACHE_TTL,
+    get_output_style,
     is_cache_enabled,
     is_package_excluded,
+    is_verbose_enabled,
     set_cache_dir,
     set_cache_ttl,
     set_verify_ssl,
@@ -40,6 +42,10 @@ from oss_sustain_guard.resolvers import (
     find_manifest_files,
     get_resolver,
 )
+from oss_sustain_guard.schema_migrations import (
+    ANALYSIS_VERSION,
+    is_analysis_version_compatible,
+)
 from oss_sustain_guard.trend import ComparisonReport, TrendAnalyzer
 
 # project_root is the parent directory of oss_sustain_guard/
@@ -55,7 +61,9 @@ console = Console()
 # --- Helper Functions ---
 
 
-def load_database(use_cache: bool = True, use_local_cache: bool = True) -> dict:
+def load_database(
+    use_cache: bool = True, use_local_cache: bool = True, verbose: bool = False
+) -> dict:
     """Load the sustainability database with caching support.
 
     Loads data with the following priority:
@@ -66,6 +74,7 @@ def load_database(use_cache: bool = True, use_local_cache: bool = True) -> dict:
     Args:
         use_cache: If False, skip all cached data sources and perform real-time analysis only.
         use_local_cache: If False, skip local cache loading (only affects initial load).
+        verbose: If True, display cache loading information.
 
     Returns:
         Dictionary of package data keyed by "ecosystem:package_name".
@@ -95,9 +104,10 @@ def load_database(use_cache: bool = True, use_local_cache: bool = True) -> dict:
             cached_data = load_cache(ecosystem)
             if cached_data:
                 merged.update(cached_data)
-                console.print(
-                    f"[dim]Loaded {len(cached_data)} entries from local cache: {ecosystem}[/dim]"
-                )
+                if verbose:
+                    console.print(
+                        f"[dim]Loaded {len(cached_data)} entries from local cache: {ecosystem}[/dim]"
+                    )
 
     # Determine which packages need to be fetched from remote
     # We'll collect package names from the check command and fetch only those
@@ -128,6 +138,19 @@ def load_packages_from_cloudflare(
         # Convert KV keys back to database keys (ecosystem:package_name)
         result = {}
         for kv_key, data in kv_data.items():
+            payload_version = data.get("analysis_version")
+            if not is_analysis_version_compatible(payload_version, ANALYSIS_VERSION):
+                if verbose:
+                    console.print(
+                        f"[dim]Note: Skipping {kv_key} from Cloudflare KV "
+                        f"(analysis version {payload_version or 'unknown'} "
+                        f"!= {ANALYSIS_VERSION})[/dim]"
+                    )
+                continue
+            if payload_version is None and verbose:
+                console.print(
+                    "[dim]Note: Using legacy cache entry without analysis version tag.[/dim]"
+                )
             # KV key format: "2.0:python:requests"
             # Extract ecosystem:package_name
             parts = kv_key.split(":", 2)  # Split on first 2 colons
@@ -600,37 +623,68 @@ def analyze_package(
                 f"  -> 💾 Found [bold green]{db_key}[/bold green] in local cache"
             )
         cached_data = db[db_key]
-        # Reconstruct metrics from cached data
-        metrics = [
-            Metric(
-                m["name"],
-                m["score"],
-                m["max_score"],
-                m["message"],
-                m["risk"],
+        payload_version = cached_data.get("analysis_version")
+        if not is_analysis_version_compatible(payload_version, ANALYSIS_VERSION):
+            if verbose:
+                console.print(
+                    f"[dim]Note: Ignoring local cache for {db_key} "
+                    f"(analysis version {payload_version or 'unknown'} "
+                    f"!= {ANALYSIS_VERSION})[/dim]"
+                )
+        else:
+            if payload_version is None and verbose:
+                console.print(
+                    "[dim]Note: Using legacy cache entry without analysis version tag.[/dim]"
+                )
+
+            if verbose:
+                console.print(
+                    f"  -> 🔄 Reconstructing metrics from cached data (analysis_version: {payload_version or 'legacy'})"
+                )
+
+            # Reconstruct metrics from cached data
+            metrics = [
+                Metric(
+                    m["name"],
+                    m["score"],
+                    m["max_score"],
+                    m["message"],
+                    m["risk"],
+                )
+                for m in cached_data.get("metrics", [])
+            ]
+
+            if verbose:
+                console.print(f"     ✓ Reconstructed {len(metrics)} metrics")
+
+            # Recalculate total score with selected profile
+            recalculated_score = compute_weighted_total_score(metrics, profile)
+
+            if verbose:
+                console.print(
+                    f"     ✓ Recalculated total score using profile '{profile}': {recalculated_score}/100"
+                )
+
+            # Reconstruct AnalysisResult
+            result = AnalysisResult(
+                repo_url=cached_data.get("github_url", "unknown"),
+                total_score=recalculated_score,
+                metrics=metrics,
+                funding_links=cached_data.get("funding_links", []),
+                is_community_driven=cached_data.get("is_community_driven", False),
+                models=cached_data.get("models", []),
+                signals=cached_data.get("signals", {}),
+                dependency_scores={},  # Empty for cached results
             )
-            for m in cached_data.get("metrics", [])
-        ]
-        # Recalculate total score with selected profile
-        recalculated_score = compute_weighted_total_score(metrics, profile)
-        # Reconstruct AnalysisResult
-        result = AnalysisResult(
-            repo_url=cached_data.get("github_url", "unknown"),
-            total_score=recalculated_score,
-            metrics=metrics,
-            funding_links=cached_data.get("funding_links", []),
-            is_community_driven=cached_data.get("is_community_driven", False),
-            models=cached_data.get("models", []),
-            signals=cached_data.get("signals", {}),
-            dependency_scores={},  # Empty for cached results
-        )
 
-        # If show_dependencies is requested, analyze dependencies
-        if show_dependencies and lockfile_path:
-            dep_scores = _analyze_dependencies_for_package(ecosystem, lockfile_path, db)
-            result = result._replace(dependency_scores=dep_scores)
+            # If show_dependencies is requested, analyze dependencies
+            if show_dependencies and lockfile_path:
+                dep_scores = _analyze_dependencies_for_package(
+                    ecosystem, lockfile_path, db
+                )
+                result = result._replace(dependency_scores=dep_scores)
 
-        return result
+            return result
 
     # Try loading from Cloudflare KV
     if use_remote_cache:
@@ -643,6 +697,13 @@ def analyze_package(
                     f"  -> ☁️  Found [bold green]{db_key}[/bold green] in Cloudflare KV"
                 )
             cached_data = cloudflare_data[db_key]
+
+            if verbose:
+                payload_version = cached_data.get("analysis_version")
+                console.print(
+                    f"  -> 🔄 Reconstructing metrics from Cloudflare KV (analysis_version: {payload_version or 'legacy'})"
+                )
+
             # Reconstruct metrics from cached data
             metrics = [
                 Metric(
@@ -654,8 +715,18 @@ def analyze_package(
                 )
                 for m in cached_data.get("metrics", [])
             ]
+
+            if verbose:
+                console.print(f"     ✓ Reconstructed {len(metrics)} metrics")
+
             # Recalculate total score with selected profile
             recalculated_score = compute_weighted_total_score(metrics, profile)
+
+            if verbose:
+                console.print(
+                    f"     ✓ Recalculated total score using profile '{profile}': {recalculated_score}/100"
+                )
+
             # Reconstruct AnalysisResult
             result = AnalysisResult(
                 repo_url=cached_data.get("github_url", "unknown"),
@@ -732,6 +803,7 @@ def analyze_package(
                 "metrics": [metric._asdict() for metric in analysis_result.metrics],
                 "funding_links": analysis_result.funding_links,
                 "is_community_driven": analysis_result.is_community_driven,
+                "analysis_version": ANALYSIS_VERSION,
                 "cache_metadata": {
                     "fetched_at": datetime.now(timezone.utc).isoformat(),
                     "ttl_seconds": DEFAULT_CACHE_TTL,
@@ -775,17 +847,17 @@ def check(
         "-l",
         help="Include packages from lockfiles in the current directory.",
     ),
-    verbose: bool = typer.Option(
-        False,
+    verbose: bool | None = typer.Option(
+        None,
         "--verbose",
         "-v",
-        help="Display detailed metrics for each package, including raw signals.",
+        help="Enable verbose logging (cache operations, metric reconstruction details). If not specified, uses config file default.",
     ),
-    compact: bool = typer.Option(
-        False,
-        "--compact",
-        "-c",
-        help="Display results in compact format (one line per package, ideal for CI/CD).",
+    output_style: str | None = typer.Option(
+        None,
+        "--output-style",
+        "-o",
+        help="Output format style: compact (one line per package, CI/CD-friendly), normal (table with key observations), detail (full metrics table with signals). If not specified, uses config file default.",
     ),
     show_models: bool = typer.Option(
         False,
@@ -877,6 +949,12 @@ def check(
     ),
 ):
     """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)."""
+    # Apply config defaults if not specified via CLI
+    if verbose is None:
+        verbose = is_verbose_enabled()
+    if output_style is None:
+        output_style = get_output_style()
+
     # Validate profile
     if profile not in SCORING_PROFILES:
         console.print(
@@ -885,6 +963,15 @@ def check(
         console.print(
             f"[dim]Available profiles: {', '.join(SCORING_PROFILES.keys())}[/dim]"
         )
+        raise typer.Exit(code=1)
+
+    # Validate output_style
+    valid_output_styles = ["compact", "normal", "detail"]
+    if output_style not in valid_output_styles:
+        console.print(
+            f"[red]❌ Unknown output style '{output_style}'.[/red]",
+        )
+        console.print(f"[dim]Available styles: {', '.join(valid_output_styles)}[/dim]")
         raise typer.Exit(code=1)
 
     # Handle --clear-cache option
@@ -906,7 +993,7 @@ def check(
     use_local = use_cache and not no_local_cache
     use_remote = use_cache and not no_remote_cache
 
-    db = load_database(use_cache=use_cache, use_local_cache=use_local)
+    db = load_database(use_cache=use_cache, use_local_cache=use_local, verbose=verbose)
     results_to_display = []
     packages_to_analyze: list[tuple[str, str]] = []  # (ecosystem, package_name)
 
@@ -1173,15 +1260,15 @@ def check(
             results_to_display.append(result)
 
     if results_to_display:
-        if compact:
+        if output_style == "compact":
             display_results_compact(
                 results_to_display, show_dependencies=show_dependencies
             )
-        elif verbose:
+        elif output_style == "detail":
             display_results_detailed(
-                results_to_display, show_signals=verbose, show_models=show_models
+                results_to_display, show_signals=True, show_models=show_models
             )
-        else:
+        else:  # normal
             display_results(
                 results_to_display,
                 show_models=show_models,
