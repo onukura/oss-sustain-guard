@@ -249,6 +249,118 @@ uv run ruff format --check oss_sustain_guard tests builder
 3. Address feedback
 4. Approval and merge
 
+## 🚀 Release Process
+
+### Release Types
+
+OSS Sustain Guard uses **tag-based releases** with automated publishing to PyPI and TestPyPI.
+
+**Production Release (PyPI):**
+- Tags: `v*.*.*` (e.g., `v0.7.0`, `v1.0.0`)
+- Publishes to: [PyPI](https://pypi.org/project/oss-sustain-guard/)
+- Triggers: Any version tag without pre-release suffix
+
+**Pre-release (TestPyPI):**
+- Tags: `v*.*.*-alpha`, `v*.*.*-beta`, `v*.*.*-rc*` (e.g., `v0.7.0-alpha`, `v0.8.0-beta.1`)
+- Publishes to: [TestPyPI](https://test.pypi.org/project/oss-sustain-guard/)
+- Triggers: Version tags with pre-release suffix (contains `-`)
+
+### Creating a Release
+
+#### 1. Pre-release (Testing)
+
+Use pre-release tags to test on TestPyPI before production:
+
+```bash
+# Update version in pyproject.toml
+# version = "0.8.0"
+
+# Create and push pre-release tag
+git tag v0.8.0-alpha
+git push origin v0.8.0-alpha
+
+# Test installation from TestPyPI
+pip install --index-url https://test.pypi.org/simple/ oss-sustain-guard
+```
+
+#### 2. Production Release
+
+Once testing is complete, create a production release:
+
+```bash
+# Ensure version is updated in pyproject.toml
+# version = "0.8.0"
+
+# Create and push production tag
+git tag v0.8.0
+git push origin v0.8.0
+
+# GitHub Actions will automatically:
+# 1. Build distribution packages
+# 2. Publish to PyPI
+# 3. Create GitHub Release
+# 4. Sign with Sigstore
+```
+
+### Version Numbering
+
+Follow [Semantic Versioning](https://semver.org/):
+
+- **MAJOR.MINOR.PATCH** (e.g., `1.2.3`)
+  - **MAJOR**: Incompatible API changes
+  - **MINOR**: New features (backward-compatible)
+  - **PATCH**: Bug fixes (backward-compatible)
+
+**Pre-release suffixes:**
+- `-alpha`: Early testing, may have bugs
+- `-beta`: Feature-complete, testing for bugs
+- `-rc1`, `-rc2`: Release candidate, near-final testing
+
+### Automated Publishing Workflow
+
+The `.github/workflows/publish.yml` workflow handles:
+
+1. **Build** (all pushes to main and tags):
+   - Creates wheel (`.whl`) and source distribution (`.tar.gz`)
+   - Uploads as artifacts
+
+2. **PyPI Publication** (production tags only):
+   - Requires: `refs/tags/v*` (no pre-release suffix)
+   - Uses trusted publishing (no tokens required)
+   - Creates signed GitHub Release
+
+3. **TestPyPI Publication** (pre-release tags only):
+   - Requires: `refs/tags/v*-*` (contains `-`)
+   - For testing before production release
+
+### Troubleshooting Releases
+
+**Error: "400 Bad Request" from TestPyPI/PyPI**
+
+- **Cause**: Version already exists (you cannot re-publish the same version)
+- **Solution**: Increment version number in `pyproject.toml`
+
+**Error: "Invalid version"**
+
+- **Cause**: Version format doesn't follow PEP 440
+- **Solution**: Use format `MAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH-suffix`
+
+**Release not triggered**
+
+- **Cause**: Tag format incorrect or workflow file issue
+- **Solution**: Check tag matches `v*.*.*` pattern (starts with `v`)
+
+### Maintainer Checklist
+
+Before creating a release:
+
+- [ ] All tests pass (`uv run pytest`)
+- [ ] Code quality checks pass (`uv run ruff check && uv run ruff format`)
+- [ ] Version updated in `pyproject.toml`
+- [ ] CHANGELOG.md updated (if exists)
+- [ ] Documentation updated for new features
+- [ ] Pre-release tested on TestPyPI (for major releases)
+
 ## 🆕 Adding New Features
 
 ### Adding a New Metric
