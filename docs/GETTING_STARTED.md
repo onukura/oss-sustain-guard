@@ -15,7 +15,7 @@ pip install oss-sustain-guard
 ### 1. Check a Single Package
 
 ```bash
-oss-guard check requests
+os4g check requests
 ```
 
 This shows you:
@@ -27,7 +27,7 @@ This shows you:
 ### 2. Check Multiple Packages
 
 ```bash
-oss-guard check python:django npm:react rust:tokio
+os4g check python:django npm:react rust:tokio
 ```
 
 Mix any languages you use in one command.
@@ -35,7 +35,7 @@ Mix any languages you use in one command.
 ### 3. Auto-Detect Your Project Dependencies
 
 ```bash
-oss-guard check --include-lock
+os4g check --include-lock
 ```
 
 Automatically scans `requirements.txt`, `package.json`, `Cargo.toml`, and other manifest files.
@@ -43,7 +43,7 @@ Automatically scans `requirements.txt`, `package.json`, `Cargo.toml`, and other 
 ### 4. Scan Entire Projects (Monorepos)
 
 ```bash
-oss-guard check --recursive
+os4g check --recursive
 ```
 
 Recursively finds and analyzes all dependencies in subdirectories.
@@ -51,7 +51,7 @@ Recursively finds and analyzes all dependencies in subdirectories.
 ### 5. Analyze Your Project's Dependencies
 
 ```bash
-oss-guard check --show-dependencies
+os4g check --show-dependencies
 ```
 
 Displays health scores of all your project's dependencies (requires lockfiles like `uv.lock`, `package-lock.json`, etc.).
@@ -71,7 +71,7 @@ Your results show:
 ### Evaluate a New Library
 
 ```bash
-oss-guard check library-name --output-style detail
+os4g check library-name --output-style detail
 ```
 
 The `--output-style detail` (or `-o detail`) shows all metrics in a detailed table format.
@@ -79,14 +79,14 @@ The `--output-style detail` (or `-o detail`) shows all metrics in a detailed tab
 For verbose logging (cache operations, metric reconstruction):
 
 ```bash
-oss-guard check library-name -v
+os4g check library-name -v
 ```
 
 ### Check Your Project's Dependencies
 
 ```bash
 cd /path/to/project
-oss-guard check --include-lock
+os4g check --include-lock
 ```
 
 ### Use Different Scoring Profiles
@@ -95,19 +95,19 @@ Recalculate scores based on your priorities:
 
 ```bash
 # Security-focused evaluation
-oss-guard check requests --profile security_first
+os4g check requests --profile security_first
 
 # Contributor-experience focused
-oss-guard check requests --profile contributor_experience
+os4g check requests --profile contributor_experience
 
 # Long-term stability focused
-oss-guard check requests --profile long_term_stability
+os4g check requests --profile long_term_stability
 ```
 
 ### Bypass Cache (Real-time Analysis)
 
 ```bash
-oss-guard check requests --no-cache
+os4g check requests --no-cache
 ```
 
 ## 💡 Key Concepts
@@ -151,13 +151,13 @@ Control how results are displayed:
 
 ```bash
 # Compact output (one line per package, ideal for CI/CD)
-oss-guard check requests -o compact
+os4g check requests -o compact
 
 # Normal output (default, table with key observations)
-oss-guard check requests -o normal
+os4g check requests -o normal
 
 # Detail output (full metrics table with all signals)
-oss-guard check requests -o detail
+os4g check requests -o detail
 ```
 
 ### Verbose Logging
@@ -166,11 +166,11 @@ Enable detailed logging for debugging and cache operations:
 
 ```bash
 # Show cache operations and metric reconstruction
-oss-guard check requests -v
+os4g check requests -v
 
 # Combine with any output style
-oss-guard check requests -v -o compact
-oss-guard check requests -v -o detail
+os4g check requests -v -o compact
+os4g check requests -v -o detail
 ```
 
 ### Use a Different Scoring Profile
@@ -179,19 +179,19 @@ Recalculate scores based on different priorities:
 
 ```bash
 # Prioritize security
-oss-guard check requests --profile security_first
+os4g check requests --profile security_first
 
 # Prioritize contributor experience
-oss-guard check requests --profile contributor_experience
+os4g check requests --profile contributor_experience
 
 # Prioritize long-term stability
-oss-guard check requests --profile long_term_stability
+os4g check requests --profile long_term_stability
 ```
 
 ### Bypass Cache (Real-time Analysis)
 
 ```bash
-oss-guard check requests --no-cache
+os4g check requests --no-cache
 ```
 
 ## 📌 Next Steps

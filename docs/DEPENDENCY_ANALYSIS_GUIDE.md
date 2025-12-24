@@ -42,13 +42,13 @@ The `--show-dependencies` flag **only works when your project contains a lockfil
 Analyze your project with dependency scores:
 
 ```bash
-oss-guard check --show-dependencies
+os4g check --show-dependencies
 ```
 
 Or with auto-detection:
 
 ```bash
-oss-guard check --show-dependencies --include-lock
+os4g check --show-dependencies --include-lock
 ```
 
 ### With Specific Packages
@@ -57,7 +57,7 @@ Dependency scores are **only available when analyzing your project directory wit
 
 ```bash
 cd /path/to/your/project
-oss-guard check requests --show-dependencies
+os4g check requests --show-dependencies
 # ℹ️  --show-dependencies specified but no lockfiles found in .
 #    Dependency scores are only available when analyzing projects with lockfiles.
 ```
@@ -67,7 +67,7 @@ oss-guard check requests --show-dependencies
 Display dependency statistics in compact format (ideal for CI/CD):
 
 ```bash
-oss-guard check --show-dependencies -c
+os4g check --show-dependencies -c
 ```
 
 Output:
@@ -82,7 +82,7 @@ Output:
 Display detailed dependency tables:
 
 ```bash
-oss-guard check --show-dependencies -o detail
+os4g check --show-dependencies -o detail
 ```
 
 Output:
@@ -104,7 +104,7 @@ Output:
 Display top 10 dependencies with health status:
 
 ```bash
-oss-guard check --show-dependencies
+os4g check --show-dependencies
 ```
 
 Output:
@@ -132,7 +132,7 @@ Dependency scores use the same 0-100 scale as primary packages:
 ```bash
 # Analyze your project with dependency insights
 cd my-python-project
-oss-guard check --show-dependencies
+os4g check --show-dependencies
 
 # Results show:
 # ✓ my-project (85/100) - Healthy

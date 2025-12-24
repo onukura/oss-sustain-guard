@@ -18,13 +18,13 @@ ValueError: GitHub token not found. Set GITHUB_TOKEN environment variable.
 
 Option A: Use cached packages (recommended, no token needed):
 ```bash
-oss-guard check requests  # Works instantly if in cache
+os4g check requests  # Works instantly if in cache
 ```
 
 Option B: Set a GitHub token to analyze new packages:
 ```bash
 export GITHUB_TOKEN="your_github_token_here"
-oss-guard check new-package  # Analyzes uncached packages
+os4g check new-package  # Analyzes uncached packages
 ```
 
 **How to Create a GitHub Token:**
@@ -48,10 +48,10 @@ PackageNotFoundError: Package 'my-package' not found in python ecosystem
 
 ```shell
 # Double-check package name (case-sensitive)
-oss-guard check requests  # ✅ Correct
+os4g check requests  # ✅ Correct
 
 # Explicitly specify the ecosystem
-oss-guard check python:requests
+os4g check python:requests
 
 # Verify on the package registry
 # https://pypi.org/project/requests/
@@ -71,11 +71,11 @@ SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed
 
 ```shell
 # Disable SSL verification (development only)
-oss-guard check requests --insecure
+os4g check requests --insecure
 
 # Or set environment variable
 export OSS_SUSTAIN_GUARD_INSECURE=true
-oss-guard check requests
+os4g check requests
 
 # Warning: Do not use in production
 ```
@@ -95,15 +95,15 @@ HTTPStatusError: 403 Forbidden - Rate limit exceeded
 ```shell
 # Set GitHub token (much higher rate limit)
 export GITHUB_TOKEN="your_token"
-oss-guard check package1 package2 package3
+os4g check package1 package2 package3
 
 # Use cache (cached packages don't require API calls)
-oss-guard check requests  # Loads from cache, no API call
+os4g check requests  # Loads from cache, no API call
 
 # Cache default TTL
 # Default: 7 days
 # Manual reset
-oss-guard check --clear-cache
+os4g check --clear-cache
 ```
 
 ## ❓ Frequently Asked Questions
@@ -114,13 +114,13 @@ oss-guard check --clear-cache
 
 ```bash
 # Change cache directory
-oss-guard check requests --cache-dir /path/to/custom/cache
+os4g check requests --cache-dir /path/to/custom/cache
 
 # Clear cache
-oss-guard check --clear-cache
+os4g check --clear-cache
 
 # Change cache TTL (seconds)
-oss-guard check requests --cache-ttl 2592000  # 30 days
+os4g check requests --cache-ttl 2592000  # 30 days
 ```
 
 ### Q2: How is the score calculated?
@@ -136,7 +136,7 @@ oss-guard check requests --cache-ttl 2592000  # 30 days
 
 ```bash
 # Switch profiles
-oss-guard check requests --profile security_first
+os4g check requests --profile security_first
 ```
 
 See [Scoring Profiles Guide](SCORING_PROFILES_GUIDE.md) for details.
@@ -147,14 +147,14 @@ See [Scoring Profiles Guide](SCORING_PROFILES_GUIDE.md) for details.
 
 ```bash
 # Mix languages
-oss-guard check \
+os4g check \
   python:django \
   npm:react \
   rust:tokio \
   go:github.com/golang/go
 
 # Or rely on auto-detection
-oss-guard check django react tokio
+os4g check django react tokio
 ```
 
 ### Q4: How do I exclude specific packages?
@@ -203,10 +203,10 @@ See [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) for details.
 
 ```bash
 cd monorepo-root
-oss-guard check --recursive
+os4g check --recursive
 
 # Limit depth
-oss-guard check --recursive --depth 2
+os4g check --recursive --depth 2
 ```
 
 See [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) for details.
@@ -217,13 +217,13 @@ See [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) for details.
 
 ```bash
 # View historical data
-oss-guard trend requests
+os4g trend requests
 
 # Compare specific dates
-oss-guard compare requests 2025-12-11 2025-12-12
+os4g compare requests 2025-12-11 2025-12-12
 
 # List available snapshots
-oss-guard list-snapshots
+os4g list-snapshots
 ```
 
 See [Time Series Analysis Guide](TREND_ANALYSIS_GUIDE.md) for details.
@@ -261,10 +261,10 @@ This is an **observation**, not a judgment. Every project has unique circumstanc
 
 ```bash
 # Show projects that would appreciate support
-oss-guard gratitude
+os4g gratitude
 
 # Show top 5
-oss-guard gratitude --top 5
+os4g gratitude --top 5
 ```
 
 See [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) for details.
@@ -275,11 +275,11 @@ See [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) for details.
 
 ```bash
 # Display detailed metrics
-oss-guard check requests -v
+os4g check requests -v
 
 # Display debug information
 export RUST_LOG=debug
-oss-guard check requests
+os4g check requests
 ```
 
 ### Inspect Cache
@@ -300,7 +300,7 @@ curl -H "Authorization: token $GITHUB_TOKEN" \
   https://api.github.com/user
 
 # Run without cache
-oss-guard check requests --no-cache
+os4g check requests --no-cache
 ```
 
 ## 🚀 Performance Optimization
@@ -309,13 +309,13 @@ oss-guard check requests --no-cache
 
 ```bash
 # 1. Enable cache and retry
-oss-guard check requests  # Uses cache
+os4g check requests  # Uses cache
 
 # 2. Skip verbose logging
-oss-guard check requests  # Remove -v flag
+os4g check requests  # Remove -v flag
 
 # 3. Use compact output
-oss-guard check requests -o compact
+os4g check requests -o compact
 
 # 4. Set GitHub token (improves rate limits)
 export GITHUB_TOKEN="your_token"
@@ -328,10 +328,10 @@ export GITHUB_TOKEN="your_token"
 - uses: actions/cache@v3
   with:
     path: ~/.cache/oss-sustain-guard
-    key: oss-guard-cache
+    key: os4g-cache
 
 - name: Check
-  run: oss-guard check --recursive --compact
+  run: os4g check --recursive --compact
 ```
 
 ## 📚 Learn More

@@ -52,19 +52,19 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 pip install oss-sustain-guard
 
 # Check a single package
-oss-guard check requests
+os4g check requests
 
 # Check multiple packages (auto-detect language)
-oss-guard check django flask numpy
+os4g check django flask numpy
 
 # Multi-language support
-oss-guard check python:requests npm:react rust:tokio
+os4g check python:requests npm:react rust:tokio
 
 # Auto-detect from manifest files
-oss-guard check --include-lock
+os4g check --include-lock
 
 # Scan recursively (great for monorepos)
-oss-guard check --recursive
+os4g check --recursive
 ```
 
 ## 📚 Documentation
@@ -103,13 +103,13 @@ See [Database Schema](https://onukura.github.io/oss-sustain-guard/DATABASE_SCHEM
 
 - **🎁 Gratitude Vending Machine** - Discover community projects that need support
   ```bash
-  oss-guard gratitude --top 5
+  os4g gratitude --top 5
   ```
 
 - **📊 Trend Analysis** - Track package health evolution
   ```bash
-  oss-guard trend requests
-  oss-guard compare requests 2025-12-11 2025-12-12
+  os4g trend requests
+  os4g compare requests 2025-12-11 2025-12-12
   ```
 
 - **💝 Community Funding Links** - Auto-displays funding options for community-driven projects

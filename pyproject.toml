@@ -49,6 +49,7 @@ Issues = "https://github.com/onukura/oss-sustain-guard/issues"
 
 [project.scripts]
 oss-guard = "oss_sustain_guard.cli:app"
+os4g = "oss_sustain_guard.cli:app"
 
 [build-system]
 requires = ["hatchling"]

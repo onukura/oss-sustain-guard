@@ -62,7 +62,7 @@ exclude = ["internal-lib"]
 Run:
 
 ```bash
-oss-guard check requirements.txt
+os4g check requirements.txt
 ```
 
 Output:
@@ -79,7 +79,7 @@ Output:
 ### Example 2: Direct Package Specification
 
 ```bash
-oss-guard check flask django internal-lib
+os4g check flask django internal-lib
 ```
 
 Output:
@@ -106,9 +106,9 @@ exclude = ["Flask"]
 
 ```bash
 # All of these will be excluded
-oss-guard check flask
-oss-guard check Flask
-oss-guard check FLASK
+os4g check flask
+os4g check Flask
+os4g check FLASK
 ```
 
 ## Pre-Commit Integration
@@ -166,7 +166,7 @@ git commit -m "Update dependencies"
 Use verbose output to confirm:
 
 ```bash
-oss-guard check requirements.txt -v
+os4g check requirements.txt -v
 ```
 
 ### Reset Configuration
@@ -343,10 +343,10 @@ use_defaults = true  # Already covers most languages
 
 ```bash
 # Run with verbose to see what's being scanned
-oss-guard check --recursive -v
+os4g check --recursive -v
 
 # Check a specific directory
-oss-guard check --root-dir ./my-project --recursive
+os4g check --root-dir ./my-project --recursive
 ```
 
 #### Debug Configuration

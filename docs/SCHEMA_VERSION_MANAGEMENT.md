@@ -224,7 +224,7 @@ ANALYSIS_VERSION: Final[str] = "2.0"  # Increment when scoring logic changes
 
 # After updating, rebuild database and clear caches:
 # 1. Run: python builder/build_db.py
-# 2. Run: oss-guard check --clear-cache
+# 2. Run: os4g check --clear-cache
 ```
 
 ## Testing

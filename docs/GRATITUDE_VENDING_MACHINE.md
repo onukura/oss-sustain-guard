@@ -40,10 +40,10 @@ Only projects that meet ALL of these criteria are shown:
 
 ```bash
 # Show top 3 projects that need support
-oss-guard gratitude
+os4g gratitude
 
 # Show top 5 projects
-oss-guard gratitude --top 5
+os4g gratitude --top 5
 ```
 
 ### Example Output
@@ -207,7 +207,7 @@ The name reflects our philosophy:
 
 The command uses your **local cache** (`~/.cache/oss-sustain-guard`) which stores analysis data for:
 
-- Packages you've analyzed with `oss-guard check`
+- Packages you've analyzed with `os4g check`
 - Pre-computed database entries (if available)
 
 **Note**: If cache is empty or disabled, you'll see a message to run analysis first.

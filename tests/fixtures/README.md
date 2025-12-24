@@ -50,7 +50,7 @@ The `test_fixtures_integration.py` file demonstrates how to:
 
 1. **Parse dependency files** - Read and extract package names from each format
 2. **Mock analysis results** - Create `AnalysisResult` objects with proper `Metric` data
-3. **Test CLI commands** - Invoke `oss-guard check <package>` with mocked backend
+3. **Test CLI commands** - Invoke `os4g check <package>` with mocked backend
 4. **Cross-language validation** - Verify support for all 8 programming languages
 
 ## Example Test Pattern

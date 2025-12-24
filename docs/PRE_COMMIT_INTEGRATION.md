@@ -85,7 +85,7 @@ pre-commit run oss-sustain-guard-pyproject --hook-stage manual
 Then provide package names as arguments:
 
 ```bash
-oss-guard check flask django numpy --output-style compact
+os4g check flask django numpy --output-style compact
 ```
 
 **Best Practice:** Add `-o compact` to your hook configuration for readable output:
@@ -105,19 +105,19 @@ OSS Sustain Guard supports multiple package ecosystems:
 
 ```bash
 # Python packages
-oss-guard check requests flask
+os4g check requests flask
 
 # JavaScript (npm)
-oss-guard check npm:react npm:vue
+os4g check npm:react npm:vue
 
 # Rust (crates.io)
-oss-guard check rust:tokio rust:serde
+os4g check rust:tokio rust:serde
 
 # Go
-oss-guard check go:github.com/golang/go
+os4g check go:github.com/golang/go
 
 # Other languages
-oss-guard check ruby:rails php:symfony/console
+os4g check ruby:rails php:symfony/console
 ```
 
 ## Hook Behavior

@@ -14,10 +14,10 @@ Enables recursive scanning of subdirectories to find manifest and lockfiles.
 
 ```bash
 # Scan only the current directory (default)
-oss-guard check
+os4g check
 
 # Recursively scan all subdirectories
-oss-guard check --recursive
+os4g check --recursive
 ```
 
 ### `--depth` / `-d`
@@ -28,13 +28,13 @@ Controls the maximum directory depth for recursive scanning.
 
 ```bash
 # Scan current directory and one level of subdirectories
-oss-guard check --recursive --depth 1
+os4g check --recursive --depth 1
 
 # Scan up to 3 levels deep
-oss-guard check --recursive --depth 3
+os4g check --recursive --depth 3
 
 # Unlimited depth (default when using --recursive)
-oss-guard check --recursive
+os4g check --recursive
 ```
 
 **Note:** `--depth 0` in recursive mode will only scan the root directory.
@@ -56,7 +56,7 @@ Analyze all packages across multiple subprojects in a monorepo:
 #       └── Cargo.toml         (Rust)
 
 cd monorepo
-oss-guard check --recursive
+os4g check --recursive
 ```
 
 **Output:**
@@ -79,10 +79,10 @@ For very large workspaces, limit the scan depth to avoid excessive scanning:
 
 ```bash
 # Only scan immediate subdirectories (depth 1)
-oss-guard check --recursive --depth 1
+os4g check --recursive --depth 1
 
 # Scan up to 2 levels deep
-oss-guard check --recursive --depth 2
+os4g check --recursive --depth 2
 ```
 
 This is useful when you have deep directory structures but only care about top-level projects.
@@ -93,10 +93,10 @@ Combine with ecosystem filtering to analyze only specific language packages:
 
 ```bash
 # Find all Python packages recursively
-oss-guard check --recursive --ecosystem python
+os4g check --recursive --ecosystem python
 
 # Find all JavaScript packages in subdirectories
-oss-guard check --recursive --ecosystem javascript
+os4g check --recursive --ecosystem javascript
 ```
 
 ### Include Lockfiles Recursively
@@ -105,10 +105,10 @@ Scan all lockfiles across the project tree:
 
 ```bash
 # Find and analyze all packages from lockfiles recursively
-oss-guard check --recursive --include-lock
+os4g check --recursive --include-lock
 
 # Limit depth for lockfile scanning
-oss-guard check --recursive --include-lock --depth 2
+os4g check --recursive --include-lock --depth 2
 ```
 
 ## Ignored Directories
@@ -226,7 +226,7 @@ cache
 To verify which directories are being scanned, use the `-v` (verbose) flag:
 
 ```bash
-oss-guard check --recursive -v
+os4g check --recursive -v
 ```
 
 This will show which directories were found and which packages were detected.
@@ -238,35 +238,35 @@ This will show which directories were found and which packages were detected.
 ```bash
 # Scan entire monorepo with unlimited depth
 cd /path/to/monorepo
-oss-guard check --recursive
+os4g check --recursive
 ```
 
 ### Example 2: Shallow Scan for Quick Check
 
 ```bash
 # Only check immediate subdirectories
-oss-guard check --recursive --depth 1
+os4g check --recursive --depth 1
 ```
 
 ### Example 3: Deep Scan with Lockfiles
 
 ```bash
 # Scan up to 3 levels deep, including lockfiles
-oss-guard check --recursive --depth 3 --include-lock
+os4g check --recursive --depth 3 --include-lock
 ```
 
 ### Example 4: Monorepo with Specific Root
 
 ```bash
 # Scan from a specific subdirectory
-oss-guard check --root-dir ./projects --recursive --depth 2
+os4g check --root-dir ./projects --recursive --depth 2
 ```
 
 ### Example 5: Export Results for All Packages
 
 ```bash
 # Scan recursively and show detailed metrics with models
-oss-guard check --recursive --show-models -o detail
+os4g check --recursive --show-models -o detail
 ```
 
 ## Performance Considerations
@@ -281,7 +281,7 @@ You can combine recursive scanning with other options:
 
 ```bash
 # Full analysis with all features
-oss-guard check \
+os4g check \
   --recursive \
   --depth 2 \
   --include-lock \
@@ -291,10 +291,10 @@ oss-guard check \
   --profile security_first
 
 # Cache-free recursive scan
-oss-guard check --recursive --no-cache
+os4g check --recursive --no-cache
 
 # Recursive scan with custom cache settings
-oss-guard check --recursive --cache-ttl 3600
+os4g check --recursive --cache-ttl 3600
 ```
 
 ## Troubleshooting

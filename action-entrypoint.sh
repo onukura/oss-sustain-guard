@@ -14,7 +14,7 @@ INSECURE="${INPUT_INSECURE:-false}"
 GITHUB_TOKEN="${GITHUB_TOKEN}"
 
 # Build command
-CMD="uv run oss-guard check"
+CMD="uv run os4g check"
 
 # Add packages (if specified)
 if [ -n "${PACKAGES}" ]; then
