@@ -54,6 +54,12 @@ Analyze all packages across multiple subprojects in a monorepo:
 #   │   └── requirements.txt   (Python)
 #   └── shared/
 #       └── Cargo.toml         (Rust)
+#       └── DESCRIPTION        (R)
+#       └── Package.swift      (Swift)
+#       └── stack.yaml         (Haskell)
+#       └── pubspec.yaml       (Dart)
+#       └── mix.exs            (Elixir)
+#       └── cpanfile           (Perl)
 
 cd monorepo
 os4g check --recursive
@@ -63,7 +69,7 @@ os4g check --recursive
 
 ```shell
 🔍 No packages specified. Recursively scanning /path/to/monorepo (unlimited depth)...
-✅ Detected ecosystems: javascript, python, rust
+✅ Detected ecosystems: dart, elixir, haskell, javascript, perl, python, r, rust, swift
 📋 Found manifest file: frontend/package.json
    Found 10 package(s) in package.json
 📋 Found manifest file: backend/requirements.txt

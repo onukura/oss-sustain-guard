@@ -1,0 +1,10 @@
+name: example_app
+version: 0.1.0
+dependencies:
+  http: ^1.2.0
+  path: ^1.8.3
+dev_dependencies:
+  lints: ^3.0.0
+  test: any
+dependency_overrides:
+  collection: ^1.18.0

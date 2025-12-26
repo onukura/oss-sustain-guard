@@ -227,12 +227,18 @@ When specifying packages from different ecosystems:
 |-----------|--------|---------|
 | Python | `python:` or none | `requests` or `python:flask` |
 | JavaScript | `npm:` or `js:` | `npm:react` or `js:express` |
+| Dart | `dart:` or `pub:` | `dart:http` |
+| Elixir | `elixir:` or `hex:` | `elixir:phoenix` |
+| Haskell | `haskell:` or `hackage:` | `haskell:text` |
+| Perl | `perl:` or `cpan:` | `perl:Mojolicious` |
+| R | `r:` or `cran:` | `r:ggplot2` |
 | Rust | `rust:` | `rust:tokio` |
 | Ruby | `ruby:` or `gem:` | `ruby:rails` |
 | Go | `go:` | `go:github.com/golang/go` |
 | PHP | `php:` or `composer:` | `php:symfony/console` |
 | Java | `java:` | `java:com.google.guava:guava` |
 | C# | `csharp:` or `nuget:` | `csharp:Newtonsoft.Json` |
+| Swift | `swift:` or `spm:` | `swift:apple/swift-nio` |
 
 ## Output Handling
 

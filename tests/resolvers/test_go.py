@@ -35,6 +35,45 @@ class TestGoResolver:
         result = resolver.resolve_github_url("github.com/sirupsen/logrus")
         assert result == ("sirupsen", "logrus")
 
+    def test_resolve_github_url_with_version_suffix(self):
+        """Test resolving GitHub path with Go module version suffix."""
+        resolver = GoResolver()
+        # go-redis/redis uses /v8 version suffix for v8.x releases
+        result = resolver.resolve_github_url("github.com/go-redis/redis/v8")
+        assert result == ("go-redis", "redis")
+
+    def test_resolve_github_url_with_v2_suffix(self):
+        """Test resolving GitHub path with /v2 version suffix."""
+        resolver = GoResolver()
+        result = resolver.resolve_github_url("github.com/user/repo/v2")
+        assert result == ("user", "repo")
+
+    def test_strip_go_version_suffix(self):
+        """Test _strip_go_version_suffix helper method."""
+        # Test various version suffixes
+        assert (
+            GoResolver._strip_go_version_suffix("github.com/go-redis/redis/v8")
+            == "github.com/go-redis/redis"
+        )
+        assert (
+            GoResolver._strip_go_version_suffix("github.com/user/repo/v2")
+            == "github.com/user/repo"
+        )
+        assert (
+            GoResolver._strip_go_version_suffix("github.com/user/repo/v100")
+            == "github.com/user/repo"
+        )
+        # Test paths without version suffix remain unchanged
+        assert (
+            GoResolver._strip_go_version_suffix("github.com/golang/go")
+            == "github.com/golang/go"
+        )
+        # Test that it doesn't match version-like strings in the middle
+        assert (
+            GoResolver._strip_go_version_suffix("github.com/v2ray/v2ray-core")
+            == "github.com/v2ray/v2ray-core"
+        )
+
     @patch("httpx.Client.get")
     def test_resolve_github_url_golang_org(self, mock_get):
         """Test resolving golang.org package via pkg.go.dev."""

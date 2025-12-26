@@ -7,14 +7,20 @@ from pathlib import Path
 from oss_sustain_guard.config import get_exclusion_patterns
 from oss_sustain_guard.resolvers.base import LanguageResolver
 from oss_sustain_guard.resolvers.csharp import CSharpResolver
+from oss_sustain_guard.resolvers.dart import DartResolver
+from oss_sustain_guard.resolvers.elixir import ElixirResolver
 from oss_sustain_guard.resolvers.go import GoResolver
+from oss_sustain_guard.resolvers.haskell import HaskellResolver
 from oss_sustain_guard.resolvers.java import JavaResolver
 from oss_sustain_guard.resolvers.javascript import JavaScriptResolver
 from oss_sustain_guard.resolvers.kotlin import KotlinResolver
+from oss_sustain_guard.resolvers.perl import PerlResolver
 from oss_sustain_guard.resolvers.php import PhpResolver
 from oss_sustain_guard.resolvers.python import PythonResolver
+from oss_sustain_guard.resolvers.r import RResolver
 from oss_sustain_guard.resolvers.ruby import RubyResolver
 from oss_sustain_guard.resolvers.rust import RustResolver
+from oss_sustain_guard.resolvers.swift import SwiftResolver
 
 # Global registry of resolvers
 _RESOLVERS: dict[str, LanguageResolver] = {}
@@ -30,10 +36,20 @@ def _initialize_resolvers() -> None:
         _RESOLVERS["typescript"] = JavaScriptResolver()  # Alias
         _RESOLVERS["js"] = JavaScriptResolver()  # Alias
         _RESOLVERS["npm"] = JavaScriptResolver()  # Alias
+        _RESOLVERS["dart"] = DartResolver()
+        _RESOLVERS["pub"] = DartResolver()  # Alias
+        _RESOLVERS["elixir"] = ElixirResolver()
+        _RESOLVERS["hex"] = ElixirResolver()  # Alias
         _RESOLVERS["go"] = GoResolver()
+        _RESOLVERS["r"] = RResolver()
+        _RESOLVERS["cran"] = RResolver()  # Alias
         _RESOLVERS["ruby"] = RubyResolver()
         _RESOLVERS["gem"] = RubyResolver()  # Alias
         _RESOLVERS["rust"] = RustResolver()
+        _RESOLVERS["haskell"] = HaskellResolver()
+        _RESOLVERS["hackage"] = HaskellResolver()  # Alias
+        _RESOLVERS["perl"] = PerlResolver()
+        _RESOLVERS["cpan"] = PerlResolver()  # Alias
         _RESOLVERS["php"] = PhpResolver()
         _RESOLVERS["composer"] = PhpResolver()  # Alias
         _RESOLVERS["java"] = JavaResolver()
@@ -43,6 +59,8 @@ def _initialize_resolvers() -> None:
         _RESOLVERS["csharp"] = CSharpResolver()
         _RESOLVERS["dotnet"] = CSharpResolver()  # Alias
         _RESOLVERS["nuget"] = CSharpResolver()  # Alias
+        _RESOLVERS["swift"] = SwiftResolver()
+        _RESOLVERS["spm"] = SwiftResolver()  # Alias
 
 
 def get_resolver(ecosystem: str) -> LanguageResolver | None:

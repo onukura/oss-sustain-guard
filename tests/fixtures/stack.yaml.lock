@@ -1,0 +1,2 @@
+packages:
+  - hackage: text-1.2.5.0@sha256:abc,123

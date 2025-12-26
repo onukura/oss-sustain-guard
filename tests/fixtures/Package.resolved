@@ -1,0 +1,18 @@
+{
+  "object": {
+    "pins": [
+      {
+        "location": "https://github.com/apple/swift-nio.git",
+        "state": {
+          "version": "2.56.0"
+        }
+      },
+      {
+        "location": "https://github.com/Alamofire/Alamofire.git",
+        "state": {
+          "version": "5.8.0"
+        }
+      }
+    ]
+  }
+}

@@ -58,7 +58,7 @@ os4g check requests
 os4g check django flask numpy
 
 # Multi-language support
-os4g check python:requests npm:react rust:tokio
+os4g check python:requests npm:react rust:tokio r:ggplot2 haskell:text swift:apple/swift-nio
 
 # Auto-detect from manifest files
 os4g check --include-lock
@@ -81,7 +81,7 @@ For detailed usage, configuration, and features, see our documentation site:
 
 ### Supported Ecosystems
 
-Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
+Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby, R, Haskell, Swift, Dart, Elixir, Perl
 
 See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/) for ecosystem-specific syntax.
 

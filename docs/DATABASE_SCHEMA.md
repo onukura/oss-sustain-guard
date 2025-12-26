@@ -22,6 +22,12 @@ Cloudflare KV uses content-addressable keys:
 Examples:
 - `2.0:python:requests`
 - `2.0:javascript:react`
+- `2.0:dart:http`
+- `2.0:elixir:phoenix`
+- `2.0:haskell:text`
+- `2.0:perl:Mojolicious`
+- `2.0:r:ggplot2`
+- `2.0:swift:apple/swift-nio`
 - `2.0:rust:tokio`
 
 ### Data Loading Priority
@@ -50,7 +56,7 @@ Examples:
 
 ```json
 {
-  "ecosystem": "python|javascript|go|rust|php|java|csharp|ruby",
+  "ecosystem": "python|javascript|go|rust|php|java|csharp|ruby|kotlin|dart|elixir|haskell|perl|r|swift",
   "package_name": "string",
   "github_url": "https://github.com/{owner}/{repo}",
   "analysis_version": "1.0",
@@ -95,7 +101,7 @@ Examples:
 
 | Field | Type | Description |
 |----------|-----|------|
-| `ecosystem` | string | Ecosystem name: `python`, `javascript`, `go`, `rust`, `php`, `java`, `csharp`, `ruby` |
+| `ecosystem` | string | Ecosystem name: `python`, `javascript`, `go`, `rust`, `php`, `java`, `csharp`, `ruby`, `kotlin`, `dart`, `elixir`, `haskell`, `perl`, `r`, `swift` |
 | `package_name` | string | Package name within the ecosystem |
 | `github_url` | string | GitHub repository URL |
 | `analysis_version` | string | Analysis version for computed metrics (e.g., `"1.0"`). Used to invalidate cache when scoring logic changes. |

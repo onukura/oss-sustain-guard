@@ -89,6 +89,11 @@ def load_database(
     ecosystems = [
         "python",
         "javascript",
+        "dart",
+        "elixir",
+        "haskell",
+        "perl",
+        "r",
         "ruby",
         "rust",
         "php",
@@ -96,6 +101,7 @@ def load_database(
         "kotlin",
         "csharp",
         "go",
+        "swift",
     ]
 
     # Load from local cache first if enabled
@@ -1027,12 +1033,18 @@ def check(
         for eco in [
             "python",
             "javascript",
+            "dart",
+            "elixir",
+            "haskell",
+            "perl",
+            "r",
+            "ruby",
             "rust",
             "go",
             "php",
             "java",
-            "ruby",
             "csharp",
+            "swift",
         ]:
             resolver = get_resolver(eco)
             if resolver and manifest_name in resolver.get_manifest_files():
@@ -1044,7 +1056,7 @@ def check(
                 f"[yellow]⚠️  Could not detect ecosystem from manifest file: {manifest_name}[/yellow]"
             )
             console.print(
-                "[dim]Supported manifest files:[/dim] package.json, requirements.txt, pyproject.toml, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config"
+                "[dim]Supported manifest files:[/dim] package.json, requirements.txt, pyproject.toml, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config, DESCRIPTION, Package.swift, cabal.project, stack.yaml, package.yaml, pubspec.yaml, mix.exs, cpanfile"
             )
             raise typer.Exit(code=1)
 

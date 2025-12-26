@@ -52,6 +52,12 @@ os4g check requests  # ✅ Correct
 
 # Explicitly specify the ecosystem
 os4g check python:requests
+os4g check r:ggplot2
+os4g check haskell:text
+os4g check swift:apple/swift-nio
+os4g check dart:http
+os4g check elixir:phoenix
+os4g check perl:Mojolicious
 
 # Verify on the package registry
 # https://pypi.org/project/requests/

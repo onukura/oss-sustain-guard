@@ -117,7 +117,7 @@ oss-sustain-guard trend <PACKAGE_NAME> [OPTIONS]
 **Options:**
 
 - `--ecosystem, -e TEXT` - Package ecosystem (default: `python`)
-  - Supported: `python`, `javascript`, `rust`, `java`, `kotlin`, `php`, `ruby`, `csharp`, `go`
+  - Supported: `python`, `javascript`, `rust`, `java`, `kotlin`, `php`, `ruby`, `csharp`, `go`, `r`, `haskell`, `swift`, `dart`, `elixir`, `perl`
 - `--metric, -m TEXT` - Focus on specific metric (optional)
 - `--use-remote/--no-remote` - Load historical data from Cloudflare KV (default: True)
 - `--include-latest` - Include real-time analysis if package not in history (requires GITHUB_TOKEN)

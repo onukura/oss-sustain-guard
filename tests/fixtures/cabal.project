@@ -1,0 +1,2 @@
+packages: .
+constraints: any.text, any.bytestring

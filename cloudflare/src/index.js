@@ -28,7 +28,8 @@ const BATCH_RATE_WEIGHT = 10; // Batch requests count as 10 normal requests
 
 // Valid ecosystems for key validation (must match Python ECOSYSTEM_MAPPING values)
 const VALID_ECOSYSTEMS = new Set([
-  'python', 'javascript', 'rust', 'java', 'php', 'ruby', 'csharp', 'go', 'kotlin'
+  'python', 'javascript', 'rust', 'java', 'php', 'ruby', 'csharp', 'go', 'kotlin',
+  'r', 'haskell', 'swift', 'dart', 'elixir', 'perl'
 ]);
 
 // Key format regex: {version}:{ecosystem}:{package_name}[:{date}]

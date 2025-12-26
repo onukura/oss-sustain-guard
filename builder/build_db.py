@@ -77,18 +77,20 @@ ECOSYSTEM_MAPPING = {
     "Pypi": "python",
     "Cargo": "rust",
     "Maven": "java",
+    "CRAN": "r",
+    "Hackage": "haskell",
     "Packagist": "php",
     "Rubygems": "ruby",
     "NuGet": "csharp",
     "Go": "go",
+    "SwiftPM": "swift",
+    "Hex": "elixir",
+    "CPAN": "perl",
+    "Pub": "dart",
     # Popular ecosystems (commented out for now)
     # "CocoaPods": "swift",  # Objective-C/Swift
-    # "Pub": "dart",  # Dart
-    # "CPAN": "perl",  # Perl
-    # "CRAN": "r",  # R
     # "Clojars": "clojure",  # Clojure
     # "Hex": "elixir",  # Elixir
-    # "Hackage": "haskell",  # Haskell
     # "Conda": "python",  # Alternative Python package manager
 }
 

@@ -32,6 +32,12 @@ The `--show-dependencies` flag **only works when your project contains a lockfil
 
 - `Cargo.lock` (Rust)
 - `go.mod`, `go.sum` (Go modules)
+- `cabal.project.freeze`, `stack.yaml.lock` (Haskell)
+- `cpanfile.snapshot` (Perl)
+- `mix.lock` (Elixir)
+- `pubspec.lock` (Dart)
+- `renv.lock` (R)
+- `Package.resolved` (Swift Package Manager)
 - `Gemfile.lock` (Ruby)
 - `composer.lock` (PHP)
 

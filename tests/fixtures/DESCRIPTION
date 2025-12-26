@@ -1,0 +1,5 @@
+Package: example
+Title: Example Package
+Version: 0.1.0
+Imports: dplyr, ggplot2 (>= 3.0.0)
+Suggests: testthat

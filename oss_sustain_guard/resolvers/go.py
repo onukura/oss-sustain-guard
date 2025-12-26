@@ -35,7 +35,10 @@ class GoResolver(LanguageResolver):
         """
         # Check if it's already a repository path
         if package_name.startswith(("github.com/", "gitlab.com/")):
-            repo = parse_repository_url(package_name)
+            # Strip Go module version suffixes (e.g., /v2, /v8)
+            # Go modules use these for major version tracking, but they're not part of the repo path
+            cleaned_package_name = self._strip_go_version_suffix(package_name)
+            repo = parse_repository_url(cleaned_package_name)
             if repo:
                 return repo
 
@@ -144,6 +147,32 @@ class GoResolver(LanguageResolver):
     def get_manifest_files(self) -> list[str]:
         """Return list of Go manifest file names."""
         return ["go.mod"]
+
+    @staticmethod
+    def _strip_go_version_suffix(module_path: str) -> str:
+        """
+        Strip Go module version suffixes like /v2, /v8, etc.
+
+        Go modules use major version suffixes for packages with versions >= v2,
+        but these are not part of the repository path.
+
+        Examples:
+            github.com/go-redis/redis/v8 -> github.com/go-redis/redis
+            github.com/user/repo/v2 -> github.com/user/repo
+            github.com/user/repo -> github.com/user/repo (unchanged)
+
+        Args:
+            module_path: The Go module path.
+
+        Returns:
+            Module path with version suffix removed if present.
+        """
+        import re
+
+        # Match trailing /vN where N is a digit (e.g., /v2, /v8, /v100)
+        # This pattern only matches at the end of the string
+        pattern = r"/v\d+$"
+        return re.sub(pattern, "", module_path)
 
     def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """

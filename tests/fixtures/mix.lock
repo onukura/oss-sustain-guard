@@ -1,0 +1,4 @@
+%{
+  "ecto_sql": {:hex, :ecto_sql, "3.10.2"},
+  "phoenix": {:hex, :phoenix, "1.7.10"}
+}

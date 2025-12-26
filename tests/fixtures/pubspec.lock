@@ -1,0 +1,36 @@
+packages:
+  collection:
+    dependency: "direct overridden"
+    description:
+      name: collection
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.18.0"
+  http:
+    dependency: "direct main"
+    description:
+      name: http
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
+  lints:
+    dependency: "direct dev"
+    description:
+      name: lints
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
+  path:
+    dependency: transitive
+    description:
+      name: path
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.8.3"
+  test:
+    dependency: "direct dev"
+    description:
+      name: test
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.24.0"

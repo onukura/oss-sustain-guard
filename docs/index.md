@@ -101,6 +101,12 @@ pip install oss-sustain-guard
 - **Python** - PyPI
 - **JavaScript/TypeScript** - npm
 - **Rust** - Cargo
+- **Dart** - pub.dev
+- **Elixir** - Hex.pm
+- **Haskell** - Hackage
+- **Perl** - CPAN
+- **R** - CRAN/renv
+- **Swift** - Swift Package Manager
 - **Java** - Maven
 - **PHP** - Packagist
 - **Ruby** - RubyGems

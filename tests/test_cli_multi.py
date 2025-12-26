@@ -232,7 +232,7 @@ class TestLoadDatabase:
         assert "python:requests" in db
         assert db["python:requests"]["total_score"] == 85
         # Should be called for each ecosystem
-        assert mock_load_cache.call_count == 9  # 9 ecosystems
+        assert mock_load_cache.call_count == 15  # 15 ecosystems
 
     def test_load_database_no_cache(self):
         """Test loading database with cache disabled."""
