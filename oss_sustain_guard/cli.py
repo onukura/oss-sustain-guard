@@ -756,14 +756,22 @@ def analyze_package(
         )
         return None
 
-    repo_info = resolver.resolve_github_url(package_name)
+    repo_info = resolver.resolve_repository(package_name)
     if not repo_info:
         console.print(
-            f"  -> [yellow]ℹ️  GitHub repository not found for {db_key}. Package may not have public source code.[/yellow]"
+            f"  -> [yellow]ℹ️  Repository not found for {db_key}. Package may not have public source code.[/yellow]"
         )
         return None
 
-    owner, repo_name = repo_info
+    if repo_info.provider != "github":
+        console.print(
+            "  -> [yellow]ℹ️  Repository is hosted on "
+            f"{repo_info.provider.title()} ({repo_info.url}). "
+            "Real-time analysis currently supports GitHub only.[/yellow]"
+        )
+        return None
+
+    owner, repo_name = repo_info.owner, repo_info.name
     if verbose:
         console.print(
             f"  -> 🔍 [bold yellow]{db_key}[/bold yellow] analyzing real-time (no cache)..."
@@ -1636,9 +1644,16 @@ def trend(
             # Try to resolve package to GitHub repository
             resolver = get_resolver(ecosystem)
             if resolver:
-                repo_info = resolver.resolve_github_url(package_name)
+                repo_info = resolver.resolve_repository(package_name)
                 if repo_info:
-                    owner, repo = repo_info
+                    if repo_info.provider != "github":
+                        console.print(
+                            "  -> [yellow]ℹ️  Repository is hosted on "
+                            f"{repo_info.provider.title()} ({repo_info.url}). "
+                            "Real-time analysis currently supports GitHub only.[/yellow]"
+                        )
+                        return
+                    owner, repo = repo_info.owner, repo_info.name
                     try:
                         # Perform real-time analysis
                         import os

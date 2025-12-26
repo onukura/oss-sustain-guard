@@ -2,6 +2,7 @@
 Tests for resolver base classes and abstractions.
 """
 
+from oss_sustain_guard.repository import RepositoryReference
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -12,9 +13,15 @@ class MockResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "mock"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         if package_name == "mock-pkg":
-            return ("owner", "repo")
+            return RepositoryReference(
+                provider="github",
+                host="github.com",
+                path="owner/repo",
+                owner="owner",
+                name="repo",
+            )
         return None
 
     def parse_lockfile(self, lockfile_path: str) -> list[PackageInfo]:

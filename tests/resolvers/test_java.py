@@ -157,26 +157,38 @@ com.typesafe:config:1.4.0
         with pytest.raises(ValueError):
             resolver.parse_lockfile(str(lockfile))
 
-    def test_parse_github_url_valid(self):
+    def test_parse_repository_url_github(self):
         """Test parsing valid GitHub URL."""
-        resolver = JavaResolver()
-        result = resolver._parse_github_url("https://github.com/google/guava")
-        assert result == ("google", "guava")
+        from oss_sustain_guard.repository import parse_repository_url
 
-    def test_parse_github_url_with_git_suffix(self):
+        result = parse_repository_url("https://github.com/google/guava")
+        assert result is not None
+        assert result.provider == "github"
+        assert result.owner == "google"
+        assert result.name == "guava"
+
+    def test_parse_repository_url_github_with_git_suffix(self):
         """Test parsing GitHub URL with .git suffix."""
-        resolver = JavaResolver()
-        result = resolver._parse_github_url("https://github.com/google/guava.git")
-        assert result == ("google", "guava")
+        from oss_sustain_guard.repository import parse_repository_url
 
-    def test_parse_github_url_non_github(self):
-        """Test parsing non-GitHub URL."""
-        resolver = JavaResolver()
-        result = resolver._parse_github_url("https://gitlab.com/user/repo")
-        # Non-GitHub URLs still extract owner/repo, just not from GitHub
-        assert result == ("user", "repo")
+        result = parse_repository_url("https://github.com/google/guava.git")
+        assert result is not None
+        assert result.provider == "github"
+        assert result.owner == "google"
+        assert result.name == "guava"
 
-    def test_parse_github_url_invalid(self):
+    def test_parse_repository_url_gitlab(self):
+        """Test parsing GitLab URL."""
+        from oss_sustain_guard.repository import parse_repository_url
+
+        result = parse_repository_url("https://gitlab.com/user/repo")
+        assert result is not None
+        assert result.provider == "gitlab"
+        assert result.owner == "user"
+        assert result.name == "repo"
+
+    def test_parse_repository_url_invalid(self):
         """Test parsing invalid URL."""
-        resolver = JavaResolver()
-        assert resolver._parse_github_url("") is None
+        from oss_sustain_guard.repository import parse_repository_url
+
+        assert parse_repository_url("") is None

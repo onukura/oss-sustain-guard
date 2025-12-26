@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -21,15 +22,15 @@ class CSharpResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "csharp"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Fetches package information from NuGet Flat Container API and extracts GitHub URL from nuspec.
+        Fetches package information from NuGet Flat Container API and extracts repository URL from nuspec.
 
         Args:
             package_name: The name of the package on NuGet.
 
         Returns:
-            A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
+            RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
             package_lower = package_name.lower()
@@ -70,7 +71,7 @@ class CSharpResolver(LanguageResolver):
             )
             if repo_match:
                 repository_url = repo_match.group(1)
-                return self._parse_github_url(repository_url)
+                return parse_repository_url(repository_url)
 
             return None
         except (httpx.RequestError, ValueError, KeyError) as e:
@@ -259,54 +260,3 @@ class CSharpResolver(LanguageResolver):
             return packages
         except Exception as e:
             raise ValueError(f"Failed to parse packages.config: {e}") from e
-
-    @staticmethod
-    def _parse_github_url(url: str) -> tuple[str, str] | None:
-        """
-        Parse GitHub URL and extract owner and repo.
-
-        Args:
-            url: GitHub URL in format https://github.com/owner/repo[.git]
-                 or other git URLs
-
-        Returns:
-            Tuple of (owner, repo) or None if URL cannot be parsed.
-        """
-        if not url or not isinstance(url, str):
-            return None
-
-        # Remove .git suffix if present
-        if url.endswith(".git"):
-            url = url[:-4]
-
-        # Handle GitHub URLs
-        if "github.com" in url:
-            parts = url.rstrip("/").split("/")
-            if len(parts) >= 2:
-                owner = parts[-2]
-                repo = parts[-1]
-                if owner and repo:
-                    return (owner, repo)
-
-        # Handle other git hosting URLs
-        # Try to extract last two path components as owner/repo
-        parts = url.rstrip("/").split("/")
-        if len(parts) >= 2:
-            repo = parts[-1]
-            owner = parts[-2]
-
-            # Filter out common non-meaningful parts
-            if (
-                repo
-                and owner
-                and owner
-                not in [
-                    "repos",
-                    "git",
-                    "repo",
-                    "repository",
-                ]
-            ):
-                return (owner, repo)
-
-        return None

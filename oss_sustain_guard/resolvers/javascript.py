@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -18,15 +19,15 @@ class JavaScriptResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "javascript"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Fetches package information from the npm registry and extracts the GitHub URL.
+        Fetches package information from the npm registry and extracts repository URL.
 
         Args:
             package_name: The name of the package on npm.
 
         Returns:
-            A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
+            RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
             with httpx.Client(verify=get_verify_ssl()) as client:
@@ -50,29 +51,26 @@ class JavaScriptResolver(LanguageResolver):
             if not repo_url:
                 # Fallback: check other common fields
                 homepage = data.get("homepage", "")
-                if "github.com" in homepage:
+                if isinstance(homepage, str):
                     repo_url = homepage
 
             if repo_url:
+                normalized = repo_url.strip()
+                if normalized.startswith("github:"):
+                    normalized = f"https://github.com/{normalized.split(':', 1)[1]}"
+                elif normalized.startswith("gitlab:"):
+                    normalized = f"https://gitlab.com/{normalized.split(':', 1)[1]}"
+
                 # Clean up git URL (remove git+ prefix and .git suffix)
-                repo_url = (
-                    repo_url.replace("git+", "")
+                normalized = (
+                    normalized.replace("git+", "")
                     .replace("git://", "https://")
-                    .replace(".git", "")
-                    .strip()
+                    .rstrip("/")
                 )
 
-                # Parse GitHub URL
-                if "github.com" in repo_url:
-                    parts = repo_url.strip("/").split("/")
-                    try:
-                        gh_index = parts.index("github.com")
-                        if len(parts) > gh_index + 2:
-                            owner = parts[gh_index + 1]
-                            repo = parts[gh_index + 2]
-                            return owner, repo.split("#")[0]  # Clean fragment
-                    except (ValueError, IndexError):
-                        return None
+                repo = parse_repository_url(normalized)
+                if repo:
+                    return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             print(f"Error fetching JavaScript data for {package_name}: {e}")

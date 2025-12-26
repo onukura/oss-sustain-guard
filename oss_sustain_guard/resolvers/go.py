@@ -7,6 +7,7 @@ from pathlib import Path
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -17,9 +18,9 @@ class GoResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "go"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Resolve Go module to GitHub repository.
+        Resolve Go module to repository URL.
 
         Go modules often use GitHub paths directly (e.g., github.com/user/repo).
         For other paths, query pkg.go.dev API. If package_name is a short name
@@ -30,15 +31,13 @@ class GoResolver(LanguageResolver):
                          or a short package name (e.g., "gorm").
 
         Returns:
-            A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
+            RepositoryReference if a supported repository URL is found, otherwise None.
         """
-        # Check if it's already a GitHub path
-        if package_name.startswith("github.com/"):
-            parts = package_name.split("/")
-            if len(parts) >= 3:
-                owner = parts[1]
-                repo = parts[2]
-                return owner, repo
+        # Check if it's already a repository path
+        if package_name.startswith(("github.com/", "gitlab.com/")):
+            repo = parse_repository_url(package_name)
+            if repo:
+                return repo
 
         # For non-GitHub paths or short names, try to query pkg.go.dev
         try:
@@ -71,28 +70,29 @@ class GoResolver(LanguageResolver):
                 )
                 response.raise_for_status()
 
-                # Look for GitHub repository link in the UnitMeta-repo section
-                if "github.com" in response.text:
+                # Look for repository link in the UnitMeta-repo section
+                if "github.com" in response.text or "gitlab.com" in response.text:
                     import re
 
                     # First try to find the repository link in UnitMeta-repo section
                     # This is more reliable than searching the entire page
-                    pattern = r'class="UnitMeta-repo"[^>]*>.*?href="https://github\.com/([^/]+)/([^/"]+)"'
+                    pattern = r'class="UnitMeta-repo"[^>]*>.*?href="(https://[^"]+)"'
                     matches = re.findall(pattern, response.text, re.DOTALL)
-                    if matches:
-                        owner, repo = matches[0]
-                        return owner, repo
+                    for match in matches:
+                        repo = parse_repository_url(match)
+                        if repo:
+                            return repo
 
-                    # Fallback: search for any GitHub URL
-                    pattern = r'https://github\.com/([^/]+)/([^/\s"<>]+)'
+                    # Fallback: search for any repository URL
+                    pattern = r'https://(?:github|gitlab)\.com/[^/\s"<>]+/[^/\s"<>]+'
                     matches = re.findall(pattern, response.text)
-                    if matches:
+                    for match in matches:
                         # Filter out common false positives (golang/go is the Go logo link)
-                        for owner, repo in matches:
-                            if owner != "golang" or repo != "go":
-                                # Clean any trailing characters
-                                repo = repo.split("#")[0].split("?")[0].rstrip("/")
-                                return owner, repo
+                        if "github.com/golang/go" in match:
+                            continue
+                        repo = parse_repository_url(match)
+                        if repo:
+                            return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             print(f"Error fetching Go data for {package_name}: {e}")

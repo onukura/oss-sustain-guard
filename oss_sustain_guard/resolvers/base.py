@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import NamedTuple
 
+from oss_sustain_guard.repository import RepositoryReference
+
 
 class PackageInfo(NamedTuple):
     """Unified package information across all languages."""
@@ -26,20 +28,31 @@ class LanguageResolver(ABC):
         pass
 
     @abstractmethod
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Resolve package name to GitHub (owner, repo).
+        Resolve package name to a repository reference.
 
         Args:
             package_name: Package name in the ecosystem's format.
 
         Returns:
-            Tuple of (owner, repo) or None if not found.
+            RepositoryReference or None if not found.
 
         Raises:
             Exception: If there's an error querying the registry.
         """
         pass
+
+    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+        """
+        Resolve package name to GitHub (owner, repo).
+
+        Legacy helper for GitHub-only workflows.
+        """
+        repo = self.resolve_repository(package_name)
+        if repo and repo.provider == "github":
+            return repo.owner, repo.name
+        return None
 
     @abstractmethod
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:

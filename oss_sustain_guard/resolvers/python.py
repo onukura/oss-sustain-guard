@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -18,15 +19,15 @@ class PythonResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "python"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Fetches package information from the PyPI JSON API and extracts the GitHub URL.
+        Fetches package information from the PyPI JSON API and extracts repository URL.
 
         Args:
             package_name: The name of the package on PyPI.
 
         Returns:
-            A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
+            RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
             with httpx.Client(verify=get_verify_ssl()) as client:
@@ -46,34 +47,25 @@ class PythonResolver(LanguageResolver):
                 "Homepage",
             ]
 
-            github_url = None
+            url_candidates: list[str] = []
             if project_urls:  # Ensure project_urls is not None or empty
                 for key in url_keys:
-                    if (
-                        key in project_urls
-                        and project_urls[key]
-                        and "github.com" in project_urls[key]
-                    ):
-                        github_url = project_urls[key]
-                        break
+                    value = project_urls.get(key)
+                    if isinstance(value, str) and value:
+                        url_candidates.append(value)
 
-                if not github_url:
-                    # Fallback to searching all urls
-                    for url in project_urls.values():
-                        if isinstance(url, str) and "github.com" in url:
-                            github_url = url
-                            break
+                for url in project_urls.values():
+                    if isinstance(url, str) and url:
+                        url_candidates.append(url)
 
-            if github_url:
-                parts = github_url.strip("/").split("/")
-                try:
-                    gh_index = parts.index("github.com")
-                    if len(parts) > gh_index + 2:
-                        owner = parts[gh_index + 1]
-                        repo = parts[gh_index + 2]
-                        return owner, repo.split("#")[0]  # Clean fragment
-                except (ValueError, IndexError):
-                    return None
+            home_page = data.get("info", {}).get("home_page")
+            if isinstance(home_page, str) and home_page:
+                url_candidates.append(home_page)
+
+            for candidate in url_candidates:
+                repo = parse_repository_url(candidate)
+                if repo:
+                    return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             print(f"Error fetching PyPI data for {package_name}: {e}")

@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -20,15 +21,15 @@ class PhpResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "php"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Fetches package information from Packagist V2 API and extracts GitHub URL.
+        Fetches package information from Packagist V2 API and extracts repository URL.
 
         Args:
             package_name: The name of the package in vendor/package format.
 
         Returns:
-            A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
+            RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
             with httpx.Client(verify=get_verify_ssl()) as client:
@@ -60,14 +61,18 @@ class PhpResolver(LanguageResolver):
             if isinstance(source, dict):
                 repository_url = source.get("url", "")
                 if repository_url:
-                    return self._parse_github_url(repository_url)
+                    repo = parse_repository_url(repository_url)
+                    if repo:
+                        return repo
 
             # Fallback to support section
             support = package_data.get("support", {})
             if isinstance(support, dict):
                 source_url = support.get("source", "")
                 if source_url:
-                    return self._parse_github_url(source_url)
+                    repo = parse_repository_url(source_url)
+                    if repo:
+                        return repo
 
             return None
         except httpx.HTTPStatusError as e:
@@ -201,54 +206,3 @@ class PhpResolver(LanguageResolver):
             return packages
         except (json.JSONDecodeError, IOError) as e:
             raise ValueError(f"Failed to parse composer.json: {e}") from e
-
-    @staticmethod
-    def _parse_github_url(url: str) -> tuple[str, str] | None:
-        """
-        Parse GitHub URL and extract owner and repo.
-
-        Args:
-            url: GitHub URL in format https://github.com/owner/repo[.git]
-                 or other git URLs
-
-        Returns:
-            Tuple of (owner, repo) or None if URL cannot be parsed.
-        """
-        if not url or not isinstance(url, str):
-            return None
-
-        # Remove .git suffix if present
-        if url.endswith(".git"):
-            url = url[:-4]
-
-        # Handle GitHub URLs
-        if "github.com" in url:
-            parts = url.rstrip("/").split("/")
-            if len(parts) >= 2:
-                owner = parts[-2]
-                repo = parts[-1]
-                if owner and repo:
-                    return (owner, repo)
-
-        # Handle other git hosting URLs
-        # Try to extract last two path components as owner/repo
-        parts = url.rstrip("/").split("/")
-        if len(parts) >= 2:
-            repo = parts[-1]
-            owner = parts[-2]
-
-            # Filter out common non-meaningful parts
-            if (
-                repo
-                and owner
-                and owner
-                not in [
-                    "repos",
-                    "git",
-                    "repo",
-                    "repository",
-                ]
-            ):
-                return (owner, repo)
-
-        return None

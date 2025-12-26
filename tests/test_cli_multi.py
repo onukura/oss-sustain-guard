@@ -5,6 +5,7 @@ Tests for multi-language CLI functionality.
 from unittest.mock import MagicMock, patch
 
 from oss_sustain_guard.cli import analyze_package, parse_package_spec
+from oss_sustain_guard.repository import RepositoryReference
 
 
 class TestParsePackageSpec:
@@ -89,7 +90,7 @@ class TestAnalyzePackage:
     def test_analyze_package_not_found(self, mock_excluded, mock_get_resolver):
         """Test analyzing package that doesn't have GitHub URL."""
         mock_resolver = MagicMock()
-        mock_resolver.resolve_github_url.return_value = None
+        mock_resolver.resolve_repository.return_value = None
         mock_get_resolver.return_value = mock_resolver
 
         result = analyze_package("nonexistent", "python", {})
@@ -106,7 +107,13 @@ class TestAnalyzePackage:
         from oss_sustain_guard.core import AnalysisResult, Metric
 
         mock_resolver = MagicMock()
-        mock_resolver.resolve_github_url.return_value = ("psf", "requests")
+        mock_resolver.resolve_repository.return_value = RepositoryReference(
+            provider="github",
+            host="github.com",
+            path="psf/requests",
+            owner="psf",
+            name="requests",
+        )
         mock_get_resolver.return_value = mock_resolver
 
         mock_result = AnalysisResult(
@@ -142,7 +149,13 @@ class TestAnalyzePackage:
         from oss_sustain_guard.core import AnalysisResult, Metric
 
         mock_resolver = MagicMock()
-        mock_resolver.resolve_github_url.return_value = ("psf", "requests")
+        mock_resolver.resolve_repository.return_value = RepositoryReference(
+            provider="github",
+            host="github.com",
+            path="psf/requests",
+            owner="psf",
+            name="requests",
+        )
         mock_get_resolver.return_value = mock_resolver
 
         mock_result = AnalysisResult(
@@ -176,7 +189,13 @@ class TestAnalyzePackage:
     ):
         """Test package analysis with error."""
         mock_resolver = MagicMock()
-        mock_resolver.resolve_github_url.return_value = ("user", "repo")
+        mock_resolver.resolve_repository.return_value = RepositoryReference(
+            provider="github",
+            host="github.com",
+            path="user/repo",
+            owner="user",
+            name="repo",
+        )
         mock_get_resolver.return_value = mock_resolver
 
         mock_analyze_repo.side_effect = Exception("API error")

@@ -7,6 +7,7 @@ from pathlib import Path
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -17,9 +18,9 @@ class RubyResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "ruby"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Resolve Ruby gem to GitHub repository.
+        Resolve Ruby gem to repository URL.
 
         Queries the RubyGems API to get gem metadata and extracts GitHub URL.
 
@@ -27,7 +28,7 @@ class RubyResolver(LanguageResolver):
             package_name: The gem name (e.g., rails, devise).
 
         Returns:
-            A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
+            RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
             with httpx.Client(verify=get_verify_ssl()) as client:
@@ -48,25 +49,10 @@ class RubyResolver(LanguageResolver):
                 ]
 
                 for url in urls_to_check:
-                    if url and "github.com" in url:
-                        # Parse GitHub URL
-                        # Format: https://github.com/owner/repo[/tree/...]
-                        # Clean up query strings and fragments
-                        url_clean = url.split("?")[0].split("#")[0].rstrip("/")
-                        parts = url_clean.split("/")
-
-                        # Find github.com in path
-                        try:
-                            github_idx = parts.index("github.com")
-                            if len(parts) > github_idx + 2:
-                                owner = parts[github_idx + 1]
-                                repo = parts[github_idx + 2]
-                                # Clean up .git suffix if present
-                                if repo.endswith(".git"):
-                                    repo = repo[:-4]
-                                return owner, repo
-                        except (ValueError, IndexError):
-                            continue
+                    if isinstance(url, str) and url:
+                        repo = parse_repository_url(url)
+                        if repo:
+                            return repo
 
                 return None
 

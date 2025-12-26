@@ -2,6 +2,7 @@
 Tests for resolver registry and factory functions.
 """
 
+from oss_sustain_guard.repository import RepositoryReference
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     get_all_resolvers,
@@ -18,7 +19,7 @@ class MockEcosystemResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "mock-ecosystem"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         return None
 
     def parse_lockfile(self, lockfile_path: str) -> list[PackageInfo]:

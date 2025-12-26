@@ -10,6 +10,7 @@ from pathlib import Path
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -37,19 +38,20 @@ class JavaResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "java"
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
-        Fetches package information from Maven Central and extracts GitHub URL from pom.xml.
+        Fetches package information from Maven Central and extracts repository URL from pom.xml.
 
         Args:
             package_name: The name of the package in groupId:artifactId format.
 
         Returns:
-            A tuple of (owner, repo_name) if a GitHub URL is found, otherwise None.
+            RepositoryReference if a supported repository URL is found, otherwise None.
         """
         # Check known packages first
         if package_name in self.KNOWN_PACKAGES:
-            return self.KNOWN_PACKAGES[package_name]
+            owner, repo = self.KNOWN_PACKAGES[package_name]
+            return parse_repository_url(f"https://github.com/{owner}/{repo}")
 
         try:
             # Parse groupId:artifactId format
@@ -88,15 +90,19 @@ class JavaResolver(LanguageResolver):
                 )
                 if scm_match:
                     scm_url = scm_match.group(1)
-                    return self._parse_github_url(scm_url)
+                    repo = parse_repository_url(scm_url)
+                    if repo:
+                        return repo
 
-                # Fallback: look for GitHub URL in project url or any GitHub link
-                github_match = re.search(
-                    r'https://github\.com/[^\s<>"\']+',
+                # Fallback: look for repository URL in project url or any link
+                repo_match = re.search(
+                    r'https://(?:github|gitlab)\.com/[^\s<>"\']+',
                     pom_response.text,
                 )
-                if github_match:
-                    return self._parse_github_url(github_match.group(0))
+                if repo_match:
+                    repo = parse_repository_url(repo_match.group(0))
+                    if repo:
+                        return repo
 
                 return None
         except (httpx.RequestError, ValueError, KeyError) as e:
@@ -418,55 +424,3 @@ class JavaResolver(LanguageResolver):
             return packages
         except Exception as e:
             raise ValueError(f"Failed to parse build.sbt.lock: {e}") from e
-
-    @staticmethod
-    def _parse_github_url(url: str) -> tuple[str, str] | None:
-        """
-        Parse GitHub URL and extract owner and repo.
-
-        Args:
-            url: GitHub URL in format https://github.com/owner/repo[.git]
-                 or other git URLs like https://gitbox.apache.org/repos/asf/repo-name.git
-
-        Returns:
-            Tuple of (owner, repo) or None if URL cannot be parsed.
-        """
-        if not url or not isinstance(url, str):
-            return None
-
-        # Remove .git suffix if present
-        if url.endswith(".git"):
-            url = url[:-4]
-
-        # Handle GitHub URLs
-        if "github.com" in url:
-            parts = url.rstrip("/").split("/")
-            if len(parts) >= 2:
-                owner = parts[-2]
-                repo = parts[-1]
-                if owner and repo:
-                    return (owner, repo)
-
-        # Handle other git hosting URLs (e.g., gitbox.apache.org)
-        # Try to extract last two path components as owner/repo
-        parts = url.rstrip("/").split("/")
-        if len(parts) >= 2:
-            # Skip common patterns and extract meaningful last two parts
-            repo = parts[-1]
-            owner = parts[-2]
-
-            # Filter out common non-meaningful parts
-            if (
-                repo
-                and owner
-                and owner
-                not in [
-                    "repos",
-                    "git",
-                    "repo",
-                    "repository",
-                ]
-            ):
-                return (owner, repo)
-
-        return None
