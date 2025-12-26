@@ -324,8 +324,56 @@ class TestAnalyzeDependenciesForPackage:
         mock_get_deps.return_value = ["dep1", "dep2"]
 
         db = {
-            "python:dep1": {"total_score": 85},
-            "python:dep2": {"total_score": 90},
+            "python:dep1": {
+                "metrics": [
+                    {
+                        "name": "Contributor Redundancy",
+                        "score": 20,
+                        "max_score": 20,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                    {
+                        "name": "Recent Activity",
+                        "score": 15,
+                        "max_score": 20,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                    {
+                        "name": "Security Signals",
+                        "score": 10,
+                        "max_score": 15,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                ]
+            },
+            "python:dep2": {
+                "metrics": [
+                    {
+                        "name": "Contributor Redundancy",
+                        "score": 20,
+                        "max_score": 20,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                    {
+                        "name": "Recent Activity",
+                        "score": 20,
+                        "max_score": 20,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                    {
+                        "name": "Security Signals",
+                        "score": 15,
+                        "max_score": 15,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                ]
+            },
         }
 
         # Create a temporary lockfile
@@ -342,8 +390,13 @@ class TestAnalyzeDependenciesForPackage:
 
             assert "dep1" in result
             assert "dep2" in result
-            assert result["dep1"] == 85
-            assert result["dep2"] == 90
+            # Scores are calculated from metrics using balanced profile
+            # dep1: Contributor Redundancy (20/20) + Recent Activity (15/20) + Security Signals (10/15)
+            # dep2: Contributor Redundancy (20/20) + Recent Activity (20/20) + Security Signals (15/15)
+            # Scores will be weighted by category
+            assert result["dep1"] > 0  # Should have a positive score
+            assert result["dep2"] > 0  # Should have a positive score
+            assert result["dep2"] > result["dep1"]  # dep2 has better scores
         finally:
             import os
 

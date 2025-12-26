@@ -516,7 +516,11 @@ def display_results_detailed(
 
 
 def _analyze_dependencies_for_package(
-    ecosystem: str, lockfile_path: str | Path, db: dict, package_name: str
+    ecosystem: str,
+    lockfile_path: str | Path,
+    db: dict,
+    package_name: str,
+    profile: str = "balanced",
 ) -> dict[str, int]:
     """
     Analyze dependencies for a specific package from a lockfile and return their scores.
@@ -524,8 +528,9 @@ def _analyze_dependencies_for_package(
     Args:
         ecosystem: Ecosystem name (python, javascript, etc).
         lockfile_path: Path to the lockfile.
-        db: Database dictionary with cached package scores.
+        db: Database dictionary with cached package metrics.
         package_name: Name of the package to get dependencies for.
+        profile: Scoring profile to use for calculating scores.
 
     Returns:
         Dictionary mapping dependency package names to their scores.
@@ -543,17 +548,62 @@ def _analyze_dependencies_for_package(
             return {}
 
         dep_scores: dict[str, int] = {}
+        missing_packages = []
 
-        # Look up scores for each dependency
+        # Look up metrics for each dependency from local db first
         for dep_name in dep_names:
             db_key = f"{ecosystem}:{dep_name}"
             if db_key in db:
                 try:
                     pkg_data = db[db_key]
-                    score = pkg_data.get("total_score", 0)
-                    dep_scores[dep_name] = score
+                    # Calculate score from metrics using the specified profile
+                    metrics_data = pkg_data.get("metrics", [])
+                    if metrics_data:
+                        metrics = [
+                            Metric(
+                                m["name"],
+                                m["score"],
+                                m["max_score"],
+                                m["message"],
+                                m["risk"],
+                            )
+                            for m in metrics_data
+                        ]
+                        score = compute_weighted_total_score(metrics, profile)
+                        dep_scores[dep_name] = score
+                    else:
+                        missing_packages.append((ecosystem, dep_name))
                 except (KeyError, TypeError):
-                    pass
+                    missing_packages.append((ecosystem, dep_name))
+            else:
+                missing_packages.append((ecosystem, dep_name))
+
+        # Try to fetch missing packages from Cloudflare KV
+        if missing_packages:
+            try:
+                kv_data = load_packages_from_cloudflare(missing_packages, verbose=False)
+                for kv_key, data in kv_data.items():
+                    # Extract package name from key (format: "ecosystem:package_name")
+                    parts = kv_key.split(":", 1)
+                    if len(parts) == 2:
+                        _, pkg_name = parts
+                        metrics_data = data.get("metrics", [])
+                        if metrics_data:
+                            metrics = [
+                                Metric(
+                                    m["name"],
+                                    m["score"],
+                                    m["max_score"],
+                                    m["message"],
+                                    m["risk"],
+                                )
+                                for m in metrics_data
+                            ]
+                            score = compute_weighted_total_score(metrics, profile)
+                            dep_scores[pkg_name] = score
+            except Exception:
+                # Silently fail if Cloudflare KV is unavailable
+                pass
 
         return dep_scores
     except Exception as e:
@@ -679,7 +729,7 @@ def analyze_package(
             # If show_dependencies is requested, analyze dependencies
             if show_dependencies and lockfile_path:
                 dep_scores = _analyze_dependencies_for_package(
-                    ecosystem, lockfile_path, db, package_name
+                    ecosystem, lockfile_path, db, package_name, profile
                 )
                 result = result._replace(dependency_scores=dep_scores)
 
@@ -741,7 +791,7 @@ def analyze_package(
             # If show_dependencies is requested, analyze dependencies
             if show_dependencies and lockfile_path:
                 dep_scores = _analyze_dependencies_for_package(
-                    ecosystem, lockfile_path, db, package_name
+                    ecosystem, lockfile_path, db, package_name, profile
                 )
                 result = result._replace(dependency_scores=dep_scores)
 
@@ -826,7 +876,7 @@ def analyze_package(
         # If show_dependencies is requested, analyze dependencies
         if show_dependencies and lockfile_path:
             dep_scores = _analyze_dependencies_for_package(
-                ecosystem, lockfile_path, db, package_name
+                ecosystem, lockfile_path, db, package_name, profile
             )
             analysis_result = analysis_result._replace(dependency_scores=dep_scores)
 
