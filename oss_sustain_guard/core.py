@@ -375,7 +375,26 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
             "Critical",
         )
 
-    # Count commits per author
+    # Bot patterns to exclude (same as check_maintainer_drain)
+    bot_keywords = [
+        "bot",
+        "action",
+        "dependabot",
+        "renovate",
+        "github-actions",
+        "ci-",
+        "autorelease",
+        "release-bot",
+        "copilot",
+        "actions-user",
+    ]
+
+    def is_bot(login: str) -> bool:
+        """Check if login appears to be a bot."""
+        lower = login.lower()
+        return any(keyword in lower for keyword in bot_keywords)
+
+    # Count commits per author (excluding bots)
     author_counts: dict[str, int] = {}
     for edge in history:
         node = edge.get("node", {})
@@ -383,10 +402,21 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
         user = author.get("user")
         if user:
             login = user.get("login")
-            if login:
+            if login and not is_bot(login):
                 author_counts[login] = author_counts.get(login, 0) + 1
 
-    total_commits = len(history)
+    # Check if we have any human contributors
+    if not author_counts:
+        return Metric(
+            "Contributor Redundancy",
+            0,
+            max_score,
+            "No human contributors found (only bot commits).",
+            "Critical",
+        )
+
+    # Calculate total commits by human contributors only
+    total_commits = sum(author_counts.values())
     if total_commits == 0:
         return Metric(
             "Contributor Redundancy",
@@ -397,7 +427,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
         )
 
     # Find the top contributor
-    top_contributor_commits = max(author_counts.values()) if author_counts else 0
+    top_contributor_commits = max(author_counts.values())
     percentage = (top_contributor_commits / total_commits) * 100
     num_contributors = len(author_counts)
 
@@ -1288,6 +1318,25 @@ def check_attraction(repo_data: dict[str, Any]) -> Metric:
             "Medium",
         )
 
+    # Bot patterns to exclude (same as check_bus_factor)
+    bot_keywords = [
+        "bot",
+        "action",
+        "dependabot",
+        "renovate",
+        "github-actions",
+        "ci-",
+        "autorelease",
+        "release-bot",
+        "copilot",
+        "actions-user",
+    ]
+
+    def is_bot(login: str) -> bool:
+        """Check if login appears to be a bot."""
+        lower = login.lower()
+        return any(keyword in lower for keyword in bot_keywords)
+
     # Collect all contributors with their first commit date
     contributor_first_seen: dict[str, datetime] = {}
     now = datetime.now(timezone.utc)
@@ -1303,7 +1352,7 @@ def check_attraction(repo_data: dict[str, Any]) -> Metric:
             continue
 
         login = user.get("login")
-        if not login:
+        if not login or is_bot(login):  # Exclude bots
             continue
 
         try:
@@ -1404,6 +1453,25 @@ def check_retention(repo_data: dict[str, Any]) -> Metric:
             "Medium",
         )
 
+    # Bot patterns to exclude (same as check_bus_factor)
+    bot_keywords = [
+        "bot",
+        "action",
+        "dependabot",
+        "renovate",
+        "github-actions",
+        "ci-",
+        "autorelease",
+        "release-bot",
+        "copilot",
+        "actions-user",
+    ]
+
+    def is_bot(login: str) -> bool:
+        """Check if login appears to be a bot."""
+        lower = login.lower()
+        return any(keyword in lower for keyword in bot_keywords)
+
     # Track contributors by time period
     now = datetime.now(timezone.utc)
     three_months_ago = now - timedelta(days=90)
@@ -1422,7 +1490,7 @@ def check_retention(repo_data: dict[str, Any]) -> Metric:
             continue
 
         login = user.get("login")
-        if not login:
+        if not login or is_bot(login):  # Exclude bots
             continue
 
         try:
@@ -1907,6 +1975,25 @@ def check_organizational_diversity(repo_data: dict[str, Any]) -> Metric:
             "None",
         )
 
+    # Bot patterns to exclude (same as check_bus_factor)
+    bot_keywords = [
+        "bot",
+        "action",
+        "dependabot",
+        "renovate",
+        "github-actions",
+        "ci-",
+        "autorelease",
+        "release-bot",
+        "copilot",
+        "actions-user",
+    ]
+
+    def is_bot(login: str) -> bool:
+        """Check if login appears to be a bot."""
+        lower = login.lower()
+        return any(keyword in lower for keyword in bot_keywords)
+
     # Collect organization signals
     organizations: set[str] = set()
     email_domains: set[str] = set()
@@ -1918,6 +2005,11 @@ def check_organizational_diversity(repo_data: dict[str, Any]) -> Metric:
         # Check company field
         user = author.get("user")
         if user:
+            login = user.get("login")
+            # Skip bots
+            if login and is_bot(login):
+                continue
+
             company = user.get("company")
             if company and len(company) > 1:
                 # Normalize company name
@@ -2956,6 +3048,26 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
         target = default_branch.get("target")
         if target:
             history = target.get("history", {}).get("edges", [])
+
+            # Bot patterns to exclude (same as check_bus_factor)
+            bot_keywords = [
+                "bot",
+                "action",
+                "dependabot",
+                "renovate",
+                "github-actions",
+                "ci-",
+                "autorelease",
+                "release-bot",
+                "copilot",
+                "actions-user",
+            ]
+
+            def is_bot(login: str) -> bool:
+                """Check if login appears to be a bot."""
+                lower = login.lower()
+                return any(keyword in lower for keyword in bot_keywords)
+
             author_counts = {}
             for edge in history:
                 node = edge.get("node", {})
@@ -2963,7 +3075,7 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
                 user = author.get("user")
                 if user:
                     login = user.get("login")
-                    if login:
+                    if login and not is_bot(login):  # Exclude bots
                         author_counts[login] = author_counts.get(login, 0) + 1
             if author_counts:
                 signals["contributor_count"] = len(author_counts)

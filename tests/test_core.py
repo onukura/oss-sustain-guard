@@ -2382,3 +2382,36 @@ def test_analyze_repository_not_found(mock_graphql_query):
 
     with pytest.raises(ValueError, match="not found or is inaccessible"):
         analyze_repository("nonexistent", "repo")
+
+
+def test_check_bus_factor_excludes_bots():
+    """Test check_bus_factor excludes bot accounts from contributor count."""
+    from oss_sustain_guard.core import check_bus_factor
+
+    repo_data = {
+        "defaultBranchRef": {
+            "target": {
+                "history": {
+                    "edges": [
+                        {"node": {"author": {"user": {"login": "onukura"}}}},
+                        {"node": {"author": {"user": {"login": "onukura"}}}},
+                        {"node": {"author": {"user": {"login": "onukura"}}}},
+                        {"node": {"author": {"user": {"login": "github-actions"}}}},
+                        {"node": {"author": {"user": {"login": "actions-user"}}}},
+                        {"node": {"author": {"user": {"login": "dependabot"}}}},
+                        {"node": {"author": {"user": {"login": "copilot"}}}},
+                    ],
+                    "totalCount": 107,
+                }
+            }
+        }
+    }
+
+    result = check_bus_factor(repo_data)
+
+    # Should detect only 1 human contributor (onukura)
+    # 3 commits out of 3 human commits = 100%
+    assert result.name == "Contributor Redundancy"
+    assert "1 contributor(s)" in result.message or "single author" in result.message
+    # Should not count bots in the contributor count
+    assert "4 contributor(s)" not in result.message
