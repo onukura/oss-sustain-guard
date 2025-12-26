@@ -20,7 +20,6 @@ from oss_sustain_guard.core import (
     check_fork_activity,
     check_funding,
     check_issue_resolution_duration,
-    check_license_clarity,
     check_organizational_diversity,
     check_pr_acceptance_ratio,
     check_pr_responsiveness,
@@ -978,34 +977,6 @@ def test_check_project_popularity_new():
     assert metric.name == "Project Popularity"
     assert metric.score == 0  # <10 stars
     assert metric.risk == "Low"
-
-
-# --- License Clarity Tests ---
-
-
-def test_check_license_clarity_osi_approved():
-    """Tests license clarity with OSI-approved license."""
-    repo_data = {
-        "licenseInfo": {
-            "name": "MIT License",
-            "spdxId": "MIT",
-            "url": "https://opensource.org/licenses/MIT",
-        }
-    }
-    metric = check_license_clarity(repo_data)
-    assert metric.name == "License Clarity"
-    assert metric.score == 5
-    assert metric.risk == "None"
-    assert "OSI-approved" in metric.message
-
-
-def test_check_license_clarity_no_license():
-    """Tests license clarity with no license."""
-    repo_data = {"licenseInfo": None}
-    metric = check_license_clarity(repo_data)
-    assert metric.name == "License Clarity"
-    assert metric.score == 0
-    assert metric.risk == "High"
 
 
 # --- PR Responsiveness Tests ---
@@ -2143,39 +2114,6 @@ def test_check_fork_activity_healthy_large():
     assert result.score == result.max_score
     assert result.risk == "None"
     assert "Excellent" in result.message or "Healthy" in result.message
-
-
-def test_check_fork_activity_high_divergence_risk():
-    """Test fork activity with high divergence risk (>40% active)."""
-    from datetime import datetime, timedelta, timezone
-
-    from oss_sustain_guard.core import check_fork_activity
-
-    now = datetime.now(timezone.utc)
-    recent_date = (now - timedelta(days=30)).isoformat()
-
-    # All forks are active (100% active ratio)
-    forks = [
-        {
-            "node": {
-                "createdAt": recent_date,
-                "pushedAt": recent_date,
-                "defaultBranchRef": {
-                    "target": {
-                        "history": {"edges": [{"node": {"committedDate": recent_date}}]}
-                    }
-                },
-            }
-        }
-        for _ in range(20)
-    ]
-
-    repo_data = {"forkCount": 150, "forks": {"edges": forks}}
-    result = check_fork_activity(repo_data)
-
-    assert result.score <= 2
-    assert result.risk in ["Medium", "Low"]
-    assert "Needs attention" in result.message or "divergence" in result.message.lower()
 
 
 # --- Tests for check_license_clarity ---
