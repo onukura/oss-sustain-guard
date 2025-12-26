@@ -2,6 +2,7 @@
 Tests for Java resolver.
 """
 
+import platform
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -414,6 +415,10 @@ libraryDependencies += "com.typesafe" % "config" % "1.4.0"
         with pytest.raises(ValueError):
             resolver.parse_manifest(str(pom_file))
 
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="chmod does not restrict file access on Windows",
+    )
     def test_parse_gradle_manifest_io_error(self, tmp_path):
         """Test handling IOError in gradle parsing."""
         gradle_file = tmp_path / "build.gradle"
@@ -429,6 +434,10 @@ libraryDependencies += "com.typesafe" % "config" % "1.4.0"
             # Restore permissions for cleanup
             gradle_file.chmod(0o644)
 
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="chmod does not restrict file access on Windows",
+    )
     def test_parse_sbt_manifest_io_error(self, tmp_path):
         """Test handling IOError in sbt parsing."""
         sbt_file = tmp_path / "build.sbt"
