@@ -105,7 +105,7 @@ class JavaResolver(LanguageResolver):
                         return repo
 
                 return None
-        except (httpx.RequestError, ValueError, KeyError) as e:
+        except (httpx.RequestError, httpx.HTTPStatusError, ValueError, KeyError) as e:
             print(f"Error fetching Java data for {package_name}: {e}")
             return None
 
@@ -264,8 +264,8 @@ class JavaResolver(LanguageResolver):
             #     testImplementation("group:artifact:version")
             # }
 
-            # Pattern: implementation/testImplementation/etc '...' or "..."
-            pattern = r"(?:implementation|testImplementation|compileOnly|runtimeOnly)\s+['\"]([^'\"]+)['\"]"
+            # Pattern: implementation/testImplementation/etc '...' or "..." or ("...")
+            pattern = r"(?:implementation|testImplementation|compileOnly|runtimeOnly)\s*\(?['\"]([^'\"]+)['\"]\)?"
             matches = re.findall(pattern, content)
 
             for match in matches:
