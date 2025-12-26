@@ -516,51 +516,44 @@ def display_results_detailed(
 
 
 def _analyze_dependencies_for_package(
-    ecosystem: str, lockfile_path: str | Path, db: dict
+    ecosystem: str, lockfile_path: str | Path, db: dict, package_name: str
 ) -> dict[str, int]:
     """
-    Analyze dependencies from a lockfile and return their scores.
+    Analyze dependencies for a specific package from a lockfile and return their scores.
 
     Args:
         ecosystem: Ecosystem name (python, javascript, etc).
         lockfile_path: Path to the lockfile.
         db: Database dictionary with cached package scores.
+        package_name: Name of the package to get dependencies for.
 
     Returns:
-        Dictionary mapping package names to their scores.
+        Dictionary mapping dependency package names to their scores.
     """
     try:
-        from oss_sustain_guard.dependency_graph import (
-            filter_high_value_dependencies,
-            get_all_dependencies,
-        )
+        from oss_sustain_guard.dependency_graph import get_package_dependencies
 
         lockfile_path = Path(lockfile_path)
         if not lockfile_path.exists():
             return {}
 
-        graphs = get_all_dependencies([lockfile_path])
-        if not graphs:
+        # Get dependencies specifically for this package
+        dep_names = get_package_dependencies(lockfile_path, package_name)
+        if not dep_names:
             return {}
 
         dep_scores: dict[str, int] = {}
 
-        for graph in graphs:
-            if graph.ecosystem != ecosystem:
-                continue
-
-            # Get top dependencies
-            top_deps = filter_high_value_dependencies(graph, max_count=20)
-
-            for dep in top_deps:
-                db_key = f"{ecosystem}:{dep.name}"
-                if db_key in db:
-                    try:
-                        pkg_data = db[db_key]
-                        score = pkg_data.get("total_score", 0)
-                        dep_scores[dep.name] = score
-                    except (KeyError, TypeError):
-                        pass
+        # Look up scores for each dependency
+        for dep_name in dep_names:
+            db_key = f"{ecosystem}:{dep_name}"
+            if db_key in db:
+                try:
+                    pkg_data = db[db_key]
+                    score = pkg_data.get("total_score", 0)
+                    dep_scores[dep_name] = score
+                except (KeyError, TypeError):
+                    pass
 
         return dep_scores
     except Exception as e:
@@ -686,7 +679,7 @@ def analyze_package(
             # If show_dependencies is requested, analyze dependencies
             if show_dependencies and lockfile_path:
                 dep_scores = _analyze_dependencies_for_package(
-                    ecosystem, lockfile_path, db
+                    ecosystem, lockfile_path, db, package_name
                 )
                 result = result._replace(dependency_scores=dep_scores)
 
@@ -748,7 +741,7 @@ def analyze_package(
             # If show_dependencies is requested, analyze dependencies
             if show_dependencies and lockfile_path:
                 dep_scores = _analyze_dependencies_for_package(
-                    ecosystem, lockfile_path, db
+                    ecosystem, lockfile_path, db, package_name
                 )
                 result = result._replace(dependency_scores=dep_scores)
 
@@ -832,7 +825,9 @@ def analyze_package(
 
         # If show_dependencies is requested, analyze dependencies
         if show_dependencies and lockfile_path:
-            dep_scores = _analyze_dependencies_for_package(ecosystem, lockfile_path, db)
+            dep_scores = _analyze_dependencies_for_package(
+                ecosystem, lockfile_path, db, package_name
+            )
             analysis_result = analysis_result._replace(dependency_scores=dep_scores)
 
         return analysis_result

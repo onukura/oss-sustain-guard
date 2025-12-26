@@ -317,24 +317,11 @@ class TestLoadPackagesFromCloudflare:
 class TestAnalyzeDependenciesForPackage:
     """Test dependency analysis functionality."""
 
-    @patch("oss_sustain_guard.dependency_graph.get_all_dependencies")
-    @patch("oss_sustain_guard.dependency_graph.filter_high_value_dependencies")
-    def test_analyze_dependencies_success(self, mock_filter, mock_get_deps):
+    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
+    def test_analyze_dependencies_success(self, mock_get_deps):
         """Test successful dependency analysis."""
-        from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
-
-        # Create DependencyInfo objects for dependencies
-        dep1 = DependencyInfo(name="dep1", ecosystem="python", version="1.0.0")
-        dep2 = DependencyInfo(name="dep2", ecosystem="python", version="2.0.0")
-
-        mock_graph = DependencyGraph(
-            root_package="test-package",
-            ecosystem="python",
-            direct_dependencies=[dep1, dep2],
-            transitive_dependencies=[],
-        )
-        mock_get_deps.return_value = [mock_graph]
-        mock_filter.return_value = [dep1, dep2]
+        # Mock get_package_dependencies to return a list of dependency names
+        mock_get_deps.return_value = ["dep1", "dep2"]
 
         db = {
             "python:dep1": {"total_score": 85},
@@ -349,7 +336,9 @@ class TestAnalyzeDependenciesForPackage:
             tmp_path = tmp.name
 
         try:
-            result = _analyze_dependencies_for_package("python", tmp_path, db)
+            result = _analyze_dependencies_for_package(
+                "python", tmp_path, db, "test-package"
+            )
 
             assert "dep1" in result
             assert "dep2" in result
@@ -363,22 +352,26 @@ class TestAnalyzeDependenciesForPackage:
     def test_analyze_dependencies_missing_lockfile(self):
         """Test dependency analysis with missing lockfile."""
         result = _analyze_dependencies_for_package(
-            "python", "/nonexistent/file.lock", {}
+            "python", "/nonexistent/file.lock", {}, "test-package"
         )
         assert result == {}
 
-    @patch("oss_sustain_guard.dependency_graph.get_all_dependencies")
-    def test_analyze_dependencies_no_graphs(self, mock_get_deps):
-        """Test dependency analysis with no dependency graphs."""
+    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
+    def test_analyze_dependencies_no_deps(self, mock_get_deps):
+        """Test dependency analysis with no dependencies found."""
         mock_get_deps.return_value = []
 
-        result = _analyze_dependencies_for_package("python", "/tmp/test.lock", {})
+        result = _analyze_dependencies_for_package(
+            "python", "/tmp/test.lock", {}, "test-package"
+        )
         assert result == {}
 
-    @patch("oss_sustain_guard.dependency_graph.get_all_dependencies")
+    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
     def test_analyze_dependencies_exception(self, mock_get_deps):
         """Test dependency analysis with exception."""
         mock_get_deps.side_effect = Exception("Parse error")
 
-        result = _analyze_dependencies_for_package("python", "/tmp/test.lock", {})
+        result = _analyze_dependencies_for_package(
+            "python", "/tmp/test.lock", {}, "test-package"
+        )
         assert result == {}
