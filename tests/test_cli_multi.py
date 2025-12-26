@@ -4,8 +4,18 @@ Tests for multi-language CLI functionality.
 
 from unittest.mock import MagicMock, patch
 
-from oss_sustain_guard.cli import analyze_package, parse_package_spec
+from typer.testing import CliRunner
+
+from oss_sustain_guard.cli import (
+    _analyze_dependencies_for_package,
+    analyze_package,
+    load_database,
+    load_packages_from_cloudflare,
+    parse_package_spec,
+)
 from oss_sustain_guard.repository import RepositoryReference
+
+runner = CliRunner()
 
 
 class TestParsePackageSpec:
@@ -204,3 +214,171 @@ class TestAnalyzePackage:
         assert result is None
         # save_cache should not be called on error
         mock_save_cache.assert_not_called()
+
+
+class TestLoadDatabase:
+    """Test database loading functionality."""
+
+    @patch("oss_sustain_guard.cli.load_cache")
+    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
+    def test_load_database_with_local_cache(self, mock_enabled, mock_load_cache):
+        """Test loading database from local cache."""
+        mock_load_cache.return_value = {
+            "python:requests": {"package_name": "requests", "total_score": 85}
+        }
+
+        db = load_database(use_cache=True, use_local_cache=True, verbose=False)
+
+        assert "python:requests" in db
+        assert db["python:requests"]["total_score"] == 85
+        # Should be called for each ecosystem
+        assert mock_load_cache.call_count == 9  # 9 ecosystems
+
+    def test_load_database_no_cache(self):
+        """Test loading database with cache disabled."""
+        db = load_database(use_cache=False, use_local_cache=True, verbose=False)
+        assert db == {}
+
+    @patch("oss_sustain_guard.cli.load_cache", return_value=None)
+    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
+    def test_load_database_empty_cache(self, mock_enabled, mock_load_cache):
+        """Test loading database with empty cache."""
+        db = load_database(use_cache=True, use_local_cache=True, verbose=False)
+        assert db == {}
+
+    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=False)
+    def test_load_database_cache_disabled(self, mock_enabled):
+        """Test loading database when cache is disabled."""
+        db = load_database(use_cache=True, use_local_cache=True, verbose=False)
+        assert db == {}
+
+
+class TestLoadPackagesFromCloudflare:
+    """Test Cloudflare KV loading functionality."""
+
+    @patch("oss_sustain_guard.cli.CloudflareKVClient")
+    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
+    @patch("oss_sustain_guard.cli.save_cache")
+    @patch("oss_sustain_guard.cli.is_analysis_version_compatible", return_value=True)
+    def test_load_packages_success(
+        self, mock_version, mock_save, mock_cache_enabled, mock_client
+    ):
+        """Test successfully loading packages from Cloudflare KV."""
+        mock_kv = MagicMock()
+        mock_kv.batch_get.return_value = {
+            "2.0:python:requests": {
+                "ecosystem": "python",
+                "package_name": "requests",
+                "total_score": 85,
+                "analysis_version": "2.0",
+            }
+        }
+        mock_client.return_value = mock_kv
+
+        result = load_packages_from_cloudflare([("python", "requests")], verbose=False)
+
+        assert "python:requests" in result
+        assert result["python:requests"]["total_score"] == 85
+
+    @patch("oss_sustain_guard.cli.CloudflareKVClient")
+    def test_load_packages_exception(self, mock_client):
+        """Test handling exceptions when loading from Cloudflare KV."""
+        mock_client.side_effect = Exception("Network error")
+
+        result = load_packages_from_cloudflare([("python", "requests")], verbose=False)
+
+        assert result == {}
+
+    def test_load_packages_empty_list(self):
+        """Test loading with empty package list."""
+        result = load_packages_from_cloudflare([], verbose=False)
+        assert result == {}
+
+    @patch("oss_sustain_guard.cli.CloudflareKVClient")
+    @patch("oss_sustain_guard.cli.is_analysis_version_compatible", return_value=False)
+    def test_load_packages_incompatible_version(self, mock_version, mock_client):
+        """Test skipping packages with incompatible analysis version."""
+        mock_kv = MagicMock()
+        mock_kv.batch_get.return_value = {
+            "2.0:python:requests": {
+                "ecosystem": "python",
+                "package_name": "requests",
+                "total_score": 85,
+                "analysis_version": "1.0",
+            }
+        }
+        mock_client.return_value = mock_kv
+
+        result = load_packages_from_cloudflare([("python", "requests")], verbose=False)
+
+        assert result == {}
+
+
+class TestAnalyzeDependenciesForPackage:
+    """Test dependency analysis functionality."""
+
+    @patch("oss_sustain_guard.dependency_graph.get_all_dependencies")
+    @patch("oss_sustain_guard.dependency_graph.filter_high_value_dependencies")
+    def test_analyze_dependencies_success(self, mock_filter, mock_get_deps):
+        """Test successful dependency analysis."""
+        from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
+
+        # Create DependencyInfo objects for dependencies
+        dep1 = DependencyInfo(name="dep1", ecosystem="python", version="1.0.0")
+        dep2 = DependencyInfo(name="dep2", ecosystem="python", version="2.0.0")
+
+        mock_graph = DependencyGraph(
+            root_package="test-package",
+            ecosystem="python",
+            direct_dependencies=[dep1, dep2],
+            transitive_dependencies=[],
+        )
+        mock_get_deps.return_value = [mock_graph]
+        mock_filter.return_value = [dep1, dep2]
+
+        db = {
+            "python:dep1": {"total_score": 85},
+            "python:dep2": {"total_score": 90},
+        }
+
+        # Create a temporary lockfile
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as tmp:
+            tmp.write("")
+            tmp_path = tmp.name
+
+        try:
+            result = _analyze_dependencies_for_package("python", tmp_path, db)
+
+            assert "dep1" in result
+            assert "dep2" in result
+            assert result["dep1"] == 85
+            assert result["dep2"] == 90
+        finally:
+            import os
+
+            os.unlink(tmp_path)
+
+    def test_analyze_dependencies_missing_lockfile(self):
+        """Test dependency analysis with missing lockfile."""
+        result = _analyze_dependencies_for_package(
+            "python", "/nonexistent/file.lock", {}
+        )
+        assert result == {}
+
+    @patch("oss_sustain_guard.dependency_graph.get_all_dependencies")
+    def test_analyze_dependencies_no_graphs(self, mock_get_deps):
+        """Test dependency analysis with no dependency graphs."""
+        mock_get_deps.return_value = []
+
+        result = _analyze_dependencies_for_package("python", "/tmp/test.lock", {})
+        assert result == {}
+
+    @patch("oss_sustain_guard.dependency_graph.get_all_dependencies")
+    def test_analyze_dependencies_exception(self, mock_get_deps):
+        """Test dependency analysis with exception."""
+        mock_get_deps.side_effect = Exception("Parse error")
+
+        result = _analyze_dependencies_for_package("python", "/tmp/test.lock", {})
+        assert result == {}
