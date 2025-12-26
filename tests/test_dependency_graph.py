@@ -11,6 +11,7 @@ from oss_sustain_guard.dependency_graph import (
     DependencyInfo,
     filter_high_value_dependencies,
     get_all_dependencies,
+    get_package_dependencies,
     parse_javascript_lockfile,
     parse_python_lockfile,
 )
@@ -620,3 +621,164 @@ def test_corrupted_pyproject_for_poetry_dependencies():
         result = _get_poetry_direct_dependencies(Path(tmpdir))
 
         assert result == set()
+
+
+def test_get_package_dependencies_uv_lock():
+    """Test extracting dependencies for a specific package from uv.lock."""
+    uv_lock_content = """
+[[package]]
+name = "requests"
+version = "2.28.0"
+dependencies = [
+    { name = "certifi" },
+    { name = "charset-normalizer" },
+    { name = "idna" },
+    { name = "urllib3" },
+]
+
+[[package]]
+name = "click"
+version = "8.1.0"
+dependencies = [
+    { name = "colorama", marker = "platform_system == 'Windows'" },
+]
+
+[[package]]
+name = "pytest"
+version = "7.0.0"
+dependencies = [
+    { name = "attrs" },
+    { name = "iniconfig" },
+    { name = "packaging" },
+]
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "uv.lock"
+        lockfile_path.write_text(uv_lock_content)
+
+        # Test getting dependencies for requests
+        deps = get_package_dependencies(lockfile_path, "requests")
+        assert set(deps) == {"certifi", "charset-normalizer", "idna", "urllib3"}
+
+        # Test getting dependencies for click
+        deps = get_package_dependencies(lockfile_path, "click")
+        assert set(deps) == {"colorama"}
+
+        # Test getting dependencies for pytest
+        deps = get_package_dependencies(lockfile_path, "pytest")
+        assert set(deps) == {"attrs", "iniconfig", "packaging"}
+
+        # Test package that doesn't exist
+        deps = get_package_dependencies(lockfile_path, "nonexistent")
+        assert deps == []
+
+
+def test_get_package_dependencies_poetry_lock():
+    """Test extracting dependencies for a specific package from poetry.lock."""
+    poetry_lock_content = """
+[[package]]
+name = "requests"
+version = "2.28.0"
+
+[package.dependencies]
+certifi = ">=2017.4.17"
+charset-normalizer = ">=2,<4"
+idna = ">=2.5,<4"
+urllib3 = ">=1.21.1,<1.27"
+
+[[package]]
+name = "pytest"
+version = "7.0.0"
+
+[package.dependencies]
+attrs = ">=19.2.0"
+iniconfig = "*"
+packaging = "*"
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "poetry.lock"
+        lockfile_path.write_text(poetry_lock_content)
+
+        # Test getting dependencies for requests
+        deps = get_package_dependencies(lockfile_path, "requests")
+        assert set(deps) == {"certifi", "charset-normalizer", "idna", "urllib3"}
+
+        # Test getting dependencies for pytest
+        deps = get_package_dependencies(lockfile_path, "pytest")
+        assert set(deps) == {"attrs", "iniconfig", "packaging"}
+
+        # Test package that doesn't exist
+        deps = get_package_dependencies(lockfile_path, "nonexistent")
+        assert deps == []
+
+
+def test_get_package_dependencies_package_lock_json():
+    """Test extracting dependencies for a specific package from package-lock.json."""
+    package_lock_content = """{
+  "name": "test-project",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "packages": {
+    "node_modules/react": {
+      "name": "react",
+      "version": "18.0.0",
+      "dependencies": {
+        "loose-envify": "^1.1.0"
+      }
+    },
+    "node_modules/react-dom": {
+      "name": "react-dom",
+      "version": "18.0.0",
+      "dependencies": {
+        "loose-envify": "^1.1.0",
+        "scheduler": "^0.23.0"
+      }
+    },
+    "node_modules/@types/react": {
+      "name": "@types/react",
+      "version": "18.0.0",
+      "dependencies": {
+        "@types/prop-types": "*",
+        "csstype": "^3.0.2"
+      }
+    }
+  }
+}"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "package-lock.json"
+        lockfile_path.write_text(package_lock_content)
+
+        # Test getting dependencies for react
+        deps = get_package_dependencies(lockfile_path, "react")
+        assert set(deps) == {"loose-envify"}
+
+        # Test getting dependencies for react-dom
+        deps = get_package_dependencies(lockfile_path, "react-dom")
+        assert set(deps) == {"loose-envify", "scheduler"}
+
+        # Test getting dependencies for scoped package
+        deps = get_package_dependencies(lockfile_path, "@types/react")
+        assert set(deps) == {"@types/prop-types", "csstype"}
+
+        # Test package that doesn't exist
+        deps = get_package_dependencies(lockfile_path, "nonexistent")
+        assert deps == []
+
+
+def test_get_package_dependencies_nonexistent_file():
+    """Test get_package_dependencies with non-existent file."""
+    deps = get_package_dependencies("/nonexistent/path/uv.lock", "requests")
+    assert deps == []
+
+
+def test_get_package_dependencies_unsupported_format():
+    """Test get_package_dependencies with unsupported lockfile format."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "unsupported.lock"
+        lockfile_path.write_text("some content")
+
+        deps = get_package_dependencies(lockfile_path, "requests")
+        assert deps == []

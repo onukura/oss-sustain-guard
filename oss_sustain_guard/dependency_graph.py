@@ -395,3 +395,119 @@ def filter_high_value_dependencies(
     # Sort by name for consistency
     sorted_direct = sorted(graph.direct_dependencies, key=lambda d: d.name)
     return sorted_direct[:max_count]
+
+
+def get_package_dependencies(lockfile_path: str | Path, package_name: str) -> list[str]:
+    """
+    Extract dependencies for a specific package from a lockfile.
+
+    Args:
+        lockfile_path: Path to the lockfile.
+        package_name: Name of the package to get dependencies for.
+
+    Returns:
+        List of dependency package names.
+    """
+    lockfile_path = Path(lockfile_path)
+    if not lockfile_path.exists():
+        return []
+
+    filename = lockfile_path.name
+    package_name_lower = package_name.lower()
+
+    try:
+        if filename == "uv.lock":
+            return _get_uv_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "poetry.lock":
+            return _get_poetry_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "Pipfile.lock":
+            return _get_pipfile_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "package-lock.json":
+            return _get_npm_package_dependencies(lockfile_path, package_name_lower)
+        else:
+            return []
+    except Exception:
+        return []
+
+
+def _get_uv_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from uv.lock."""
+    with open(lockfile_path, "rb") as f:
+        data = tomllib.load(f)
+
+    for package in data.get("package", []):
+        name = package.get("name", "")
+        if name.lower() == package_name_lower:
+            dependencies = package.get("dependencies", [])
+            dep_names = []
+            for dep in dependencies:
+                if isinstance(dep, dict):
+                    dep_name = dep.get("name", "")
+                    if dep_name:
+                        dep_names.append(dep_name)
+                elif isinstance(dep, str):
+                    dep_names.append(dep)
+            return dep_names
+    return []
+
+
+def _get_poetry_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from poetry.lock."""
+    with open(lockfile_path, "rb") as f:
+        data = tomllib.load(f)
+
+    for package in data.get("package", []):
+        name = package.get("name", "")
+        if name.lower() == package_name_lower:
+            dependencies = package.get("dependencies", {})
+            if isinstance(dependencies, dict):
+                return list(dependencies.keys())
+            return []
+    return []
+
+
+def _get_pipfile_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from Pipfile.lock."""
+    with open(lockfile_path) as f:
+        data = json.load(f)
+
+    # Check both default and develop sections
+    for section in ["default", "develop"]:
+        packages = data.get(section, {})
+        for pkg_name, _pkg_data in packages.items():
+            if pkg_name.lower() == package_name_lower:
+                # Pipfile.lock doesn't store per-package dependencies
+                # Return empty list as it's flat
+                return []
+    return []
+
+
+def _get_npm_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from package-lock.json."""
+    with open(lockfile_path) as f:
+        data = json.load(f)
+
+    # npm v7+ uses "packages" with paths
+    packages = data.get("packages", {})
+    for path, pkg_data in packages.items():
+        name = pkg_data.get("name", "")
+        if not name and path:
+            # Extract name from path (e.g., "node_modules/package-name")
+            parts = path.split("/")
+            if len(parts) >= 2 and parts[0] == "node_modules":
+                name = "/".join(parts[1:])  # Handle scoped packages
+
+        if name.lower() == package_name_lower:
+            dependencies = pkg_data.get("dependencies", {})
+            if isinstance(dependencies, dict):
+                return list(dependencies.keys())
+            return []
+    return []
