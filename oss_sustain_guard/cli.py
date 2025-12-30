@@ -671,10 +671,8 @@ def analyze_packages_parallel(
                     try:
                         result = future.result()
                         results_map[idx] = result
-                    except Exception as e:
-                        console.print(
-                            f"    [yellow]⚠️  Error analyzing {ecosystem}:{pkg}: {e}[/yellow]"
-                        )
+                    except Exception:
+                        # Silently fail - errors are handled by None result
                         results_map[idx] = None
                     progress.advance(task)
 

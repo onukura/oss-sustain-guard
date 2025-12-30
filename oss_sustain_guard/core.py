@@ -3276,14 +3276,12 @@ def analyze_repositories_batch(
                         owner, name, repo_info, platform=platform
                     )
                     results[(owner, name)] = result
-                except Exception as e:
-                    console.print(
-                        f"  [yellow]⚠️  Error analyzing {owner}/{name}: {e}[/yellow]"
-                    )
+                except Exception:
+                    # Silently fail - error handling is done at CLI layer
                     results[(owner, name)] = None
 
-        except Exception as e:
-            console.print(f"  [yellow]⚠️  Batch query error: {e}[/yellow]")
+        except Exception:
+            # Silently fail - error handling is done at CLI layer
             # Mark all repositories in failed batch as None
             for owner, name in batch:
                 results[(owner, name)] = None
@@ -3338,7 +3336,7 @@ def _analyze_repository_data(
     try:
         metrics.append(check_zombie_status(repo_info))
     except Exception as e:
-        console.print(f"  [yellow]⚠️  Recent activity check incomplete: {e}[/yellow]")
+        # Silently capture error in metric message
         metrics.append(
             Metric("Recent Activity", 0, 20, f"Note: Analysis incomplete - {e}", "High")
         )
@@ -3346,9 +3344,7 @@ def _analyze_repository_data(
     try:
         metrics.append(check_merge_velocity(repo_info))
     except Exception as e:
-        console.print(
-            f"  [yellow]⚠️  Change request resolution check incomplete: {e}[/yellow]"
-        )
+        # Silently capture error in metric message
         metrics.append(
             Metric(
                 "Change Request Resolution",
@@ -3362,7 +3358,7 @@ def _analyze_repository_data(
     try:
         metrics.append(check_issue_resolution_duration(repo_info))
     except Exception as e:
-        console.print(f"  [yellow]⚠️  Issue resolution check incomplete: {e}[/yellow]")
+        # Silently capture error in metric message
         metrics.append(
             Metric(
                 "Issue Resolution Time",
@@ -3376,7 +3372,7 @@ def _analyze_repository_data(
     try:
         metrics.append(check_funding(repo_info))
     except Exception as e:
-        console.print(f"  [yellow]⚠️  Funding status check incomplete: {e}[/yellow]")
+        # Silently capture error in metric message
         metrics.append(
             Metric(
                 "Funding Status",
@@ -3390,7 +3386,7 @@ def _analyze_repository_data(
     try:
         metrics.append(check_community_health(repo_info))
     except Exception as e:
-        console.print(f"  [yellow]⚠️  Community response check incomplete: {e}[/yellow]")
+        # Silently capture error in metric message
         metrics.append(
             Metric(
                 "Community Response Time",
@@ -3404,7 +3400,7 @@ def _analyze_repository_data(
     try:
         metrics.append(check_ci_status(repo_info))
     except Exception as e:
-        console.print(f"  [yellow]⚠️  CI/CD status check incomplete: {e}[/yellow]")
+        # Silently capture error in metric message
         metrics.append(
             Metric(
                 "CI/CD Status",
@@ -3421,7 +3417,7 @@ def _analyze_repository_data(
             repo_url = f"https://github.com/{owner}/{name}"
             metrics.append(check_dependents_count(repo_url, platform, package_name))
         except Exception as e:
-            console.print(f"  [yellow]⚠️  Dependents check incomplete: {e}[/yellow]")
+            # Silently capture error in metric message
             metrics.append(
                 Metric(
                     "Downstream Dependents",
@@ -3453,9 +3449,8 @@ def _analyze_repository_data(
 
     repo_url = f"https://github.com/{owner}/{name}"
 
-    console.print(
-        f"Analysis complete for [bold cyan]{owner}/{name}[/bold cyan]. Score: {total_score}/100"
-    )
+    # Note: Progress display is handled by CLI layer, not here
+    # Individual completion messages would interfere with progress bar
 
     return AnalysisResult(
         repo_url=repo_url,
