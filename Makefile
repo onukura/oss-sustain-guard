@@ -12,5 +12,8 @@ test:
 test-check:
 	uv run os4g check requests -v
 
+test-self-check:
+	uv run os4g check -r ./ --insecure --no-cache
+
 test-manifests:
 	uv run os4g check -r ./tests/fixtures/ --insecure --no-cache
