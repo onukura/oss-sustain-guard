@@ -9,11 +9,5 @@ doc-serve:
 test:
 	uv run pytest tests/ -v --cov=oss_sustain_guard --cov-report=xml --cov-report=term --cov-report=html
 
-test-build-db:
-	uv run python builder/build_db.py --ecosystems python --limit 5 --upload-to-cloudflare
-
 test-check:
 	uv run os4g check requests -v
-
-deploy-cf-workers:
-	cd cloudflare && wrangler deploy
