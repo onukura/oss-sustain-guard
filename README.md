@@ -7,7 +7,7 @@
 
 ![demo](./docs/assets/demo01.png)
 
-**Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 21 metrics including Contributor Redundancy, Maintainer Retention, and Security Signals.
+**Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 24 metrics including Contributor Redundancy, Maintainer Retention, and Security Signals.
 
 > 📌 **Quick Notes:**
 >
@@ -32,7 +32,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ## 🎯 Key Features
 
-- **21 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security
+- **24 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security
 - **Optional Dependents Analysis** - Downstream dependency metrics (informational, not affecting total score)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
@@ -84,7 +84,7 @@ Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby, R, Haskell, Swift, Da
 
 See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/) for ecosystem-specific syntax.
 
-### 21 Sustainability Metrics
+### 24 Sustainability Metrics
 
 Evaluated across 5 categories:
 

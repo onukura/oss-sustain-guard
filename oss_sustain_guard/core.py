@@ -227,6 +227,9 @@ def _get_repository_query() -> str:
             node {
               mergedAt
               createdAt
+              mergedBy {
+                login
+              }
               reviews(first: 10) {
                 totalCount
                 edges {
@@ -286,6 +289,18 @@ def _get_repository_query() -> str:
             node {
               createdAt
               closedAt
+              updatedAt
+              timelineItems(first: 1, itemTypes: CLOSED_EVENT) {
+                edges {
+                  node {
+                    ... on ClosedEvent {
+                      actor {
+                        login
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -2700,6 +2715,111 @@ def check_pr_merge_speed(repo_data: dict[str, Any]) -> Metric:
     return Metric("PR Merge Speed", score, max_score, message, risk)
 
 
+def check_single_maintainer_load(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates maintainer workload distribution using Gini coefficient.
+
+    Measures concentration of Issue/PR closing activity among contributors.
+    High concentration (high Gini) indicates risk of single maintainer burnout.
+
+    The Gini coefficient ranges from 0 (perfect equality) to 1 (maximum inequality).
+    Lower values indicate more distributed workload across maintainers.
+
+    Scoring:
+    - Gini < 0.3: 5/5 (Well distributed - healthy team)
+    - Gini 0.3-0.5: 3/5 (Moderate - some concentration)
+    - Gini 0.5-0.7: 2/5 (High concentration - monitor)
+    - Gini > 0.7: 1/5 (Very high concentration - needs support)
+
+    CHAOSS Aligned: Contributor Diversity and Bus Factor
+    """
+    max_score = 5
+
+    # Collect PR and Issue closers
+    closer_counts: dict[str, int] = {}
+
+    # Count PR closers (merged PRs)
+    merged_prs = repo_data.get("pullRequests", {}).get("edges", [])
+    for edge in merged_prs:
+        node = edge.get("node", {})
+        merged_by = node.get("mergedBy")
+        if merged_by and isinstance(merged_by, dict):
+            login = merged_by.get("login")
+            if login:
+                closer_counts[login] = closer_counts.get(login, 0) + 1
+
+    # Count Issue closers (from timeline events)
+    closed_issues = repo_data.get("closedIssues", {}).get("edges", [])
+    for edge in closed_issues:
+        node = edge.get("node", {})
+        timeline_items = node.get("timelineItems", {}).get("edges", [])
+
+        for timeline_edge in timeline_items:
+            timeline_node = timeline_edge.get("node", {})
+            actor = timeline_node.get("actor")
+            if actor and isinstance(actor, dict):
+                login = actor.get("login")
+                if login:
+                    closer_counts[login] = closer_counts.get(login, 0) + 1
+                    break  # Only count the first closer
+
+    if not closer_counts:
+        return Metric(
+            "Maintainer Load Distribution",
+            max_score // 2,
+            max_score,
+            "Note: No Issue/PR closing activity to analyze.",
+            "None",
+        )
+
+    # Calculate Gini coefficient
+    # Sort counts in ascending order
+    counts = sorted(closer_counts.values())
+    n = len(counts)
+
+    if n == 1:
+        # Single maintainer - maximum concentration
+        gini = 1.0
+    else:
+        # Calculate Gini coefficient using the formula:
+        # Gini = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
+        total = sum(counts)
+        weighted_sum = sum((i + 1) * count for i, count in enumerate(counts))
+        gini = (2 * weighted_sum) / (n * total) - (n + 1) / n
+
+    # Scoring logic based on Gini coefficient
+    if gini < 0.3:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Healthy: Workload well distributed (Gini {gini:.2f}). "
+            f"{n} contributors share Issue/PR closing duties."
+        )
+    elif gini < 0.5:
+        score = 3
+        risk = "Low"
+        message = (
+            f"Moderate: Some workload concentration (Gini {gini:.2f}). "
+            f"{n} contributors with varying activity levels."
+        )
+    elif gini < 0.7:
+        score = 2
+        risk = "Medium"
+        message = (
+            f"Observe: High workload concentration (Gini {gini:.2f}). "
+            f"Consider expanding maintainer team from {n} contributors."
+        )
+    else:
+        score = 1
+        risk = "High"
+        message = (
+            f"Needs support: Very high workload concentration (Gini {gini:.2f}). "
+            f"Single maintainer burden evident among {n} contributor(s)."
+        )
+
+    return Metric("Maintainer Load Distribution", score, max_score, message, risk)
+
+
 def check_dependents_count(
     repo_url: str, platform: str | None = None, package_name: str | None = None
 ) -> Metric | None:
@@ -2812,6 +2932,7 @@ SCORING_CATEGORIES = {
             "Contributor Attraction",
             "Contributor Retention",
             "Organizational Diversity",
+            "Maintainer Load Distribution",
         ],
     },
     "Development Activity": {
@@ -2832,6 +2953,8 @@ SCORING_CATEGORIES = {
             "PR Acceptance Ratio",
             "Review Health",
             "Issue Resolution Duration",  # More important now
+            "Stale Issue Ratio",
+            "PR Merge Speed",
         ],
     },
     "Project Maturity": {
@@ -3626,6 +3749,175 @@ def _analyze_repository_data(
         )
 
     try:
+        metrics.append(check_release_cadence(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Release Rhythm",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_security_posture(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Security Signals",
+                0,
+                15,
+                f"Note: Analysis incomplete - {e}",
+                "High",
+            )
+        )
+
+    try:
+        metrics.append(check_attraction(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Contributor Attraction",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_retention(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Contributor Retention",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_review_health(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Review Health",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_documentation_presence(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Documentation Presence",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_code_of_conduct(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Code of Conduct",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_pr_acceptance_ratio(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "PR Acceptance Ratio",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_organizational_diversity(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Organizational Diversity",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_fork_activity(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Fork Activity",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_project_popularity(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "Project Popularity",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_license_clarity(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "License Clarity",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_pr_responsiveness(repo_info))
+    except Exception as e:
+        metrics.append(
+            Metric(
+                "PR Responsiveness",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
         metrics.append(check_community_health(repo_info))
     except Exception as e:
         # Silently capture error in metric message
@@ -3681,6 +3973,20 @@ def _analyze_repository_data(
             )
         )
 
+    try:
+        metrics.append(check_single_maintainer_load(repo_info))
+    except Exception as e:
+        # Silently capture error in metric message
+        metrics.append(
+            Metric(
+                "Maintainer Load Distribution",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
     # Dependents analysis (if platform and package_name provided)
     if platform and package_name:
         try:
@@ -3698,8 +4004,8 @@ def _analyze_repository_data(
                 )
             )
 
-    # Calculate total score (simple sum for now)
-    total_score = sum(m.score for m in metrics)
+    # Calculate total score using category-weighted scoring system
+    total_score = compute_weighted_total_score(metrics, profile="balanced")
 
     # Extract funding information directly from repo data
     funding_links = repo_info.get("fundingLinks", [])
