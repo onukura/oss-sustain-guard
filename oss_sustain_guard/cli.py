@@ -1500,6 +1500,46 @@ def cache_stats(
         console.print(table)
 
 
+@app.command(name="clear-cache")
+def clear_cache_command(
+    ecosystem: str | None = typer.Argument(
+        None,
+        help="Specific ecosystem to clear (python, javascript, rust, etc.), or omit to clear all ecosystems.",
+    ),
+    cache_dir: Path | None = typer.Option(
+        None,
+        "--cache-dir",
+        help="Cache directory path (default: ~/.cache/oss-sustain-guard).",
+    ),
+):
+    """Clear the local cache.
+
+    Examples:
+      os4g clear-cache              # Clear all caches
+      os4g clear-cache python       # Clear only Python cache
+      os4g clear-cache javascript   # Clear only JavaScript cache
+    """
+    if cache_dir:
+        set_cache_dir(cache_dir)
+
+    cleared = clear_cache(ecosystem)
+
+    if cleared == 0:
+        if ecosystem:
+            console.print(
+                f"[yellow]ℹ️  No cache files found for ecosystem: {ecosystem}[/yellow]"
+            )
+        else:
+            console.print("[yellow]ℹ️  No cache files found[/yellow]")
+    else:
+        if ecosystem:
+            console.print(
+                f"[green]✨ Cleared {cleared} cache file(s) for {ecosystem}[/green]"
+            )
+        else:
+            console.print(f"[green]✨ Cleared {cleared} cache file(s)[/green]")
+
+
 @app.command()
 def gratitude(
     top_n: int = typer.Option(
