@@ -137,6 +137,7 @@ class TestAnalyzePackage:
                     risk="Low",
                 )
             ],
+            ecosystem="python",
         )
         mock_analyze_repo.return_value = mock_result
 
@@ -179,6 +180,7 @@ class TestAnalyzePackage:
                     risk="Low",
                 )
             ],
+            ecosystem="python",
         )
         mock_analyze_repo.return_value = mock_result
 
