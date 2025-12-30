@@ -88,7 +88,6 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 **Reference:**
 
 - [Database Schema](DATABASE_SCHEMA.md) - Understanding cached data format
-- [Schema Version Management](SCHEMA_VERSION_MANAGEMENT.md) - Schema evolution and migrations
 
 ## Installation
 

@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 from oss_sustain_guard.config import get_verify_ssl
-from oss_sustain_guard.schema_migrations import normalize_metric_name
 
 # Load environment variables from .env file
 load_dotenv()
@@ -2773,12 +2772,8 @@ def compute_weighted_total_score(
     profile_config = SCORING_PROFILES[profile]
     weights = profile_config["weights"]
 
-    # Create metric dict with schema migration support
-    metric_dict: dict[str, Metric] = {}
-    for m in metrics:
-        # Normalize metric name (v1.x -> v2.0 if needed)
-        normalized_name = normalize_metric_name(m.name)
-        metric_dict[normalized_name] = m
+    # Create metric dict
+    metric_dict: dict[str, Metric] = {m.name: m for m in metrics}
 
     category_scores: dict[str, float] = {}
 

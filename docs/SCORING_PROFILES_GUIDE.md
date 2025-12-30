@@ -81,7 +81,7 @@ Emphasizes maintainer health and sustainable development.
 **Best for:**
 
 - Long-term dependencies in critical infrastructure
-- Evaluating bus factor and maintainer retention
+- Evaluating contributor redundancy and maintainer retention
 - Projects with multi-year roadmaps
 - Avoiding maintainer burnout risks
 
@@ -259,7 +259,7 @@ See [Contributing Guide](GETTING_STARTED.md) for how to provide feedback.
 
 All profiles use the same **5 categories** with different weights:
 
-1. **Maintainer Health** - Bus factor, retention, diversity
+1. **Maintainer Health** - Contributor redundancy, retention, diversity
 2. **Development Activity** - Releases, CI, recent activity
 3. **Community Engagement** - Responsiveness, PR handling, issue resolution
 4. **Project Maturity** - Documentation, governance, adoption

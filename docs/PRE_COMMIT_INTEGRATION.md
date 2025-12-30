@@ -123,16 +123,16 @@ os4g check ruby:rails php:symfony/console
 ## Hook Behavior
 
 1. **Package Detection:** Reads package names from the monitored file or command arguments
-2. **Sustainability Analysis:** Evaluates each package using 9 key metrics:
-   - Bus Factor
-   - Maintainer Drain
-   - Zombie Check
-   - Merge Velocity
-   - CI Status
-   - Funding
-   - Release Cadence
-   - Security Posture
-   - Community Health
+2. **Sustainability Analysis:** Evaluates each package using core metrics:
+   - Contributor Redundancy
+   - Maintainer Retention
+   - Recent Activity
+   - Change Request Resolution
+   - Build Health
+   - Funding Signals
+   - Release Rhythm
+   - Security Signals
+   - Issue Responsiveness
 3. **Cache-Based Lookup:** Uses pre-computed scores from `data/database.json` for fast results
 4. **Result Display:** Shows results in a rich formatted table with color-coded risk levels
 

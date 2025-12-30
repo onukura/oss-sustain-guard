@@ -15,7 +15,7 @@ pip install oss-sustain-guard
 **OSS Sustain Guard requires a GitHub Personal Access Token for all package analysis.**
 
 This is needed because the tool fetches repository data directly from GitHub's API to analyze:
-- Contributor activity and bus factor
+- Contributor activity and redundancy
 - Release patterns and commit history
 - Issue/PR response times
 - Security policies and funding information

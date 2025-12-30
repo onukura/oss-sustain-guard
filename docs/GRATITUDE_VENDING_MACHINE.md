@@ -17,14 +17,14 @@ The command analyzes your cached dependencies and calculates a **support priorit
 ### Priority Calculation
 
 ```
-Priority = (100 - Health Score) + (20 - Contributor Redundancy) + (15 - Maintainer Drain)
+Priority = (100 - Health Score) + (20 - Contributor Redundancy) + (10 - Maintainer Retention)
 ```
 
 **Higher priority = More support needed**
 
 - **Health Score** (0-100): Overall project sustainability
 - **Contributor Redundancy** (0-20): Distribution of contributions (lower = single maintainer risk)
-- **Maintainer Drain** (0-15): Maintainer retention and activity
+- **Maintainer Retention** (0-10): Maintainer retention and activity
 
 ### Filtering Criteria
 
@@ -58,7 +58,7 @@ Top 3 projects that would appreciate your support:
    Repository: https://github.com/Textualize/rich
    Health Score: 77/100 (Monitor)
    Contributor Redundancy: 10/20
-   Maintainer Drain: 15/15
+   Maintainer Retention: 10/10
    💝 Support options:
       • GITHUB: https://github.com/willmcgugan
 
@@ -66,7 +66,7 @@ Top 3 projects that would appreciate your support:
    Repository: https://github.com/pytest-dev/pytest
    Health Score: 78/100 (Monitor)
    Contributor Redundancy: 15/20
-   Maintainer Drain: 15/15
+   Maintainer Retention: 10/10
    💝 Support options:
       • GITHUB: https://github.com/pytest-dev
       • TIDELIFT: https://tidelift.com/funding/github/pypi/pytest
@@ -76,7 +76,7 @@ Top 3 projects that would appreciate your support:
    Repository: https://github.com/fastapi/typer
    Health Score: 76/100 (Monitor)
    Contributor Redundancy: 15/20
-   Maintainer Drain: 15/15
+   Maintainer Retention: 10/10
    💝 Support options:
       • GITHUB: https://github.com/tiangolo
 
@@ -104,7 +104,7 @@ When you select a project:
 Unlike simple popularity metrics, the Gratitude Vending Machine considers:
 
 - **Actual need**: Projects with lower health scores get higher priority
-- **Bus factor risk**: Single-maintainer projects are highlighted
+- **Contributor concentration**: Single-maintainer projects are highlighted
 - **Maintainer capacity**: Projects with overworked maintainers rank higher
 
 ### 2. Community Focus
@@ -128,7 +128,7 @@ Each project shows:
 
 - **Health Score**: Overall sustainability (0-100)
 - **Contributor Redundancy**: Single maintainer risk indicator
-- **Maintainer Drain**: Maintainer retention status
+- **Maintainer Retention**: Maintainer retention status
 - **Repository URL**: Link to the project
 
 This helps you understand **why** a project needs support.
@@ -158,7 +158,7 @@ Corporate-backed projects (e.g., maintained by large organizations like Google, 
 Even projects with high health scores (80+) may appear if they:
 
 - Have low contributor redundancy (single maintainer risk)
-- Have high maintainer drain (recent contributor loss)
+- Have declining maintainer retention (recent contributor loss)
 - Have significant dependency impact
 
 Health Score is just one factor—the algorithm considers multiple sustainability dimensions.

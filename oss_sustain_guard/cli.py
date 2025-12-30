@@ -50,10 +50,9 @@ from oss_sustain_guard.resolvers import (
     get_resolver,
 )
 from oss_sustain_guard.resolvers.base import close_resolver_http_client
-from oss_sustain_guard.schema_migrations import (
-    ANALYSIS_VERSION,
-    is_analysis_version_compatible,
-)
+
+# Schema version for cached data compatibility
+ANALYSIS_VERSION = "1.0"
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -568,7 +567,7 @@ def analyze_packages_parallel(
             if use_local_cache and db_key in db:
                 cached_data = db[db_key]
                 payload_version = cached_data.get("analysis_version")
-                if is_analysis_version_compatible(payload_version, ANALYSIS_VERSION):
+                if payload_version == ANALYSIS_VERSION:
                     # Use cached data
                     metrics = [
                         Metric(
@@ -831,22 +830,17 @@ def analyze_package(
             )
         cached_data = db[db_key]
         payload_version = cached_data.get("analysis_version")
-        if not is_analysis_version_compatible(payload_version, ANALYSIS_VERSION):
+        if payload_version != ANALYSIS_VERSION:
             if verbose:
                 console.print(
-                    f"[dim]Note: Ignoring local cache for {db_key} "
-                    f"(analysis version {payload_version or 'unknown'} "
-                    f"!= {ANALYSIS_VERSION})[/dim]"
+                    f"[dim]ℹ️  Cache version mismatch for {db_key} "
+                    f"({payload_version or 'unknown'} != {ANALYSIS_VERSION}). "
+                    f"Fetching fresh data...[/dim]"
                 )
         else:
-            if payload_version is None and verbose:
-                console.print(
-                    "[dim]Note: Using legacy cache entry without analysis version tag.[/dim]"
-                )
-
             if verbose:
                 console.print(
-                    f"  -> 🔄 Reconstructing metrics from cached data (analysis_version: {payload_version or 'legacy'})"
+                    f"  -> 🔄 Reconstructing metrics from cached data (analysis_version: {payload_version})"
                 )
 
             # Reconstruct metrics from cached data
