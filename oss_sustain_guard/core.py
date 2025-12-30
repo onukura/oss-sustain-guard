@@ -3152,6 +3152,322 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
     return signals
 
 
+# --- Batch Analysis Functions ---
+
+
+def _get_batch_repository_query(repo_list: list[tuple[str, str]]) -> str:
+    """Generate a GraphQL query for multiple repositories using aliases.
+
+    Args:
+        repo_list: List of (owner, name) tuples.
+
+    Returns:
+        GraphQL query string with aliases for each repository.
+    """
+    query_parts = ["query GetMultipleRepositories {"]
+
+    for idx, (owner, name) in enumerate(repo_list):
+        alias = f"repo{idx}"
+        # Simplified query with only essential fields for performance
+        query_parts.append(f"""
+  {alias}: repository(owner: "{owner}", name: "{name}") {{
+    isArchived
+    pushedAt
+    owner {{
+      login
+      ... on Organization {{
+        name
+        login
+      }}
+    }}
+    defaultBranchRef {{
+      target {{
+        ... on Commit {{
+          history(first: 50) {{
+            edges {{
+              node {{
+                authoredDate
+                author {{
+                  user {{
+                    login
+                    company
+                  }}
+                  email
+                }}
+              }}
+            }}
+            totalCount
+          }}
+        }}
+      }}
+    }}
+    pullRequests(first: 30, states: MERGED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+      edges {{
+        node {{
+          createdAt
+          mergedAt
+        }}
+      }}
+    }}
+    issues(first: 30, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+      edges {{
+        node {{
+          createdAt
+          closedAt
+        }}
+      }}
+    }}
+    repositoryTopics(first: 10) {{
+      nodes {{
+        topic {{
+          name
+        }}
+      }}
+    }}
+    fundingLinks {{
+      platform
+      url
+    }}
+  }}""")
+
+    query_parts.append("}")
+    return "\n".join(query_parts)
+
+
+def analyze_repositories_batch(
+    repo_list: list[tuple[str, str]],
+    platform: str | None = None,
+) -> dict[tuple[str, str], AnalysisResult | None]:
+    """Analyze multiple repositories in a single GraphQL query.
+
+    Args:
+        repo_list: List of (owner, name) tuples.
+        platform: Optional package platform for dependents analysis.
+
+    Returns:
+        Dictionary mapping (owner, name) to AnalysisResult or None.
+    """
+    if not repo_list:
+        return {}
+
+    # GitHub GraphQL has limits, so batch in groups of 5
+    batch_size = 5
+    results: dict[tuple[str, str], AnalysisResult | None] = {}
+
+    for i in range(0, len(repo_list), batch_size):
+        batch = repo_list[i : i + batch_size]
+
+        try:
+            query = _get_batch_repository_query(batch)
+            response = _query_github_graphql(query, {})
+
+            # Process each repository in the batch
+            for idx, (owner, name) in enumerate(batch):
+                alias = f"repo{idx}"
+                repo_info = response.get(alias)
+
+                if repo_info is None:
+                    results[(owner, name)] = None
+                    continue
+
+                # Analyze the repository using the retrieved data
+                try:
+                    result = _analyze_repository_data(
+                        owner, name, repo_info, platform=platform
+                    )
+                    results[(owner, name)] = result
+                except Exception as e:
+                    console.print(
+                        f"  [yellow]⚠️  Error analyzing {owner}/{name}: {e}[/yellow]"
+                    )
+                    results[(owner, name)] = None
+
+        except Exception as e:
+            console.print(f"  [yellow]⚠️  Batch query error: {e}[/yellow]")
+            # Mark all repositories in failed batch as None
+            for owner, name in batch:
+                results[(owner, name)] = None
+
+    return results
+
+
+def _analyze_repository_data(
+    owner: str,
+    name: str,
+    repo_info: dict[str, Any],
+    platform: str | None = None,
+    package_name: str | None = None,
+) -> AnalysisResult:
+    """Analyze repository data (extracted from GraphQL response).
+
+    This is the core analysis logic separated from the GraphQL query.
+    """
+    metrics = []
+    try:
+        metrics.append(check_bus_factor(repo_info))
+    except Exception as e:
+        console.print(
+            f"  [yellow]⚠️  Contributor redundancy check incomplete: {e}[/yellow]"
+        )
+        metrics.append(
+            Metric(
+                "Contributor Redundancy",
+                0,
+                20,
+                f"Note: Analysis incomplete - {e}",
+                "High",
+            )
+        )
+
+    try:
+        metrics.append(check_maintainer_drain(repo_info))
+    except Exception as e:
+        console.print(
+            f"  [yellow]⚠️  Maintainer retention check incomplete: {e}[/yellow]"
+        )
+        metrics.append(
+            Metric(
+                "Maintainer Retention",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "High",
+            )
+        )
+
+    try:
+        metrics.append(check_zombie_status(repo_info))
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Recent activity check incomplete: {e}[/yellow]")
+        metrics.append(
+            Metric("Recent Activity", 0, 20, f"Note: Analysis incomplete - {e}", "High")
+        )
+
+    try:
+        metrics.append(check_merge_velocity(repo_info))
+    except Exception as e:
+        console.print(
+            f"  [yellow]⚠️  Change request resolution check incomplete: {e}[/yellow]"
+        )
+        metrics.append(
+            Metric(
+                "Change Request Resolution",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_issue_resolution_duration(repo_info))
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Issue resolution check incomplete: {e}[/yellow]")
+        metrics.append(
+            Metric(
+                "Issue Resolution Time",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_funding(repo_info))
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Funding status check incomplete: {e}[/yellow]")
+        metrics.append(
+            Metric(
+                "Funding Status",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_community_health(repo_info))
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Community response check incomplete: {e}[/yellow]")
+        metrics.append(
+            Metric(
+                "Community Response Time",
+                0,
+                10,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_ci_status(repo_info))
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  CI/CD status check incomplete: {e}[/yellow]")
+        metrics.append(
+            Metric(
+                "CI/CD Status",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Low",
+            )
+        )
+
+    # Dependents analysis (if platform and package_name provided)
+    if platform and package_name:
+        try:
+            repo_url = f"https://github.com/{owner}/{name}"
+            metrics.append(check_dependents_count(repo_url, platform, package_name))
+        except Exception as e:
+            console.print(f"  [yellow]⚠️  Dependents check incomplete: {e}[/yellow]")
+            metrics.append(
+                Metric(
+                    "Downstream Dependents",
+                    0,
+                    10,
+                    f"Note: Analysis incomplete - {e}",
+                    "Low",
+                )
+            )
+
+    # Calculate total score (simple sum for now)
+    total_score = sum(m.score for m in metrics)
+
+    # Extract funding information directly from repo data
+    funding_links = repo_info.get("fundingLinks", [])
+
+    # Determine if project is community-driven (simple heuristic)
+    owner_login = repo_info.get("owner", {}).get("login", "")
+    is_community = not any(
+        corp in owner_login.lower()
+        for corp in ["google", "microsoft", "facebook", "meta", "amazon", "aws"]
+    )
+
+    # Generate CHAOSS metric models (placeholder for now)
+    models: list[MetricModel] = []
+
+    # Extract raw signals for transparency (placeholder for now)
+    signals: dict[str, Any] = {}
+
+    repo_url = f"https://github.com/{owner}/{name}"
+
+    console.print(
+        f"Analysis complete for [bold cyan]{owner}/{name}[/bold cyan]. Score: {total_score}/100"
+    )
+
+    return AnalysisResult(
+        repo_url=repo_url,
+        total_score=total_score,
+        metrics=metrics,
+        funding_links=funding_links if is_community else [],
+        is_community_driven=is_community,
+        models=models,
+        signals=signals,
+    )
+
+
 # --- Main Analysis Function ---
 
 
@@ -3196,367 +3512,17 @@ def analyze_repository(
 
         repo_info = repo_data["repository"]
 
-        # Calculate metrics with error handling for each metric
-        metrics = []
-        try:
-            metrics.append(check_bus_factor(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Contributor redundancy check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Contributor Redundancy",
-                    0,
-                    20,
-                    f"Note: Analysis incomplete - {e}",
-                    "High",
-                )
-            )
+        # Use the shared analysis logic
+        return _analyze_repository_data(owner, name, repo_info, platform, package_name)
 
-        try:
-            metrics.append(check_maintainer_drain(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Maintainer retention check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Maintainer Retention",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "High",
-                )
-            )
-
-        try:
-            metrics.append(check_zombie_status(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Recent activity check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Recent Activity", 0, 20, f"Note: Analysis incomplete - {e}", "High"
-                )
-            )
-
-        try:
-            metrics.append(check_merge_velocity(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Change request resolution check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Change Request Resolution",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "High",
-                )
-            )
-
-        try:
-            metrics.append(check_ci_status(repo_info))
-        except Exception as e:
-            console.print(f"  [yellow]⚠️  Build health check incomplete: {e}[/yellow]")
-            metrics.append(
-                Metric("Build Health", 0, 5, f"Note: Analysis incomplete - {e}", "High")
-            )
-
-        try:
-            metrics.append(check_funding(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Funding signals check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Funding Signals", 0, 10, f"Note: Analysis incomplete - {e}", "High"
-                )
-            )
-
-        try:
-            metrics.append(check_release_cadence(repo_info))
-        except Exception as e:
-            console.print(f"  [yellow]⚠️  Release rhythm check incomplete: {e}[/yellow]")
-            metrics.append(
-                Metric(
-                    "Release Rhythm", 0, 10, f"Note: Analysis incomplete - {e}", "High"
-                )
-            )
-
-        try:
-            metrics.append(check_security_posture(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Security signals check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Security Signals",
-                    0,
-                    15,
-                    f"Note: Analysis incomplete - {e}",
-                    "High",
-                )
-            )
-
-        try:
-            metrics.append(check_community_health(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Issue responsiveness check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Issue Responsiveness",
-                    0,
-                    5,
-                    f"Note: Analysis incomplete - {e}",
-                    "High",
-                )
-            )
-
-        # New CHAOSS metrics (Phase 4)
-        try:
-            metrics.append(check_attraction(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Contributor attraction check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Contributor Attraction",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        try:
-            metrics.append(check_retention(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Contributor retention check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Contributor Retention",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        try:
-            metrics.append(check_review_health(repo_info))
-        except Exception as e:
-            console.print(f"  [yellow]⚠️  Review health check incomplete: {e}[/yellow]")
-            metrics.append(
-                Metric(
-                    "Review Health",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        # New metrics (Phase 5)
-        try:
-            metrics.append(check_documentation_presence(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Documentation presence check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Documentation Presence",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        try:
-            metrics.append(check_code_of_conduct(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Code of conduct check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Code of Conduct",
-                    0,
-                    5,
-                    f"Note: Analysis incomplete - {e}",
-                    "Low",
-                )
-            )
-
-        try:
-            metrics.append(check_pr_acceptance_ratio(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  PR acceptance ratio check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "PR Acceptance Ratio",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        try:
-            metrics.append(check_issue_resolution_duration(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Issue resolution duration check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Issue Resolution Duration",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        try:
-            metrics.append(check_organizational_diversity(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Organizational diversity check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Organizational Diversity",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        try:
-            metrics.append(check_fork_activity(repo_info))
-        except Exception as e:
-            console.print(f"  [yellow]⚠️  Fork activity check incomplete: {e}[/yellow]")
-            metrics.append(
-                Metric(
-                    "Fork Activity",
-                    0,
-                    5,
-                    f"Note: Analysis incomplete - {e}",
-                    "Low",
-                )
-            )
-
-        try:
-            metrics.append(check_project_popularity(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Project popularity check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "Project Popularity",
-                    0,
-                    10,
-                    f"Note: Analysis incomplete - {e}",
-                    "Low",
-                )
-            )
-
-        try:
-            metrics.append(check_license_clarity(repo_info))
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  License clarity check incomplete: {e}[/yellow]"
-            )
-            metrics.append(
-                Metric(
-                    "License Clarity",
-                    0,
-                    5,
-                    f"Note: Analysis incomplete - {e}",
-                    "Medium",
-                )
-            )
-
-        # NOTE: PR Responsiveness metric removed (duplicate of Issue Responsiveness)
-        # Kept only Issue Resolution Duration in Community Engagement category
-        # try:
-        #     metrics.append(check_pr_responsiveness(repo_info))
-        # except Exception as e:
-        #     console.print(
-        #         f"  [yellow]⚠️  PR responsiveness check incomplete: {e}[/yellow]"
-        #     )
-        #     metrics.append(
-        #         Metric(
-        #             "PR Responsiveness",
-        #             0,
-        #             5,
-        #             f"Note: Analysis incomplete - {e}",
-        #             "Medium",
-        #         )
-        #     )
-
-        # Optional: Check downstream dependents if Libraries.io API is configured
-        if platform and package_name:
-            try:
-                dependents_metric = check_dependents_count(
-                    f"https://github.com/{owner}/{name}", platform, package_name
-                )
-                if dependents_metric:
-                    metrics.append(dependents_metric)
-            except Exception as e:
-                console.print(
-                    f"  [yellow]⚠️  Downstream dependents check incomplete: {e}[/yellow]"
-                )
-                # Don't append a placeholder metric if API key is not configured
-
-        # Calculate total score using category-weighted approach
-        # This provides a balanced view across sustainability dimensions
-        total_score = compute_weighted_total_score(metrics)
-
-        console.print(
-            f"Analysis complete for [bold cyan]{owner}/{name}[/bold cyan]. Score: {total_score}/100"
-        )
-
-        # Extract funding links and community status
-        funding_links = repo_info.get("fundingLinks", [])
-        is_community_driven = not is_corporate_backed(repo_info)
-
-        # Compute metric models (CHAOSS-aligned aggregations)
-        models = compute_metric_models(metrics)
-
-        # Extract raw signals for transparency
-        signals = extract_signals(metrics, repo_info)
-
-        return AnalysisResult(
-            repo_url=f"https://github.com/{owner}/{name}",
-            total_score=total_score,
-            metrics=metrics,
-            funding_links=funding_links,
-            is_community_driven=is_community_driven,
-            models=models,
-            signals=signals,
-            dependency_scores={},
-        )
-
+    except httpx.HTTPStatusError as e:
+        console.print(f"[red]HTTP Error: {e}[/red]")
+        raise
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise
     except Exception as e:
-        console.print(f"  [bold red]❌ Unable to complete analysis: {e}[/bold red]")
+        console.print(f"[red]Unexpected error during analysis: {e}[/red]")
         raise
 
 

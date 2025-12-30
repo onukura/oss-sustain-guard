@@ -38,6 +38,7 @@ from oss_sustain_guard.core import (
     SCORING_PROFILES,
     AnalysisResult,
     Metric,
+    analyze_repositories_batch,
     analyze_repository,
     close_http_client,
     compute_weighted_total_score,
@@ -63,6 +64,34 @@ LATEST_DIR = project_root / "data" / "latest"
 # --- Typer App ---
 app = typer.Typer()
 console = Console()
+
+# --- Lockfile Cache ---
+# Cache parsed lockfiles to avoid re-parsing during dependency analysis
+_lockfile_cache: dict[str, dict[str, list[str]]] = {}
+
+
+def get_cached_lockfile_dependencies(
+    lockfile_path: Path, package_name: str
+) -> list[str] | None:
+    """Get dependencies from cached lockfile parsing."""
+    cache_key = str(lockfile_path.absolute())
+    if cache_key in _lockfile_cache:
+        return _lockfile_cache[cache_key].get(package_name)
+    return None
+
+
+def cache_lockfile_dependencies(
+    lockfile_path: Path, package_deps: dict[str, list[str]]
+):
+    """Cache parsed lockfile dependencies."""
+    cache_key = str(lockfile_path.absolute())
+    _lockfile_cache[cache_key] = package_deps
+
+
+def clear_lockfile_cache():
+    """Clear the lockfile cache."""
+    _lockfile_cache.clear()
+
 
 # --- Helper Functions ---
 
@@ -459,6 +488,7 @@ def analyze_packages_parallel(
     verbose: bool = False,
     use_local_cache: bool = True,
     max_workers: int = 5,
+    use_batch_queries: bool = True,
 ) -> list[AnalysisResult | None]:
     """
     Analyze multiple packages in parallel using ThreadPoolExecutor.
@@ -473,6 +503,7 @@ def analyze_packages_parallel(
         verbose: If True, display cache source information.
         use_local_cache: If False, skip local cache lookup.
         max_workers: Maximum number of parallel workers (default: 5).
+        use_batch_queries: If True, use batch GraphQL queries for uncached packages.
 
     Returns:
         List of AnalysisResult or None for each package.
@@ -510,41 +541,145 @@ def analyze_packages_parallel(
     ) as progress:
         task = progress.add_task("[cyan]Analyzing packages...", total=total)
 
-        # Parallel processing with ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all tasks
-            future_to_pkg = {
-                executor.submit(
-                    analyze_package,
-                    pkg,
-                    ecosystem,
-                    db,
-                    profile,
-                    enable_dependents,
-                    show_dependencies,
-                    lockfile_path,
-                    False,  # Disable verbose in parallel mode to avoid output conflicts
-                    use_local_cache,
-                ): (ecosystem, pkg)
-                for ecosystem, pkg in packages_data
-            }
+        # Step 1: Check cache and resolve repositories
+        uncached_packages: list[
+            tuple[str, str, str, str]
+        ] = []  # (ecosystem, pkg, owner, repo)
+        pkg_to_index: dict[tuple[str, str], int] = {}
+        results_map: dict[int, AnalysisResult | None] = {}
 
-            # Collect results as they complete
-            pkg_results = {}
-            for future in as_completed(future_to_pkg):
-                ecosystem, pkg = future_to_pkg[future]
-                try:
-                    result = future.result()
-                    pkg_results[(ecosystem, pkg)] = result
-                except Exception as e:
-                    console.print(
-                        f"    [yellow]⚠️  Error analyzing {ecosystem}:{pkg}: {e}[/yellow]"
+        for idx, (ecosystem, pkg) in enumerate(packages_data):
+            pkg_to_index[(ecosystem, pkg)] = idx
+            db_key = f"{ecosystem}:{pkg}"
+
+            # Check if in cache
+            if use_local_cache and db_key in db:
+                cached_data = db[db_key]
+                payload_version = cached_data.get("analysis_version")
+                if is_analysis_version_compatible(payload_version, ANALYSIS_VERSION):
+                    # Use cached data
+                    metrics = [
+                        Metric(
+                            m["name"],
+                            m["score"],
+                            m["max_score"],
+                            m["message"],
+                            m["risk"],
+                        )
+                        for m in cached_data.get("metrics", [])
+                    ]
+                    recalculated_score = compute_weighted_total_score(metrics, profile)
+                    result = AnalysisResult(
+                        repo_url=cached_data.get("github_url", "unknown"),
+                        total_score=recalculated_score,
+                        metrics=metrics,
+                        funding_links=cached_data.get("funding_links", []),
+                        is_community_driven=cached_data.get(
+                            "is_community_driven", False
+                        ),
+                        models=cached_data.get("models", []),
+                        signals=cached_data.get("signals", {}),
+                        dependency_scores={},
                     )
-                    pkg_results[(ecosystem, pkg)] = None
+                    results_map[idx] = result
+                    progress.advance(task)
+                    continue
+
+            # Not in cache - need to resolve and analyze
+            resolver = get_resolver(ecosystem)
+            if not resolver:
+                results_map[idx] = None
                 progress.advance(task)
+                continue
+
+            repo_info = resolver.resolve_repository(pkg)
+            if not repo_info or repo_info.provider != "github":
+                results_map[idx] = None
+                progress.advance(task)
+                continue
+
+            uncached_packages.append((ecosystem, pkg, repo_info.owner, repo_info.name))
+
+        # Step 2: Batch query for uncached packages
+        if use_batch_queries and uncached_packages:
+            # Process in batches to update progress incrementally
+            batch_size = 5  # Match the batch size in analyze_repositories_batch
+            for batch_idx in range(0, len(uncached_packages), batch_size):
+                batch_end = min(batch_idx + batch_size, len(uncached_packages))
+                current_batch = uncached_packages[batch_idx:batch_end]
+                current_repo_list = [
+                    (owner, repo) for _, _, owner, repo in current_batch
+                ]
+
+                # Analyze current batch
+                batch_results = analyze_repositories_batch(current_repo_list)
+
+                # Process results and update progress for each package in batch
+                for ecosystem, pkg, owner, repo in current_batch:
+                    idx = pkg_to_index[(ecosystem, pkg)]
+                    result = batch_results.get((owner, repo))
+
+                    if result:
+                        # Cache the result
+                        db_key = f"{ecosystem}:{pkg}"
+                        cache_entry = {
+                            "github_url": result.repo_url,
+                            "metrics": [
+                                {
+                                    "name": m.name,
+                                    "score": m.score,
+                                    "max_score": m.max_score,
+                                    "message": m.message,
+                                    "risk": m.risk,
+                                }
+                                for m in result.metrics
+                            ],
+                            "analysis_version": ANALYSIS_VERSION,
+                            "funding_links": result.funding_links,
+                            "is_community_driven": result.is_community_driven,
+                            "models": result.models,
+                            "signals": result.signals,
+                        }
+                        # save_cache expects dict[str, dict] format
+                        save_cache(ecosystem, {db_key: cache_entry})
+
+                    results_map[idx] = result
+                    progress.advance(task)
+
+        elif not use_batch_queries and uncached_packages:
+            # Fall back to parallel processing without batch queries
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_pkg = {
+                    executor.submit(
+                        analyze_package,
+                        pkg,
+                        ecosystem,
+                        db,
+                        profile,
+                        enable_dependents,
+                        show_dependencies,
+                        lockfile_path,
+                        False,
+                        use_local_cache,
+                    ): (ecosystem, pkg)
+                    for ecosystem, pkg, _, _ in uncached_packages
+                }
+
+                for future in as_completed(future_to_pkg):
+                    ecosystem, pkg = future_to_pkg[future]
+                    idx = pkg_to_index[(ecosystem, pkg)]
+                    try:
+                        result = future.result()
+                        results_map[idx] = result
+                    except Exception as e:
+                        console.print(
+                            f"    [yellow]⚠️  Error analyzing {ecosystem}:{pkg}: {e}[/yellow]"
+                        )
+                        results_map[idx] = None
+                    progress.advance(task)
 
         # Return results in original order
-        results = [pkg_results.get(pkg_data) for pkg_data in packages_data]
+        results = [results_map.get(i) for i in range(total)]
 
     return results
 
@@ -576,8 +711,17 @@ def _analyze_dependencies_for_package(
         if not lockfile_path.exists():
             return {}
 
-        # Get dependencies specifically for this package
-        dep_names = get_package_dependencies(lockfile_path, package_name)
+        # Check cache first
+        cached_deps = get_cached_lockfile_dependencies(lockfile_path, package_name)
+        if cached_deps is not None:
+            dep_names = cached_deps
+        else:
+            # Parse lockfile and cache results
+            dep_names = get_package_dependencies(lockfile_path, package_name)
+            if dep_names:
+                # Cache for future use (simple single-package cache)
+                cache_lockfile_dependencies(lockfile_path, {package_name: dep_names})
+
         if not dep_names:
             return {}
 
@@ -1286,9 +1430,10 @@ def check(
     else:
         console.print("No results to display.")
 
-    # Clean up HTTP clients
+    # Clean up HTTP clients and lockfile cache
     close_http_client()
     close_resolver_http_client()
+    clear_lockfile_cache()
 
 
 @app.command()
