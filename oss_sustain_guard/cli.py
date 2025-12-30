@@ -1569,16 +1569,32 @@ def list_cache_command(
         "-p",
         help="Scoring profile for score calculation: balanced (default), security_first, contributor_experience, long_term_stability.",
     ),
+    limit: int | None = typer.Option(
+        100,
+        "--limit",
+        "-l",
+        help="Maximum number of packages to display (default: 100). Set to 0 or None for unlimited.",
+    ),
+    filter_keyword: str | None = typer.Option(
+        None,
+        "--filter",
+        "-f",
+        help="Filter packages by keyword in package name or repository URL (case-insensitive).",
+    ),
 ):
     """List cached packages in a table format.
 
     Examples:
-      os4g list-cache                         # List all valid cached packages
-      os4g list-cache python                  # List only Python packages
-      os4g list-cache --all                   # Include expired cache entries
-      os4g list-cache --sort name             # Sort by package name
-      os4g list-cache --sort date             # Sort by cache date
-      os4g list-cache --profile security_first  # Use security_first profile for scoring
+      os4g list-cache                            # List top 100 valid cached packages
+      os4g list-cache python                     # List only Python packages
+      os4g list-cache --all                      # Include expired cache entries
+      os4g list-cache --sort name                # Sort by package name
+      os4g list-cache --sort date                # Sort by cache date
+      os4g list-cache --profile security_first   # Use security_first profile for scoring
+      os4g list-cache --limit 50                 # Show top 50 packages
+      os4g list-cache --limit 0                  # Show all packages (unlimited)
+      os4g list-cache --filter requests          # Filter packages containing 'requests'
+      os4g list-cache --filter github.com/psf    # Filter by repository URL
     """
     if cache_dir:
         set_cache_dir(cache_dir)
@@ -1639,6 +1655,25 @@ def list_cache_command(
             )
             return
 
+    # Apply keyword filter if specified
+    total_before_filter = len(packages)
+    if filter_keyword:
+        filter_lower = filter_keyword.lower()
+        packages = [
+            p
+            for p in packages
+            if filter_lower in p["package_name"].lower()
+            or filter_lower in p["github_url"].lower()
+        ]
+        if not packages:
+            console.print(
+                f"[yellow]ℹ️  No packages found matching filter: '{filter_keyword}'[/yellow]"
+            )
+            console.print(
+                f"[dim]Total packages before filter: {total_before_filter}[/dim]"
+            )
+            return
+
     # Sort packages
     if sort_by == "score":
         packages.sort(key=lambda p: p["total_score"], reverse=True)
@@ -1653,6 +1688,13 @@ def list_cache_command(
             f"[yellow]⚠️  Unknown sort option: {sort_by}. Using default (score).[/yellow]"
         )
         packages.sort(key=lambda p: p["total_score"], reverse=True)
+
+    # Apply limit if specified (0 or None means unlimited)
+    total_count = len(packages)
+    limited = False
+    if limit and limit > 0 and len(packages) > limit:
+        packages = packages[:limit]
+        limited = True
 
     # Display table
     title = "Cached Packages" if show_all else "Valid Cached Packages"
@@ -1708,11 +1750,21 @@ def list_cache_command(
         table.add_row(*row)
 
     console.print(table)
-    console.print(f"\n[dim]Total: {len(packages)} package(s)[/dim]")
+
+    # Display summary information
+    summary_parts = [f"Showing: {len(packages)} package(s)"]
+
+    if limited:
+        summary_parts.append(f"(limited from {total_count})")
+
+    if filter_keyword:
+        summary_parts.append(f"(filtered by: '{filter_keyword}')")
+
+    console.print(f"\n[dim]{' '.join(summary_parts)}[/dim]")
 
     if not show_all:
         all_packages = get_cached_packages(ecosystem, expected_version=ANALYSIS_VERSION)
-        expired_count = len(all_packages) - len(packages)
+        expired_count = len(all_packages) - total_count
         if expired_count > 0:
             console.print(
                 f"[dim]({expired_count} expired package(s) hidden. Use --all to show them.)[/dim]"
