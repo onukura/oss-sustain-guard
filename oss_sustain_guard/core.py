@@ -408,8 +408,10 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
     - 70-89%: 10pt reduction
     - 50-69%: 5pt reduction
     - <50%: 0pt reduction (healthy)
+
+    Note: All metrics are now scored on a 0-10 scale for consistency.
     """
-    max_score = 20
+    max_score = 10
 
     # Extract commit history
     default_branch = repo_data.get("defaultBranchRef")
@@ -507,12 +509,12 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
     is_mature_bdfl = total_repo_commits >= 1000 and percentage >= 90
     is_mature_project = total_repo_commits >= 100
 
-    # Scoring logic with BDFL model recognition
+    # Scoring logic with BDFL model recognition (0-10 scale)
     if percentage >= 90:
         # Very high single-author concentration
         if is_mature_bdfl:
             # Mature BDFL model = proven track record
-            score = 15
+            score = 8  # 15/20 → 8/10
             risk = "Low"
             message = (
                 f"BDFL model: {percentage:.0f}% by founder/leader. "
@@ -520,7 +522,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
             )
         elif is_mature_project:
             # Mature project but recently single-heavy = concern
-            score = 5
+            score = 2  # 5/20 → 2/10
             risk = "High"
             message = (
                 f"High: {percentage:.0f}% of recent commits by single author. "
@@ -528,21 +530,21 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
             )
         else:
             # New project with founder-heavy commit = acceptable
-            score = 10
+            score = 5  # 10/20 → 5/10
             risk = "Medium"
             message = (
                 f"New project: {percentage:.0f}% by single author. "
                 f"Expected for early-stage projects."
             )
     elif percentage >= 70:
-        score = 10
+        score = 5  # 10/20 → 5/10
         risk = "High"
         message = (
             f"High: {percentage:.0f}% of commits by single author. "
             f"{num_contributors} contributor(s) total."
         )
     elif percentage >= 50:
-        score = 15
+        score = 8  # 15/20 → 8/10
         risk = "Medium"
         message = (
             f"Medium: {percentage:.0f}% by top contributor. "
@@ -705,17 +707,19 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     - 1+ year, mature, regularly tagged: Medium (stable maintenance)
     - 1+ year, no tags, no activity: High (potentially abandoned)
     - 2+ years, no activity: Critical
+
+    Note: All metrics are now scored on a 0-10 scale for consistency.
     """
     from datetime import datetime
 
-    max_score = 20
+    max_score = 10
 
     is_archived = repo_data.get("isArchived", False)
     if is_archived:
         # Archived repos are intentional, not risky if properly maintained during lifecycle
         return Metric(
             "Recent Activity",
-            10,  # Not 0 - archived is intentional, but needs monitoring
+            5,  # 10/20 → 5/10 - archived is intentional, but needs monitoring
             max_score,
             "Repository is archived (intentional).",
             "Medium",
@@ -746,7 +750,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     now = datetime.now(pushed_at.tzinfo)
     days_since_last_push = (now - pushed_at).days
 
-    # Scoring logic with maturity consideration
+    # Scoring logic with maturity consideration (0-10 scale)
     if days_since_last_push > 730:  # 2+ years
         return Metric(
             "Recent Activity",
@@ -758,7 +762,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     elif days_since_last_push > 365:  # 1+ year
         return Metric(
             "Recent Activity",
-            5,
+            2,  # 5/20 → 2/10
             max_score,
             f"Last activity {days_since_last_push} days ago (1+ year). "
             f"May be in stable/maintenance mode.",
@@ -767,7 +771,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     elif days_since_last_push > 180:  # 6+ months
         return Metric(
             "Recent Activity",
-            10,
+            5,  # 10/20 → 5/10
             max_score,
             f"Last activity {days_since_last_push} days ago (6+ months).",
             "Medium",
@@ -775,7 +779,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     elif days_since_last_push > 90:  # 3+ months
         return Metric(
             "Recent Activity",
-            15,
+            8,  # 15/20 → 8/10
             max_score,
             f"Last activity {days_since_last_push} days ago (3+ months).",
             "Low",
@@ -886,13 +890,13 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
 
     Note: CI Status is now a reference metric with reduced weight.
 
-    Scoring:
-    - SUCCESS or NEUTRAL: 5/5 (CI passing)
-    - FAILURE: 0/5 (CI issues detected)
-    - IN_PROGRESS/QUEUED: 3/5 (Not yet completed)
-    - No CI data: 0/5 (No CI configuration detected)
+    Scoring (0-10 scale):
+    - SUCCESS or NEUTRAL: 10/10 (CI passing)
+    - FAILURE: 0/10 (CI issues detected)
+    - IN_PROGRESS/QUEUED: 6/10 (Not yet completed)
+    - No CI data: 0/10 (No CI configuration detected)
     """
-    max_score = 5
+    max_score = 10
 
     # Check if repository is archived
     is_archived = repo_data.get("isArchived", False)
@@ -960,7 +964,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
     conclusion = conclusion.upper()
     status = status.upper()
 
-    # Scoring logic based on CI conclusion (reference only)
+    # Scoring logic based on CI conclusion (0-10 scale)
     if conclusion in ("SUCCESS", "NEUTRAL"):
         score = max_score
         risk = "None"
@@ -971,25 +975,25 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
         message = f"CI Status: {conclusion.lower()} (Latest check failed)."
     elif conclusion in ("SKIPPED", "STALE"):
         # SKIPPED is not a failure - give partial credit
-        score = 3
+        score = 6  # 3/5 → 6/10
         risk = "Low"
         message = f"CI Status: {conclusion.lower()} (Check skipped but CI configured)."
     elif status == "IN_PROGRESS":
-        score = 3
+        score = 6  # 3/5 → 6/10
         risk = "Low"
         message = "CI Status: Tests in progress (not yet complete)."
     elif status == "QUEUED":
-        score = 3
+        score = 6  # 3/5 → 6/10
         risk = "Low"
         message = "CI Status: Tests queued."
     elif conclusion == "" and status == "":
         # CI exists but no conclusion yet - give partial credit
-        score = 3
+        score = 6  # 3/5 → 6/10
         risk = "Low"
         message = "CI Status: Configured (no recent runs detected)."
     else:
         # Unknown status - still give some credit if CI exists
-        score = 2
+        score = 4  # 2/5 → 4/10
         risk = "Low"
         message = f"CI Status: Unknown ({conclusion or status or 'no data'})."
 
@@ -1178,14 +1182,15 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
     - Unresolved vulnerability alerts (Critical/High)
     - Overall security awareness
 
-    Scoring:
-    - Critical alerts unresolved: 0/15 (Critical)
-    - High alerts unresolved: 5/15 (High risk)
-    - Security policy + no alerts: 15/15 (Excellent)
-    - Security policy only: 12/15 (Good)
-    - No security infrastructure: 8/15 (Moderate)
+    Scoring (0-10 scale):
+    - Critical alerts unresolved: 0/10 (Critical)
+    - High alerts unresolved (3+): 3/10 (High risk)
+    - High alerts unresolved (1-2): 5/10 (Medium risk)
+    - Security policy + no alerts: 10/10 (Excellent)
+    - No alerts: 8/10 (Good)
+    - No security infrastructure: 5/10 (Moderate)
     """
-    max_score = 15
+    max_score = 10
 
     has_security_policy = repo_data.get("isSecurityPolicyEnabled", False)
     vulnerability_alerts = repo_data.get("vulnerabilityAlerts", {}).get("edges", [])
@@ -1207,7 +1212,7 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
         elif severity == "HIGH":
             high_count += 1
 
-    # Scoring logic
+    # Scoring logic (0-10 scale)
     if critical_count > 0:
         score = 0
         risk = "Critical"
@@ -1216,14 +1221,14 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
             f"Review and action recommended."
         )
     elif high_count >= 3:
-        score = 5
+        score = 3  # 5/15 → 3/10
         risk = "High"
         message = (
             f"High: {high_count} unresolved HIGH vulnerability alert(s). "
             f"Review and patch recommended."
         )
     elif high_count > 0:
-        score = 8
+        score = 5  # 8/15 → 5/10
         risk = "Medium"
         message = (
             f"Medium: {high_count} unresolved HIGH vulnerability alert(s). "
@@ -1235,12 +1240,12 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
         message = "Excellent: Security policy enabled, no unresolved alerts."
     elif vulnerability_alerts:
         # Has alerts infrastructure but all resolved
-        score = 12
+        score = 8  # 12/15 → 8/10
         risk = "None"
         message = "Good: No unresolved vulnerabilities detected."
     else:
         # No security policy, no alerts (may not be using Dependabot)
-        score = 8
+        score = 5  # 8/15 → 5/10
         risk = "None"
         message = "Moderate: No security policy detected. Consider adding SECURITY.md."
 
@@ -1256,15 +1261,16 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
     - Community activity level
     - Maintainer engagement
 
-    Scoring:
-    - Average response <24h: 5/5 (Excellent)
-    - Average response <7d: 3/5 (Good)
-    - Average response >30d: 0/5 (Poor)
-    - No open issues: 5/5 (Low activity or well-maintained)
+    Scoring (0-10 scale):
+    - Average response <48h: 10/10 (Excellent)
+    - Average response <7d: 6/10 (Good)
+    - Average response 7-30d: 2/10 (Slow)
+    - Average response >30d: 0/10 (Poor)
+    - No open issues: 10/10 (Low activity or well-maintained)
     """
     from datetime import datetime
 
-    max_score = 5
+    max_score = 10
 
     issues = repo_data.get("issues", {}).get("edges", [])
 
@@ -1307,7 +1313,7 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
     if not response_times:
         return Metric(
             "Community Health",
-            3,  # More generous: 3/5 for no data
+            6,  # 3/5 → 6/10 - more generous: 6/10 for no data
             max_score,
             "Note: No recent issue responses to analyze (may indicate low issue volume).",
             "None",
@@ -1315,22 +1321,22 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
 
     avg_response_time = sum(response_times) / len(response_times)
 
-    # Scoring logic
-    if avg_response_time < 24:  # <1 day
+    # Scoring logic (0-10 scale)
+    if avg_response_time < 48:  # <2 days
         score = max_score
         risk = "None"
         message = (
             f"Excellent: Average issue response time {avg_response_time:.1f} hours."
         )
     elif avg_response_time < 168:  # <7 days
-        score = 3
+        score = 6  # 3/5 → 6/10
         risk = "None"
         message = (
             f"Good: Average issue response time {avg_response_time:.1f} hours "
             f"({avg_response_time / 24:.1f} days)."
         )
     elif avg_response_time < 720:  # <30 days
-        score = 1
+        score = 2  # 1/5 → 2/10
         risk = "Medium"
         message = (
             f"Slow: Average issue response time {avg_response_time:.1f} hours "
@@ -1639,7 +1645,7 @@ def check_review_health(repo_data: dict[str, Any]) -> Metric:
     - Review count per PR
 
     Scoring:
-    - Avg first review <24h & 2+ reviews: 10/10 (Excellent)
+    - Avg first review <48h & 2+ reviews: 10/10 (Excellent)
     - Avg first review <7d & 1+ reviews: 7/10 (Good)
     - Avg first review >7d or 0 reviews: 0/10 (Needs improvement)
     """
@@ -1706,7 +1712,7 @@ def check_review_health(repo_data: dict[str, Any]) -> Metric:
     avg_review_count = sum(review_counts) / len(review_counts) if review_counts else 0
 
     # Scoring logic
-    if avg_review_time < 24 and avg_review_count >= 2:
+    if avg_review_time < 48 and avg_review_count >= 2:
         score = max_score
         risk = "None"
         message = (
@@ -1839,11 +1845,11 @@ def check_code_of_conduct(repo_data: dict[str, Any]) -> Metric:
 
     A Code of Conduct signals a welcoming, inclusive community.
 
-    Scoring:
-    - GitHub recognized CoC: 5/5
-    - No CoC: 0/5 (but low risk - informational)
+    Scoring (0-10 scale):
+    - GitHub recognized CoC: 10/10
+    - No CoC: 0/10 (but low risk - informational)
     """
-    max_score = 5
+    max_score = 10
 
     code_of_conduct = repo_data.get("codeOfConduct")
 
@@ -2248,7 +2254,7 @@ def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
     """
     from datetime import datetime, timedelta, timezone
 
-    max_score = 5
+    max_score = 10
 
     fork_count = repo_data.get("forkCount", 0)
     fork_edges = repo_data.get("forks", {}).get("edges", [])
@@ -2326,41 +2332,41 @@ def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
             risk = "None"
             message = f"Excellent: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Healthy ecosystem with low divergence risk."
         elif active_fork_ratio < 40:
-            score = 3
+            score = 6
             risk = "Low"
             message = f"Monitor: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Consider community alignment efforts."
         else:
-            score = 2
+            score = 4
             risk = "Medium"
             message = f"Needs attention: {fork_count} forks, ~{active_fork_count}/{sample_size} active. High fork divergence risk detected."
     elif fork_count >= 50:
         # Medium ecosystem
         if active_fork_ratio < 30:
-            score = 4
+            score = 8
             risk = "None"
             message = f"Good: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Growing ecosystem."
         else:
-            score = 2
+            score = 4
             risk = "Low"
             message = f"Monitor: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Watch for divergence."
     elif fork_count >= 10:
         # Smaller ecosystem
         if active_fork_count >= 2:
-            score = 3
+            score = 6
             risk = "None"
             message = f"Moderate: {fork_count} forks, {active_fork_count} active. Growing community interest."
         else:
-            score = 2
+            score = 4
             risk = "None"
             message = f"Early: {fork_count} forks, {active_fork_count} active. Small community."
     else:
         # Very small ecosystem
         if active_fork_count > 0:
-            score = 2
+            score = 4
             risk = "Low"
             message = f"Early: {fork_count} fork(s), {active_fork_count} active. Emerging interest."
         else:
-            score = 1
+            score = 2
             risk = "Low"
             message = f"Limited: {fork_count} fork(s), no recent activity detected."
 
@@ -2437,7 +2443,7 @@ def check_license_clarity(repo_data: dict[str, Any]) -> Metric:
     - Other recognized license: 3/5
     - No license detected: 0/5 (High risk for users)
     """
-    max_score = 5
+    max_score = 10
 
     license_info = repo_data.get("licenseInfo")
 
@@ -2476,13 +2482,13 @@ def check_license_clarity(repo_data: dict[str, Any]) -> Metric:
         risk = "None"
         message = f"Excellent: {license_name} (OSI-approved). Clear licensing."
     elif spdx_id:
-        score = 3
+        score = 6
         risk = "Low"
         message = (
             f"Good: {license_name} detected. Verify compatibility for your use case."
         )
     else:
-        score = 2
+        score = 4
         risk = "Medium"
         message = (
             f"Note: {license_name} detected but not recognized. Review license terms."
@@ -2506,7 +2512,7 @@ def check_pr_responsiveness(repo_data: dict[str, Any]) -> Metric:
     """
     from datetime import datetime
 
-    max_score = 5
+    max_score = 10
 
     # Check closed PRs for first response time
     closed_prs = repo_data.get("closedPullRequests", {}).get("edges", [])
@@ -2565,7 +2571,7 @@ def check_pr_responsiveness(repo_data: dict[str, Any]) -> Metric:
             f"Excellent: Avg PR first response {avg_response:.1f}h. Very responsive."
         )
     elif avg_response < 168:  # 7 days
-        score = 3
+        score = 6
         risk = "Low"
         message = f"Good: Avg PR first response {avg_response / 24:.1f}d."
     else:
@@ -2593,7 +2599,7 @@ def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
     """
     from datetime import datetime, timedelta
 
-    max_score = 5
+    max_score = 10
 
     # Check closed issues for stale ratio
     closed_issues = repo_data.get("closedIssues", {}).get("edges", [])
@@ -2645,15 +2651,15 @@ def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
             f"Healthy: {stale_ratio:.1f}% of issues are stale (90+ days inactive)."
         )
     elif stale_ratio < 30:
-        score = 3
+        score = 6
         risk = "Low"
         message = f"Acceptable: {stale_ratio:.1f}% of issues are stale."
     elif stale_ratio < 50:
-        score = 2
+        score = 4
         risk = "Medium"
         message = f"Observe: {stale_ratio:.1f}% of issues are stale. Consider review."
     else:
-        score = 1
+        score = 2
         risk = "High"
         message = f"Significant: {stale_ratio:.1f}% of issues are stale. Backlog accumulation evident."
 
@@ -2677,7 +2683,7 @@ def check_pr_merge_speed(repo_data: dict[str, Any]) -> Metric:
     """
     from datetime import datetime
 
-    max_score = 5
+    max_score = 10
 
     # Check merged PRs
     merged_prs = repo_data.get("pullRequests", {}).get("edges", [])
@@ -2735,15 +2741,15 @@ def check_pr_merge_speed(repo_data: dict[str, Any]) -> Metric:
         risk = "None"
         message = f"Excellent: Median PR merge time {median_merge_days:.1f}d. Responsive review cycle."
     elif median_merge_days < 7:
-        score = 4
+        score = 8
         risk = "Low"
         message = f"Good: Median PR merge time {median_merge_days:.1f}d."
     elif median_merge_days < 30:
-        score = 2
+        score = 4
         risk = "Medium"
         message = f"Moderate: Median PR merge time {median_merge_days:.1f}d."
     else:
-        score = 1
+        score = 2
         risk = "High"
         message = f"Observe: Median PR merge time {median_merge_days:.1f}d. Review cycle is slow."
 
@@ -2768,7 +2774,7 @@ def check_single_maintainer_load(repo_data: dict[str, Any]) -> Metric:
 
     CHAOSS Aligned: Contributor Diversity and Bus Factor
     """
-    max_score = 5
+    max_score = 10
 
     # Collect PR and Issue closers
     closer_counts: dict[str, int] = {}
@@ -2831,21 +2837,21 @@ def check_single_maintainer_load(repo_data: dict[str, Any]) -> Metric:
             f"{n} contributors share Issue/PR closing duties."
         )
     elif gini < 0.5:
-        score = 3
+        score = 6
         risk = "Low"
         message = (
             f"Moderate: Some workload concentration (Gini {gini:.2f}). "
             f"{n} contributors with varying activity levels."
         )
     elif gini < 0.7:
-        score = 2
+        score = 4
         risk = "Medium"
         message = (
             f"Observe: High workload concentration (Gini {gini:.2f}). "
             f"Consider expanding maintainer team from {n} contributors."
         )
     else:
-        score = 1
+        score = 2
         risk = "High"
         message = (
             f"Needs support: Very high workload concentration (Gini {gini:.2f}). "
@@ -2888,8 +2894,10 @@ def check_dependents_count(
         - 10+ dependents: 6/20 (Early adoption)
         - 1+ dependents: 3/20 (Used by others)
         - 0 dependents: 0/20 (No downstream dependencies)
+
+    Note: Docstring shows old 20-point scale but function now uses 10-point scale internally.
     """
-    max_score = 20
+    max_score = 10
 
     # Check if Libraries.io API is configured (check environment at runtime)
     api_key = os.getenv("LIBRARIESIO_API_KEY")
@@ -2955,112 +2963,157 @@ def check_dependents_count(
 
 # --- Scoring System ---
 
-# Category definitions for weighted scoring
-# Each category has metrics and a weight for the total score
-SCORING_CATEGORIES = {
-    "Maintainer Health": {
-        "weight": 0.25,  # 25% of total score
-        "description": "Measures contributor and maintainer sustainability",
-        "metrics": [
-            "Contributor Redundancy",
-            "Maintainer Retention",
-            "Contributor Attraction",
-            "Contributor Retention",
-            "Organizational Diversity",
-            "Maintainer Load Distribution",
-        ],
-    },
-    "Development Activity": {
-        "weight": 0.20,  # 20% of total score
-        "description": "Measures ongoing development and release health",
-        "metrics": [
-            "Recent Activity",
-            "Release Rhythm",
-            "Build Health",
-            "Change Request Resolution",
-        ],
-    },
-    "Community Engagement": {
-        "weight": 0.25,  # 25% of total score (increased from 20%)
-        "description": "Measures responsiveness and contributor experience",
-        "metrics": [
-            "Issue Responsiveness",
-            "PR Acceptance Ratio",
-            "Review Health",
-            "Issue Resolution Duration",  # More important now
-            "Stale Issue Ratio",
-            "PR Merge Speed",
-        ],
-    },
-    "Project Maturity": {
-        "weight": 0.15,  # 15% of total score
-        "description": "Measures documentation, governance, and adoption",
-        "metrics": [
-            "Documentation Presence",
-            "Code of Conduct",
-            "License Clarity",
-            "Project Popularity",
-            "Fork Activity",
-            # Note: "Downstream Dependents" is an optional informational metric
-            # and is NOT included in score calculation to ensure consistency
-            # whether or not --enable-dependents flag is used
-        ],
-    },
-    "Security & Funding": {
-        "weight": 0.15,  # 15% of total score (decreased from 20%)
-        "description": "Measures security posture and financial sustainability",
-        "metrics": [
-            "Security Signals",
-            "Funding Signals",
-        ],
-    },
-}
+# Metric weight definitions for different profiles
+# All metrics are scored on a 0-10 scale
+# Weights are integers (1+) that determine relative importance
+# Higher weight = more important to overall score
+# Total score = Sum(metric_score × weight) / Sum(10 × weight) × 100
 
 # Scoring profiles for different use cases
-# Each profile adjusts category weights based on specific priorities
+# Each profile adjusts metric weights based on specific priorities
 SCORING_PROFILES = {
     "balanced": {
         "name": "Balanced",
         "description": "Balanced view across all sustainability dimensions",
         "weights": {
-            "Maintainer Health": 0.25,
-            "Development Activity": 0.20,
-            "Community Engagement": 0.25,
-            "Project Maturity": 0.15,
-            "Security & Funding": 0.15,
+            # Maintainer Health (25% emphasis)
+            "Contributor Redundancy": 3,
+            "Maintainer Retention": 2,
+            "Contributor Attraction": 2,
+            "Contributor Retention": 2,
+            "Organizational Diversity": 2,
+            "Maintainer Load Distribution": 2,
+            # Development Activity (20% emphasis)
+            "Recent Activity": 3,
+            "Release Rhythm": 2,
+            "Build Health": 2,
+            "Change Request Resolution": 2,
+            # Community Engagement (25% emphasis)
+            "Issue Responsiveness": 2,
+            "PR Acceptance Ratio": 2,
+            "Review Health": 2,
+            "Issue Resolution Duration": 2,
+            "Stale Issue Ratio": 2,
+            "PR Merge Speed": 2,
+            # Project Maturity (15% emphasis)
+            "Documentation Presence": 2,
+            "Code of Conduct": 1,
+            "License Clarity": 1,
+            "Project Popularity": 2,
+            "Fork Activity": 1,
+            # Security & Funding (15% emphasis)
+            "Security Signals": 2,
+            "Funding Signals": 2,
+            # PR Responsiveness
+            "PR Responsiveness": 1,
         },
     },
     "security_first": {
         "name": "Security First",
         "description": "Prioritizes security and risk mitigation",
         "weights": {
-            "Maintainer Health": 0.20,
-            "Development Activity": 0.15,
-            "Community Engagement": 0.20,
-            "Project Maturity": 0.15,
-            "Security & Funding": 0.30,  # Increased importance
+            # Maintainer Health (20% emphasis)
+            "Contributor Redundancy": 2,
+            "Maintainer Retention": 2,
+            "Contributor Attraction": 1,
+            "Contributor Retention": 1,
+            "Organizational Diversity": 2,
+            "Maintainer Load Distribution": 1,
+            # Development Activity (15% emphasis)
+            "Recent Activity": 2,
+            "Release Rhythm": 2,
+            "Build Health": 3,
+            "Change Request Resolution": 1,
+            # Community Engagement (20% emphasis)
+            "Issue Responsiveness": 2,
+            "PR Acceptance Ratio": 1,
+            "Review Health": 2,
+            "Issue Resolution Duration": 1,
+            "Stale Issue Ratio": 1,
+            "PR Merge Speed": 2,
+            # Project Maturity (15% emphasis)
+            "Documentation Presence": 2,
+            "Code of Conduct": 1,
+            "License Clarity": 2,
+            "Project Popularity": 1,
+            "Fork Activity": 1,
+            # Security & Funding (30% emphasis) - INCREASED
+            "Security Signals": 4,
+            "Funding Signals": 3,
+            # PR Responsiveness
+            "PR Responsiveness": 1,
         },
     },
     "contributor_experience": {
         "name": "Contributor Experience",
         "description": "Focuses on community engagement and contributor-friendliness",
         "weights": {
-            "Maintainer Health": 0.15,
-            "Development Activity": 0.15,
-            "Community Engagement": 0.45,  # Doubled importance
-            "Project Maturity": 0.15,
-            "Security & Funding": 0.10,
+            # Maintainer Health (15% emphasis)
+            "Contributor Redundancy": 1,
+            "Maintainer Retention": 1,
+            "Contributor Attraction": 2,
+            "Contributor Retention": 2,
+            "Organizational Diversity": 1,
+            "Maintainer Load Distribution": 1,
+            # Development Activity (15% emphasis)
+            "Recent Activity": 2,
+            "Release Rhythm": 1,
+            "Build Health": 1,
+            "Change Request Resolution": 2,
+            # Community Engagement (45% emphasis) - DOUBLED
+            "Issue Responsiveness": 4,
+            "PR Acceptance Ratio": 4,
+            "Review Health": 3,
+            "Issue Resolution Duration": 3,
+            "Stale Issue Ratio": 2,
+            "PR Merge Speed": 3,
+            # Project Maturity (15% emphasis)
+            "Documentation Presence": 2,
+            "Code of Conduct": 2,
+            "License Clarity": 1,
+            "Project Popularity": 1,
+            "Fork Activity": 1,
+            # Security & Funding (10% emphasis)
+            "Security Signals": 1,
+            "Funding Signals": 1,
+            # PR Responsiveness
+            "PR Responsiveness": 3,
         },
     },
     "long_term_stability": {
         "name": "Long-term Stability",
         "description": "Emphasizes maintainer health and sustainable development",
         "weights": {
-            "Maintainer Health": 0.35,  # Highest priority
-            "Development Activity": 0.25,
-            "Community Engagement": 0.15,
-            "Project Maturity": 0.15,
-            "Security & Funding": 0.10,
+            # Maintainer Health (35% emphasis) - HIGHEST
+            "Contributor Redundancy": 4,
+            "Maintainer Retention": 3,
+            "Contributor Attraction": 2,
+            "Contributor Retention": 3,
+            "Organizational Diversity": 3,
+            "Maintainer Load Distribution": 3,
+            # Development Activity (25% emphasis)
+            "Recent Activity": 3,
+            "Release Rhythm": 3,
+            "Build Health": 2,
+            "Change Request Resolution": 2,
+            # Community Engagement (15% emphasis)
+            "Issue Responsiveness": 1,
+            "PR Acceptance Ratio": 1,
+            "Review Health": 2,
+            "Issue Resolution Duration": 1,
+            "Stale Issue Ratio": 1,
+            "PR Merge Speed": 1,
+            # Project Maturity (15% emphasis)
+            "Documentation Presence": 2,
+            "Code of Conduct": 1,
+            "License Clarity": 1,
+            "Project Popularity": 1,
+            "Fork Activity": 1,
+            # Security & Funding (10% emphasis)
+            "Security Signals": 1,
+            "Funding Signals": 2,
+            # PR Responsiveness
+            "PR Responsiveness": 1,
         },
     },
 }
@@ -3070,21 +3123,24 @@ def compute_weighted_total_score(
     metrics: list[Metric], profile: str = "balanced"
 ) -> int:
     """
-    Computes a weighted total score based on sustainability categories.
+    Computes a weighted total score based on individual metric weights.
 
-    The scoring system groups metrics into 5 categories and applies
-    different weights based on the selected profile:
+    New scoring system (v2.0):
+    - All metrics are scored on a 0-10 scale
+    - Each metric has a weight (integer ≥ 1) defined per profile
+    - Total score = Sum(metric_score × weight) / Sum(10 × weight) × 100
+    - Result is normalized to 0-100 scale
+
+    This approach provides:
+    - Transparency: Users see individual scores (0-10) and weights
+    - Flexibility: Easy to add new metrics - just assign a score and weight
+    - Consistency: No confusion about why max_score differs per metric
 
     Profiles:
     - balanced: Balanced view (default)
-    - security_first: Prioritizes security (40% weight)
-    - contributor_experience: Focuses on community (40% weight)
-    - long_term_stability: Emphasizes maintainer health (35% weight)
-
-    Each category score is normalized to 0-100, then weighted.
-
-    Supports backward compatibility: automatically migrates v1.x metric names
-    to v2.0 schema using METRIC_NAME_MIGRATION mapping.
+    - security_first: Prioritizes security
+    - contributor_experience: Focuses on community
+    - long_term_stability: Emphasizes maintainer health
 
     Args:
         metrics: List of computed Metric instances
@@ -3104,36 +3160,20 @@ def compute_weighted_total_score(
     profile_config = SCORING_PROFILES[profile]
     weights = profile_config["weights"]
 
-    # Create metric dict
-    metric_dict: dict[str, Metric] = {m.name: m for m in metrics}
+    # Calculate weighted sum
+    weighted_score_sum = 0.0
+    weighted_max_sum = 0.0
 
-    category_scores: dict[str, float] = {}
+    for m in metrics:
+        metric_weight = weights.get(m.name, 1)  # Default weight = 1 if not specified
+        weighted_score_sum += m.score * metric_weight
+        weighted_max_sum += 10 * metric_weight  # All metrics are now 0-10 scale
 
-    for category_name, category_config in SCORING_CATEGORIES.items():
-        category_metrics = category_config["metrics"]
-        category_score = 0.0
-        category_max = 0.0
-
-        for metric_name in category_metrics:
-            if metric_name in metric_dict:
-                m = metric_dict[metric_name]
-                category_score += m.score
-                category_max += m.max_score
-
-        # Normalize category to 0-100 scale
-        if category_max > 0:
-            normalized = (category_score / category_max) * 100
-        else:
-            normalized = 0.0
-
-        category_scores[category_name] = normalized
-
-    # Apply category weights from selected profile
-    total_score = 0.0
-    for category_name in SCORING_CATEGORIES.keys():
-        weight = weights.get(category_name, 0)
-        category_normalized = category_scores.get(category_name, 0)
-        total_score += category_normalized * weight
+    # Normalize to 0-100 scale
+    if weighted_max_sum > 0:
+        total_score = (weighted_score_sum / weighted_max_sum) * 100
+    else:
+        total_score = 0.0
 
     return int(round(total_score))
 
@@ -3153,101 +3193,43 @@ def compare_scoring_profiles(metrics: list[Metric]) -> dict[str, dict[str, Any]]
         - name: Profile display name
         - description: Profile description
         - total_score: Total score (0-100) for this profile
-        - weights: Category weights used
-        - category_scores: Normalized category scores (0-100)
+        - weights: Metric weights used in this profile
     """
     comparison: dict[str, dict[str, Any]] = {}
-    metric_dict = {m.name: m for m in metrics}
-
-    # Calculate normalized category scores (same for all profiles)
-    category_scores: dict[str, float] = {}
-    for category_name, category_config in SCORING_CATEGORIES.items():
-        category_metrics = category_config["metrics"]
-        category_score = 0.0
-        category_max = 0.0
-
-        for metric_name in category_metrics:
-            if metric_name in metric_dict:
-                m = metric_dict[metric_name]
-                category_score += m.score
-                category_max += m.max_score
-
-        normalized = (category_score / category_max) * 100 if category_max > 0 else 0
-        category_scores[category_name] = normalized
 
     # Calculate total score for each profile
     for profile_key, profile_config in SCORING_PROFILES.items():
-        weights = profile_config["weights"]
-        total_score = sum(
-            category_scores.get(cat, 0) * weights.get(cat, 0)
-            for cat in SCORING_CATEGORIES.keys()
-        )
+        total_score = compute_weighted_total_score(metrics, profile_key)
 
         comparison[profile_key] = {
             "name": profile_config["name"],
             "description": profile_config["description"],
-            "total_score": int(round(total_score)),
-            "weights": weights,
-            "category_scores": category_scores.copy(),
+            "total_score": total_score,
+            "weights": profile_config["weights"],
         }
 
     return comparison
 
 
-def compute_category_breakdown(metrics: list[Metric]) -> dict[str, dict[str, Any]]:
+def get_metric_weights(profile: str = "balanced") -> dict[str, int]:
     """
-    Returns detailed breakdown of scores by category.
-
-    Useful for understanding which areas need attention.
+    Returns the metric weights for a given profile.
 
     Args:
-        metrics: List of computed Metric instances
+        profile: Scoring profile name (default: "balanced")
 
     Returns:
-        Dictionary with category names as keys, containing:
-        - score: normalized score (0-100)
-        - weight: category weight
-        - weighted_score: contribution to total
-        - metrics: individual metric scores in this category
+        Dictionary mapping metric names to their weights
+
+    Raises:
+        ValueError: If profile is not recognized
     """
-    metric_dict = {m.name: m for m in metrics}
-    breakdown: dict[str, dict[str, Any]] = {}
+    if profile not in SCORING_PROFILES:
+        raise ValueError(
+            f"Unknown profile '{profile}'. Available: {', '.join(SCORING_PROFILES.keys())}"
+        )
 
-    for category_name, category_config in SCORING_CATEGORIES.items():
-        category_metrics = category_config["metrics"]
-        metric_details = []
-        category_score = 0.0
-        category_max = 0.0
-
-        for metric_name in category_metrics:
-            if metric_name in metric_dict:
-                m = metric_dict[metric_name]
-                category_score += m.score
-                category_max += m.max_score
-                metric_details.append(
-                    {
-                        "name": metric_name,
-                        "score": m.score,
-                        "max_score": m.max_score,
-                        "percentage": (
-                            int((m.score / m.max_score) * 100) if m.max_score > 0 else 0
-                        ),
-                    }
-                )
-
-        # Normalize category
-        normalized = (category_score / category_max) * 100 if category_max > 0 else 0
-        weight = category_config["weight"]
-
-        breakdown[category_name] = {
-            "description": category_config["description"],
-            "score": int(normalized),
-            "weight": weight,
-            "weighted_contribution": int(normalized * weight),
-            "metrics": metric_details,
-        }
-
-    return breakdown
+    return SCORING_PROFILES[profile]["weights"]
 
 
 # --- Metric Model Calculation Functions ---

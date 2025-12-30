@@ -8,7 +8,6 @@ import httpx
 import pytest
 
 from oss_sustain_guard.core import (
-    SCORING_CATEGORIES,
     SCORING_PROFILES,
     AnalysisResult,
     Metric,
@@ -27,7 +26,6 @@ from oss_sustain_guard.core import (
     check_retention,
     check_review_health,
     compare_scoring_profiles,
-    compute_category_breakdown,
     compute_weighted_total_score,
     is_corporate_backed,
 )
@@ -1068,27 +1066,27 @@ def test_compute_weighted_total_score():
     """Tests the weighted total score calculation."""
     # Create a set of metrics with known values
     metrics = [
-        Metric("Contributor Redundancy", 15, 20, "Good", "Low"),
+        Metric("Contributor Redundancy", 15, 10, "Good", "Low"),
         Metric("Maintainer Retention", 8, 10, "Stable", "None"),
-        Metric("Recent Activity", 20, 20, "Active", "None"),
+        Metric("Recent Activity", 20, 10, "Active", "None"),
         Metric("Change Request Resolution", 8, 10, "Good", "None"),
-        Metric("Build Health", 5, 5, "CI passing", "None"),
+        Metric("Build Health", 5, 10, "CI passing", "None"),
         Metric("Funding Signals", 8, 10, "Funded", "None"),
         Metric("Release Rhythm", 10, 10, "Active", "None"),
-        Metric("Security Signals", 12, 15, "Good", "None"),
-        Metric("Issue Responsiveness", 5, 5, "Fast", "None"),
+        Metric("Security Signals", 12, 10, "Good", "None"),
+        Metric("Issue Responsiveness", 5, 10, "Fast", "None"),
         Metric("Contributor Attraction", 7, 10, "Good", "Low"),
         Metric("Contributor Retention", 7, 10, "Good", "Low"),
         Metric("Review Health", 8, 10, "Good", "None"),
         Metric("Documentation Presence", 10, 10, "Excellent", "None"),
-        Metric("Code of Conduct", 5, 5, "Present", "None"),
+        Metric("Code of Conduct", 5, 10, "Present", "None"),
         Metric("PR Acceptance Ratio", 10, 10, "High", "None"),
         Metric("Issue Resolution Duration", 7, 10, "Good", "None"),
         Metric("Organizational Diversity", 7, 10, "Good", "Low"),
-        Metric("Fork Activity", 4, 5, "Active", "None"),
+        Metric("Fork Activity", 4, 10, "Active", "None"),
         Metric("Project Popularity", 8, 10, "Popular", "None"),
-        Metric("License Clarity", 5, 5, "MIT", "None"),
-        Metric("PR Responsiveness", 5, 5, "Fast", "None"),
+        Metric("License Clarity", 5, 10, "MIT", "None"),
+        Metric("PR Responsiveness", 5, 10, "Fast", "None"),
     ]
 
     score = compute_weighted_total_score(metrics)
@@ -1100,41 +1098,25 @@ def test_compute_weighted_total_score():
     assert score >= 70  # Should be high given the good scores
 
 
-def test_compute_category_breakdown():
-    """Tests the category breakdown function."""
-    metrics = [
-        Metric("Contributor Redundancy", 15, 20, "Good", "Low"),
-        Metric("Security Signals", 12, 15, "Good", "None"),
-        Metric("Documentation Presence", 10, 10, "Excellent", "None"),
-    ]
+def test_scoring_profiles_structure():
+    """Tests that SCORING_PROFILES is properly defined."""
+    assert (
+        len(SCORING_PROFILES) == 4
+    )  # balanced, security_first, contributor_experience, long_term_stability
 
-    breakdown = compute_category_breakdown(metrics)
-
-    # Check structure
-    assert "Maintainer Health" in breakdown
-    assert "Security & Funding" in breakdown
-    assert "Project Maturity" in breakdown
-
-    # Check Maintainer Health category
-    mh = breakdown["Maintainer Health"]
-    assert "score" in mh
-    assert "weight" in mh
-    assert "metrics" in mh
-    assert mh["weight"] == 0.25
-
-
-def test_scoring_categories_structure():
-    """Tests that SCORING_CATEGORIES is properly defined."""
-    assert len(SCORING_CATEGORIES) == 5
-
-    total_weight = sum(cat["weight"] for cat in SCORING_CATEGORIES.values())
-    assert total_weight == 1.0  # Weights should sum to 100%
-
-    # Check all categories have required fields
-    for _name, config in SCORING_CATEGORIES.items():
-        assert "weight" in config
+    # Check all profiles have required fields
+    for profile_name, config in SCORING_PROFILES.items():
+        assert "name" in config
         assert "description" in config
-        assert "metrics" in config
+        assert "weights" in config
+        assert isinstance(config["weights"], dict)
+
+        # All weights should be integers >= 1
+        for metric_name, weight in config["weights"].items():
+            assert isinstance(weight, int), (
+                f"{profile_name}.{metric_name} weight must be int"
+            )
+            assert weight >= 1, f"{profile_name}.{metric_name} weight must be >= 1"
 
 
 # --- Scoring Profile Tests ---
@@ -1144,30 +1126,30 @@ def test_default_balanced_profile():
     """Test that balanced profile produces expected scores."""
     metrics = [
         # Maintainer Health (25%)
-        Metric("Contributor Redundancy", 10, 20, "Test", "Low"),
+        Metric("Contributor Redundancy", 10, 10, "Test", "Low"),
         Metric("Maintainer Retention", 5, 10, "Test", "Low"),
         Metric("Contributor Attraction", 7, 10, "Test", "Low"),
         Metric("Contributor Retention", 6, 10, "Test", "Low"),
         Metric("Organizational Diversity", 5, 10, "Test", "Low"),
         # Development Activity (20%)
-        Metric("Recent Activity", 15, 20, "Test", "Low"),
+        Metric("Recent Activity", 15, 10, "Test", "Low"),
         Metric("Release Rhythm", 8, 10, "Test", "Low"),
-        Metric("Build Health", 4, 5, "Test", "Low"),
+        Metric("Build Health", 4, 10, "Test", "Low"),
         Metric("Change Request Resolution", 7, 10, "Test", "Low"),
         # Community Engagement (20%)
-        Metric("Issue Responsiveness", 4, 5, "Test", "Low"),
+        Metric("Issue Responsiveness", 4, 10, "Test", "Low"),
         Metric("PR Acceptance Ratio", 8, 10, "Test", "Low"),
-        Metric("PR Responsiveness", 4, 5, "Test", "Low"),
+        Metric("PR Responsiveness", 4, 10, "Test", "Low"),
         Metric("Review Health", 8, 10, "Test", "Low"),
         Metric("Issue Resolution Duration", 7, 10, "Test", "Low"),
         # Project Maturity (15%)
         Metric("Documentation Presence", 9, 10, "Test", "Low"),
-        Metric("Code of Conduct", 5, 5, "Test", "Low"),
-        Metric("License Clarity", 5, 5, "Test", "Low"),
+        Metric("Code of Conduct", 5, 10, "Test", "Low"),
+        Metric("License Clarity", 5, 10, "Test", "Low"),
         Metric("Project Popularity", 8, 10, "Test", "Low"),
-        Metric("Fork Activity", 4, 5, "Test", "Low"),
+        Metric("Fork Activity", 4, 10, "Test", "Low"),
         # Security & Funding (20%)
-        Metric("Security Signals", 12, 15, "Test", "Low"),
+        Metric("Security Signals", 12, 10, "Test", "Low"),
         Metric("Funding Signals", 8, 10, "Test", "Low"),
     ]
 
@@ -1179,8 +1161,8 @@ def test_default_balanced_profile():
 def test_security_first_profile():
     """Test that security_first profile weights security heavily."""
     metrics = [
-        Metric("Contributor Redundancy", 20, 20, "Test", "None"),
-        Metric("Security Signals", 0, 15, "Critical", "Critical"),  # Poor security
+        Metric("Contributor Redundancy", 20, 10, "Test", "None"),
+        Metric("Security Signals", 0, 10, "Critical", "Critical"),  # Poor security
         Metric("Funding Signals", 0, 10, "Test", "High"),
     ]
 
@@ -1194,10 +1176,10 @@ def test_security_first_profile():
 def test_contributor_experience_profile():
     """Test that contributor_experience profile emphasizes community."""
     metrics = [
-        Metric("Issue Responsiveness", 5, 5, "Excellent", "None"),
+        Metric("Issue Responsiveness", 5, 10, "Excellent", "None"),
         Metric("PR Acceptance Ratio", 10, 10, "Excellent", "None"),
         Metric("Review Health", 10, 10, "Excellent", "None"),
-        Metric("Security Signals", 0, 15, "Poor", "High"),  # Poor security
+        Metric("Security Signals", 0, 10, "Poor", "High"),  # Poor security
     ]
 
     balanced_score = compute_weighted_total_score(metrics, "balanced")
@@ -1211,13 +1193,13 @@ def test_long_term_stability_profile():
     """Test that long_term_stability profile prioritizes maintainer health."""
     metrics = [
         # Excellent maintainer health
-        Metric("Contributor Redundancy", 20, 20, "Excellent", "None"),
+        Metric("Contributor Redundancy", 20, 10, "Excellent", "None"),
         Metric("Maintainer Retention", 10, 10, "Excellent", "None"),
         Metric("Contributor Attraction", 10, 10, "Excellent", "None"),
         Metric("Contributor Retention", 10, 10, "Excellent", "None"),
         Metric("Organizational Diversity", 10, 10, "Excellent", "None"),
         # Poor other metrics
-        Metric("Security Signals", 0, 15, "Poor", "High"),
+        Metric("Security Signals", 0, 10, "Poor", "High"),
         Metric("Project Popularity", 0, 10, "Poor", "Low"),
     ]
 
@@ -1243,9 +1225,9 @@ def test_invalid_profile_raises_error():
 def test_compare_scoring_profiles():
     """Test profile comparison functionality."""
     metrics = [
-        Metric("Contributor Redundancy", 10, 20, "Test", "Low"),
-        Metric("Security Signals", 10, 15, "Test", "Low"),
-        Metric("Issue Responsiveness", 4, 5, "Test", "Low"),
+        Metric("Contributor Redundancy", 10, 10, "Test", "Low"),
+        Metric("Security Signals", 10, 10, "Test", "Low"),
+        Metric("Issue Responsiveness", 4, 10, "Test", "Low"),
     ]
 
     comparison = compare_scoring_profiles(metrics)
@@ -1271,10 +1253,10 @@ def test_compare_profiles_different_scores():
     """Test that different profiles produce different scores."""
     metrics = [
         # Heavy security issues
-        Metric("Security Signals", 0, 15, "Critical", "Critical"),
+        Metric("Security Signals", 0, 10, "Critical", "Critical"),
         Metric("Funding Signals", 0, 10, "None", "High"),
         # Excellent community
-        Metric("Issue Responsiveness", 5, 5, "Excellent", "None"),
+        Metric("Issue Responsiveness", 5, 10, "Excellent", "None"),
         Metric("PR Acceptance Ratio", 10, 10, "Excellent", "None"),
         Metric("Review Health", 10, 10, "Excellent", "None"),
     ]
@@ -1302,8 +1284,8 @@ def test_profile_weights_sum_to_one():
 def test_category_scores_consistent_across_profiles():
     """Test that category scores are calculated consistently."""
     metrics = [
-        Metric("Contributor Redundancy", 10, 20, "Test", "Low"),
-        Metric("Security Signals", 12, 15, "Test", "Low"),
+        Metric("Contributor Redundancy", 10, 10, "Test", "Low"),
+        Metric("Security Signals", 12, 10, "Test", "Low"),
     ]
 
     comparison = compare_scoring_profiles(metrics)
@@ -2294,7 +2276,7 @@ def test_extract_signals_basic():
 
     metrics = [
         Metric("Funding Signals", 10, 10, "Test", "None"),
-        Metric("Recent Activity", 20, 20, "Test", "None"),
+        Metric("Recent Activity", 20, 10, "Test", "None"),
     ]
 
     repo_data = {

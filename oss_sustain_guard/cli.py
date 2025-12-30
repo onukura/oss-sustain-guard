@@ -42,6 +42,7 @@ from oss_sustain_guard.core import (
     analyze_repository,
     close_http_client,
     compute_weighted_total_score,
+    get_metric_weights,
 )
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
@@ -326,9 +327,15 @@ def display_results(
 
 
 def display_results_detailed(
-    results: list[AnalysisResult], show_signals: bool = False, show_models: bool = False
+    results: list[AnalysisResult],
+    show_signals: bool = False,
+    show_models: bool = False,
+    profile: str = "balanced",
 ):
     """Display detailed analysis results with all metrics for each package."""
+    # Get weights for current profile
+    weights = get_metric_weights(profile)
+
     for result in results:
         # Determine overall color
         risk_color = "green"
@@ -360,7 +367,7 @@ def display_results_detailed(
         metrics_table = Table(show_header=True, header_style="bold magenta")
         metrics_table.add_column("Metric", style="cyan", no_wrap=True)
         metrics_table.add_column("Score", justify="center", style="magenta")
-        metrics_table.add_column("Max", justify="center", style="magenta")
+        metrics_table.add_column("Weight", justify="center", style="dim cyan")
         metrics_table.add_column("Status", justify="left")
         metrics_table.add_column("Observation", justify="left")
 
@@ -380,10 +387,8 @@ def display_results_detailed(
                 status_style = "yellow"
                 status_text = "Consider improving"
             elif metric.risk == "None":
-                # Secondary: check score ratio for "None" risk
-                score_ratio = (
-                    metric.score / metric.max_score if metric.max_score > 0 else 0
-                )
+                # Secondary: check score ratio for "None" risk (all metrics now 0-10)
+                score_ratio = metric.score / 10.0
                 if score_ratio >= 0.8:
                     status_style = "green"
                     status_text = "Healthy"
@@ -398,10 +403,13 @@ def display_results_detailed(
                 status_style = "green"
                 status_text = "Healthy"
 
+            # Get weight for this metric
+            metric_weight = weights.get(metric.name, 1)
+
             metrics_table.add_row(
                 metric.name,
                 f"[cyan]{metric.score}[/cyan]",
-                f"[cyan]{metric.max_score}[/cyan]",
+                f"[dim cyan]{metric_weight}[/dim cyan]",
                 f"[{status_style}]{status_text}[/{status_style}]",
                 metric.message,
             )
@@ -1425,7 +1433,10 @@ def check(
             )
         elif output_style == "detail":
             display_results_detailed(
-                results_to_display, show_signals=True, show_models=show_models
+                results_to_display,
+                show_signals=True,
+                show_models=show_models,
+                profile=profile,
             )
         else:  # normal
             display_results(
