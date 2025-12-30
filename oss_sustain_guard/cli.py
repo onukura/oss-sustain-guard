@@ -4,7 +4,6 @@ Command-line interface for OSS Sustain Guard.
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import typer
 from rich.console import Console
@@ -13,10 +12,8 @@ from rich.table import Table
 from oss_sustain_guard.cache import (
     clear_cache,
     get_cache_stats,
-    list_history_dates,
     load_cache,
     save_cache,
-    save_to_history,
 )
 from oss_sustain_guard.config import (
     DEFAULT_CACHE_TTL,
@@ -35,7 +32,6 @@ from oss_sustain_guard.core import (
     analyze_repository,
     compute_weighted_total_score,
 )
-from oss_sustain_guard.remote_cache import CloudflareKVClient
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     find_lockfiles,
@@ -46,7 +42,6 @@ from oss_sustain_guard.schema_migrations import (
     ANALYSIS_VERSION,
     is_analysis_version_compatible,
 )
-from oss_sustain_guard.trend import ComparisonReport, TrendAnalyzer
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -120,78 +115,6 @@ def load_database(
     # For now, if cache is disabled, we skip remote fetching and go straight to real-time analysis
 
     return merged
-
-
-def load_packages_from_cloudflare(
-    packages: list[tuple[str, str]], verbose: bool = False
-) -> dict:
-    """Load specific packages from Cloudflare KV.
-
-    Args:
-        packages: List of (ecosystem, package_name) tuples to load.
-        verbose: If True, display cache source information.
-
-    Returns:
-        Dictionary of package data keyed by "ecosystem:package_name".
-    """
-    if not packages:
-        return {}
-
-    try:
-        client = CloudflareKVClient()
-        kv_data = client.batch_get(packages)
-
-        # Convert KV keys back to database keys (ecosystem:package_name)
-        result = {}
-        for kv_key, data in kv_data.items():
-            payload_version = data.get("analysis_version")
-            if not is_analysis_version_compatible(payload_version, ANALYSIS_VERSION):
-                if verbose:
-                    console.print(
-                        f"[dim]Note: Skipping {kv_key} from Cloudflare KV "
-                        f"(analysis version {payload_version or 'unknown'} "
-                        f"!= {ANALYSIS_VERSION})[/dim]"
-                    )
-                continue
-            if payload_version is None and verbose:
-                console.print(
-                    "[dim]Note: Using legacy cache entry without analysis version tag.[/dim]"
-                )
-            # KV key format: "2.0:python:requests"
-            # Extract ecosystem:package_name
-            parts = kv_key.split(":", 2)  # Split on first 2 colons
-            if len(parts) >= 3:
-                ecosystem = parts[1]
-                package_name = parts[2]
-                db_key = f"{ecosystem}:{package_name}"
-                result[db_key] = data
-
-        if result:
-            if verbose:
-                console.print(
-                    f"[dim]☁️  Loaded {len(result)} entries from Cloudflare KV[/dim]"
-                )
-
-            # Save to local cache if enabled
-            if is_cache_enabled():
-                # Group by ecosystem for caching
-                by_ecosystem = {}
-                for db_key, data in result.items():
-                    ecosystem = data.get("ecosystem")
-                    if ecosystem:
-                        if ecosystem not in by_ecosystem:
-                            by_ecosystem[ecosystem] = {}
-                        by_ecosystem[ecosystem][db_key] = data
-
-                for ecosystem, eco_data in by_ecosystem.items():
-                    save_cache(ecosystem, eco_data)
-
-        return result
-    except Exception as e:
-        console.print(
-            f"[dim]Note: Cloudflare KV unavailable ({type(e).__name__}), using local data[/dim]"
-        )
-        return {}
 
 
 def display_results_compact(
@@ -548,7 +471,6 @@ def _analyze_dependencies_for_package(
             return {}
 
         dep_scores: dict[str, int] = {}
-        missing_packages = []
 
         # Look up metrics for each dependency from local db first
         for dep_name in dep_names:
@@ -571,39 +493,8 @@ def _analyze_dependencies_for_package(
                         ]
                         score = compute_weighted_total_score(metrics, profile)
                         dep_scores[dep_name] = score
-                    else:
-                        missing_packages.append((ecosystem, dep_name))
                 except (KeyError, TypeError):
-                    missing_packages.append((ecosystem, dep_name))
-            else:
-                missing_packages.append((ecosystem, dep_name))
-
-        # Try to fetch missing packages from Cloudflare KV
-        if missing_packages:
-            try:
-                kv_data = load_packages_from_cloudflare(missing_packages, verbose=False)
-                for kv_key, data in kv_data.items():
-                    # Extract package name from key (format: "ecosystem:package_name")
-                    parts = kv_key.split(":", 1)
-                    if len(parts) == 2:
-                        _, pkg_name = parts
-                        metrics_data = data.get("metrics", [])
-                        if metrics_data:
-                            metrics = [
-                                Metric(
-                                    m["name"],
-                                    m["score"],
-                                    m["max_score"],
-                                    m["message"],
-                                    m["risk"],
-                                )
-                                for m in metrics_data
-                            ]
-                            score = compute_weighted_total_score(metrics, profile)
-                            dep_scores[pkg_name] = score
-            except Exception:
-                # Silently fail if Cloudflare KV is unavailable
-                pass
+                    pass
 
         return dep_scores
     except Exception as e:
@@ -638,7 +529,6 @@ def analyze_package(
     lockfile_path: str | Path | None = None,
     verbose: bool = False,
     use_local_cache: bool = True,
-    use_remote_cache: bool = True,
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -653,7 +543,6 @@ def analyze_package(
         lockfile_path: Path to lockfile for dependency analysis.
         verbose: If True, display cache source information.
         use_local_cache: If False, skip local cache lookup.
-        use_remote_cache: If False, skip Cloudflare KV lookup.
 
     Returns:
         AnalysisResult or None if analysis fails.
@@ -689,68 +578,6 @@ def analyze_package(
             if verbose:
                 console.print(
                     f"  -> 🔄 Reconstructing metrics from cached data (analysis_version: {payload_version or 'legacy'})"
-                )
-
-            # Reconstruct metrics from cached data
-            metrics = [
-                Metric(
-                    m["name"],
-                    m["score"],
-                    m["max_score"],
-                    m["message"],
-                    m["risk"],
-                )
-                for m in cached_data.get("metrics", [])
-            ]
-
-            if verbose:
-                console.print(f"     ✓ Reconstructed {len(metrics)} metrics")
-
-            # Recalculate total score with selected profile
-            recalculated_score = compute_weighted_total_score(metrics, profile)
-
-            if verbose:
-                console.print(
-                    f"     ✓ Recalculated total score using profile '{profile}': {recalculated_score}/100"
-                )
-
-            # Reconstruct AnalysisResult
-            result = AnalysisResult(
-                repo_url=cached_data.get("github_url", "unknown"),
-                total_score=recalculated_score,
-                metrics=metrics,
-                funding_links=cached_data.get("funding_links", []),
-                is_community_driven=cached_data.get("is_community_driven", False),
-                models=cached_data.get("models", []),
-                signals=cached_data.get("signals", {}),
-                dependency_scores={},  # Empty for cached results
-            )
-
-            # If show_dependencies is requested, analyze dependencies
-            if show_dependencies and lockfile_path:
-                dep_scores = _analyze_dependencies_for_package(
-                    ecosystem, lockfile_path, db, package_name, profile
-                )
-                result = result._replace(dependency_scores=dep_scores)
-
-            return result
-
-    # Try loading from Cloudflare KV
-    if use_remote_cache:
-        cloudflare_data = load_packages_from_cloudflare(
-            [(ecosystem, package_name)], verbose=verbose
-        )
-        if db_key in cloudflare_data:
-            if verbose:
-                console.print(
-                    f"  -> ☁️  Found [bold green]{db_key}[/bold green] in Cloudflare KV"
-                )
-            cached_data = cloudflare_data[db_key]
-
-            if verbose:
-                payload_version = cached_data.get("analysis_version")
-                console.print(
-                    f"  -> 🔄 Reconstructing metrics from Cloudflare KV (analysis_version: {payload_version or 'legacy'})"
                 )
 
             # Reconstruct metrics from cached data
@@ -967,20 +794,10 @@ def check(
         "--no-local-cache",
         help="Disable local cache (~/.cache/oss-sustain-guard). Remote cache (Cloudflare KV) will still be used.",
     ),
-    no_remote_cache: bool = typer.Option(
-        False,
-        "--no-remote-cache",
-        help="Disable remote cache (Cloudflare KV). Local cache will still be used.",
-    ),
     clear_cache_flag: bool = typer.Option(
         False,
         "--clear-cache",
         help="Clear cache and exit.",
-    ),
-    save_history: bool = typer.Option(
-        True,
-        "--save-history/--no-save-history",
-        help="Automatically save snapshot to local history for trend analysis.",
     ),
     root_dir: Path = typer.Option(
         Path("."),
@@ -1050,7 +867,6 @@ def check(
     # Determine cache usage flags
     use_cache = not no_cache
     use_local = use_cache and not no_local_cache
-    use_remote = use_cache and not no_remote_cache
 
     db = load_database(use_cache=use_cache, use_local_cache=use_local, verbose=verbose)
     results_to_display = []
@@ -1319,7 +1135,6 @@ def check(
             lockfile,
             verbose,
             use_local,
-            use_remote,
         )
         if result:
             results_to_display.append(result)
@@ -1345,27 +1160,6 @@ def check(
                 style="yellow",
             )
 
-        # Save to history if enabled
-        if save_history and use_cache:
-            # Group analyzed packages by ecosystem for history saving
-            ecosystem_snapshots: dict[str, dict[str, Any]] = {}
-            for eco, pkg_name in packages_to_analyze:
-                if is_package_excluded(pkg_name):
-                    continue
-                db_key = f"{eco}:{pkg_name}"
-                if db_key in db:
-                    if eco not in ecosystem_snapshots:
-                        ecosystem_snapshots[eco] = {}
-                    ecosystem_snapshots[eco][db_key] = db[db_key]
-
-            # Save each ecosystem's snapshot
-            for eco, snapshot_data in ecosystem_snapshots.items():
-                if snapshot_data:
-                    saved = save_to_history(eco, snapshot_data)
-                    if saved:
-                        console.print(
-                            f"[dim]💾 Saved snapshot to local history: {eco}[/dim]"
-                        )
     else:
         console.print("No results to display.")
 
@@ -1619,317 +1413,6 @@ def gratitude(
         console.print(
             "\n[dim]Cancelled. Thank you for considering supporting OSS maintainers! 🙏[/dim]"
         )
-
-
-@app.command()
-def trend(
-    package_name: str = typer.Argument(..., help="Package name to analyze trends for"),
-    ecosystem: str = typer.Option(
-        "python",
-        "--ecosystem",
-        "-e",
-        help="Package ecosystem (python, javascript, rust, etc.)",
-    ),
-    metric: str | None = typer.Option(
-        None,
-        "--metric",
-        "-m",
-        help="Focus on specific metric (optional)",
-    ),
-    include_latest: bool = typer.Option(
-        False,
-        "--include-latest",
-        help="Include real-time analysis if package not found in history",
-    ),
-    use_remote: bool = typer.Option(
-        True,
-        "--use-remote/--no-remote",
-        help="Load historical data from Cloudflare KV (default: True)",
-    ),
-) -> None:
-    """Display trend analysis for a package.
-
-    This command shows how a package's health score and metrics have changed
-    over time by analyzing historical data from:
-    1. Cloudflare KV (remote historical cache) - if --use-remote (default)
-    2. Local cache history (~/.cache/oss-sustain-guard/history/)
-
-    If --include-latest is specified and the package is not found in history,
-    a real-time analysis will be performed to get the current snapshot.
-
-    Examples:
-        oss-sustain-guard trend requests
-        oss-sustain-guard trend express --ecosystem javascript
-        oss-sustain-guard trend flask --metric "Bus Factor"
-        oss-sustain-guard trend newpackage --include-latest
-        oss-sustain-guard trend requests --no-remote  # Use local data only
-    """
-    console.print("\n[bold cyan]📊 Package Health Trend Analysis[/bold cyan]\n")
-
-    analyzer = TrendAnalyzer(use_remote=use_remote)
-
-    # List available dates for this ecosystem
-    available_dates = analyzer.list_available_dates(ecosystem)
-    if not available_dates:
-        console.print(
-            f"[yellow]No historical snapshots found for ecosystem: {ecosystem}[/yellow]"
-        )
-        console.print(
-            "[dim]Tip: Historical data is automatically saved when you run 'oss-sustain-guard check' command.[/dim]"
-        )
-        if not include_latest:
-            return
-
-    if available_dates:
-        console.print(
-            f"[dim]Found {len(available_dates)} snapshots: {', '.join(available_dates)}[/dim]\n"
-        )
-
-    # Load package history
-    history = analyzer.load_package_history(package_name, ecosystem)
-
-    if not history:
-        console.print(
-            f"[yellow]ℹ️  No historical data found for package: {ecosystem}:{package_name}[/yellow]"
-        )
-
-        if include_latest:
-            console.print(
-                "[dim]📡 Attempting real-time analysis to get current snapshot...[/dim]\n"
-            )
-
-            # Try to resolve package to GitHub repository
-            resolver = get_resolver(ecosystem)
-            if resolver:
-                repo_info = resolver.resolve_repository(package_name)
-                if repo_info:
-                    if repo_info.provider != "github":
-                        console.print(
-                            "  -> [yellow]ℹ️  Repository is hosted on "
-                            f"{repo_info.provider.title()} ({repo_info.url}). "
-                            "Real-time analysis currently supports GitHub only.[/yellow]"
-                        )
-                        return
-                    owner, repo = repo_info.owner, repo_info.name
-                    try:
-                        # Perform real-time analysis
-                        import os
-
-                        if not os.getenv("GITHUB_TOKEN"):
-                            console.print(
-                                "[red]❌ GITHUB_TOKEN environment variable is required for real-time analysis[/red]"
-                            )
-                            console.print(
-                                "[dim]Set GITHUB_TOKEN or use archived data only.[/dim]"
-                            )
-                            return
-
-                        result = analyze_repository(owner, repo)
-
-                        # Create a current snapshot entry
-                        from oss_sustain_guard.trend import TrendData
-
-                        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-                        history = [
-                            TrendData(
-                                date=current_date,
-                                package_name=package_name,
-                                total_score=result.total_score,
-                                metrics=[m._asdict() for m in result.metrics],
-                                github_url=result.repo_url,
-                            )
-                        ]
-
-                        console.print(
-                            f"[green]✓ Real-time analysis complete for {result.repo_url}[/green]\n"
-                        )
-                        console.print(
-                            "[dim]Note: This is a single snapshot. Historical comparison requires archived data.[/dim]\n"
-                        )
-
-                    except Exception as e:
-                        console.print(f"[red]❌ Real-time analysis failed: {e}[/red]")
-                        console.print(
-                            "[dim]Package may not have a GitHub repository or API rate limit exceeded.[/dim]"
-                        )
-                        return
-                else:
-                    console.print(
-                        f"[red]❌ Could not resolve package '{package_name}' to GitHub repository[/red]"
-                    )
-                    console.print(
-                        "[dim]Package may not exist or doesn't have GitHub repository metadata.[/dim]"
-                    )
-                    return
-            else:
-                console.print(
-                    f"[red]❌ No resolver available for ecosystem: {ecosystem}[/red]"
-                )
-                return
-        else:
-            console.print(
-                "[dim]Package may not exist in snapshots or hasn't been analyzed yet.[/dim]"
-            )
-            console.print(
-                "[dim]💡 Tip: Use --include-latest flag to perform real-time analysis[/dim]"
-            )
-            return
-
-    # Display trend summary
-    analyzer.display_trend_table(package_name, history)
-
-    # Display metric-specific trends if requested
-    if metric:
-        console.print("\n")
-        analyzer.display_metric_comparison(package_name, history, metric)
-    else:
-        # Show all metrics in summary view
-        console.print("\n")
-        console.print(
-            "[dim]💡 Tip: Use --metric flag to see detailed trend for specific metric[/dim]"
-        )
-        console.print(
-            '[dim]   Example: oss-sustain-guard trend {} --metric "Bus Factor"[/dim]\n'.format(
-                package_name
-            )
-        )
-
-
-@app.command()
-def compare(
-    package_name: str = typer.Argument(..., help="Package name to compare"),
-    date1: str = typer.Argument(..., help="Earlier date (YYYY-MM-DD)"),
-    date2: str = typer.Argument(..., help="Later date (YYYY-MM-DD)"),
-    ecosystem: str = typer.Option(
-        "python",
-        "--ecosystem",
-        "-e",
-        help="Package ecosystem (python, javascript, rust, etc.)",
-    ),
-    use_remote: bool = typer.Option(
-        True,
-        "--use-remote/--no-remote",
-        help="Load historical data from Cloudflare KV (default: True)",
-    ),
-) -> None:
-    """Compare package health between two specific dates.
-
-    This command generates a detailed comparison report showing how a package's
-    metrics have changed between two snapshots.
-
-    Data sources:
-    1. Cloudflare KV (remote historical cache) - if --use-remote (default)
-    2. Local cache history (~/.cache/oss-sustain-guard/history/)
-
-    Examples:
-        oss-sustain-guard compare requests 2025-12-11 2025-12-12
-        oss-sustain-guard compare express 2025-11-01 2025-12-01 --ecosystem javascript
-        oss-sustain-guard compare requests 2025-11-01 2025-12-01 --no-remote
-    """
-    console.print("\n[bold cyan]📊 Package Health Comparison Report[/bold cyan]\n")
-
-    analyzer = TrendAnalyzer(use_remote=use_remote)
-    reporter = ComparisonReport(analyzer)
-
-    # Validate dates
-    available_dates = analyzer.list_available_dates(ecosystem)
-    if not available_dates:
-        console.print(
-            f"[yellow]No historical snapshots found for ecosystem: {ecosystem}[/yellow]"
-        )
-        console.print(
-            "[dim]Tip: Historical data is automatically saved when you run 'oss-sustain-guard check' command.[/dim]"
-        )
-        return
-
-    if date1 not in available_dates:
-        console.print(f"[red]Date {date1} not found in archive.[/red]")
-        console.print(f"Available dates: {', '.join(available_dates)}")
-        return
-
-    if date2 not in available_dates:
-        console.print(f"[red]Date {date2} not found in archive.[/red]")
-        console.print(f"Available dates: {', '.join(available_dates)}")
-        return
-
-    # Generate comparison
-    reporter.compare_dates(package_name, date1, date2, ecosystem)
-    console.print()
-
-
-@app.command()
-def list_snapshots(
-    ecosystem: str | None = typer.Argument(
-        None,
-        help="Ecosystem to list snapshots for (python, javascript, etc.). If omitted, lists all ecosystems.",
-    ),
-    use_remote: bool = typer.Option(
-        True,
-        "--use-remote/--no-remote",
-        help="Check Cloudflare KV for available dates (default: True)",
-    ),
-) -> None:
-    """List all available snapshot dates.
-
-    This command shows all dates for which historical data is available,
-    useful for determining valid date ranges for trend analysis.
-
-    Data sources:
-    1. Cloudflare KV (remote historical cache) - if --use-remote (default)
-    2. Local cache history (~/.cache/oss-sustain-guard/history/)
-
-    Examples:
-        oss-sustain-guard list-snapshots
-        oss-sustain-guard list-snapshots python
-        oss-sustain-guard list-snapshots javascript --no-remote
-    """
-    console.print("\n[bold cyan]📅 Available Snapshot Dates[/bold cyan]\n")
-
-    # List of all ecosystems to check
-    ecosystems_to_check = [
-        "python",
-        "javascript",
-        "rust",
-        "java",
-        "php",
-        "ruby",
-        "csharp",
-        "go",
-        "kotlin",
-    ]
-
-    if ecosystem:
-        ecosystems_to_check = [ecosystem]
-
-    # Collect all snapshot dates across ecosystems
-    ecosystem_dates: dict[str, list[str]] = {}
-    for eco in ecosystems_to_check:
-        dates = list_history_dates(eco)
-        if dates:
-            ecosystem_dates[eco] = dates
-
-    if not ecosystem_dates:
-        console.print("[yellow]No historical snapshots found in local cache.[/yellow]")
-        console.print(
-            "[dim]Tip: Historical data is automatically saved when you run 'oss-sustain-guard check' command.[/dim]"
-        )
-        return
-
-    # Display in a table
-    table = Table(title="Available Snapshots by Ecosystem")
-    table.add_column("Ecosystem", style="cyan")
-    table.add_column("Snapshots", justify="right", style="white")
-    table.add_column("Date Range", style="dim")
-
-    total_snapshots = 0
-    for eco, dates in sorted(ecosystem_dates.items()):
-        date_range = f"{dates[0]} to {dates[-1]}" if len(dates) > 1 else dates[0]
-        table.add_row(eco, str(len(dates)), date_range)
-        total_snapshots += len(dates)
-
-    console.print(table)
-    console.print(f"\n[dim]Total snapshots: {total_snapshots}[/dim]\n")
 
 
 if __name__ == "__main__":

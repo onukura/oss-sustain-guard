@@ -158,7 +158,7 @@ def test_query_github_graphql_no_token():
     Tests that a ValueError is raised if the GITHUB_TOKEN is not set.
     """
     with pytest.raises(
-        ValueError, match="GITHUB_TOKEN environment variable is not set"
+        ValueError, match="GITHUB_TOKEN environment variable is required"
     ):
         _query_github_graphql("query {}", {})
 

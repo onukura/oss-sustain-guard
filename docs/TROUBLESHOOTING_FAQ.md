@@ -4,35 +4,51 @@ This section covers common issues and solutions when using OSS Sustain Guard.
 
 ## 🔴 Common Errors
 
-### 1. "GitHub token not found" Error
+### 1. "GITHUB_TOKEN environment variable is required" Error
 
 **Error Message:**
 
 ```shell
-ValueError: GitHub token not found. Set GITHUB_TOKEN environment variable.
+ValueError: GITHUB_TOKEN environment variable is required.
+
+To get started:
+1. Create a GitHub Personal Access Token (classic):
+   → https://github.com/settings/tokens/new
+2. Select scopes: 'public_repo' (for public repositories)
+3. Set the token:
+   export GITHUB_TOKEN='your_token_here'  # Linux/macOS
+   or add to your .env file: GITHUB_TOKEN=your_token_here
 ```
 
-**When This Happens:** You're analyzing a package not in the cache without providing a GitHub token.
+**When This Happens:** Every time you run `os4g check` without a GitHub token set.
 
 **Solution:**
 
-Option A: Use cached packages (recommended, no token needed):
-```bash
-os4g check requests  # Works instantly if in cache
-```
+OSS Sustain Guard requires a GitHub token for all analyses:
 
-Option B: Set a GitHub token to analyze new packages:
 ```bash
+# Create token at: https://github.com/settings/tokens/new
 export GITHUB_TOKEN="your_github_token_here"
-os4g check new-package  # Analyzes uncached packages
+os4g check requests  # Now works
 ```
 
 **How to Create a GitHub Token:**
 
-1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens/new)
 2. Click "Generate new token (classic)"
-3. Select `public_repo` scope (read-only, sufficient for analysis)
-4. Copy the token and set it: `export GITHUB_TOKEN="your_token"`
+3. Token name: `oss-sustain-guard`
+4. Select `public_repo` scope (read-only access to public repositories)
+5. Click "Generate token" and **copy it immediately** (you won't see it again)
+6. Set the environment variable:
+   ```bash
+   export GITHUB_TOKEN="your_token"  # Linux/macOS
+   ```
+   Or add to `.env` file in your project:
+   ```
+   GITHUB_TOKEN=your_token_here
+   ```
+
+**Why Required:** GitHub's API requires authentication to query repository data (contributors, releases, issues, funding, etc.).
 
 ### 2. "Package not found" Error
 

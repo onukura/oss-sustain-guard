@@ -10,7 +10,49 @@ Install easily from PyPI:
 pip install oss-sustain-guard
 ```
 
-## 🚀 First Steps
+## � GitHub Token Setup (Required)
+
+**OSS Sustain Guard requires a GitHub Personal Access Token for all package analysis.**
+
+This is needed because the tool fetches repository data directly from GitHub's API to analyze:
+- Contributor activity and bus factor
+- Release patterns and commit history
+- Issue/PR response times
+- Security policies and funding information
+- And more sustainability metrics
+
+### Quick Setup (3 steps)
+
+**1. Create a token:**
+Visit [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a classic token with `public_repo` scope.
+
+**2. Set the environment variable:**
+
+```bash
+# Linux/macOS
+export GITHUB_TOKEN='your_token_here'
+
+# Windows PowerShell
+$env:GITHUB_TOKEN='your_token_here'
+
+# Or add to .env file in your project
+echo "GITHUB_TOKEN=your_token_here" > .env
+```
+
+**3. Verify it works:**
+
+```bash
+os4g check requests
+```
+
+> **Why is this required?**
+> - GitHub's unauthenticated API has very low rate limits (60 requests/hour)
+> - Authenticated requests get 5,000 requests/hour
+> - Package analysis requires multiple API calls per repository
+>
+> **Security:** The token only needs `public_repo` scope (read access to public repositories). Never commit tokens to version control.
+
+## �🚀 First Steps
 
 ### 1. Check a Single Package
 
@@ -110,16 +152,53 @@ os4g check requests --profile long_term_stability
 os4g check requests --no-cache
 ```
 
+## � GitHub Token Setup
+
+**Required:** OSS Sustain Guard requires a GitHub Personal Access Token to analyze repositories.
+
+### Quick Setup (5 minutes)
+
+1. **Create a token:**
+   - Visit: https://github.com/settings/tokens/new
+   - Token name: `oss-sustain-guard`
+   - Select scopes: ✓ `public_repo` (for public repositories)
+   - Click "Generate token" and **copy it immediately**
+
+2. **Set the token:**
+
+   **Linux/macOS:**
+   ```bash
+   export GITHUB_TOKEN='your_token_here'
+   ```
+
+   **Windows (PowerShell):**
+   ```powershell
+   $env:GITHUB_TOKEN='your_token_here'
+   ```
+
+   **Persistent (recommended):**
+   Add to your `.env` file in your project directory:
+   ```
+   GITHUB_TOKEN=your_token_here
+   ```
+
+3. **Verify:**
+   ```bash
+   os4g check requests
+   ```
+
+### Why is a token needed?
+
+GitHub's API requires authentication for repository analysis. The token allows OSS Sustain Guard to:
+- Query repository metadata (contributors, releases, issues)
+- Access funding information
+- Analyze project health metrics
+
+**Rate Limits:** With a token, you get 5,000 requests/hour (vs 60 without). Local caching minimizes API calls.
+
+**Security:** Your token is only stored locally and never sent anywhere except GitHub's API.
+
 ## 💡 Key Concepts
-
-### When Do I Need a GitHub Token?
-
-For most analysis of popular packages, you don't need a GitHub token—OSS Sustain Guard uses **pre-computed caches** for instant results. You'll only need `GITHUB_TOKEN` if:
-
-- Analyzing a new/uncommon package not in the cache
-- Analyzing frequently and hitting rate limits
-
-If you see "GitHub token not found" error, see [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md) for setup.
 
 ### CHAOSS-Aligned Metrics
 
@@ -129,7 +208,6 @@ All metrics follow [CHAOSS (Community Health Analytics in Open Source Software)]
 
 - **Analyze your project's dependencies**: [Dependency Analysis](DEPENDENCY_ANALYSIS_GUIDE.md)
 - **Analyze entire projects**: [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md)
-- **Track changes over time**: [Time Series Analysis](TREND_ANALYSIS_GUIDE.md)
 - **Exclude packages**: [Exclude Configuration](EXCLUDE_PACKAGES_GUIDE.md)
 - **Automate in CI/CD**: [GitHub Actions](GITHUB_ACTIONS_GUIDE.md)
 - **Find projects to support**: [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md)

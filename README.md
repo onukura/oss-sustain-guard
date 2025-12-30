@@ -9,11 +9,9 @@
 
 **Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 21 metrics including Contributor Redundancy, Maintainer Retention, and Security Signals.
 
-✨ **Globally Distributed Cache** - Instant results via Cloudflare KV with local fallback caching.
-
 > 📌 **Quick Notes:**
 >
-> - **Instant results** - Popular packages served from global Cloudflare KV cache (no API calls needed)
+> - **Local caching** - Popular packages served from efficient local cache for faster results
 > - **SSL verification** - Use `--insecure` flag to disable SSL verification for development/testing only
 > - **Package resolution** - If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
 > - **Full documentation** - https://onukura.github.io/oss-sustain-guard/
@@ -39,9 +37,8 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
-- **Time Series Analysis** - Track package health trends over time, compare snapshots, generate reports
 - **Community Support Awareness** - Displays funding links for community-driven projects
-- **Globally Distributed Cache** - Cloudflare KV-based data delivery with local user cache fallback
+- **Local Caching** - Efficient local cache for faster repeated checks
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
 - **Zero Configuration** - Works out of the box
 
@@ -50,6 +47,9 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 ```bash
 # Install
 pip install oss-sustain-guard
+
+# Set GitHub token (required for all package analysis)
+export GITHUB_TOKEN='your_token_here'  # Get from: https://github.com/settings/tokens/new
 
 # Check a single package
 os4g check requests
@@ -73,7 +73,6 @@ For detailed usage, configuration, and features, see our documentation site:
 
 - **[Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/)** - Installation and basic usage
 - **[Scoring Profiles](https://onukura.github.io/oss-sustain-guard/SCORING_PROFILES_GUIDE/)** - Different evaluation perspectives
-- **[Trend Analysis](https://onukura.github.io/oss-sustain-guard/TREND_ANALYSIS_GUIDE/)** - Track package health over time
 - **[GitHub Actions Integration](https://onukura.github.io/oss-sustain-guard/GITHUB_ACTIONS_GUIDE/)** - CI/CD setup
 - **[Pre-Commit Hooks](https://onukura.github.io/oss-sustain-guard/PRE_COMMIT_INTEGRATION/)** - Automated checks
 - **[Exclude Packages](https://onukura.github.io/oss-sustain-guard/EXCLUDE_PACKAGES_GUIDE/)** - Configuration
@@ -97,8 +96,6 @@ Evaluated across 5 categories:
 
 **Score interpretation:** 80-100 (Healthy) | 50-79 (Monitor) | 0-49 (Needs Attention)
 
-See [Database Schema](https://onukura.github.io/oss-sustain-guard/DATABASE_SCHEMA/) for complete metric details.
-
 ### Special Features
 
 - **🎁 Gratitude Vending Machine** - Discover community projects that need support
@@ -106,25 +103,17 @@ See [Database Schema](https://onukura.github.io/oss-sustain-guard/DATABASE_SCHEM
   os4g gratitude --top 5
   ```
 
-- **📊 Trend Analysis** - Track package health evolution
-  ```bash
-  os4g trend requests
-  os4g compare requests 2025-12-11 2025-12-12
-  ```
-
-- **💝 Community Funding Links** - Auto-displays funding options for community-driven projects
-
-See [Trend Analysis Guide](https://onukura.github.io/oss-sustain-guard/TREND_ANALYSIS_GUIDE/) for details.
+- **� Community Funding Links** - Auto-displays funding options for community-driven projects
 
 ## 🤝 Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code style, and architecture documentation.
 
-## 📝 Documentation
+
+## �📝 Documentation
 
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
-- [Trend Analysis Guide](./docs/TREND_ANALYSIS_GUIDE.md) - Time series analysis and historical comparison
-- [Database Schema](./docs/DATABASE_SCHEMA.md) - JSON database format
+
 - [Pre-Commit Integration](./docs/PRE_COMMIT_INTEGRATION.md) - Hook configuration
 - [GitHub Actions Guide](./docs/GITHUB_ACTIONS_GUIDE.md) - CI/CD setup
 - [Exclude Packages Guide](./docs/EXCLUDE_PACKAGES_GUIDE.md) - Package filtering

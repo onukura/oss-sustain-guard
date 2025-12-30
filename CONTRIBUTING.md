@@ -66,8 +66,8 @@ git checkout -b feature/add-new-metric
 uv run pytest tests/ -v
 
 # Check code quality
-uv run ruff check oss_sustain_guard tests builder
-uv run ruff format oss_sustain_guard tests builder
+uv run ruff check oss_sustain_guard tests
+uv run ruff format oss_sustain_guard tests
 ```
 
 ### 3. Commit Changes
@@ -185,13 +185,13 @@ def analyze_package(
 
 ```bash
 # Lint check
-uv run ruff check oss_sustain_guard tests builder
+uv run ruff check oss_sustain_guard tests
 
 # Format code
-uv run ruff format oss_sustain_guard tests builder
+uv run ruff format oss_sustain_guard tests
 
 # Check formatting without modifying files
-uv run ruff format --check oss_sustain_guard tests builder
+uv run ruff format --check oss_sustain_guard tests
 ```
 
 ## 📝 Pull Request Process
@@ -463,16 +463,6 @@ oss_sustain_guard/
     php.py                       # PHP (Composer/Packagist) resolver
     java.py                      # Java/Kotlin/Scala (Maven Central) resolver
     csharp.py                    # C# (.NET/NuGet) resolver
-
-builder/
-  build_db.py                    # Multi-language DB generation script
-  fallback_packages.py           # Fallback package definitions
-
-data/
-  latest/                        # Current snapshot (build artifacts, not committed)
-    python.json
-    javascript.json
-    ...
 
 tests/
   resolvers/                     # Resolver unit tests

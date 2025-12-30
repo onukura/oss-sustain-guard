@@ -10,7 +10,6 @@ from oss_sustain_guard.cli import (
     _analyze_dependencies_for_package,
     analyze_package,
     load_database,
-    load_packages_from_cloudflare,
     parse_package_spec,
 )
 from oss_sustain_guard.repository import RepositoryReference
@@ -251,67 +250,6 @@ class TestLoadDatabase:
         """Test loading database when cache is disabled."""
         db = load_database(use_cache=True, use_local_cache=True, verbose=False)
         assert db == {}
-
-
-class TestLoadPackagesFromCloudflare:
-    """Test Cloudflare KV loading functionality."""
-
-    @patch("oss_sustain_guard.cli.CloudflareKVClient")
-    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
-    @patch("oss_sustain_guard.cli.save_cache")
-    @patch("oss_sustain_guard.cli.is_analysis_version_compatible", return_value=True)
-    def test_load_packages_success(
-        self, mock_version, mock_save, mock_cache_enabled, mock_client
-    ):
-        """Test successfully loading packages from Cloudflare KV."""
-        mock_kv = MagicMock()
-        mock_kv.batch_get.return_value = {
-            "2.0:python:requests": {
-                "ecosystem": "python",
-                "package_name": "requests",
-                "total_score": 85,
-                "analysis_version": "2.0",
-            }
-        }
-        mock_client.return_value = mock_kv
-
-        result = load_packages_from_cloudflare([("python", "requests")], verbose=False)
-
-        assert "python:requests" in result
-        assert result["python:requests"]["total_score"] == 85
-
-    @patch("oss_sustain_guard.cli.CloudflareKVClient")
-    def test_load_packages_exception(self, mock_client):
-        """Test handling exceptions when loading from Cloudflare KV."""
-        mock_client.side_effect = Exception("Network error")
-
-        result = load_packages_from_cloudflare([("python", "requests")], verbose=False)
-
-        assert result == {}
-
-    def test_load_packages_empty_list(self):
-        """Test loading with empty package list."""
-        result = load_packages_from_cloudflare([], verbose=False)
-        assert result == {}
-
-    @patch("oss_sustain_guard.cli.CloudflareKVClient")
-    @patch("oss_sustain_guard.cli.is_analysis_version_compatible", return_value=False)
-    def test_load_packages_incompatible_version(self, mock_version, mock_client):
-        """Test skipping packages with incompatible analysis version."""
-        mock_kv = MagicMock()
-        mock_kv.batch_get.return_value = {
-            "2.0:python:requests": {
-                "ecosystem": "python",
-                "package_name": "requests",
-                "total_score": 85,
-                "analysis_version": "1.0",
-            }
-        }
-        mock_client.return_value = mock_kv
-
-        result = load_packages_from_cloudflare([("python", "requests")], verbose=False)
-
-        assert result == {}
 
 
 class TestAnalyzeDependenciesForPackage:
