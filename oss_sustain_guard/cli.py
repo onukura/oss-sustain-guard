@@ -1547,15 +1547,31 @@ def gratitude(
         if not is_community:
             continue
 
-        # Calculate support priority score
-        total_score = data.get("total_score", 0)
-        metrics = data.get("metrics", [])
+        # Calculate total_score from metrics (since it's not stored in cache)
+        metrics_data = data.get("metrics", [])
+        if not metrics_data:
+            continue
+
+        # Convert dict metrics to Metric objects
+        metric_objects = [
+            Metric(
+                name=m.get("name", ""),
+                score=m.get("score", 0),
+                max_score=m.get("max_score", 0),
+                message=m.get("message", ""),
+                risk=m.get("risk", "None"),
+            )
+            for m in metrics_data
+        ]
+
+        # Compute total score using balanced profile (default for gratitude)
+        total_score = compute_weighted_total_score(metric_objects, profile="balanced")
 
         # Find specific metrics that indicate need for support
         bus_factor_score = 20  # Default max
         maintainer_drain_score = 15  # Default max
 
-        for metric in metrics:
+        for metric in metrics_data:
             metric_name = metric.get("name", "")
             if "Bus Factor" in metric_name or "Contributor Redundancy" in metric_name:
                 bus_factor_score = metric.get("score", 20)
