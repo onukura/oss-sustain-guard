@@ -2,7 +2,7 @@ exclude: ^(.venv|venv|node_modules)/
 
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.14.8
+    rev: v0.14.10
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -10,7 +10,7 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: check-docstring-first
@@ -25,7 +25,7 @@ repos:
           )
       - id: detect-private-key
   - repo: https://github.com/onukura/oss-sustain-guard
-    rev: "main"
+    rev: v0.11.1
     hooks:
       - id: oss-sustain-guard
         args: [--insecure, --include-lock, -o, compact]
