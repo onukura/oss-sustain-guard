@@ -147,7 +147,7 @@ The implementation handles three error scenarios:
 The graduated scoring reflects project health:
 
 - **<15% stale** (5/5): Excellent backlog management
-- **15-30% stale** (3/5): Acceptable, room for improvement  
+- **15-30% stale** (3/5): Acceptable, room for improvement
 - **30-50% stale** (2/5): Needs attention, backlog building up
 - **>50% stale** (1/5): Significant challenge, potential burnout
 

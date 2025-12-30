@@ -75,7 +75,7 @@ Provide structured findings with specific recommendations:
 ```
 User: "Check if adding-new-metric follows best practices"
 
-1. fetch_webpage(best-practices-url) 
+1. fetch_webpage(best-practices-url)
    → Extract current criteria
 
 2. read_file(".claude/skills/adding-new-metric/SKILL.md")
@@ -87,7 +87,7 @@ User: "Check if adding-new-metric follows best practices"
    - Conciseness (≤500 lines?)
    - Progressive disclosure used?
    - Consistent terminology?
-   
+
 4. Generate report with specific fixes
 ```
 
