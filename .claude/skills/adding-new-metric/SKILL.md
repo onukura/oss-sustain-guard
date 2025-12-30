@@ -253,7 +253,7 @@ from typing import Any
 VALIDATION_PROJECTS = {
     "Famous/Mature": {
         "requests": "psf/requests",
-        "react": "facebook/react", 
+        "react": "facebook/react",
         "kubernetes": "kubernetes/kubernetes",
         "django": "django/django",
         "fastapi": "fastapi/fastapi",
@@ -271,15 +271,15 @@ VALIDATION_PROJECTS = {
 def analyze_project(owner: str, repo: str) -> dict[str, Any]:
     """Run analysis on a project and return results."""
     cmd = [
-        "uv", "run", "os4g", "check", 
+        "uv", "run", "os4g", "check",
         f"{owner}/{repo}",
         "--insecure", "--no-cache", "-o", "json"
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode != 0:
         return {"error": result.stderr}
-    
+
     # Parse JSON output
     try:
         return json.loads(result.stdout)
@@ -291,25 +291,25 @@ def main():
     print("OSS Sustain Guard - Score Validation Report")
     print("=" * 80)
     print()
-    
+
     for category, projects in VALIDATION_PROJECTS.items():
         print(f"\n## {category}\n")
         print(f"{'Project':<25} {'Score':<10} {'Status':<15} {'Key Observations'}")
         print("-" * 80)
-        
+
         for name, repo_path in projects.items():
             result = analyze_project(*repo_path.split("/"))
-            
+
             if "error" in result:
                 print(f"{name:<25} {'ERROR':<10} {result['error'][:40]}")
                 continue
-            
+
             score = result.get("total_score", 0)
             status = "✓ Healthy" if score >= 80 else "⚠ Monitor" if score >= 60 else "⚡ Needs attention"
             observations = result.get("key_observations", "N/A")[:40]
-            
+
             print(f"{name:<25} {score:<10} {status:<15} {observations}")
-    
+
     print("\n" + "=" * 80)
     print("\nValidation complete. Review scores for:")
     print("  - Famous projects should score 70-95")
