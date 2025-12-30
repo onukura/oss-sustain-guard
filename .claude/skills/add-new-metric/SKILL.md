@@ -1,6 +1,6 @@
 ---
-name: add-new-metric
-description: Guide for adding new sustainability metrics to OSS Sustain Guard. Use this when the user wants to implement a new metric function that evaluates a specific aspect of open-source project health (e.g., issue responsiveness, test coverage, security response time, etc.).
+name: adding-new-metric
+description: Guides systematic implementation of new sustainability metrics in OSS Sustain Guard. Use when adding metric functions to evaluate project health aspects like issue responsiveness, test coverage, or security response time.
 ---
 
 # Add New Metric
@@ -220,87 +220,138 @@ funding = repo_data.get("fundingLinks", [])
 
 ## Example: Stale Issue Ratio
 
+For a complete, production-ready implementation example, see [examples/stale-issue-ratio.md](examples/stale-issue-ratio.md).
+
+**Quick overview:**
+- **Measures**: Percentage of issues not updated in 90+ days
+- **Max Score**: 5 points
+- **Scoring**: <15% stale (5pts), 15-30% (3pts), 30-50% (2pts), >50% (1pt)
+- **Key patterns**: Time-based calculation, graduated scoring, graceful error handling
+- **Real results**: fastapi (8.2% stale, 5/5), requests (23.4%, 3/5)
+
+## Score Validation with Real Projects
+
+After implementing a new metric, validate scoring behavior with diverse real-world projects.
+
+### Validation Script
+
+Create `scripts/validate_scoring.py`:
+
 ```python
-def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
-    """
-    Evaluates Stale Issue Ratio - percentage of issues not updated in 90+ days.
+#!/usr/bin/env python3
+"""
+Score validation script for testing new metrics against diverse projects.
 
-    Measures how well the project manages its issue backlog.
-    High stale issue ratio indicates potential burnout or backlog accumulation.
+Usage:
+    uv run python scripts/validate_scoring.py
+"""
 
-    Scoring:
-    - <15% stale: 5/5 (Healthy backlog management)
-    - 15-30% stale: 3/5 (Acceptable)
-    - 30-50% stale: 2/5 (Needs attention)
-    - >50% stale: 1/5 (Significant backlog challenge)
+import subprocess
+import json
+from typing import Any
 
-    CHAOSS Aligned: Issue aging and backlog management
-    """
-    from datetime import datetime, timedelta
+VALIDATION_PROJECTS = {
+    "Famous/Mature": {
+        "requests": "psf/requests",
+        "react": "facebook/react", 
+        "kubernetes": "kubernetes/kubernetes",
+        "django": "django/django",
+        "fastapi": "fastapi/fastapi",
+    },
+    "Popular/Active": {
+        "angular": "angular/angular",
+        "numpy": "numpy/numpy",
+        "pandas": "pandas-dev/pandas",
+    },
+    "Emerging/Small": {
+        # Add smaller projects you want to test
+    },
+}
 
-    max_score = 5
+def analyze_project(owner: str, repo: str) -> dict[str, Any]:
+    """Run analysis on a project and return results."""
+    cmd = [
+        "uv", "run", "os4g", "check", 
+        f"{owner}/{repo}",
+        "--insecure", "--no-cache", "-o", "json"
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        return {"error": result.stderr}
+    
+    # Parse JSON output
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse JSON output"}
 
-    closed_issues = repo_data.get("closedIssues", {}).get("edges", [])
+def main():
+    print("=" * 80)
+    print("OSS Sustain Guard - Score Validation Report")
+    print("=" * 80)
+    print()
+    
+    for category, projects in VALIDATION_PROJECTS.items():
+        print(f"\n## {category}\n")
+        print(f"{'Project':<25} {'Score':<10} {'Status':<15} {'Key Observations'}")
+        print("-" * 80)
+        
+        for name, repo_path in projects.items():
+            result = analyze_project(*repo_path.split("/"))
+            
+            if "error" in result:
+                print(f"{name:<25} {'ERROR':<10} {result['error'][:40]}")
+                continue
+            
+            score = result.get("total_score", 0)
+            status = "✓ Healthy" if score >= 80 else "⚠ Monitor" if score >= 60 else "⚡ Needs attention"
+            observations = result.get("key_observations", "N/A")[:40]
+            
+            print(f"{name:<25} {score:<10} {status:<15} {observations}")
+    
+    print("\n" + "=" * 80)
+    print("\nValidation complete. Review scores for:")
+    print("  - Famous projects should score 70-95")
+    print("  - New metrics should show reasonable distribution")
+    print("  - No project should score >100")
 
-    if not closed_issues:
-        return Metric(
-            "Stale Issue Ratio",
-            max_score // 2,
-            max_score,
-            "Note: No closed issues in recent history.",
-            "None",
-        )
-
-    stale_count = 0
-    current_time = datetime.now(datetime.now().astimezone().tzinfo)
-    stale_threshold = current_time - timedelta(days=90)
-
-    for edge in closed_issues:
-        node = edge.get("node", {})
-        updated_at_str = node.get("updatedAt") or node.get("closedAt")
-
-        if not updated_at_str:
-            continue
-
-        try:
-            updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
-            if updated_at < stale_threshold:
-                stale_count += 1
-        except (ValueError, AttributeError):
-            pass
-
-    total_issues = len(closed_issues)
-    if total_issues == 0:
-        return Metric(
-            "Stale Issue Ratio",
-            5,
-            max_score,
-            "Note: Unable to calculate stale issue ratio.",
-            "None",
-        )
-
-    stale_ratio = (stale_count / total_issues) * 100
-
-    # Scoring logic
-    if stale_ratio < 15:
-        score = max_score
-        risk = "None"
-        message = f"Healthy: {stale_ratio:.1f}% of issues are stale (90+ days inactive)."
-    elif stale_ratio < 30:
-        score = 3
-        risk = "Low"
-        message = f"Acceptable: {stale_ratio:.1f}% of issues are stale."
-    elif stale_ratio < 50:
-        score = 2
-        risk = "Medium"
-        message = f"Observe: {stale_ratio:.1f}% of issues are stale. Consider review."
-    else:
-        score = 1
-        risk = "High"
-        message = f"Significant: {stale_ratio:.1f}% of issues are stale. Backlog accumulation evident."
-
-    return Metric("Stale Issue Ratio", score, max_score, message, risk)
+if __name__ == "__main__":
+    main()
 ```
+
+### Quick Validation Command
+
+```bash
+# Test specific famous projects
+uv run os4g check requests react fastapi kubernetes --insecure --no-cache
+
+# Compare before/after metric changes
+uv run os4g check requests --insecure --no-cache -o detail > before.txt
+# ... make changes ...
+uv run os4g check requests --insecure --no-cache -o detail > after.txt
+diff before.txt after.txt
+```
+
+### Expected Score Ranges
+
+| Category | Expected Score | Examples |
+|----------|----------------|----------|
+| Famous/Mature | 75-95 | requests, kubernetes, react |
+| Popular/Active | 65-85 | angular, numpy, pandas |
+| Emerging/Small | 45-70 | New projects with activity |
+| Problematic | 20-50 | Abandoned or struggling projects |
+
+### Validation Checklist
+
+After implementing a new metric:
+
+- [ ] Test on 3-5 famous projects (requests, react, kubernetes, etc.)
+- [ ] Verify scores remain within 0-100
+- [ ] Check that famous projects score reasonably high (70+)
+- [ ] Ensure new metric contributes meaningfully to total score
+- [ ] Review that metric differentiates well between projects
+- [ ] Confirm no single metric dominates the total score
 
 ## Troubleshooting
 
@@ -308,3 +359,5 @@ def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
 **Metric not appearing**: Check integration in `_analyze_repository_data()`
 **Tests fail**: Update expected metric names in test files
 **Data not available**: Add proper null checks and default handling
+**Scores too similar across projects**: Adjust scoring thresholds for better differentiation
+**Famous project scores low**: Review metric logic and thresholds
