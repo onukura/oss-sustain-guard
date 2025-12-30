@@ -942,6 +942,11 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
         score = 0
         risk = "Medium"  # Downgraded from Critical
         message = f"CI Status: {conclusion.lower()} (Latest check failed)."
+    elif conclusion in ("SKIPPED", "STALE"):
+        # SKIPPED is not a failure - give partial credit
+        score = 3
+        risk = "Low"
+        message = f"CI Status: {conclusion.lower()} (Check skipped but CI configured)."
     elif status == "IN_PROGRESS":
         score = 3
         risk = "Low"
@@ -950,11 +955,16 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
         score = 3
         risk = "Low"
         message = "CI Status: Tests queued."
-    else:
-        # Unknown status
-        score = 0
+    elif conclusion == "" and status == "":
+        # CI exists but no conclusion yet - give partial credit
+        score = 3
         risk = "Low"
-        message = f"CI Status: Unknown ({conclusion or status})."
+        message = "CI Status: Configured (no recent runs detected)."
+    else:
+        # Unknown status - still give some credit if CI exists
+        score = 2
+        risk = "Low"
+        message = f"CI Status: Unknown ({conclusion or status or 'no data'})."
 
     return Metric("Build Health", score, max_score, message, risk)
 
@@ -1270,10 +1280,10 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
     if not response_times:
         return Metric(
             "Issue Responsiveness",
-            2,
+            3,  # More generous: 3/5 for no data
             max_score,
-            "Unable to assess: No responded issues in recent history.",
-            "Medium",
+            "Note: No recent issue responses to analyze (may indicate low issue volume).",
+            "None",
         )
 
     avg_response_time = sum(response_times) / len(response_times)
@@ -1917,9 +1927,9 @@ def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
     if not edges:
         return Metric(
             "Issue Resolution Duration",
-            max_score // 2,
+            7,  # More generous: 7/10 instead of 5/10
             max_score,
-            "Note: No closed issues to analyze.",
+            "Note: No closed issues in recent history (may be addressing issues promptly).",
             "None",
         )
 

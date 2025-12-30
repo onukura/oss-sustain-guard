@@ -2041,9 +2041,9 @@ def test_check_community_health_no_comments():
     repo_data = {"issues": {"edges": issues}}
     result = check_community_health(repo_data)
 
-    assert result.score == 2
-    assert result.risk == "Medium"
-    assert "Unable to assess" in result.message
+    assert result.score == 3  # Updated: more generous scoring
+    assert result.risk == "None"  # Updated: changed from Medium
+    assert "No recent issue responses" in result.message
 
 
 # --- Tests for check_fork_activity ---
