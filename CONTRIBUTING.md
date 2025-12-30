@@ -392,12 +392,27 @@ Before creating a release:
    def test_check_dependency_freshness_up_to_date():
        mock_data = {"dependencies": {"outdated": 0}}
        result = check_dependency_freshness(mock_data)
-       assert result.score == 10
+       assert result.score == 10  # All metrics use 0-10 scale
+       assert result.max_score == 10
    ```
 
-4. **Update documentation:**
-   - README.md
-   - docs/METRICS.md (if exists)
+4. **Add metric to all scoring profiles in `core.py`:**
+
+   ```python
+   SCORING_PROFILES = {
+       "balanced": {
+           "weights": {
+               # ... existing metrics ...
+               "Dependency Freshness": 2,  # Assign appropriate weight (1+)
+           },
+       },
+       # Update all 4 profiles: balanced, security_first, contributor_experience, long_term_stability
+   }
+   ```
+
+5. **Update documentation:**
+   - README.md (if adding to metric count)
+   - docs/SCORING_PROFILES_GUIDE.md (if significant new metric)
 
 ### Adding a New Language Resolver
 

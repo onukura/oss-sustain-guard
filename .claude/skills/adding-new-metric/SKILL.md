@@ -16,9 +16,10 @@ This skill provides a systematic workflow for adding new sustainability metrics 
 ## Critical Principles
 
 1. **No Duplication**: Always check existing metrics to avoid measuring the same thing
-2. **100-Point Budget**: Total max scores must sum to ≤100 across all metrics
-3. **Project Philosophy**: Use "observation" language, not "risk" or "critical"
-4. **CHAOSS Alignment**: Reference CHAOSS metrics when applicable
+2. **10-Point Scale**: ALL metrics use max_score=10 for consistency and transparency
+3. **Integer Weights**: Metric importance is controlled via profile weights (integers ≥1)
+4. **Project Philosophy**: Use "observation" language, not "risk" or "critical"
+5. **CHAOSS Alignment**: Reference CHAOSS metrics when applicable
 
 ## Implementation Workflow
 
@@ -50,7 +51,7 @@ def check_my_metric(repo_data: dict[str, Any]) -> Metric:
     """
     from datetime import datetime
 
-    max_score = 5  # Adjust based on importance
+    max_score = 10  # ALWAYS use 10 for all metrics
 
     # Extract data from repo_data
     data = repo_data.get("fieldName", {})
@@ -67,29 +68,35 @@ def check_my_metric(repo_data: dict[str, Any]) -> Metric:
     # Calculate metric
     # ...
 
-    # Score logic with graduated thresholds
+    # Score logic with graduated thresholds (0-10 scale)
     if condition_excellent:
-        score = max_score
+        score = 10  # Excellent
         risk = "None"
         message = f"Excellent: [Details]."
     elif condition_good:
-        score = max_score * 0.8
+        score = 8  # Good (80%)
         risk = "Low"
         message = f"Good: [Details]."
     elif condition_moderate:
-        score = max_score * 0.4
+        score = 5  # Moderate (50%)
         risk = "Medium"
         message = f"Moderate: [Details]."
-    else:
-        score = max_score * 0.2
+    elif condition_needs_attention:
+        score = 2  # Needs attention (20%)
         risk = "High"
         message = f"Observe: [Details]. Consider improving."
+    else:
+        score = 0  # Critical issue
+        risk = "Critical"
+        message = f"Note: [Details]. Immediate attention recommended."
 
     return Metric("My Metric Name", score, max_score, message, risk)
 ```
 
 **Key Decisions**:
-- `max_score`: Typically 5, 10, or 20 based on importance
+- `max_score`: **ALWAYS 10** for all metrics (consistency)
+- Score range: **0-10** (use integers or decimals)
+- Importance: Controlled by **profile weights** (integers ≥1)
 - Risk levels: "None", "Low", "Medium", "High", "Critical"
 - Use supportive language: "Observe", "Consider", "Monitor" not "Failed", "Error"
 
@@ -115,15 +122,32 @@ except Exception as e:
 
 **Location**: After `check_ci_status()`, before dependents analysis
 
-### 4. Verify Total Score Budget
+### 4. Add Metric to Scoring Profiles
+
+Update `SCORING_PROFILES` in `core.py` to include your new metric:
 
 ```python
-# Calculate total possible score
-total_max = 20 + 10 + 20 + 10 + 10 + 10 + 5 + 5 + ...
-# Must be ≤ 100
+SCORING_PROFILES = {
+    "balanced": {
+        "name": "Balanced",
+        "description": "...",
+        "weights": {
+            # Existing metrics...
+            "Contributor Redundancy": 3,
+            "Security Signals": 2,
+            # Add your new metric
+            "My Metric Name": 2,  # Assign appropriate weight (1+)
+            # ...
+        },
+    },
+    # Update all 4 profiles...
+}
 ```
 
-**Adjust if needed**: Reduce max_score proportionally across metrics
+**Weight Guidelines**:
+- **Critical metrics**: 3-5 (bus factor, security)
+- **Important metrics**: 2-3 (activity, responsiveness)
+- **Supporting metrics**: 1-2 (documentation, governance)
 
 ### 5. Test Implementation
 
@@ -355,7 +379,7 @@ After implementing a new metric:
 
 ## Troubleshooting
 
-**Score exceeds 100**: Reduce max_score values proportionally
+**Score calculation issues**: Verify all metrics have max_score=10 and check profile weights
 **Metric not appearing**: Check integration in `_analyze_repository_data()`
 **Tests fail**: Update expected metric names in test files
 **Data not available**: Add proper null checks and default handling

@@ -1,6 +1,23 @@
 # Scoring Profiles Guide
 
-OSS Sustain Guard provides multiple **scoring profiles** to evaluate projects based on different priorities. Each profile adjusts the weight of sustainability categories to match specific use cases.
+OSS Sustain Guard provides multiple **scoring profiles** to evaluate projects based on different priorities. Each profile assigns **integer weights** (≥1) to individual metrics to reflect their relative importance.
+
+## Scoring System Overview
+
+- **All metrics are scored on a 0-10 scale** for consistency and transparency
+- **Weights are integers (1+)** that determine relative importance per metric
+- **Total score formula**: `Sum(metric_score × weight) / Sum(10 × weight) × 100`
+- **Result**: Normalized 0-100 score for easy comparison
+
+**Example Calculation:**
+```
+Metric A: score=8, weight=3  →  8×3 = 24
+Metric B: score=6, weight=2  →  6×2 = 12
+Metric C: score=10, weight=1 → 10×1 = 10
+────────────────────────────────────────
+Total: (24+12+10) / (3×10 + 2×10 + 1×10) × 100
+     = 46 / 60 × 100 = 76.7 ≈ 77/100
+```
 
 ## Available Profiles
 
@@ -8,13 +25,13 @@ OSS Sustain Guard provides multiple **scoring profiles** to evaluate projects ba
 
 A balanced view across all sustainability dimensions.
 
-**Category Weights:**
+**Metric Emphasis (Key Weights):**
 
-- Maintainer Health: 25%
-- Development Activity: 20%
-- Community Engagement: 25% ⬆️ (increased from 20%)
-- Project Maturity: 15%
-- Security & Funding: 15% ⬇️ (decreased from 20%)
+- Contributor Redundancy: 3 (High priority - bus factor)
+- Recent Activity: 3 (Critical for active development)
+- Security Signals: 2 (Balanced security focus)
+- Issue Responsiveness: 2 (Community health)
+- Other metrics: 1-2 (Proportional importance)
 
 **Best for:** General-purpose evaluation, understanding overall project health.
 
@@ -24,13 +41,13 @@ A balanced view across all sustainability dimensions.
 
 Prioritizes security and risk mitigation.
 
-**Category Weights:**
+**Metric Emphasis (Key Weights):**
 
-- **Security & Funding: 30%** ⬆️ (adjusted)
-- Maintainer Health: 20%
-- Development Activity: 15%
-- Community Engagement: 20%
-- Project Maturity: 15%
+- **Security Signals: 5** ⬆️ (Highest priority - vulnerabilities)
+- **Funding Signals: 3** (Sustainability via funding)
+- Build Health: 3 (CI/CD reliability)
+- Contributor Redundancy: 2 (Maintainer security)
+- Other metrics: 1-2 (Balanced coverage)
 
 **Best for:**
 
@@ -47,13 +64,14 @@ Prioritizes security and risk mitigation.
 
 Focuses on community engagement and contributor-friendliness.
 
-**Category Weights:**
+**Metric Emphasis (Key Weights):**
 
-- **Community Engagement: 45%** ⬆️ (highest priority)
-- Project Maturity: 15%
-- Maintainer Health: 15%
-- Development Activity: 15%
-- Security & Funding: 10%
+- **Issue Responsiveness: 4** ⬆️ (Community engagement)
+- **PR Acceptance Ratio: 4** (Welcoming to contributors)
+- **Review Health: 3** (Code review quality)
+- **PR Responsiveness: 3** (Fast feedback)
+- Documentation Presence: 2 (Onboarding ease)
+- Other metrics: 1-2 (Supporting factors)
 
 **Best for:**
 
@@ -70,13 +88,14 @@ Focuses on community engagement and contributor-friendliness.
 
 Emphasizes maintainer health and sustainable development.
 
-**Category Weights:**
+**Metric Emphasis (Key Weights):**
 
-- **Maintainer Health: 35%** ⬆️ (highest priority)
-- Development Activity: 25%
-- Community Engagement: 15%
-- Project Maturity: 15%
-- Security & Funding: 10%
+- **Contributor Redundancy: 5** ⬆️ (Bus factor - critical)
+- **Maintainer Retention: 4** (Team stability)
+- **Contributor Attraction: 3** (Pipeline health)
+- **Organizational Diversity: 3** (Risk distribution)
+- Recent Activity: 3 (Consistent development)
+- Other metrics: 1-2 (Holistic view)
 
 **Best for:**
 
@@ -210,33 +229,55 @@ Different profiles can produce significantly different scores:
 
 ## Advanced Usage: Custom Weights
 
-While not directly exposed in the API yet, you can modify `SCORING_PROFILES` in `core.py` to create custom profiles:
+You can modify `SCORING_PROFILES` in `core.py` to create custom profiles:
 
 ```python
-# Future enhancement (not yet implemented)
 SCORING_PROFILES["custom_enterprise"] = {
     "name": "Enterprise Custom",
     "description": "Custom profile for enterprise evaluation",
     "weights": {
-        "Maintainer Health": 0.30,
-        "Development Activity": 0.20,
-        "Community Engagement": 0.05,
-        "Project Maturity": 0.25,
-        "Security & Funding": 0.20,
+        # Security-focused metrics (high weights)
+        "Security Signals": 5,
+        "Funding Signals": 4,
+        "Build Health": 3,
+
+        # Maintainer health (moderate weights)
+        "Contributor Redundancy": 3,
+        "Maintainer Retention": 2,
+        "Organizational Diversity": 2,
+
+        # Other metrics (standard weights)
+        "Recent Activity": 2,
+        "Release Rhythm": 2,
+        "Documentation Presence": 2,
+        "License Clarity": 2,
+
+        # Lower priority for community metrics
+        "Issue Responsiveness": 1,
+        "PR Acceptance Ratio": 1,
+        # ... (include all 24 metrics)
     },
 }
 ```
+
+**Important:** All metrics must have a weight ≥1.
 
 ---
 
 ## Integration with CLI
 
-The CLI currently uses the **balanced** profile by default. Future enhancements will support profile selection:
+The CLI supports profile selection via the `--profile` flag:
 
 ```bash
-# Future feature (not yet implemented)
-oss-sustain-guard check --profile security_first requests
-oss-sustain-guard check --compare-profiles django
+# Use specific profile
+os4g check --profile security_first requests
+os4g check --profile contributor_experience django
+os4g check --profile long_term_stability flask
+
+# Compare all profiles (Python API)
+python -c "from oss_sustain_guard.core import analyze_repository, compare_scoring_profiles; \
+  result = analyze_repository('psf', 'requests'); \
+  print(compare_scoring_profiles(result.metrics))"
 ```
 
 ---
@@ -255,31 +296,53 @@ See [Contributing Guide](GETTING_STARTED.md) for how to provide feedback.
 
 ## Technical Details
 
-### Category Breakdown
+### Metric-Level Weighting
 
-All profiles use the same **5 categories** with different weights:
+All profiles assign **individual weights to each metric** (not categories):
 
-1. **Maintainer Health** - Contributor redundancy, retention, diversity
-2. **Development Activity** - Releases, CI, recent activity
-3. **Community Engagement** - Responsiveness, PR handling, issue resolution
-4. **Project Maturity** - Documentation, governance, adoption
-5. **Security & Funding** - Security posture, funding signals
+- **~24 metrics** evaluated per repository
+- Each metric scored **0-10** (normalized scale)
+- Weights are **integers ≥1** per metric
+- Different profiles emphasize different metrics
+
+**Example Metrics:**
+- Contributor Redundancy, Maintainer Retention, Recent Activity
+- Security Signals, Funding Signals, Build Health
+- Issue Responsiveness, PR Acceptance Ratio, Review Health
+- Documentation Presence, License Clarity, Code of Conduct
+- And more...
 
 ### Score Calculation
 
-1. Each category is normalized to 0-100 scale
-2. Profile weights are applied to categories
-3. Weighted sum produces total score (0-100)
+1. Each metric produces a score (0-10)
+2. Profile weights are applied to individual metrics
+3. Weighted sum is normalized to 0-100 scale
 
 Formula:
 
-```shell
-Total Score = Σ (Category_Score_normalized × Profile_Weight)
+```python
+Total Score = Sum(metric_score × metric_weight) / Sum(10 × metric_weight) × 100
+```
+
+**Worked Example:**
+```
+# Balanced profile with 3 metrics:
+Contributor Redundancy: 8/10, weight=3  →  8×3 = 24
+Security Signals: 10/10, weight=2       → 10×2 = 20
+Recent Activity: 6/10, weight=2         →  6×2 = 12
+                                           ──────
+Total: (24+20+12) / (10×3 + 10×2 + 10×2) × 100
+     = 56 / 70 × 100 = 80/100
 ```
 
 ### Validation
 
-All profile weights must sum to 1.0 (validated in tests).
+All profile weights are positive integers (validated in tests):
+```python
+for metric_name, weight in profile["weights"].items():
+    assert isinstance(weight, int)
+    assert weight >= 1
+```
 
 ---
 

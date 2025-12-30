@@ -32,10 +32,10 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ## 🎯 Key Features
 
-- **24 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security
+- **24 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all metrics scored 0-10)
 - **Optional Dependents Analysis** - Downstream dependency metrics (informational, not affecting total score)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
-- **Category-Weighted Scoring** - Balanced 0-100 scale evaluation across 5 key sustainability dimensions
+- **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks

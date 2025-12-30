@@ -20,17 +20,17 @@ def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
     Measures how well the project manages its issue backlog.
     High stale issue ratio indicates potential burnout or backlog accumulation.
 
-    Scoring:
-    - <15% stale: 5/5 (Healthy backlog management)
-    - 15-30% stale: 3/5 (Acceptable)
-    - 30-50% stale: 2/5 (Needs attention)
-    - >50% stale: 1/5 (Significant backlog challenge)
+    Scoring (0-10 scale):
+    - <15% stale: 10/10 (Healthy backlog management)
+    - 15-30% stale: 6/10 (Acceptable)
+    - 30-50% stale: 4/10 (Needs attention)
+    - >50% stale: 2/10 (Significant backlog challenge)
 
     CHAOSS Aligned: Issue aging and backlog management
     """
     from datetime import datetime, timedelta
 
-    max_score = 5
+    max_score = 10  # All metrics use 10-point scale
 
     closed_issues = repo_data.get("closedIssues", {}).get("edges", [])
 
@@ -65,7 +65,7 @@ def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
     if total_issues == 0:
         return Metric(
             "Stale Issue Ratio",
-            5,
+            5,  # Neutral score when unable to calculate
             max_score,
             "Note: Unable to calculate stale issue ratio.",
             "None",
@@ -73,21 +73,21 @@ def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
 
     stale_ratio = (stale_count / total_issues) * 100
 
-    # Scoring logic with graduated thresholds
+    # Scoring logic with graduated thresholds (0-10 scale)
     if stale_ratio < 15:
-        score = max_score
+        score = 10  # Excellent
         risk = "None"
         message = f"Healthy: {stale_ratio:.1f}% of issues are stale (90+ days inactive)."
     elif stale_ratio < 30:
-        score = 3
+        score = 6  # Acceptable
         risk = "Low"
         message = f"Acceptable: {stale_ratio:.1f}% of issues are stale."
     elif stale_ratio < 50:
-        score = 2
+        score = 4  # Needs attention
         risk = "Medium"
         message = f"Observe: {stale_ratio:.1f}% of issues are stale. Consider review."
     else:
-        score = 1
+        score = 2  # Significant issue
         risk = "High"
         message = f"Significant: {stale_ratio:.1f}% of issues are stale. Backlog accumulation evident."
 
@@ -144,12 +144,14 @@ The implementation handles three error scenarios:
 
 ## Scoring Philosophy
 
-The graduated scoring reflects project health:
+The graduated scoring (0-10 scale) reflects project health:
 
-- **<15% stale** (5/5): Excellent backlog management
-- **15-30% stale** (3/5): Acceptable, room for improvement
-- **30-50% stale** (2/5): Needs attention, backlog building up
-- **>50% stale** (1/5): Significant challenge, potential burnout
+- **<15% stale** (10/10): Excellent backlog management
+- **15-30% stale** (6/10): Acceptable, room for improvement
+- **30-50% stale** (4/10): Needs attention, backlog building up
+- **>50% stale** (2/10): Significant challenge, potential burnout
+
+All metrics use the same 0-10 scale for consistency. Importance is controlled via profile weights (see SCORING_PROFILES in core.py).
 
 ## Integration
 
@@ -163,20 +165,34 @@ except Exception as e:
         Metric(
             "Stale Issue Ratio",
             0,
-            5,
+            10,  # Always use max_score=10
             f"Note: Analysis incomplete - {e}",
             "Medium",
         )
     )
 ```
 
+Also added to all scoring profiles:
+
+```python
+SCORING_PROFILES = {
+    "balanced": {
+        "weights": {
+            # ... other metrics ...
+            "Stale Issue Ratio": 1,  # Supporting metric
+        },
+    },
+    # ... other profiles ...
+}
+```
+
 ## Real-World Results
 
-Tested on popular projects:
+Tested on popular projects (10-point scale):
 
-- **fastapi/fastapi**: 8.2% stale (5/5) - Excellent management
-- **psf/requests**: 23.4% stale (3/5) - Acceptable
-- **django/django**: 18.7% stale (3/5) - Good backlog health
+- **fastapi/fastapi**: 8.2% stale (10/10) - Excellent management
+- **psf/requests**: 23.4% stale (6/10) - Acceptable
+- **django/django**: 18.7% stale (6/10) - Good backlog health
 
 ## Lessons Learned
 
