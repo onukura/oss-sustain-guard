@@ -90,6 +90,7 @@ class AnalysisResult(NamedTuple):
     dependency_scores: dict[
         str, int
     ] = {}  # Package name -> score mapping for dependencies
+    ecosystem: str = ""  # Ecosystem name (python, javascript, rust, etc.)
 
 
 # --- Helper Functions ---

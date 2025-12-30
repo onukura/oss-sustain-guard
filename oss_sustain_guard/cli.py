@@ -179,13 +179,22 @@ def display_results_compact(
         # Extract package name from repo URL
         package_name = result.repo_url.replace("https://github.com/", "")
 
-        # One-line output: icon package (score) - status
-        console.print(
-            f"[{score_color}]{icon}[/{score_color}] "
-            f"[cyan]{package_name}[/cyan] "
-            f"[{score_color}]({result.total_score}/100)[/{score_color}] - "
-            f"{status}"
-        )
+        # One-line output: icon package [ecosystem] (score) - status
+        if result.ecosystem:
+            console.print(
+                f"[{score_color}]{icon}[/{score_color}] "
+                f"[cyan]{package_name}[/cyan] "
+                f"[dim]\\[{result.ecosystem}][/dim] "
+                f"[{score_color}]({result.total_score}/100)[/{score_color}] - "
+                f"{status}"
+            )
+        else:
+            console.print(
+                f"[{score_color}]{icon}[/{score_color}] "
+                f"[cyan]{package_name}[/cyan] "
+                f"[{score_color}]({result.total_score}/100)[/{score_color}] - "
+                f"{status}"
+            )
 
         # Show dependency scores summary if available and requested
         if show_dependencies and result.dependency_scores:
@@ -207,6 +216,7 @@ def display_results(
     """Display the analysis results in a rich table."""
     table = Table(title="OSS Sustain Guard Report")
     table.add_column("Package", justify="left", style="cyan", no_wrap=True)
+    table.add_column("Ecosystem", justify="left", style="blue", no_wrap=True)
     table.add_column("Score", justify="center", style="magenta")
     table.add_column("Health Status", justify="left")
     table.add_column("Key Observations", justify="left")
@@ -242,6 +252,7 @@ def display_results(
 
         table.add_row(
             result.repo_url.replace("https://github.com/", ""),
+            result.ecosystem or "unknown",
             f"[{score_color}]{result.total_score}/100[/{score_color}]",
             health_status,
             observation_text,
@@ -328,8 +339,9 @@ def display_results_detailed(
             risk_color = "yellow"
 
         # Header
+        ecosystem_label = f" ({result.ecosystem})" if result.ecosystem else ""
         console.print(
-            f"\n📦 [bold cyan]{result.repo_url.replace('https://github.com/', '')}[/bold cyan]"
+            f"\n📦 [bold cyan]{result.repo_url.replace('https://github.com/', '')}{ecosystem_label}[/bold cyan]"
         )
         console.print(
             f"   Total Score: [{risk_color}]{result.total_score}/100[/{risk_color}]"
@@ -580,6 +592,7 @@ def analyze_packages_parallel(
                         models=cached_data.get("models", []),
                         signals=cached_data.get("signals", {}),
                         dependency_scores={},
+                        ecosystem=ecosystem,
                     )
                     results_map[idx] = result
                     progress.advance(task)
@@ -620,6 +633,9 @@ def analyze_packages_parallel(
                     result = batch_results.get((owner, repo))
 
                     if result:
+                        # Add ecosystem to result
+                        result = result._replace(ecosystem=ecosystem)
+
                         # Cache the result
                         db_key = f"{ecosystem}:{pkg}"
                         cache_entry = {
@@ -866,6 +882,7 @@ def analyze_package(
                 models=cached_data.get("models", []),
                 signals=cached_data.get("signals", {}),
                 dependency_scores={},  # Empty for cached results
+                ecosystem=ecosystem,
             )
 
             # If show_dependencies is requested, analyze dependencies
@@ -929,6 +946,9 @@ def analyze_package(
         analysis_result = analyze_repository(
             owner, repo_name, platform=platform, package_name=pkg_name
         )
+
+        # Add ecosystem to result
+        analysis_result = analysis_result._replace(ecosystem=ecosystem)
 
         # Save to cache for future use
         cache_entry = {
