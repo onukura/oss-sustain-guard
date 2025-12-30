@@ -1958,7 +1958,7 @@ def test_check_community_health_no_issues():
     repo_data = {"issues": {"edges": []}}
     result = check_community_health(repo_data)
 
-    assert result.name == "Issue Responsiveness"
+    assert result.name == "Community Health"
     assert result.score == result.max_score
     assert result.risk == "None"
     assert "No open issues" in result.message

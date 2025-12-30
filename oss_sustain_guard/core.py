@@ -1242,7 +1242,7 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
 
     if not issues:
         return Metric(
-            "Issue Responsiveness",
+            "Community Health",
             max_score,
             max_score,
             "No open issues. Well-maintained or low activity.",
@@ -1278,7 +1278,7 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
 
     if not response_times:
         return Metric(
-            "Issue Responsiveness",
+            "Community Health",
             3,  # More generous: 3/5 for no data
             max_score,
             "Note: No recent issue responses to analyze (may indicate low issue volume).",
@@ -1316,7 +1316,7 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
             f"({avg_response_time / 24:.1f} days). Community response could be improved."
         )
 
-    return Metric("Issue Responsiveness", score, max_score, message, risk)
+    return Metric("Community Health", score, max_score, message, risk)
 
 
 def check_attraction(repo_data: dict[str, Any]) -> Metric:
@@ -2526,6 +2526,180 @@ def check_pr_responsiveness(repo_data: dict[str, Any]) -> Metric:
     return Metric("PR Responsiveness", score, max_score, message, risk)
 
 
+def check_stale_issue_ratio(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates Stale Issue Ratio - percentage of issues not updated in 90+ days.
+
+    Measures how well the project manages its issue backlog.
+    High stale issue ratio indicates potential burnout or backlog accumulation.
+
+    Scoring:
+    - <15% stale: 5/5 (Healthy backlog management)
+    - 15-30% stale: 3/5 (Acceptable)
+    - 30-50% stale: 2/5 (Needs attention)
+    - >50% stale: 1/5 (Significant backlog challenge)
+
+    CHAOSS Aligned: Issue aging and backlog management
+    """
+    from datetime import datetime, timedelta
+
+    max_score = 5
+
+    # Check closed issues for stale ratio
+    closed_issues = repo_data.get("closedIssues", {}).get("edges", [])
+
+    if not closed_issues:
+        return Metric(
+            "Stale Issue Ratio",
+            max_score // 2,
+            max_score,
+            "Note: No closed issues in recent history.",
+            "None",
+        )
+
+    stale_count = 0
+    current_time = datetime.now(datetime.now().astimezone().tzinfo)
+    stale_threshold = current_time - timedelta(days=90)
+
+    for edge in closed_issues:
+        node = edge.get("node", {})
+        updated_at_str = node.get("updatedAt") or node.get("closedAt")
+
+        if not updated_at_str:
+            continue
+
+        try:
+            updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
+            if updated_at < stale_threshold:
+                stale_count += 1
+        except (ValueError, AttributeError):
+            pass
+
+    total_issues = len(closed_issues)
+    if total_issues == 0:
+        return Metric(
+            "Stale Issue Ratio",
+            5,
+            max_score,
+            "Note: Unable to calculate stale issue ratio.",
+            "None",
+        )
+
+    stale_ratio = (stale_count / total_issues) * 100
+
+    # Scoring logic
+    if stale_ratio < 15:
+        score = max_score
+        risk = "None"
+        message = (
+            f"Healthy: {stale_ratio:.1f}% of issues are stale (90+ days inactive)."
+        )
+    elif stale_ratio < 30:
+        score = 3
+        risk = "Low"
+        message = f"Acceptable: {stale_ratio:.1f}% of issues are stale."
+    elif stale_ratio < 50:
+        score = 2
+        risk = "Medium"
+        message = f"Observe: {stale_ratio:.1f}% of issues are stale. Consider review."
+    else:
+        score = 1
+        risk = "High"
+        message = f"Significant: {stale_ratio:.1f}% of issues are stale. Backlog accumulation evident."
+
+    return Metric("Stale Issue Ratio", score, max_score, message, risk)
+
+
+def check_pr_merge_speed(repo_data: dict[str, Any]) -> Metric:
+    """
+    Evaluates PR Merge Speed - median time from PR creation to merge.
+
+    Measures the efficiency of the pull request review and merge process.
+    Faster merge times indicate responsive review cycles.
+
+    Scoring:
+    - Median <3 days: 5/5 (Excellent)
+    - Median 3-7 days: 4/5 (Good)
+    - Median 7-30 days: 2/5 (Moderate)
+    - Median >30 days: 1/5 (Slow)
+
+    CHAOSS Aligned: Code Development Efficiency
+    """
+    from datetime import datetime
+
+    max_score = 5
+
+    # Check merged PRs
+    merged_prs = repo_data.get("pullRequests", {}).get("edges", [])
+
+    if not merged_prs:
+        return Metric(
+            "PR Merge Speed",
+            5,
+            max_score,
+            "Note: No merged PRs available for analysis.",
+            "None",
+        )
+
+    merge_times: list[float] = []
+
+    for edge in merged_prs:
+        node = edge.get("node", {})
+        created_at_str = node.get("createdAt")
+        merged_at_str = node.get("mergedAt")
+
+        if not created_at_str or not merged_at_str:
+            continue
+
+        try:
+            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+            merged_at = datetime.fromisoformat(merged_at_str.replace("Z", "+00:00"))
+            merge_days = (merged_at - created_at).total_seconds() / 86400
+            merge_times.append(merge_days)
+        except (ValueError, AttributeError):
+            pass
+
+    if not merge_times:
+        return Metric(
+            "PR Merge Speed",
+            5,
+            max_score,
+            "Note: Unable to calculate PR merge times.",
+            "None",
+        )
+
+    # Calculate median (middle value)
+    merge_times.sort()
+    median_merge_days = (
+        merge_times[len(merge_times) // 2]
+        if len(merge_times) % 2 == 1
+        else (
+            merge_times[len(merge_times) // 2 - 1] + merge_times[len(merge_times) // 2]
+        )
+        / 2
+    )
+
+    # Scoring logic
+    if median_merge_days < 3:
+        score = max_score
+        risk = "None"
+        message = f"Excellent: Median PR merge time {median_merge_days:.1f}d. Responsive review cycle."
+    elif median_merge_days < 7:
+        score = 4
+        risk = "Low"
+        message = f"Good: Median PR merge time {median_merge_days:.1f}d."
+    elif median_merge_days < 30:
+        score = 2
+        risk = "Medium"
+        message = f"Moderate: Median PR merge time {median_merge_days:.1f}d."
+    else:
+        score = 1
+        risk = "High"
+        message = f"Observe: Median PR merge time {median_merge_days:.1f}d. Review cycle is slow."
+
+    return Metric("PR Merge Speed", score, max_score, message, risk)
+
+
 def check_dependents_count(
     repo_url: str, platform: str | None = None, package_name: str | None = None
 ) -> Metric | None:
@@ -3457,9 +3631,9 @@ def _analyze_repository_data(
         # Silently capture error in metric message
         metrics.append(
             Metric(
-                "Community Response Time",
+                "Community Health",
                 0,
-                10,
+                5,
                 f"Note: Analysis incomplete - {e}",
                 "Medium",
             )
@@ -3476,6 +3650,34 @@ def _analyze_repository_data(
                 5,
                 f"Note: Analysis incomplete - {e}",
                 "Low",
+            )
+        )
+
+    try:
+        metrics.append(check_stale_issue_ratio(repo_info))
+    except Exception as e:
+        # Silently capture error in metric message
+        metrics.append(
+            Metric(
+                "Stale Issue Ratio",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
+            )
+        )
+
+    try:
+        metrics.append(check_pr_merge_speed(repo_info))
+    except Exception as e:
+        # Silently capture error in metric message
+        metrics.append(
+            Metric(
+                "PR Merge Speed",
+                0,
+                5,
+                f"Note: Analysis incomplete - {e}",
+                "Medium",
             )
         )
 
