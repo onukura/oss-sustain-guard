@@ -6,7 +6,38 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import NamedTuple
 
+import httpx
+
+from oss_sustain_guard.config import get_verify_ssl
 from oss_sustain_guard.repository import RepositoryReference
+
+# --- Global HTTP Client for Resolvers ---
+# Reuse connections across all resolver instances
+_resolver_http_client: httpx.Client | None = None
+
+
+def get_resolver_http_client() -> httpx.Client:
+    """Get or create a global HTTP client for resolvers with connection pooling."""
+    global _resolver_http_client
+    if _resolver_http_client is None or _resolver_http_client.is_closed:
+        _resolver_http_client = httpx.Client(
+            verify=get_verify_ssl(),
+            timeout=10,
+            limits=httpx.Limits(
+                max_connections=20,
+                max_keepalive_connections=10,
+                keepalive_expiry=30.0,
+            ),
+        )
+    return _resolver_http_client
+
+
+def close_resolver_http_client():
+    """Close the global resolver HTTP client."""
+    global _resolver_http_client
+    if _resolver_http_client is not None and not _resolver_http_client.is_closed:
+        _resolver_http_client.close()
+        _resolver_http_client = None
 
 
 class PackageInfo(NamedTuple):

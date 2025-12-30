@@ -26,6 +26,35 @@ LIBRARIESIO_API_KEY = os.getenv(
     "LIBRARIESIO_API_KEY"
 )  # Optional: for dependents analysis
 
+# --- Global HTTP Client for Connection Pooling ---
+# Reuse connections across multiple requests for better performance
+_http_client: httpx.Client | None = None
+
+
+def _get_http_client() -> httpx.Client:
+    """Get or create a global HTTP client with connection pooling."""
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.Client(
+            verify=get_verify_ssl(),
+            timeout=10,
+            limits=httpx.Limits(
+                max_connections=20,
+                max_keepalive_connections=10,
+                keepalive_expiry=30.0,
+            ),
+        )
+    return _http_client
+
+
+def close_http_client():
+    """Close the global HTTP client. Call this when shutting down."""
+    global _http_client
+    if _http_client is not None and not _http_client.is_closed:
+        _http_client.close()
+        _http_client = None
+
+
 # --- Data Structures ---
 
 
@@ -94,21 +123,21 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
         "Authorization": f"bearer {GITHUB_TOKEN}",
         "Content-Type": "application/json",
     }
-    with httpx.Client(verify=get_verify_ssl()) as client:
-        response = client.post(
-            GITHUB_GRAPHQL_API,
-            json={"query": query, "variables": variables},
-            headers=headers,
-            timeout=10,
+    client = _get_http_client()
+    response = client.post(
+        GITHUB_GRAPHQL_API,
+        json={"query": query, "variables": variables},
+        headers=headers,
+        timeout=10,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if "errors" in data:
+        raise httpx.HTTPStatusError(
+            f"GitHub API Errors: {data['errors']}",
+            request=response.request,
+            response=response,
         )
-        response.raise_for_status()
-        data = response.json()
-        if "errors" in data:
-            raise httpx.HTTPStatusError(
-                f"GitHub API Errors: {data['errors']}",
-                request=response.request,
-                response=response,
-            )
     return data.get("data", {})
 
 
@@ -135,18 +164,14 @@ def _query_librariesio_api(platform: str, package_name: str) -> dict[str, Any] |
     params = {"api_key": api_key}
 
     try:
-        with httpx.Client(verify=get_verify_ssl()) as client:
-            response = client.get(url, params=params, timeout=10)
-            if response.status_code == 404:
-                console.print(
-                    f"Warning: Package {package_name} not found on Libraries.io."
-                )
-                return None
-            response.raise_for_status()
-            console.print(
-                f"Info: Queried Libraries.io for {package_name} on {platform}."
-            )
-            return response.json()
+        client = _get_http_client()
+        response = client.get(url, params=params, timeout=10)
+        if response.status_code == 404:
+            console.print(f"Warning: Package {package_name} not found on Libraries.io.")
+            return None
+        response.raise_for_status()
+        console.print(f"Info: Queried Libraries.io for {package_name} on {platform}.")
+        return response.json()
     except httpx.RequestError:
         console.print("Warning: Libraries.io API request failed.")
         return None

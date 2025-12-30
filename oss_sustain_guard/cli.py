@@ -2,11 +2,20 @@
 Command-line interface for OSS Sustain Guard.
 """
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 from oss_sustain_guard.cache import (
@@ -30,6 +39,7 @@ from oss_sustain_guard.core import (
     AnalysisResult,
     Metric,
     analyze_repository,
+    close_http_client,
     compute_weighted_total_score,
 )
 from oss_sustain_guard.resolvers import (
@@ -38,6 +48,7 @@ from oss_sustain_guard.resolvers import (
     find_manifest_files,
     get_resolver,
 )
+from oss_sustain_guard.resolvers.base import close_resolver_http_client
 from oss_sustain_guard.schema_migrations import (
     ANALYSIS_VERSION,
     is_analysis_version_compatible,
@@ -436,6 +447,106 @@ def display_results_detailed(
                 )
 
             console.print(deps_table)
+
+
+def analyze_packages_parallel(
+    packages_data: list[tuple[str, str]],
+    db: dict,
+    profile: str = "balanced",
+    enable_dependents: bool = False,
+    show_dependencies: bool = False,
+    lockfile_path: str | Path | None = None,
+    verbose: bool = False,
+    use_local_cache: bool = True,
+    max_workers: int = 5,
+) -> list[AnalysisResult | None]:
+    """
+    Analyze multiple packages in parallel using ThreadPoolExecutor.
+
+    Args:
+        packages_data: List of (ecosystem, package_name) tuples.
+        db: Cached database dictionary.
+        profile: Scoring profile name.
+        enable_dependents: Enable dependents analysis.
+        show_dependencies: Analyze and include dependency scores.
+        lockfile_path: Path to lockfile for dependency analysis.
+        verbose: If True, display cache source information.
+        use_local_cache: If False, skip local cache lookup.
+        max_workers: Maximum number of parallel workers (default: 5).
+
+    Returns:
+        List of AnalysisResult or None for each package.
+    """
+    results = []
+    total = len(packages_data)
+
+    if total == 0:
+        return results
+
+    # For single package, don't use parallel processing
+    if total == 1:
+        ecosystem, pkg = packages_data[0]
+        result = analyze_package(
+            pkg,
+            ecosystem,
+            db,
+            profile,
+            enable_dependents,
+            show_dependencies,
+            lockfile_path,
+            verbose,
+            use_local_cache,
+        )
+        return [result]
+
+    # Use progress bar for multiple packages
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("[cyan]Analyzing packages...", total=total)
+
+        # Parallel processing with ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_pkg = {
+                executor.submit(
+                    analyze_package,
+                    pkg,
+                    ecosystem,
+                    db,
+                    profile,
+                    enable_dependents,
+                    show_dependencies,
+                    lockfile_path,
+                    False,  # Disable verbose in parallel mode to avoid output conflicts
+                    use_local_cache,
+                ): (ecosystem, pkg)
+                for ecosystem, pkg in packages_data
+            }
+
+            # Collect results as they complete
+            pkg_results = {}
+            for future in as_completed(future_to_pkg):
+                ecosystem, pkg = future_to_pkg[future]
+                try:
+                    result = future.result()
+                    pkg_results[(ecosystem, pkg)] = result
+                except Exception as e:
+                    console.print(
+                        f"    [yellow]⚠️  Error analyzing {ecosystem}:{pkg}: {e}[/yellow]"
+                    )
+                    pkg_results[(ecosystem, pkg)] = None
+                progress.advance(task)
+
+        # Return results in original order
+        results = [pkg_results.get(pkg_data) for pkg_data in packages_data]
+
+    return results
 
 
 def _analyze_dependencies_for_package(
@@ -1115,19 +1226,29 @@ def check(
             )
 
     excluded_count = 0
+    # Filter out excluded packages
+    packages_to_process = []
     for eco, pkg_name in packages_to_analyze:
-        # Skip excluded packages
         if is_package_excluded(pkg_name):
             excluded_count += 1
             console.print(
                 f"  -> Skipping [bold yellow]{pkg_name}[/bold yellow] (excluded)"
             )
-            continue
+        else:
+            packages_to_process.append((eco, pkg_name))
 
-        lockfile = lockfiles_map.get(eco) if show_dependencies else None
-        result = analyze_package(
-            pkg_name,
-            eco,
+    # Parallel analysis for multiple packages
+    if packages_to_process:
+        # Get lockfile for first ecosystem (assuming uniform ecosystem in batch)
+        # For mixed ecosystems, this needs to be passed per-package
+        lockfile = None
+        if show_dependencies and packages_to_process:
+            first_eco = packages_to_process[0][0]
+            lockfile = lockfiles_map.get(first_eco)
+
+        # Use parallel processing for better performance
+        results = analyze_packages_parallel(
+            packages_to_process,
             db,
             profile,
             enable_dependents,
@@ -1135,9 +1256,11 @@ def check(
             lockfile,
             verbose,
             use_local,
+            max_workers=5,  # Adjust based on GitHub API rate limits
         )
-        if result:
-            results_to_display.append(result)
+
+        # Filter out None results
+        results_to_display = [r for r in results if r is not None]
 
     if results_to_display:
         if output_style == "compact":
@@ -1162,6 +1285,10 @@ def check(
 
     else:
         console.print("No results to display.")
+
+    # Clean up HTTP clients
+    close_http_client()
+    close_resolver_http_client()
 
 
 @app.command()
