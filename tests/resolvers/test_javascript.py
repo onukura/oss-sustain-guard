@@ -37,8 +37,8 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_github_url("react")
-        assert result == ("facebook", "react")
+        result = resolver.resolve_repository("react")
+        assert result and result.owner == "facebook" and result.name == "react"
 
     @patch("httpx.Client.get")
     def test_resolve_github_url_string_repo(self, mock_get):
@@ -50,8 +50,8 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_github_url("lodash")
-        assert result == ("lodash", "lodash")
+        result = resolver.resolve_repository("lodash")
+        assert result and result.owner == "lodash" and result.name == "lodash"
 
     @patch("httpx.Client.get")
     def test_resolve_github_url_homepage_fallback(self, mock_get):
@@ -64,8 +64,8 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_github_url("vue")
-        assert result == ("vuejs", "vue")
+        result = resolver.resolve_repository("vue")
+        assert result and result.owner == "vuejs" and result.name == "vue"
 
     @patch("httpx.Client.get")
     def test_resolve_github_url_not_found(self, mock_get):
@@ -78,7 +78,7 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_github_url("some-package")
+        result = resolver.resolve_repository("some-package")
         assert result is None
 
     @patch("httpx.Client.get")
@@ -89,7 +89,7 @@ class TestJavaScriptResolver:
         mock_get.side_effect = httpx.RequestError("Network error")
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_github_url("react")
+        result = resolver.resolve_repository("react")
         assert result is None
 
     def test_detect_lockfiles(self, tmp_path):
@@ -169,3 +169,328 @@ class TestJavaScriptResolver:
         resolver = JavaScriptResolver()
         with pytest.raises(ValueError, match="Unknown JavaScript lockfile type"):
             resolver.parse_lockfile(str(unknown_lock))
+
+    @patch("httpx.Client.get")
+    def test_resolve_github_prefix(self, mock_get):
+        """Test resolving repository with github: prefix."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "repository": {"url": "github:facebook/react"}
+        }
+        mock_get.return_value = mock_response
+
+        resolver = JavaScriptResolver()
+        result = resolver.resolve_repository("react")
+        assert result and result.owner == "facebook" and result.name == "react"
+
+    @patch("httpx.Client.get")
+    def test_resolve_gitlab_prefix(self, mock_get):
+        """Test resolving repository with gitlab: prefix."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "repository": {"url": "gitlab:gitlab-org/gitlab"}
+        }
+        mock_get.return_value = mock_response
+
+        resolver = JavaScriptResolver()
+        result = resolver.resolve_repository("gitlab")
+        # GitLab is supported, check correct parsing
+        assert result and result.provider == "gitlab"
+        assert result.owner == "gitlab-org" and result.name == "gitlab"
+
+    @patch("httpx.Client.get")
+    def test_resolve_git_protocol(self, mock_get):
+        """Test resolving repository with git:// protocol."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "repository": {"url": "git://github.com/jquery/jquery.git"}
+        }
+        mock_get.return_value = mock_response
+
+        resolver = JavaScriptResolver()
+        result = resolver.resolve_repository("jquery")
+        assert result and result.owner == "jquery" and result.name == "jquery"
+
+    @patch("httpx.Client.get")
+    def test_resolve_http_status_error(self, mock_get):
+        """Test resolving with HTTP status error."""
+        import httpx
+
+        mock_get.side_effect = httpx.HTTPStatusError(
+            "404 Not Found", request=MagicMock(), response=MagicMock()
+        )
+
+        resolver = JavaScriptResolver()
+        result = resolver.resolve_repository("nonexistent-package")
+        assert result is None
+
+    def test_parse_pnpm_lock(self, tmp_path):
+        """Test parsing pnpm-lock.yaml."""
+        pnpm_content = """lockfileVersion: '6.0'
+dependencies:
+  react:
+    specifier: ^18.2.0
+    version: 18.2.0
+  lodash:
+    specifier: ^4.17.21
+    version: 4.17.21
+packages:
+  /react@18.2.0:
+    dependencies:
+      loose-envify: 1.4.0
+  /lodash@4.17.21:
+"""
+        lock_file = tmp_path / "pnpm-lock.yaml"
+        lock_file.write_text(pnpm_content)
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+
+        assert len(packages) >= 1
+        names = {p.name for p in packages}
+        assert "react" in names or "lodash" in names
+        assert all(p.ecosystem == "javascript" for p in packages)
+
+    def test_detect_lockfiles_pnpm(self, tmp_path):
+        """Test detecting pnpm-lock.yaml."""
+        (tmp_path / "pnpm-lock.yaml").touch()
+
+        resolver = JavaScriptResolver()
+        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+
+        assert len(lockfiles) == 1
+        assert lockfiles[0].name == "pnpm-lock.yaml"
+
+    def test_detect_lockfiles_multiple(self, tmp_path):
+        """Test detecting multiple lockfiles."""
+        (tmp_path / "package-lock.json").touch()
+        (tmp_path / "yarn.lock").touch()
+        (tmp_path / "pnpm-lock.yaml").touch()
+
+        resolver = JavaScriptResolver()
+        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+
+        assert len(lockfiles) == 3
+        names = {lf.name for lf in lockfiles}
+        assert "package-lock.json" in names
+        assert "yarn.lock" in names
+        assert "pnpm-lock.yaml" in names
+
+    def test_parse_manifest_package_json(self, tmp_path):
+        """Test parsing package.json manifest."""
+        package_json = {
+            "name": "my-project",
+            "dependencies": {"react": "^18.2.0", "lodash": "^4.17.21"},
+            "devDependencies": {"typescript": "^5.0.0"},
+            "optionalDependencies": {"fsevents": "^2.3.2"},
+            "peerDependencies": {"react-dom": "^18.2.0"},
+        }
+        manifest_file = tmp_path / "package.json"
+        manifest_file.write_text(json.dumps(package_json))
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_manifest(str(manifest_file))
+
+        assert len(packages) == 5
+        names = {p.name for p in packages}
+        assert "react" in names
+        assert "lodash" in names
+        assert "typescript" in names
+        assert "fsevents" in names
+        assert "react-dom" in names
+        assert all(p.ecosystem == "javascript" for p in packages)
+
+    def test_parse_manifest_not_found(self):
+        """Test parsing non-existent manifest."""
+        resolver = JavaScriptResolver()
+        with pytest.raises(FileNotFoundError):
+            resolver.parse_manifest("/nonexistent/package.json")
+
+    def test_parse_manifest_unknown_type(self, tmp_path):
+        """Test parsing unknown manifest type."""
+        unknown_manifest = tmp_path / "unknown.json"
+        unknown_manifest.touch()
+
+        resolver = JavaScriptResolver()
+        with pytest.raises(ValueError, match="Unknown JavaScript manifest file type"):
+            resolver.parse_manifest(str(unknown_manifest))
+
+    def test_parse_manifest_invalid_json(self, tmp_path):
+        """Test parsing invalid JSON manifest."""
+        manifest_file = tmp_path / "package.json"
+        manifest_file.write_text("{ invalid json }")
+
+        resolver = JavaScriptResolver()
+        with pytest.raises(ValueError, match="Failed to parse package.json"):
+            resolver.parse_manifest(str(manifest_file))
+
+    def test_parse_package_lock_with_packages_field(self, tmp_path):
+        """Test parsing package-lock.json with packages field (v3 format)."""
+        package_lock = {
+            "lockfileVersion": 3,
+            "dependencies": {"react": {"version": "18.2.0"}},
+            "packages": {
+                "": {"name": "my-project"},
+                "node_modules/react": {"version": "18.2.0"},
+                "node_modules/lodash": {"version": "4.17.21"},
+            },
+        }
+        lock_file = tmp_path / "package-lock.json"
+        lock_file.write_text(json.dumps(package_lock))
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+
+        names = {p.name for p in packages}
+        assert "react" in names
+        assert "lodash" in names
+
+    def test_parse_yarn_lock_scoped_package(self, tmp_path):
+        """Test parsing yarn.lock with scoped packages."""
+        yarn_content = """# THIS IS A GENERATED FILE
+"@babel/core@^7.0.0":
+  version "7.22.5"
+
+"@types/node@^20.0.0":
+  version "20.3.1"
+"""
+        lock_file = tmp_path / "yarn.lock"
+        lock_file.write_text(yarn_content)
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+
+        names = {p.name for p in packages}
+        # Parser returns full scoped package names
+        assert "@babel/core" in names or "@types/node" in names
+
+    def test_parse_yarn_lock_with_comments(self, tmp_path):
+        """Test parsing yarn.lock with comments."""
+        yarn_content = """# THIS IS A GENERATED FILE
+# yarn lockfile v1
+
+"react@^18.0.0":
+  version "18.2.0"
+  # Some comment
+  dependencies:
+    react-dom: "^18.0.0"
+"""
+        lock_file = tmp_path / "yarn.lock"
+        lock_file.write_text(yarn_content)
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+
+        names = {p.name for p in packages}
+        assert "react" in names
+
+    def test_parse_package_lock_malformed(self, tmp_path):
+        """Test parsing malformed package-lock.json returns empty list."""
+        lock_file = tmp_path / "package-lock.json"
+        lock_file.write_text("{ invalid json }")
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+        assert packages == []
+
+    def test_parse_yarn_lock_malformed(self, tmp_path):
+        """Test parsing malformed yarn.lock returns empty list."""
+        lock_file = tmp_path / "yarn.lock"
+        # Create a file that will cause an exception during parsing
+        lock_file.write_bytes(b"\xff\xfe")
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+        assert packages == []
+
+    def test_parse_pnpm_lock_malformed(self, tmp_path):
+        """Test parsing malformed pnpm-lock.yaml returns empty list."""
+        lock_file = tmp_path / "pnpm-lock.yaml"
+        lock_file.write_text("invalid: yaml: content: [")
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+        assert packages == []
+
+    def test_parse_package_json_non_dict_dependencies(self, tmp_path):
+        """Test parsing package.json with non-dict dependencies."""
+        package_json = {
+            "name": "my-project",
+            "dependencies": "invalid",
+            "devDependencies": {"typescript": "^5.0.0"},
+        }
+        manifest_file = tmp_path / "package.json"
+        manifest_file.write_text(json.dumps(package_json))
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_manifest(str(manifest_file))
+
+        # Should only include devDependencies
+        assert len(packages) == 1
+        assert packages[0].name == "typescript"
+
+    def test_parse_package_json_non_string_version(self, tmp_path):
+        """Test parsing package.json with non-string version."""
+        package_json = {
+            "name": "my-project",
+            "dependencies": {"react": {"version": "18.2.0"}},
+        }
+        manifest_file = tmp_path / "package.json"
+        manifest_file.write_text(json.dumps(package_json))
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_manifest(str(manifest_file))
+
+        assert len(packages) == 1
+        assert packages[0].name == "react"
+        assert packages[0].version is None
+
+    @patch("httpx.Client.get")
+    def test_resolve_homepage_non_string(self, mock_get):
+        """Test resolving when homepage is not a string."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "repository": {},
+            "homepage": ["https://github.com/vuejs/vue"],
+        }
+        mock_get.return_value = mock_response
+
+        resolver = JavaScriptResolver()
+        result = resolver.resolve_repository("vue")
+        assert result is None
+
+    def test_parse_pnpm_lock_with_packages_section(self, tmp_path):
+        """Test parsing pnpm-lock.yaml with packages section."""
+        pnpm_content = """lockfileVersion: '6.0'
+dependencies:
+  react:
+    specifier: ^18.2.0
+    version: 18.2.0
+packages:
+  /react@18.2.0_abc123:
+    resolution: {integrity: sha512-...}
+  /lodash@4.17.21:
+    resolution: {integrity: sha512-...}
+"""
+        lock_file = tmp_path / "pnpm-lock.yaml"
+        lock_file.write_text(pnpm_content)
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+
+        names = {p.name for p in packages}
+        assert "react" in names or "lodash" in names
+
+    def test_parse_pnpm_lock_non_dict_packages(self, tmp_path):
+        """Test parsing pnpm-lock.yaml with non-dict packages."""
+        pnpm_content = """lockfileVersion: '6.0'
+dependencies: invalid
+packages: []
+"""
+        lock_file = tmp_path / "pnpm-lock.yaml"
+        lock_file.write_text(pnpm_content)
+
+        resolver = JavaScriptResolver()
+        packages = resolver.parse_lockfile(str(lock_file))
+        # Should return empty list or handle gracefully
+        assert isinstance(packages, list)
