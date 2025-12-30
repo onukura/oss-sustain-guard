@@ -480,7 +480,7 @@ def test_check_review_health_excellent():
 def test_check_documentation_presence_excellent():
     """Tests documentation presence with all signals present."""
     repo_data = {
-        "object": {"byteSize": 5000},  # README.md
+        "readmeUpperCase": {"byteSize": 5000},  # README.md
         "contributingFile": {"byteSize": 1000},  # CONTRIBUTING.md
         "hasWikiEnabled": True,
         "homepageUrl": "https://example.com/docs",
@@ -497,7 +497,7 @@ def test_check_documentation_presence_excellent():
 def test_check_documentation_presence_basic():
     """Tests documentation presence with only README."""
     repo_data = {
-        "object": {"byteSize": 500},  # README.md only
+        "readmeUpperCase": {"byteSize": 500},  # README.md only
         "contributingFile": None,
         "hasWikiEnabled": False,
         "homepageUrl": None,
@@ -512,7 +512,9 @@ def test_check_documentation_presence_basic():
 def test_check_documentation_presence_none():
     """Tests documentation presence with no documentation."""
     repo_data = {
-        "object": None,
+        "readmeUpperCase": None,
+        "readmeLowerCase": None,
+        "readmeAllCaps": None,
         "contributingFile": None,
         "hasWikiEnabled": False,
         "homepageUrl": None,
@@ -522,6 +524,27 @@ def test_check_documentation_presence_none():
     assert metric.name == "Documentation Presence"
     assert metric.score == 0
     assert metric.risk == "High"
+
+
+def test_check_documentation_presence_symlink():
+    """Tests documentation presence with symlinked README (like Next.js)."""
+    repo_data = {
+        "readmeUpperCase": None,
+        "readmeLowerCase": {
+            "byteSize": 23,  # Small size indicates symlink
+            "text": "packages/next/README.md",
+        },
+        "readmeAllCaps": None,
+        "contributingFile": {"byteSize": 1000},
+        "hasWikiEnabled": True,
+        "homepageUrl": "https://nextjs.org",
+        "description": "The React Framework",
+    }
+    metric = check_documentation_presence(repo_data)
+    assert metric.name == "Documentation Presence"
+    assert metric.score == 10  # Should detect symlinked README
+    assert metric.risk == "None"
+    assert "5/5" in metric.message
 
 
 # --- Code of Conduct Tests ---

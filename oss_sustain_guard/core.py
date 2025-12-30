@@ -361,9 +361,22 @@ def _get_repository_query() -> str:
             }
           }
         }
-        object(expression: "HEAD:README.md") {
+        readmeUpperCase: object(expression: "HEAD:README.md") {
           ... on Blob {
             byteSize
+            text
+          }
+        }
+        readmeLowerCase: object(expression: "HEAD:readme.md") {
+          ... on Blob {
+            byteSize
+            text
+          }
+        }
+        readmeAllCaps: object(expression: "HEAD:README") {
+          ... on Blob {
+            byteSize
+            text
           }
         }
         contributingFile: object(expression: "HEAD:CONTRIBUTING.md") {
@@ -1747,9 +1760,31 @@ def check_documentation_presence(repo_data: dict[str, Any]) -> Metric:
     """
     max_score = 10
 
-    # Check README
-    readme = repo_data.get("object")  # HEAD:README.md
-    has_readme = readme is not None and readme.get("byteSize", 0) > 100
+    # Check README (multiple patterns for case sensitivity)
+    readme_upper = repo_data.get("readmeUpperCase")  # README.md
+    readme_lower = repo_data.get("readmeLowerCase")  # readme.md
+    readme_all_caps = repo_data.get("readmeAllCaps")  # README
+
+    # Use whichever README pattern exists
+    readme = readme_upper or readme_lower or readme_all_caps
+
+    # Check if README exists and handle symlinks
+    has_readme = False
+    if readme is not None:
+        byte_size = readme.get("byteSize", 0)
+        # If byte_size is small (< 100), it might be a symlink - check text content
+        if byte_size > 100:
+            has_readme = True
+        elif byte_size > 0:
+            # Small file - might be a symlink, check if text looks like a path
+            text = readme.get("text", "")
+            if text and "/" in text and not text.startswith("#"):
+                # Looks like a symlink path (e.g., "packages/next/README.md")
+                # In this case, consider README as present since GitHub resolves it
+                has_readme = True
+            elif text and len(text.strip()) >= 10:
+                # Small but valid README content
+                has_readme = True
 
     # Check CONTRIBUTING.md
     contributing = repo_data.get("contributingFile")
