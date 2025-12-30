@@ -28,16 +28,23 @@ def _get_cache_path(ecosystem: str) -> Path:
     return gz_path
 
 
-def is_cache_valid(entry: dict[str, Any]) -> bool:
+def is_cache_valid(entry: dict[str, Any], expected_version: str = "1.0") -> bool:
     """
-    Check if a cache entry is still valid based on TTL.
+    Check if a cache entry is still valid based on TTL and data version.
 
     Args:
-        entry: Cache entry dict with cache_metadata.
+        entry: Cache entry dict with cache_metadata and analysis_version.
+        expected_version: Expected analysis_version string (default: "1.0").
 
     Returns:
-        True if cache is valid, False if expired or missing metadata.
+        True if cache is valid (within TTL and version matches), False otherwise.
     """
+    # Check analysis version first
+    entry_version = entry.get("analysis_version")
+    if entry_version != expected_version:
+        # Version mismatch - consider invalid
+        return False
+
     metadata = entry.get("cache_metadata")
     if not metadata or "fetched_at" not in metadata:
         # Old format without metadata - consider invalid
@@ -60,7 +67,7 @@ def is_cache_valid(entry: dict[str, Any]) -> bool:
         return False
 
 
-def load_cache(ecosystem: str) -> dict[str, Any]:
+def load_cache(ecosystem: str, expected_version: str = "1.0") -> dict[str, Any]:
     """
     Load cache for a specific ecosystem.
 
@@ -68,9 +75,10 @@ def load_cache(ecosystem: str) -> dict[str, Any]:
 
     Args:
         ecosystem: Ecosystem name (python, javascript, rust, etc.).
+        expected_version: Expected analysis_version for cache entries (default: "1.0").
 
     Returns:
-        Dictionary of cached entries (only valid entries based on TTL).
+        Dictionary of cached entries (only valid entries based on TTL and version).
     """
     cache_path = _get_cache_path(ecosystem)
 
@@ -94,10 +102,10 @@ def load_cache(ecosystem: str) -> dict[str, Any]:
             # v1.x format (flat dict) - backward compatibility
             all_data = raw_data
 
-        # Filter valid entries only
+        # Filter valid entries only (TTL + version check)
         valid_data = {}
         for key, entry in all_data.items():
-            if is_cache_valid(entry):
+            if is_cache_valid(entry, expected_version):
                 valid_data[key] = entry
 
         return valid_data

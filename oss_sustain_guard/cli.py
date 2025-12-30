@@ -53,7 +53,7 @@ from oss_sustain_guard.resolvers import (
 from oss_sustain_guard.resolvers.base import close_resolver_http_client
 
 # Schema version for cached data compatibility
-ANALYSIS_VERSION = "1.0"
+ANALYSIS_VERSION = "1.1"  # Updated: Fixed cache validation to check analysis_version
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -142,7 +142,7 @@ def load_database(
     # Load from local cache first if enabled
     if use_local_cache and is_cache_enabled():
         for ecosystem in ecosystems:
-            cached_data = load_cache(ecosystem)
+            cached_data = load_cache(ecosystem, expected_version=ANALYSIS_VERSION)
             if cached_data:
                 merged.update(cached_data)
                 if verbose:

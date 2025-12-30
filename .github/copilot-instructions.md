@@ -219,6 +219,35 @@ Both language resolvers and `core.py` make HTTP requests. Patterns:
 
 **Format**: JSON with TTL metadata for each package entry
 
+### ANALYSIS_VERSION Management
+
+**CRITICAL**: When making changes that affect scoring, **ALWAYS** increment `ANALYSIS_VERSION` in `cli.py`.
+
+**Required when:**
+- ✅ Adding new metrics to analysis
+- ✅ Removing or renaming existing metrics
+- ✅ Changing metric scoring thresholds or logic
+- ✅ Modifying scoring profile weights
+- ✅ Changing `max_score` values for any metric
+- ✅ Altering total score calculation method
+
+**Not required when:**
+- ❌ Fixing typos in metric messages
+- ❌ Updating documentation or comments
+- ❌ Refactoring code without changing logic
+- ❌ Adding CLI options that don't affect scoring
+
+**Why this matters:**
+- Old cached data with different scoring logic will produce incorrect scores
+- Version mismatch automatically invalidates old cache
+- Users get consistent scores across cache hits/misses
+
+**How to update:**
+```python
+# In cli.py
+ANALYSIS_VERSION = "1.2"  # Increment when scoring changes
+```
+
 ### Health Status Levels
 
 Metric risk values: `"Critical"`, `"High"`, `"Medium"`, `"Low"`, `"None"`

@@ -100,7 +100,28 @@ def check_my_metric(repo_data: dict[str, Any]) -> Metric:
 - Risk levels: "None", "Low", "Medium", "High", "Critical"
 - Use supportive language: "Observe", "Consider", "Monitor" not "Failed", "Error"
 
-### 3. Integrate into Analysis Pipeline
+### 3. Update ANALYSIS_VERSION
+
+**CRITICAL**: Before integrating your new metric, increment `ANALYSIS_VERSION` in `cli.py`.
+
+```python
+# In cli.py, update the version
+ANALYSIS_VERSION = "1.2"  # Increment from previous version
+```
+
+**Why this is required:**
+- New metrics change the total score calculation
+- Old cached data won't include your new metric
+- Without version increment, users get inconsistent scores (cache vs. real-time)
+- Version mismatch automatically invalidates old cache entries
+
+**Always increment when:**
+- Adding/removing metrics
+- Changing metric weights in profiles
+- Modifying scoring thresholds
+- Changing max_score values
+
+### 4. Integrate into Analysis Pipeline
 
 Add to `_analyze_repository_data()` in `core.py`:
 
@@ -122,7 +143,7 @@ except Exception as e:
 
 **Location**: After `check_ci_status()`, before dependents analysis
 
-### 4. Add Metric to Scoring Profiles
+### 5. Add Metric to Scoring Profiles
 
 Update `SCORING_PROFILES` in `core.py` to include your new metric:
 
@@ -149,7 +170,7 @@ SCORING_PROFILES = {
 - **Important metrics**: 2-3 (activity, responsiveness)
 - **Supporting metrics**: 1-2 (documentation, governance)
 
-### 5. Test Implementation
+### 6. Test Implementation
 
 ```bash
 # Syntax check
@@ -168,7 +189,7 @@ uv run pytest tests/test_core.py -x --tb=short
 uv run ruff check oss_sustain_guard/core.py
 ```
 
-### 6. Update Documentation (if needed)
+### 7. Update Documentation (if needed)
 
 Consider updating:
 - `docs/local/NEW_METRICS_IDEA.md` - Mark as implemented
@@ -231,6 +252,7 @@ funding = repo_data.get("fundingLinks", [])
 
 ## Validation Checklist
 
+- [ ] **ANALYSIS_VERSION incremented in cli.py**
 - [ ] No duplicate measurement with existing metrics
 - [ ] Total max_score budget ≤ 100
 - [ ] Uses supportive "observation" language

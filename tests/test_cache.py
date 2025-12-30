@@ -33,6 +33,7 @@ def sample_cache_data():
             "github_url": "https://github.com/psf/requests",
             "total_score": 85,
             "metrics": [],
+            "analysis_version": "1.0",
             "cache_metadata": {
                 "fetched_at": now.isoformat(),
                 "ttl_seconds": 604800,
@@ -45,6 +46,7 @@ def sample_cache_data():
             "github_url": "https://github.com/django/django",
             "total_score": 90,
             "metrics": [],
+            "analysis_version": "1.0",
             "cache_metadata": {
                 "fetched_at": (now - timedelta(days=8)).isoformat(),
                 "ttl_seconds": 604800,
@@ -58,24 +60,26 @@ def test_is_cache_valid_fresh_entry():
     """Test that fresh cache entries are valid."""
     now = datetime.now(timezone.utc)
     entry = {
+        "analysis_version": "1.0",
         "cache_metadata": {
             "fetched_at": now.isoformat(),
             "ttl_seconds": 604800,
-        }
+        },
     }
-    assert cache.is_cache_valid(entry) is True
+    assert cache.is_cache_valid(entry, expected_version="1.0") is True
 
 
 def test_is_cache_valid_expired_entry():
     """Test that expired cache entries are invalid."""
     expired_time = datetime.now(timezone.utc) - timedelta(days=8)
     entry = {
+        "analysis_version": "1.0",
         "cache_metadata": {
             "fetched_at": expired_time.isoformat(),
             "ttl_seconds": 604800,  # 7 days
-        }
+        },
     }
-    assert cache.is_cache_valid(entry) is False
+    assert cache.is_cache_valid(entry, expected_version="1.0") is False
 
 
 def test_is_cache_valid_no_metadata():
@@ -83,19 +87,47 @@ def test_is_cache_valid_no_metadata():
     entry = {
         "ecosystem": "python",
         "package_name": "requests",
+        "analysis_version": "1.0",
     }
-    assert cache.is_cache_valid(entry) is False
+    assert cache.is_cache_valid(entry, expected_version="1.0") is False
 
 
 def test_is_cache_valid_invalid_datetime():
     """Test that entries with invalid datetime are invalid."""
     entry = {
+        "analysis_version": "1.0",
         "cache_metadata": {
             "fetched_at": "invalid-datetime",
             "ttl_seconds": 604800,
+        },
+    }
+    assert cache.is_cache_valid(entry, expected_version="1.0") is False
+
+
+def test_is_cache_valid_version_mismatch():
+    """Test that entries with mismatched analysis_version are invalid."""
+    now = datetime.now(timezone.utc)
+    entry = {
+        "analysis_version": "0.9",  # Old version
+        "cache_metadata": {
+            "fetched_at": now.isoformat(),
+            "ttl_seconds": 604800,
+        },
+    }
+    assert cache.is_cache_valid(entry, expected_version="1.0") is False
+
+
+def test_is_cache_valid_missing_version():
+    """Test that entries without analysis_version are invalid."""
+    now = datetime.now(timezone.utc)
+    entry = {
+        # Missing analysis_version field
+        "cache_metadata": {
+            "fetched_at": now.isoformat(),
+            "ttl_seconds": 604800,
         }
     }
-    assert cache.is_cache_valid(entry) is False
+    assert cache.is_cache_valid(entry, expected_version="1.0") is False
 
 
 def test_load_cache_nonexistent(mock_cache_dir):
@@ -110,7 +142,7 @@ def test_load_cache_valid_entries(mock_cache_dir, sample_cache_data):
     with open(cache_file, "w", encoding="utf-8") as f:
         json.dump(sample_cache_data, f)
 
-    result = cache.load_cache("python")
+    result = cache.load_cache("python", expected_version="1.0")
     # Only the fresh entry should be loaded (requests)
     assert "python:requests" in result
     assert "python:django" not in result  # Expired
