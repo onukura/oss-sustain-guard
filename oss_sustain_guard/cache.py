@@ -201,6 +201,94 @@ def clear_cache(ecosystem: str | None = None) -> int:
     return cleared
 
 
+def get_cached_packages(
+    ecosystem: str | None = None, expected_version: str = "1.0"
+) -> list[dict[str, Any]]:
+    """
+    Get list of all cached packages with their details.
+
+    Args:
+        ecosystem: Specific ecosystem to check, or None for all ecosystems.
+        expected_version: Expected analysis_version for cache entries.
+
+    Returns:
+        List of package dictionaries with keys:
+        - ecosystem: str
+        - package_name: str
+        - github_url: str
+        - metrics: list[dict] (raw metric data for score recalculation)
+        - is_valid: bool (TTL check)
+        - fetched_at: str (ISO format)
+        - analysis_version: str
+    """
+    cache_dir = get_cache_dir()
+
+    if not cache_dir.exists():
+        return []
+
+    ecosystems_to_check = []
+    if ecosystem:
+        ecosystems_to_check = [ecosystem]
+    else:
+        # Check both .json.gz and .json files
+        processed = set()
+        for f in list(cache_dir.glob("*.json.gz")) + list(cache_dir.glob("*.json")):
+            eco_name = f.name.replace(".json.gz", "").replace(".json", "")
+            if eco_name not in processed:
+                ecosystems_to_check.append(eco_name)
+                processed.add(eco_name)
+
+    packages = []
+
+    for eco in ecosystems_to_check:
+        cache_path = _get_cache_path(eco)
+        if not cache_path.exists():
+            continue
+
+        try:
+            if cache_path.suffix == ".gz":
+                with gzip.open(cache_path, "rt", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+            # Handle schema versions
+            if isinstance(data, dict) and "_schema_version" in data:
+                # v2.0+ format
+                all_data = data.get("packages", {})
+            else:
+                # v1.x format
+                all_data = data
+
+            for key, entry in all_data.items():
+                # Parse key format: "ecosystem:package_name"
+                if ":" in key:
+                    entry_eco, pkg_name = key.split(":", 1)
+                else:
+                    entry_eco = eco
+                    pkg_name = entry.get("package_name", key)
+
+                metadata = entry.get("cache_metadata", {})
+
+                # Store metrics for score recalculation by caller
+                packages.append(
+                    {
+                        "ecosystem": entry_eco,
+                        "package_name": pkg_name,
+                        "github_url": entry.get("github_url", "unknown"),
+                        "metrics": entry.get("metrics", []),
+                        "is_valid": is_cache_valid(entry, expected_version),
+                        "fetched_at": metadata.get("fetched_at", "unknown"),
+                        "analysis_version": entry.get("analysis_version", "unknown"),
+                    }
+                )
+        except (json.JSONDecodeError, IOError):
+            continue
+
+    return packages
+
+
 def get_cache_stats(ecosystem: str | None = None) -> dict[str, Any]:
     """
     Get cache statistics.

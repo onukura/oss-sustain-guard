@@ -21,6 +21,7 @@ from rich.table import Table
 from oss_sustain_guard.cache import (
     clear_cache,
     get_cache_stats,
+    get_cached_packages,
     load_cache,
     save_cache,
 )
@@ -952,13 +953,12 @@ def analyze_package(
         # Add ecosystem to result
         analysis_result = analysis_result._replace(ecosystem=ecosystem)
 
-        # Save to cache for future use
+        # Save to cache for future use (without total_score - it will be recalculated based on profile)
         cache_entry = {
             db_key: {
                 "ecosystem": ecosystem,
                 "package_name": package_name,
                 "github_url": analysis_result.repo_url,
-                "total_score": analysis_result.total_score,
                 "metrics": [metric._asdict() for metric in analysis_result.metrics],
                 "funding_links": analysis_result.funding_links,
                 "is_community_driven": analysis_result.is_community_driven,
@@ -1538,6 +1538,185 @@ def clear_cache_command(
             )
         else:
             console.print(f"[green]✨ Cleared {cleared} cache file(s)[/green]")
+
+
+@app.command(name="list-cache")
+def list_cache_command(
+    ecosystem: str | None = typer.Argument(
+        None,
+        help="Specific ecosystem to list (python, javascript, rust, etc.), or omit to list all ecosystems.",
+    ),
+    cache_dir: Path | None = typer.Option(
+        None,
+        "--cache-dir",
+        help="Cache directory path (default: ~/.cache/oss-sustain-guard).",
+    ),
+    show_all: bool = typer.Option(
+        False,
+        "--all",
+        "-a",
+        help="Show all cached packages including expired ones (default: only valid packages).",
+    ),
+    sort_by: str = typer.Option(
+        "score",
+        "--sort",
+        "-s",
+        help="Sort by: score, name, ecosystem, date (default: score).",
+    ),
+    profile: str = typer.Option(
+        "balanced",
+        "--profile",
+        "-p",
+        help="Scoring profile for score calculation: balanced (default), security_first, contributor_experience, long_term_stability.",
+    ),
+):
+    """List cached packages in a table format.
+
+    Examples:
+      os4g list-cache                         # List all valid cached packages
+      os4g list-cache python                  # List only Python packages
+      os4g list-cache --all                   # Include expired cache entries
+      os4g list-cache --sort name             # Sort by package name
+      os4g list-cache --sort date             # Sort by cache date
+      os4g list-cache --profile security_first  # Use security_first profile for scoring
+    """
+    if cache_dir:
+        set_cache_dir(cache_dir)
+
+    # Validate profile
+    if profile not in SCORING_PROFILES:
+        console.print(
+            f"[red]❌ Unknown profile '{profile}'.[/red]",
+        )
+        console.print(
+            f"[dim]Available profiles: {', '.join(SCORING_PROFILES.keys())}[/dim]"
+        )
+        raise typer.Exit(code=1)
+
+    packages = get_cached_packages(ecosystem, expected_version=ANALYSIS_VERSION)
+
+    if not packages:
+        if ecosystem:
+            console.print(
+                f"[yellow]ℹ️  No cached packages found for ecosystem: {ecosystem}[/yellow]"
+            )
+        else:
+            console.print("[yellow]ℹ️  No cached packages found[/yellow]")
+        console.print(
+            "[dim]Run 'os4g check <package>' to analyze and cache packages.[/dim]"
+        )
+        return
+
+    # Recalculate total_score for each package based on metrics using specified profile
+    for pkg in packages:
+        metrics_data = pkg.get("metrics", [])
+        if metrics_data:
+            # Convert dict metrics to Metric objects
+            metrics = [
+                Metric(
+                    name=m.get("name", ""),
+                    score=m.get("score", 0),
+                    max_score=m.get("max_score", 0),
+                    message=m.get("message", ""),
+                    risk=m.get("risk", "None"),
+                )
+                for m in metrics_data
+            ]
+            # Recalculate with specified profile
+            pkg["total_score"] = compute_weighted_total_score(metrics, profile)
+        else:
+            pkg["total_score"] = 0
+
+    # Filter by validity if not showing all
+    if not show_all:
+        packages = [p for p in packages if p["is_valid"]]
+        if not packages:
+            console.print(
+                "[yellow]ℹ️  No valid cached packages found (all expired)[/yellow]"
+            )
+            console.print(
+                "[dim]Use --all to see expired entries or run analysis to refresh cache.[/dim]"
+            )
+            return
+
+    # Sort packages
+    if sort_by == "score":
+        packages.sort(key=lambda p: p["total_score"], reverse=True)
+    elif sort_by == "name":
+        packages.sort(key=lambda p: (p["ecosystem"], p["package_name"]))
+    elif sort_by == "ecosystem":
+        packages.sort(key=lambda p: (p["ecosystem"], p["total_score"]), reverse=True)
+    elif sort_by == "date":
+        packages.sort(key=lambda p: p["fetched_at"], reverse=True)
+    else:
+        console.print(
+            f"[yellow]⚠️  Unknown sort option: {sort_by}. Using default (score).[/yellow]"
+        )
+        packages.sort(key=lambda p: p["total_score"], reverse=True)
+
+    # Display table
+    title = "Cached Packages" if show_all else "Valid Cached Packages"
+    if ecosystem:
+        title += f" ({ecosystem})"
+    # Show profile if not default
+    if profile != "balanced":
+        title += f" [Profile: {profile}]"
+
+    table = Table(title=title, show_header=True, header_style="bold magenta")
+    table.add_column("Package", style="cyan", no_wrap=True)
+    table.add_column("Ecosystem", style="blue", no_wrap=True)
+    table.add_column("Score", justify="center", style="magenta")
+    table.add_column("Status", justify="left")
+    table.add_column("Cached At", justify="left", style="dim")
+    if show_all:
+        table.add_column("Valid", justify="center")
+
+    for pkg in packages:
+        score = pkg["total_score"]
+
+        # Determine status color and text
+        if score >= 80:
+            status_color = "green"
+            status_text = "Healthy"
+        elif score >= 50:
+            status_color = "yellow"
+            status_text = "Monitor"
+        else:
+            status_color = "red"
+            status_text = "Needs attention"
+
+        # Format cached date
+        try:
+            fetched_dt = datetime.fromisoformat(pkg["fetched_at"])
+            cached_str = fetched_dt.strftime("%Y-%m-%d %H:%M")
+        except (ValueError, TypeError):
+            cached_str = "unknown"
+
+        row = [
+            pkg["package_name"],
+            pkg["ecosystem"],
+            f"[{status_color}]{score}/100[/{status_color}]",
+            f"[{status_color}]{status_text}[/{status_color}]",
+            cached_str,
+        ]
+
+        if show_all:
+            valid_icon = "✓" if pkg["is_valid"] else "✗"
+            valid_color = "green" if pkg["is_valid"] else "red"
+            row.append(f"[{valid_color}]{valid_icon}[/{valid_color}]")
+
+        table.add_row(*row)
+
+    console.print(table)
+    console.print(f"\n[dim]Total: {len(packages)} package(s)[/dim]")
+
+    if not show_all:
+        all_packages = get_cached_packages(ecosystem, expected_version=ANALYSIS_VERSION)
+        expired_count = len(all_packages) - len(packages)
+        if expired_count > 0:
+            console.print(
+                f"[dim]({expired_count} expired package(s) hidden. Use --all to show them.)[/dim]"
+            )
 
 
 @app.command()
