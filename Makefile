@@ -1,4 +1,4 @@
-.PHONY: lint doc-serve test test-build-db deploy-cf-workers
+.PHONY: lint doc-serve test test-check test-manifests
 
 lint:
 	uv run prek run --all-files
@@ -11,3 +11,6 @@ test:
 
 test-check:
 	uv run os4g check requests -v
+
+test-manifests:
+	uv run os4g check -r ./tests/fixtures/ --insecure --no-cache
