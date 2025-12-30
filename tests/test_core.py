@@ -192,7 +192,7 @@ def test_is_corporate_backed_user():
 def test_check_funding_corporate_backed_with_funding():
     """
     Tests funding metric for corporate-backed repo with funding links.
-    Corporate backing makes max_score 5 (not critical).
+    Corporate backing provides full sustainability (10/10).
     """
     repo_data = {
         "owner": {
@@ -205,16 +205,16 @@ def test_check_funding_corporate_backed_with_funding():
     }
     metric = check_funding(repo_data)
     assert metric.name == "Funding Signals"
-    assert metric.score == 5
-    assert metric.max_score == 5
+    assert metric.score == 10
+    assert metric.max_score == 10
     assert metric.risk == "None"
-    assert "Corporate backing sufficient" in metric.message
+    assert "Well-supported" in metric.message
 
 
 def test_check_funding_corporate_backed_no_funding():
     """
     Tests funding metric for corporate-backed repo without funding links.
-    Corporate backing alone provides max points (5/5).
+    Corporate backing alone provides max points (10/10).
     """
     repo_data = {
         "owner": {
@@ -225,10 +225,10 @@ def test_check_funding_corporate_backed_no_funding():
     }
     metric = check_funding(repo_data)
     assert metric.name == "Funding Signals"
-    assert metric.score == 5
-    assert metric.max_score == 5
+    assert metric.score == 10
+    assert metric.max_score == 10
     assert metric.risk == "None"
-    assert "Corporate backing" in metric.message
+    assert "Well-supported" in metric.message
 
 
 def test_check_funding_community_with_funding():

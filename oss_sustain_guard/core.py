@@ -189,6 +189,7 @@ def _get_repository_query() -> str:
         isArchived
         pushedAt
         owner {
+          __typename
           login
           ... on Organization {
             name
@@ -982,8 +983,8 @@ def check_funding(repo_data: dict[str, Any]) -> Metric:
     - Scoring: up to 10/10
 
     For Corporate-backed projects:
-    - Funding less critical (corporate backing assumed)
-    - Scoring: capped at 5/10 (not a primary concern)
+    - Corporate backing is primary sustainability indicator
+    - Scoring: 10/10 for org-backed (funding sources not expected)
 
     Considers:
     - Explicit funding links (GitHub Sponsors, etc.)
@@ -995,8 +996,8 @@ def check_funding(repo_data: dict[str, Any]) -> Metric:
     - No funding: 0/10 (Unsupported)
 
     Scoring (Corporate-backed):
-    - Organization backing: 5/10 (Corporate backing sufficient)
-    - No funding info: 0/10 (Not applicable for corporate)
+    - Organization backing: 10/10 (Corporate sustainability model)
+    - Funding links optional (different model than community projects)
     """
     owner = repo_data.get("owner", {})
     owner_login = owner.get("login", "unknown")
@@ -1005,20 +1006,19 @@ def check_funding(repo_data: dict[str, Any]) -> Metric:
     has_funding_links = len(funding_links) > 0
 
     if is_org_backed:
-        # Corporate-backed: Funding is not critical
-        # Capped at 5/10 since corporate backing is primary indicator
-        max_score = 5
+        # Corporate-backed: Organization backing is sufficient sustainability signal
+        max_score = 10
         if has_funding_links:
-            score = 5
+            score = 10
             risk = "None"
             message = (
-                f"Corporate backing sufficient: {owner_login} + "
+                f"Well-supported: {owner_login} organization + "
                 f"{len(funding_links)} funding link(s)."
             )
         else:
-            score = 5
+            score = 10
             risk = "None"
-            message = f"Corporate backing: Organization maintained ({owner_login})."
+            message = f"Well-supported: Organization maintained by {owner_login}."
     else:
         # Community-driven: Funding is important
         max_score = 10
@@ -1883,14 +1883,29 @@ def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
     """
     Evaluates Issue Resolution Duration (CHAOSS metric).
 
-    Measures average time to close issues.
+    Measures average time to close issues. Adjusts expectations based on
+    project scale (stargazers count) to account for larger issue volumes.
 
-    Scoring:
+    Scoring (Small/Medium projects <10K stars):
     - <7 days avg: 10/10 (Fast)
     - 7-30 days: 7/10 (Good)
     - 30-90 days: 4/10 (Moderate)
     - 90-180 days: 2/10 (Slow)
     - >180 days: 0/10 (Very slow)
+
+    Scoring (Large projects 10K-100K stars):
+    - <30 days avg: 10/10 (Fast)
+    - 30-90 days: 7/10 (Good)
+    - 90-180 days: 5/10 (Moderate)
+    - 180-365 days: 3/10 (Acceptable)
+    - >365 days: 0/10 (Needs attention)
+
+    Scoring (Very large projects ≥100K stars):
+    - <60 days avg: 10/10 (Fast)
+    - 60-180 days: 7/10 (Good)
+    - 180-365 days: 5/10 (Moderate)
+    - 365-730 days: 3/10 (Acceptable)
+    - >730 days: 0/10 (Needs attention)
     """
     from datetime import datetime
 
@@ -1937,31 +1952,78 @@ def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
 
     avg_resolution = sum(resolution_times) / len(resolution_times)
 
-    # Scoring logic - stricter thresholds
-    if avg_resolution < 7:
-        score = max_score
-        risk = "None"
-        message = (
-            f"Excellent: Avg issue resolution {avg_resolution:.1f} days. Fast response."
-        )
-    elif avg_resolution < 30:
-        score = 7
-        risk = "Low"
-        message = f"Good: Avg issue resolution {avg_resolution:.1f} days."
-    elif avg_resolution < 90:
-        score = 4
-        risk = "Medium"
-        message = f"Moderate: Avg issue resolution {avg_resolution:.1f} days. Consider improving."
-    elif avg_resolution < 180:
-        score = 2
-        risk = "High"
-        message = (
-            f"Slow: Avg issue resolution {avg_resolution:.1f} days. Issues backlogging."
-        )
+    # Detect project scale for adjusted scoring
+    stargazers_count = repo_data.get("stargazerCount", 0)
+    is_very_large = stargazers_count >= 100000
+    is_large = stargazers_count >= 10000
+
+    # Scoring logic - adjusted for project scale
+    if is_very_large:
+        # Very large projects: Most lenient thresholds (massive issue volume)
+        if avg_resolution < 60:
+            score = max_score
+            risk = "None"
+            message = f"Excellent: Avg issue resolution {avg_resolution:.1f} days. Fast for very large-scale project."
+        elif avg_resolution < 180:
+            score = 7
+            risk = "Low"
+            message = f"Good: Avg issue resolution {avg_resolution:.1f} days."
+        elif avg_resolution < 365:
+            score = 5
+            risk = "Medium"
+            message = f"Moderate: Avg issue resolution {avg_resolution:.1f} days. Reasonable for very large project."
+        elif avg_resolution < 730:
+            score = 3
+            risk = "Medium"
+            message = f"Monitor: Avg issue resolution {avg_resolution:.1f} days. Acceptable given project scale."
+        else:
+            score = 0
+            risk = "High"
+            message = f"Observe: Avg issue resolution {avg_resolution:.1f} days. Consider improving."
+    elif is_large:
+        # Large projects: Lenient thresholds (higher issue volume)
+        if avg_resolution < 30:
+            score = max_score
+            risk = "None"
+            message = f"Excellent: Avg issue resolution {avg_resolution:.1f} days. Fast for large-scale project."
+        elif avg_resolution < 90:
+            score = 7
+            risk = "Low"
+            message = f"Good: Avg issue resolution {avg_resolution:.1f} days."
+        elif avg_resolution < 180:
+            score = 5
+            risk = "Medium"
+            message = f"Moderate: Avg issue resolution {avg_resolution:.1f} days. Acceptable for large project."
+        elif avg_resolution < 365:
+            score = 3
+            risk = "Medium"
+            message = f"Monitor: Avg issue resolution {avg_resolution:.1f} days. Consider improving."
+        else:
+            score = 0
+            risk = "High"
+            message = f"Observe: Avg issue resolution {avg_resolution:.1f} days. Significant backlog detected."
     else:
-        score = 0
-        risk = "High"
-        message = f"Observe: Avg issue resolution {avg_resolution:.1f} days. Significant backlog detected."
+        # Small/Medium projects: Standard thresholds
+        if avg_resolution < 7:
+            score = max_score
+            risk = "None"
+            message = f"Excellent: Avg issue resolution {avg_resolution:.1f} days. Fast response."
+        elif avg_resolution < 30:
+            score = 7
+            risk = "Low"
+            message = f"Good: Avg issue resolution {avg_resolution:.1f} days."
+        elif avg_resolution < 90:
+            score = 4
+            risk = "Medium"
+            message = f"Moderate: Avg issue resolution {avg_resolution:.1f} days. Consider improving."
+        elif avg_resolution < 180:
+            score = 2
+            risk = "High"
+            message = f"Slow: Avg issue resolution {avg_resolution:.1f} days. Issues backlogging."
+        else:
+            score = 0
+            risk = "High"
+            message = f"Observe: Avg issue resolution {avg_resolution:.1f} days. Significant backlog detected."
 
     return Metric("Issue Resolution Duration", score, max_score, message, risk)
 
@@ -3378,7 +3440,7 @@ def _analyze_repository_data(
             Metric(
                 "Funding Status",
                 0,
-                5,
+                10,
                 f"Note: Analysis incomplete - {e}",
                 "Low",
             )
@@ -3435,12 +3497,8 @@ def _analyze_repository_data(
     # Extract funding information directly from repo data
     funding_links = repo_info.get("fundingLinks", [])
 
-    # Determine if project is community-driven (simple heuristic)
-    owner_login = repo_info.get("owner", {}).get("login", "")
-    is_community = not any(
-        corp in owner_login.lower()
-        for corp in ["google", "microsoft", "facebook", "meta", "amazon", "aws"]
-    )
+    # Determine if project is community-driven using proper detection
+    is_community = not is_corporate_backed(repo_info)
 
     # Generate CHAOSS metric models (placeholder for now)
     models: list[MetricModel] = []
