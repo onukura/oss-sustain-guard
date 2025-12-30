@@ -558,8 +558,8 @@ def test_check_code_of_conduct_present():
     }
     metric = check_code_of_conduct(repo_data)
     assert metric.name == "Code of Conduct"
-    assert metric.score == 5
-    assert metric.max_score == 5
+    assert metric.score == 10
+    assert metric.max_score == 10
     assert metric.risk == "None"
     assert "Contributor Covenant" in metric.message
 
@@ -570,6 +570,7 @@ def test_check_code_of_conduct_absent():
     metric = check_code_of_conduct(repo_data)
     assert metric.name == "Code of Conduct"
     assert metric.score == 0
+    assert metric.max_score == 10
     assert metric.risk == "Low"  # Informational, not critical
 
 
@@ -848,7 +849,10 @@ def test_check_fork_activity_high():
     }
     metric = check_fork_activity(repo_data)
     assert metric.name == "Active Fork Analysis"
-    assert metric.score == 5  # 100+ forks with low active ratio (<20%)
+    assert (
+        metric.score == 10
+    )  # 100+ forks with low active ratio (<20%), scaled to 10-point system
+    assert metric.max_score == 10
     assert metric.risk == "None"
     assert "Healthy ecosystem" in metric.message
 
@@ -859,6 +863,7 @@ def test_check_fork_activity_none():
     metric = check_fork_activity(repo_data)
     assert metric.name == "Active Fork Analysis"
     assert metric.score == 0
+    assert metric.max_score == 10
     assert metric.risk == "Low"
 
 
@@ -1027,7 +1032,8 @@ def test_check_pr_responsiveness_fast():
     }
     metric = check_pr_responsiveness(repo_data)
     assert metric.name == "PR Responsiveness"
-    assert metric.score == 5  # <24h
+    assert metric.score == 10  # <24h gives max score on 0-10 scale
+    assert metric.max_score == 10
     assert metric.risk == "None"
 
 
@@ -1245,7 +1251,7 @@ def test_compare_scoring_profiles():
         assert "description" in profile_data
         assert "total_score" in profile_data
         assert "weights" in profile_data
-        assert "category_scores" in profile_data
+        # category_scores removed in new system
         assert 0 <= profile_data["total_score"] <= 100
 
 
@@ -1271,31 +1277,36 @@ def test_compare_profiles_different_scores():
     assert contributor_score > security_score
 
 
-def test_profile_weights_sum_to_one():
-    """Test that all profile weights sum to approximately 1.0."""
+def test_profile_weights_are_positive_integers():
+    """Test that all profile weights are positive integers (new system)."""
     for profile_key, profile_config in SCORING_PROFILES.items():
         weights = profile_config["weights"]
-        total_weight = sum(weights.values())
-        assert abs(total_weight - 1.0) < 0.01, (
-            f"Profile '{profile_key}' weights sum to {total_weight}, expected ~1.0"
-        )
+        for metric_name, weight in weights.items():
+            assert isinstance(weight, int), (
+                f"Profile '{profile_key}' metric '{metric_name}' weight must be int, got {type(weight)}"
+            )
+            assert weight >= 1, (
+                f"Profile '{profile_key}' metric '{metric_name}' weight must be >= 1, got {weight}"
+            )
 
 
-def test_category_scores_consistent_across_profiles():
-    """Test that category scores are calculated consistently."""
+def test_scoring_profiles_return_structure():
+    """Test that compare_scoring_profiles returns correct structure."""
     metrics = [
         Metric("Contributor Redundancy", 10, 10, "Test", "Low"),
-        Metric("Security Signals", 12, 10, "Test", "Low"),
+        Metric("Security Signals", 8, 10, "Test", "Low"),
     ]
 
     comparison = compare_scoring_profiles(metrics)
 
-    # All profiles should have same category_scores
-    first_profile = list(comparison.values())[0]
-    category_scores = first_profile["category_scores"]
-
-    for profile_data in comparison.values():
-        assert profile_data["category_scores"] == category_scores
+    # Check all profiles have required fields
+    for _profile_key, profile_data in comparison.items():
+        assert "name" in profile_data
+        assert "description" in profile_data
+        assert "total_score" in profile_data
+        assert "weights" in profile_data
+        assert isinstance(profile_data["total_score"], int)
+        assert 0 <= profile_data["total_score"] <= 100
 
 
 # --- Tests for _query_librariesio_api ---
@@ -1517,7 +1528,8 @@ def test_check_zombie_status_archived():
     result = check_zombie_status(repo_data)
 
     assert result.name == "Recent Activity"
-    assert result.score == 10
+    assert result.score == 5  # Archived: 10/20 → 5/10
+    assert result.max_score == 10
     assert result.risk == "Medium"
     assert "archived" in result.message.lower()
 
@@ -1559,7 +1571,8 @@ def test_check_zombie_status_high_inactive():
     repo_data = {"isArchived": False, "pushedAt": old_date}
 
     result = check_zombie_status(repo_data)
-    assert result.score == 5
+    assert result.score == 2  # 1+ year: 5/20 → 2/10
+    assert result.max_score == 10
     assert result.risk == "High"
     assert "1+ year" in result.message
 
@@ -1574,7 +1587,8 @@ def test_check_zombie_status_medium_inactive():
     repo_data = {"isArchived": False, "pushedAt": old_date}
 
     result = check_zombie_status(repo_data)
-    assert result.score == 10
+    assert result.score == 5  # 6+ months: 10/20 → 5/10
+    assert result.max_score == 10
     assert result.risk == "Medium"
 
 
@@ -1760,7 +1774,8 @@ def test_check_ci_status_in_progress():
     }
     result = check_ci_status(repo_data)
 
-    assert result.score == 3
+    assert result.score == 6  # 3/5 → 6/10
+    assert result.max_score == 10
     assert result.risk == "Low"
     assert "progress" in result.message.lower()
 
@@ -1949,7 +1964,8 @@ def test_check_security_posture_no_policy():
     }
     result = check_security_posture(repo_data)
 
-    assert result.score == 8
+    assert result.score == 5  # 8/15 → 5/10
+    assert result.max_score == 10
     assert "No security policy" in result.message or "Moderate" in result.message
 
 
@@ -2046,7 +2062,8 @@ def test_check_community_health_no_comments():
     repo_data = {"issues": {"edges": issues}}
     result = check_community_health(repo_data)
 
-    assert result.score == 3  # Updated: more generous scoring
+    assert result.score == 6  # 3/5 → 6/10, more generous scoring
+    assert result.max_score == 10
     assert result.risk == "None"  # Updated: changed from Medium
     assert "No recent issue responses" in result.message
 
@@ -2168,7 +2185,8 @@ def test_check_license_clarity_recognized():
     }
     result = check_license_clarity(repo_data)
 
-    assert result.score == 3
+    assert result.score == 6  # 3/5 → 6/10
+    assert result.max_score == 10
     assert result.risk == "Low"
     assert "Good" in result.message
 
@@ -2185,7 +2203,8 @@ def test_check_license_clarity_unknown():
     }
     result = check_license_clarity(repo_data)
 
-    assert result.score == 2
+    assert result.score == 4  # 2/5 → 4/10
+    assert result.max_score == 10
     assert result.risk == "Medium"
     assert "not recognized" in result.message
 

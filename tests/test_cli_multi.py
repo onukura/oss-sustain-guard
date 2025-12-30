@@ -62,10 +62,13 @@ class TestAnalyzePackage:
 
     def test_analyze_from_cache(self):
         """Test analyzing package from cache."""
+        from oss_sustain_guard.cli import ANALYSIS_VERSION
+
         cached_db = {
             "python:requests": {
                 "github_url": "https://github.com/psf/requests",
                 "total_score": 85,  # Old score (will be recalculated)
+                "analysis_version": ANALYSIS_VERSION,  # Add version to use cache
                 "metrics": [
                     {
                         "name": "Contributor Redundancy",
@@ -75,6 +78,10 @@ class TestAnalyzePackage:
                         "risk": "Low",
                     }
                 ],
+                "funding_links": [],
+                "is_community_driven": False,
+                "models": [],
+                "signals": {},
             }
         }
 
@@ -82,7 +89,7 @@ class TestAnalyzePackage:
             result = analyze_package("requests", "python", cached_db)
             assert result is not None
             assert result.repo_url == "https://github.com/psf/requests"
-            # Score is recalculated based on category weights (only 1/21 metrics = low score)
+            # Score is recalculated based on metric weights (only 1/21 metrics = low score)
             assert result.total_score > 0  # At least some score
             assert (
                 result.total_score < 85

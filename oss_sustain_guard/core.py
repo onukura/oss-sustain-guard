@@ -2324,49 +2324,49 @@ def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
         (active_fork_count / sample_size * 100) if sample_size > 0 else 0
     )
 
-    # Scoring logic based on fork patterns
+    # Scoring logic based on fork patterns (0-10 scale)
     if fork_count >= 100:
         # Large ecosystem - assess health and divergence risk
         if active_fork_ratio < 20:
-            score = max_score
+            score = max_score  # 5/5 → 10/10
             risk = "None"
             message = f"Excellent: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Healthy ecosystem with low divergence risk."
         elif active_fork_ratio < 40:
-            score = 6
+            score = 6  # 3/5 → 6/10
             risk = "Low"
             message = f"Monitor: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Consider community alignment efforts."
         else:
-            score = 4
+            score = 2  # 1/5 → 2/10, high divergence risk
             risk = "Medium"
             message = f"Needs attention: {fork_count} forks, ~{active_fork_count}/{sample_size} active. High fork divergence risk detected."
     elif fork_count >= 50:
         # Medium ecosystem
         if active_fork_ratio < 30:
-            score = 8
+            score = 8  # 4/5 → 8/10
             risk = "None"
             message = f"Good: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Growing ecosystem."
         else:
-            score = 4
+            score = 4  # 2/5 → 4/10
             risk = "Low"
             message = f"Monitor: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Watch for divergence."
     elif fork_count >= 10:
         # Smaller ecosystem
         if active_fork_count >= 2:
-            score = 6
+            score = 6  # 3/5 → 6/10
             risk = "None"
             message = f"Moderate: {fork_count} forks, {active_fork_count} active. Growing community interest."
         else:
-            score = 4
+            score = 4  # 2/5 → 4/10
             risk = "None"
             message = f"Early: {fork_count} forks, {active_fork_count} active. Small community."
     else:
         # Very small ecosystem
         if active_fork_count > 0:
-            score = 4
+            score = 4  # 2/5 → 4/10
             risk = "Low"
             message = f"Early: {fork_count} fork(s), {active_fork_count} active. Emerging interest."
         else:
-            score = 2
+            score = 2  # 1/5 → 2/10
             risk = "Low"
             message = f"Limited: {fork_count} fork(s), no recent activity detected."
 
@@ -2924,33 +2924,33 @@ def check_dependents_count(
     dependents_count = package_info.get("dependents_count", 0)
     dependent_repos_count = package_info.get("dependent_repos_count", 0)
 
-    # Score based on dependents count
+    # Score based on dependents count (scaled to 10-point system)
     if dependents_count >= 10000:
-        score = max_score
+        score = max_score  # 20/20 → 10/10
         risk = "None"
         message = f"Critical infrastructure: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos). Essential to ecosystem."
     elif dependents_count >= 1000:
-        score = 18
+        score = 9  # 18/20 → 9/10
         risk = "None"
         message = f"Widely adopted: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos)."
     elif dependents_count >= 500:
-        score = 15
+        score = 8  # 15/20 → 8/10 (rounded up)
         risk = "None"
         message = f"Popular: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos)."
     elif dependents_count >= 100:
-        score = 12
+        score = 6  # 12/20 → 6/10
         risk = "Low"
         message = f"Established: 📦 {dependents_count} packages depend on this ({dependent_repos_count} repos)."
     elif dependents_count >= 50:
-        score = 9
+        score = 5  # 9/20 → 5/10 (rounded up)
         risk = "Low"
         message = f"Growing adoption: 📦 {dependents_count} packages depend on this ({dependent_repos_count} repos)."
     elif dependents_count >= 10:
-        score = 6
+        score = 3  # 6/20 → 3/10
         risk = "Low"
         message = f"Early adoption: 📦 {dependents_count} packages depend on this ({dependent_repos_count} repos)."
     elif dependents_count >= 1:
-        score = 3
+        score = 2  # 3/20 → 2/10 (rounded up)
         risk = "Low"
         message = f"Used by others: 📦 {dependents_count} package(s) depend on this ({dependent_repos_count} repo(s))."
     else:

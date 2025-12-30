@@ -2,12 +2,20 @@
 Tests for CLI display functions (display_results, display_results_compact, display_results_detailed).
 """
 
+import re
+
 from oss_sustain_guard.cli import (
     display_results,
     display_results_compact,
     display_results_detailed,
 )
 from oss_sustain_guard.core import AnalysisResult, Metric
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text."""
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    return ansi_escape.sub("", text)
 
 
 class TestDisplayResultsCompact:
@@ -33,9 +41,10 @@ class TestDisplayResultsCompact:
         display_results_compact(results)
 
         captured = capsys.readouterr()
-        assert "psf/requests" in captured.out
-        assert "(85/100)" in captured.out
-        assert "Healthy" in captured.out
+        clean_output = strip_ansi(captured.out)
+        assert "psf/requests" in clean_output
+        assert "(85/100)" in clean_output
+        assert "Healthy" in clean_output
 
     def test_display_results_compact_needs_attention(self, capsys):
         """Test compact display for package needing attention."""

@@ -114,8 +114,8 @@ class TestDependentsCountMetric:
 
         assert result is not None
         assert result.name == "Downstream Dependents"
-        assert result.score == 20
-        assert result.max_score == 20
+        assert result.score == 10  # 20/20 → 10/10
+        assert result.max_score == 10
         assert result.risk == "None"
         assert "Critical infrastructure" in result.message
         assert "15,000" in result.message
@@ -136,7 +136,8 @@ class TestDependentsCountMetric:
         )
 
         assert result is not None
-        assert result.score == 18
+        assert result.score == 9  # 18/20 → 9/10
+        assert result.max_score == 10
         assert "Widely adopted" in result.message
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
@@ -203,13 +204,13 @@ class TestDependentsCountMetric:
 
         # Test data: (dependents_count, expected_score, expected_risk)
         test_cases = [
-            (15000, 20, "None"),  # Critical infrastructure
-            (2000, 18, "None"),  # Widely adopted
-            (600, 15, "None"),  # Popular
-            (150, 12, "Low"),  # Established
-            (75, 9, "Low"),  # Growing
-            (25, 6, "Low"),  # Early adoption
-            (5, 3, "Low"),  # Used by others
+            (15000, 10, "None"),  # Critical infrastructure: 20/20 → 10/10
+            (2000, 9, "None"),  # Widely adopted: 18/20 → 9/10
+            (600, 8, "None"),  # Popular: 15/20 → 8/10
+            (150, 6, "Low"),  # Established: 12/20 → 6/10
+            (75, 5, "Low"),  # Growing: 9/20 → 5/10
+            (25, 3, "Low"),  # Early adoption: 6/20 → 3/10
+            (5, 2, "Low"),  # Used by others: 3/20 → 2/10
             (0, 0, "Low"),  # No dependents
         ]
 
