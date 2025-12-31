@@ -264,14 +264,18 @@ class TestLoadDatabase:
 class TestAnalyzeDependenciesForPackage:
     """Test dependency analysis functionality."""
 
+    @patch("oss_sustain_guard.cli.analyze_packages_parallel")
     @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
-    def test_analyze_dependencies_success(self, mock_get_deps):
+    def test_analyze_dependencies_success(self, mock_get_deps, mock_analyze_parallel):
         """Test successful dependency analysis."""
+        from oss_sustain_guard.cli import ANALYSIS_VERSION
+
         # Mock get_package_dependencies to return a list of dependency names
         mock_get_deps.return_value = ["dep1", "dep2"]
 
         db = {
             "python:dep1": {
+                "analysis_version": ANALYSIS_VERSION,
                 "metrics": [
                     {
                         "name": "Contributor Redundancy",
@@ -294,9 +298,10 @@ class TestAnalyzeDependenciesForPackage:
                         "message": "Test message",
                         "risk": "None",
                     },
-                ]
+                ],
             },
             "python:dep2": {
+                "analysis_version": ANALYSIS_VERSION,
                 "metrics": [
                     {
                         "name": "Contributor Redundancy",
@@ -319,7 +324,7 @@ class TestAnalyzeDependenciesForPackage:
                         "message": "Test message",
                         "risk": "None",
                     },
-                ]
+                ],
             },
         }
 
@@ -344,6 +349,9 @@ class TestAnalyzeDependenciesForPackage:
             assert result["dep1"] > 0  # Should have a positive score
             assert result["dep2"] > 0  # Should have a positive score
             assert result["dep2"] > result["dep1"]  # dep2 has better scores
+
+            # Verify parallel analysis was NOT called (all deps in cache)
+            mock_analyze_parallel.assert_not_called()
         finally:
             import os
 
@@ -375,3 +383,151 @@ class TestAnalyzeDependenciesForPackage:
             "python", "/tmp/test.lock", {}, "test-package"
         )
         assert result == {}
+
+    @patch("oss_sustain_guard.cli.analyze_packages_parallel")
+    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
+    def test_analyze_dependencies_with_missing_packages(
+        self, mock_get_deps, mock_analyze_parallel
+    ):
+        """Test dependency analysis when some dependencies are not in cache."""
+        from oss_sustain_guard.cli import ANALYSIS_VERSION
+        from oss_sustain_guard.core import AnalysisResult, Metric
+
+        # Mock get_package_dependencies to return 3 dependencies
+        mock_get_deps.return_value = ["dep1", "dep2", "dep3"]
+
+        # Only dep1 is in cache, dep2 and dep3 need to be analyzed
+        db = {
+            "python:dep1": {
+                "analysis_version": ANALYSIS_VERSION,
+                "metrics": [
+                    {
+                        "name": "Contributor Redundancy",
+                        "score": 20,
+                        "max_score": 20,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                    {
+                        "name": "Recent Activity",
+                        "score": 15,
+                        "max_score": 20,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                ],
+            },
+        }
+
+        # Mock the parallel analysis to return results for dep2 and dep3
+        mock_analyze_parallel.return_value = [
+            AnalysisResult(
+                repo_url="https://github.com/owner/dep2",
+                total_score=75,
+                metrics=[
+                    Metric(
+                        name="Test Metric",
+                        score=75,
+                        max_score=100,
+                        message="Test",
+                        risk="Low",
+                    )
+                ],
+                ecosystem="python",
+            ),
+            AnalysisResult(
+                repo_url="https://github.com/owner/dep3",
+                total_score=80,
+                metrics=[
+                    Metric(
+                        name="Test Metric",
+                        score=80,
+                        max_score=100,
+                        message="Test",
+                        risk="Low",
+                    )
+                ],
+                ecosystem="python",
+            ),
+        ]
+
+        # Create a temporary lockfile
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as tmp:
+            tmp.write("")
+            tmp_path = tmp.name
+
+        try:
+            result = _analyze_dependencies_for_package(
+                "python", tmp_path, db, "test-package"
+            )
+
+            # Verify all dependencies are in result
+            assert "dep1" in result
+            assert "dep2" in result
+            assert "dep3" in result
+
+            # Verify dep1 score is from cache
+            assert result["dep1"] > 0
+
+            # Verify dep2 and dep3 scores are from analysis
+            assert result["dep2"] == 75
+            assert result["dep3"] == 80
+
+            # Verify parallel analysis was called for missing packages
+            mock_analyze_parallel.assert_called_once()
+            call_args = mock_analyze_parallel.call_args
+            packages_to_analyze = call_args[0][0]
+            assert len(packages_to_analyze) == 2
+            assert ("python", "dep2") in packages_to_analyze
+            assert ("python", "dep3") in packages_to_analyze
+        finally:
+            import os
+
+            os.unlink(tmp_path)
+
+    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
+    def test_analyze_dependencies_without_analyzing_missing(self, mock_get_deps):
+        """Test dependency analysis with analyze_missing=False."""
+        from oss_sustain_guard.cli import ANALYSIS_VERSION
+
+        # Mock get_package_dependencies to return 3 dependencies
+        mock_get_deps.return_value = ["dep1", "dep2", "dep3"]
+
+        # Only dep1 is in cache
+        db = {
+            "python:dep1": {
+                "analysis_version": ANALYSIS_VERSION,
+                "metrics": [
+                    {
+                        "name": "Contributor Redundancy",
+                        "score": 20,
+                        "max_score": 20,
+                        "message": "Test message",
+                        "risk": "None",
+                    },
+                ],
+            },
+        }
+
+        # Create a temporary lockfile
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as tmp:
+            tmp.write("")
+            tmp_path = tmp.name
+
+        try:
+            result = _analyze_dependencies_for_package(
+                "python", tmp_path, db, "test-package", analyze_missing=False
+            )
+
+            # Only dep1 should be in result (dep2 and dep3 are missing from cache)
+            assert "dep1" in result
+            assert "dep2" not in result
+            assert "dep3" not in result
+        finally:
+            import os
+
+            os.unlink(tmp_path)

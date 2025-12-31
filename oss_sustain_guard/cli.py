@@ -713,6 +713,7 @@ def _analyze_dependencies_for_package(
     db: dict,
     package_name: str,
     profile: str = "balanced",
+    analyze_missing: bool = True,
 ) -> dict[str, int]:
     """
     Analyze dependencies for a specific package from a lockfile and return their scores.
@@ -723,6 +724,7 @@ def _analyze_dependencies_for_package(
         db: Database dictionary with cached package metrics.
         package_name: Name of the package to get dependencies for.
         profile: Scoring profile to use for calculating scores.
+        analyze_missing: If True, analyze dependencies not found in cache.
 
     Returns:
         Dictionary mapping dependency package names to their scores.
@@ -749,6 +751,7 @@ def _analyze_dependencies_for_package(
             return {}
 
         dep_scores: dict[str, int] = {}
+        missing_deps: list[str] = []
 
         # Look up metrics for each dependency from local db first
         for dep_name in dep_names:
@@ -756,23 +759,56 @@ def _analyze_dependencies_for_package(
             if db_key in db:
                 try:
                     pkg_data = db[db_key]
-                    # Calculate score from metrics using the specified profile
-                    metrics_data = pkg_data.get("metrics", [])
-                    if metrics_data:
-                        metrics = [
-                            Metric(
-                                m["name"],
-                                m["score"],
-                                m["max_score"],
-                                m["message"],
-                                m["risk"],
-                            )
-                            for m in metrics_data
-                        ]
-                        score = compute_weighted_total_score(metrics, profile)
-                        dep_scores[dep_name] = score
+                    # Check if cached version is compatible
+                    payload_version = pkg_data.get("analysis_version")
+                    if payload_version == ANALYSIS_VERSION:
+                        # Calculate score from metrics using the specified profile
+                        metrics_data = pkg_data.get("metrics", [])
+                        if metrics_data:
+                            metrics = [
+                                Metric(
+                                    m["name"],
+                                    m["score"],
+                                    m["max_score"],
+                                    m["message"],
+                                    m["risk"],
+                                )
+                                for m in metrics_data
+                            ]
+                            score = compute_weighted_total_score(metrics, profile)
+                            dep_scores[dep_name] = score
+                    else:
+                        # Version mismatch, need to re-analyze
+                        missing_deps.append(dep_name)
                 except (KeyError, TypeError):
-                    pass
+                    missing_deps.append(dep_name)
+            else:
+                missing_deps.append(dep_name)
+
+        # Analyze missing dependencies if requested
+        if analyze_missing and missing_deps:
+            # Prepare packages for batch analysis
+            packages_to_analyze = [(ecosystem, dep) for dep in missing_deps]
+
+            # Analyze in parallel (using the existing parallel analysis function)
+            results = analyze_packages_parallel(
+                packages_to_analyze,
+                db,
+                profile,
+                enable_dependents=False,
+                show_dependencies=False,  # Don't recurse
+                lockfile_path=None,
+                verbose=False,
+                use_local_cache=True,
+                max_workers=5,
+                use_batch_queries=True,
+            )
+
+            # Add scores from newly analyzed packages
+            for idx, result in enumerate(results):
+                if result:
+                    dep_name = missing_deps[idx]
+                    dep_scores[dep_name] = result.total_score
 
         return dep_scores
     except Exception as e:
