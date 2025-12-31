@@ -5,6 +5,7 @@ Tests for --root-dir and --manifest options in CLI.
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from typer.testing import CliRunner
 
 from oss_sustain_guard.cli import app
@@ -15,6 +16,7 @@ runner = CliRunner()
 class TestRootDirOption:
     """Test --root-dir option functionality."""
 
+    @pytest.mark.slow
     def test_root_dir_with_fixtures(self):
         """Test auto-detection with --root-dir pointing to fixtures."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -45,6 +47,7 @@ class TestRootDirOption:
         assert "Directory not found:" in result.output
         assert "nonexistent" in result.output and "directory" in result.output
 
+    @pytest.mark.slow
     def test_root_dir_file_instead_of_directory(self):
         """Test error handling when root-dir is a file."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -59,6 +62,7 @@ class TestRootDirOption:
             assert result.exit_code == 1
             assert "Path is not a directory" in result.output
 
+    @pytest.mark.slow
     def test_root_dir_default_current_directory(self):
         """Test that default root-dir is current directory."""
         with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
@@ -72,6 +76,7 @@ class TestRootDirOption:
             # Should auto-detect from current directory (may find nothing)
             assert result.exit_code in (0, 1)  # 0 if files found, 1 if error
 
+    @pytest.mark.slow
     def test_root_dir_with_relative_path(self):
         """Test --root-dir with relative path."""
         with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
@@ -85,6 +90,7 @@ class TestRootDirOption:
             # Should resolve relative path and detect files
             assert "Auto-detecting from manifest files" in result.output
 
+    @pytest.mark.slow
     def test_root_dir_short_option(self):
         """Test -r short option for --root-dir."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -104,6 +110,7 @@ class TestRootDirOption:
 class TestManifestOption:
     """Test --manifest option functionality."""
 
+    @pytest.mark.slow
     def test_manifest_with_package_json(self):
         """Test reading from a specific package.json file."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -124,6 +131,7 @@ class TestManifestOption:
             assert "Detected ecosystem: javascript" in result.output
             assert "package.json" in result.output
 
+    @pytest.mark.slow
     def test_manifest_with_requirements_txt(self):
         """Test reading from a specific requirements.txt file."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -143,6 +151,7 @@ class TestManifestOption:
             assert "Reading manifest file" in result.output
             assert "Detected ecosystem: python" in result.output
 
+    @pytest.mark.slow
     def test_manifest_with_pyproject_toml(self):
         """Test reading from a specific pyproject.toml file."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -163,6 +172,7 @@ class TestManifestOption:
             assert "Detected ecosystem: python" in result.output
             assert "pyproject.toml" in result.output
 
+    @pytest.mark.slow
     def test_manifest_with_cargo_toml(self):
         """Test reading from a specific Cargo.toml file."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -193,6 +203,7 @@ class TestManifestOption:
         assert "Manifest file not found:" in result.output
         assert "nonexistent" in result.output and "package.json" in result.output
 
+    @pytest.mark.slow
     def test_manifest_directory_instead_of_file(self):
         """Test error handling when manifest path is a directory."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -228,6 +239,7 @@ class TestManifestOption:
         finally:
             Path(temp_path).unlink(missing_ok=True)
 
+    @pytest.mark.slow
     def test_manifest_short_option(self):
         """Test -m short option for --manifest."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -247,6 +259,7 @@ class TestManifestOption:
             assert "Reading manifest file" in result.output
             assert "Detected ecosystem: javascript" in result.output
 
+    @pytest.mark.slow
     def test_manifest_with_pipfile(self):
         """Test --manifest with Pipfile."""
         fixtures_dir = Path(__file__).parent / "fixtures"
@@ -266,6 +279,7 @@ class TestManifestOption:
             assert "Reading manifest file" in result.output
             assert "Detected ecosystem: python" in result.output
 
+    @pytest.mark.slow
     def test_manifest_with_absolute_path(self):
         """Test --manifest with absolute path from different directory."""
         fixtures_dir = Path(__file__).parent / "fixtures"

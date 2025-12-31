@@ -10,7 +10,7 @@ class TestLibrariesioAPIIntegration:
     """Test Libraries.io API query functionality."""
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_api_key"})
-    @patch("oss_sustain_guard.core.httpx.Client")
+    @patch("oss_sustain_guard.librariesio.httpx.Client")
     def test_query_librariesio_api_success(self, mock_client_class):
         """Test successful Libraries.io API query."""
         # Mock response
@@ -56,7 +56,7 @@ class TestLibrariesioAPIIntegration:
         assert result is None
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_api_key"})
-    @patch("oss_sustain_guard.core.httpx.Client")
+    @patch("oss_sustain_guard.librariesio.httpx.Client")
     def test_query_librariesio_api_not_found(self, mock_client_class):
         """Test Libraries.io API query when package not found."""
         # Mock 404 response
@@ -98,7 +98,7 @@ class TestDependentsCountMetric:
         assert result is None
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
-    @patch("oss_sustain_guard.core._query_librariesio_api")
+    @patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
     def test_dependents_count_critical_infrastructure(self, mock_query):
         """Test metric for packages with very high dependents count."""
         mock_query.return_value = {
@@ -121,7 +121,7 @@ class TestDependentsCountMetric:
         assert "15,000" in result.message
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
-    @patch("oss_sustain_guard.core._query_librariesio_api")
+    @patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
     def test_dependents_count_widely_adopted(self, mock_query):
         """Test metric for widely adopted packages."""
         mock_query.return_value = {
@@ -141,7 +141,7 @@ class TestDependentsCountMetric:
         assert "Widely adopted" in result.message
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
-    @patch("oss_sustain_guard.core._query_librariesio_api")
+    @patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
     def test_dependents_count_no_dependents(self, mock_query):
         """Test metric for packages with no dependents."""
         mock_query.return_value = {
@@ -197,7 +197,7 @@ class TestDependentsCountMetric:
         assert result is None
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
-    @patch("oss_sustain_guard.core._query_librariesio_api")
+    @patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
     def test_dependents_count_scoring_tiers(self, mock_query):
         """Test all scoring tiers for dependents count."""
         from oss_sustain_guard.core import check_dependents_count

@@ -2224,7 +2224,7 @@ def test_check_dependents_count_no_api_key():
 
 
 @patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
-@patch("oss_sustain_guard.core._query_librariesio_api")
+@patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
 def test_check_dependents_count_critical_infrastructure(mock_api):
     """Test dependents count for critical infrastructure (10000+ dependents)."""
     from oss_sustain_guard.core import check_dependents_count
@@ -2243,7 +2243,7 @@ def test_check_dependents_count_critical_infrastructure(mock_api):
 
 
 @patch.dict("os.environ", {"LIBRARIESIO_API_KEY": "fake_key"}, clear=True)
-@patch("oss_sustain_guard.core._query_librariesio_api")
+@patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
 def test_check_dependents_count_no_dependents(mock_api):
     """Test dependents count with no dependents."""
     from oss_sustain_guard.core import check_dependents_count

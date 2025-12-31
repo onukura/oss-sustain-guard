@@ -42,10 +42,10 @@ from oss_sustain_guard.core import (
     Metric,
     analyze_repositories_batch,
     analyze_repository,
-    close_http_client,
     compute_weighted_total_score,
     get_metric_weights,
 )
+from oss_sustain_guard.http_client import close_http_client
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     find_lockfiles,

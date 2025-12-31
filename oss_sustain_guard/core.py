@@ -9,55 +9,67 @@ import httpx
 from dotenv import load_dotenv
 from rich.console import Console
 
-from oss_sustain_guard.http_client import _get_http_client, close_http_client
+from oss_sustain_guard.http_client import _get_http_client
 from oss_sustain_guard.librariesio import query_librariesio_api
 from oss_sustain_guard.metrics import load_metric_specs
-from oss_sustain_guard.metrics.base import Metric, MetricContext
 from oss_sustain_guard.metrics.attraction import check_attraction  # noqa: F401
+from oss_sustain_guard.metrics.base import Metric, MetricContext
 from oss_sustain_guard.metrics.bus_factor import check_bus_factor  # noqa: F401
 from oss_sustain_guard.metrics.ci_status import check_ci_status  # noqa: F401
-from oss_sustain_guard.metrics.code_of_conduct import check_code_of_conduct  # noqa: F401
+from oss_sustain_guard.metrics.code_of_conduct import (  # noqa: F401
+    check_code_of_conduct,
+)
 from oss_sustain_guard.metrics.community_health import (  # noqa: F401
-    check_community_health,
+    check_community_health,  # noqa: F401
 )
 from oss_sustain_guard.metrics.dependents_count import (  # noqa: F401
-    check_dependents_count,
+    check_dependents_count,  # noqa: F401
 )
 from oss_sustain_guard.metrics.documentation_presence import (  # noqa: F401
-    check_documentation_presence,
+    check_documentation_presence,  # noqa: F401
 )
 from oss_sustain_guard.metrics.fork_activity import check_fork_activity  # noqa: F401
 from oss_sustain_guard.metrics.funding import (  # noqa: F401
-    check_funding,
-    is_corporate_backed,
+    check_funding,  # noqa: F401
+    is_corporate_backed,  # noqa: F401
 )
 from oss_sustain_guard.metrics.issue_resolution_duration import (  # noqa: F401
-    check_issue_resolution_duration,
+    check_issue_resolution_duration,  # noqa: F401
 )
-from oss_sustain_guard.metrics.license_clarity import check_license_clarity  # noqa: F401
-from oss_sustain_guard.metrics.maintainer_drain import check_maintainer_drain  # noqa: F401
+from oss_sustain_guard.metrics.license_clarity import (  # noqa: F401
+    check_license_clarity,
+)
+from oss_sustain_guard.metrics.maintainer_drain import (  # noqa: F401
+    check_maintainer_drain,
+)
 from oss_sustain_guard.metrics.merge_velocity import check_merge_velocity  # noqa: F401
 from oss_sustain_guard.metrics.organizational_diversity import (  # noqa: F401
-    check_organizational_diversity,
+    check_organizational_diversity,  # noqa: F401
 )
 from oss_sustain_guard.metrics.pr_acceptance_ratio import (  # noqa: F401
-    check_pr_acceptance_ratio,
+    check_pr_acceptance_ratio,  # noqa: F401
 )
 from oss_sustain_guard.metrics.pr_merge_speed import check_pr_merge_speed  # noqa: F401
 from oss_sustain_guard.metrics.pr_responsiveness import (  # noqa: F401
-    check_pr_responsiveness,
+    check_pr_responsiveness,  # noqa: F401
 )
 from oss_sustain_guard.metrics.project_popularity import (  # noqa: F401
-    check_project_popularity,
+    check_project_popularity,  # noqa: F401
 )
-from oss_sustain_guard.metrics.release_cadence import check_release_cadence  # noqa: F401
+from oss_sustain_guard.metrics.release_cadence import (  # noqa: F401
+    check_release_cadence,
+)
 from oss_sustain_guard.metrics.retention import check_retention  # noqa: F401
 from oss_sustain_guard.metrics.review_health import check_review_health  # noqa: F401
-from oss_sustain_guard.metrics.security_posture import check_security_posture  # noqa: F401
-from oss_sustain_guard.metrics.single_maintainer_load import (  # noqa: F401
-    check_single_maintainer_load,
+from oss_sustain_guard.metrics.security_posture import (  # noqa: F401
+    check_security_posture,
 )
-from oss_sustain_guard.metrics.stale_issue_ratio import check_stale_issue_ratio  # noqa: F401
+from oss_sustain_guard.metrics.single_maintainer_load import (  # noqa: F401
+    check_single_maintainer_load,  # noqa: F401
+)
+from oss_sustain_guard.metrics.stale_issue_ratio import (  # noqa: F401
+    check_stale_issue_ratio,
+)
 from oss_sustain_guard.metrics.zombie_status import check_zombie_status  # noqa: F401
 
 # Load environment variables from .env file
