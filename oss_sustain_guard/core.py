@@ -4206,8 +4206,8 @@ def _analyze_repository_data(
     is_user_owned = repo_info.get("owner", {}).get("__typename", "") == "User"
     is_community = has_funding or is_user_owned
 
-    # Generate CHAOSS metric models (placeholder for now)
-    models: list[MetricModel] = []
+    # Generate CHAOSS metric models
+    models: list[MetricModel] = compute_metric_models(metrics)
 
     # Extract raw signals for transparency (placeholder for now)
     signals: dict[str, Any] = {}
