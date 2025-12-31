@@ -1,7 +1,7 @@
 - id: oss-sustain-guard
   name: "OSS Sustain Guard"
-  description: "Analyzes package sustainability across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)"
-  entry: python -m oss_sustain_guard.cli check
+  description: "Analyzes package sustainability across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Dart, Elixir, Haskell, Perl, R, Ruby, Swift)"
+  entry: python -m oss_sustain_guard.cli check --include-lock -o compact
   language: python
   stages: [pre-commit]
   pass_filenames: false

@@ -23,6 +23,30 @@ inputs:
     description: 'Enable verbose logging (cache operations, metric reconstruction)'
     required: false
     default: 'false'
+  profile:
+    description: 'Scoring profile: balanced (default), security_first, contributor_experience, long_term_stability'
+    required: false
+    default: 'balanced'
+  show-dependencies:
+    description: 'Analyze and display dependency package scores (requires lockfiles)'
+    required: false
+    default: 'false'
+  enable-dependents:
+    description: 'Enable downstream dependents analysis via Libraries.io API (requires LIBRARIESIO_API_KEY)'
+    required: false
+    default: 'false'
+  root-dir:
+    description: 'Root directory for auto-detection of manifest files (default: current directory)'
+    required: false
+    default: '.'
+  manifest:
+    description: 'Path to specific manifest file (e.g., package.json, requirements.txt). Overrides auto-detection'
+    required: false
+    default: ''
+  recursive:
+    description: 'Recursively scan subdirectories for manifest and lock files'
+    required: false
+    default: 'false'
   insecure:
     description: 'Disable SSL certificate verification for HTTPS requests'
     required: false
@@ -44,5 +68,11 @@ runs:
     INPUT_INCLUDE_LOCK: ${{ inputs.include-lock }}
     INPUT_OUTPUT_STYLE: ${{ inputs.output-style }}
     INPUT_VERBOSE: ${{ inputs.verbose }}
+    INPUT_PROFILE: ${{ inputs.profile }}
+    INPUT_SHOW_DEPENDENCIES: ${{ inputs.show-dependencies }}
+    INPUT_ENABLE_DEPENDENTS: ${{ inputs.enable-dependents }}
+    INPUT_ROOT_DIR: ${{ inputs.root-dir }}
+    INPUT_MANIFEST: ${{ inputs.manifest }}
+    INPUT_RECURSIVE: ${{ inputs.recursive }}
     INPUT_INSECURE: ${{ inputs.insecure }}
     GITHUB_TOKEN: ${{ inputs.github-token }}
