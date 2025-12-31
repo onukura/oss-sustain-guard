@@ -28,27 +28,38 @@ def _get_cache_path(ecosystem: str) -> Path:
     return gz_path
 
 
-def is_cache_valid(entry: dict[str, Any], expected_version: str = "1.0") -> bool:
+def is_cache_valid(
+    entry: dict[str, Any],
+    expected_version: str | None = "1.0",
+    check_ttl: bool = True,
+) -> bool:
     """
     Check if a cache entry is still valid based on TTL and data version.
 
     Args:
         entry: Cache entry dict with cache_metadata and analysis_version.
         expected_version: Expected analysis_version string (default: "1.0").
+            If None, version check is skipped.
+        check_ttl: Whether to check TTL expiration (default: True).
 
     Returns:
         True if cache is valid (within TTL and version matches), False otherwise.
     """
-    # Check analysis version first
-    entry_version = entry.get("analysis_version")
-    if entry_version != expected_version:
-        # Version mismatch - consider invalid
-        return False
+    # Check analysis version if specified
+    if expected_version is not None:
+        entry_version = entry.get("analysis_version")
+        if entry_version != expected_version:
+            # Version mismatch - consider invalid
+            return False
 
     metadata = entry.get("cache_metadata")
     if not metadata or "fetched_at" not in metadata:
         # Old format without metadata - consider invalid
         return False
+
+    if not check_ttl:
+        # Skip TTL check if requested
+        return True
 
     try:
         fetched_at = datetime.fromisoformat(metadata["fetched_at"])
@@ -432,11 +443,19 @@ def get_cache_stats(
                 with open(cache_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-            eco_total = len(data)
+            # Handle schema versions
+            if isinstance(data, dict) and "_schema_version" in data:
+                # v2.0+ format
+                all_data = data.get("packages", {})
+            else:
+                # v1.x format
+                all_data = data
+
+            eco_total = len(all_data)
             eco_valid = sum(
                 1
-                for entry in data.values()
-                if expected_version is None or is_cache_valid(entry, expected_version)
+                for entry in all_data.values()
+                if is_cache_valid(entry, expected_version=expected_version)
             )
             eco_expired = eco_total - eco_valid
 
