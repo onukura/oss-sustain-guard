@@ -28,14 +28,29 @@ LIBRARIESIO_API_KEY = os.getenv(
 # --- Global HTTP Client for Connection Pooling ---
 # Reuse connections across multiple requests for better performance
 _http_client: httpx.Client | None = None
+_http_client_verify_ssl: bool | None = None  # Track SSL verification setting
 
 
 def _get_http_client() -> httpx.Client:
-    """Get or create a global HTTP client with connection pooling."""
-    global _http_client
-    if _http_client is None or _http_client.is_closed:
+    """Get or create a global HTTP client with connection pooling.
+
+    Recreates the client if SSL verification setting has changed.
+    """
+    global _http_client, _http_client_verify_ssl
+    current_verify_ssl = get_verify_ssl()
+
+    # Recreate client if setting changed or client is closed/None
+    if (
+        _http_client is None
+        or _http_client.is_closed
+        or _http_client_verify_ssl != current_verify_ssl
+    ):
+        # Close existing client if necessary
+        if _http_client is not None and not _http_client.is_closed:
+            _http_client.close()
+
         _http_client = httpx.Client(
-            verify=get_verify_ssl(),
+            verify=current_verify_ssl,
             timeout=10,
             limits=httpx.Limits(
                 max_connections=20,
@@ -43,15 +58,17 @@ def _get_http_client() -> httpx.Client:
                 keepalive_expiry=30.0,
             ),
         )
+        _http_client_verify_ssl = current_verify_ssl
     return _http_client
 
 
 def close_http_client():
     """Close the global HTTP client. Call this when shutting down."""
-    global _http_client
+    global _http_client, _http_client_verify_ssl
     if _http_client is not None and not _http_client.is_closed:
         _http_client.close()
         _http_client = None
+        _http_client_verify_ssl = None
 
 
 # --- Data Structures ---
@@ -128,7 +145,7 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
         GITHUB_GRAPHQL_API,
         json={"query": query, "variables": variables},
         headers=headers,
-        timeout=10,
+        timeout=30,  # Longer timeout for batch queries with complex data
     )
     response.raise_for_status()
     data = response.json()
@@ -3550,12 +3567,13 @@ def _get_batch_repository_query(repo_list: list[tuple[str, str]]) -> str:
 
     for idx, (owner, name) in enumerate(repo_list):
         alias = f"repo{idx}"
-        # Simplified query with only essential fields for performance
+        # Use the same comprehensive query as single repository analysis
         query_parts.append(f"""
   {alias}: repository(owner: "{owner}", name: "{name}") {{
     isArchived
     pushedAt
     owner {{
+      __typename
       login
       ... on Organization {{
         name
@@ -3565,7 +3583,7 @@ def _get_batch_repository_query(repo_list: list[tuple[str, str]]) -> str:
     defaultBranchRef {{
       target {{
         ... on Commit {{
-          history(first: 50) {{
+          history(first: 100) {{
             edges {{
               node {{
                 authoredDate
@@ -3580,36 +3598,175 @@ def _get_batch_repository_query(repo_list: list[tuple[str, str]]) -> str:
             }}
             totalCount
           }}
+          checkSuites(last: 1) {{
+            nodes {{
+              conclusion
+              status
+            }}
+          }}
         }}
       }}
     }}
-    pullRequests(first: 30, states: MERGED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+    pullRequests(first: 50, states: MERGED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+      edges {{
+        node {{
+          mergedAt
+          createdAt
+          mergedBy {{
+            login
+          }}
+          reviews(first: 10) {{
+            totalCount
+            edges {{
+              node {{
+                createdAt
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    closedPullRequests: pullRequests(first: 50, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+      totalCount
+      edges {{
+        node {{
+          closedAt
+          createdAt
+          merged
+          reviews(first: 1) {{
+            edges {{
+              node {{
+                createdAt
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    mergedPullRequestsCount: pullRequests(states: MERGED) {{
+      totalCount
+    }}
+    releases(first: 10, orderBy: {{field: CREATED_AT, direction: DESC}}) {{
+      edges {{
+        node {{
+          publishedAt
+          tagName
+        }}
+      }}
+    }}
+    issues(first: 20, states: OPEN, orderBy: {{field: CREATED_AT, direction: DESC}}) {{
       edges {{
         node {{
           createdAt
-          mergedAt
+          comments(first: 1) {{
+            edges {{
+              node {{
+                createdAt
+              }}
+            }}
+          }}
         }}
       }}
     }}
-    issues(first: 30, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+    closedIssues: issues(first: 50, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+      totalCount
       edges {{
         node {{
           createdAt
           closedAt
+          updatedAt
+          timelineItems(first: 1, itemTypes: CLOSED_EVENT) {{
+            edges {{
+              node {{
+                ... on ClosedEvent {{
+                  actor {{
+                    login
+                  }}
+                }}
+              }}
+            }}
+          }}
         }}
       }}
     }}
-    repositoryTopics(first: 10) {{
-      nodes {{
-        topic {{
-          name
+    vulnerabilityAlerts(first: 10) {{
+      edges {{
+        node {{
+          securityVulnerability {{
+            severity
+          }}
+          dismissedAt
         }}
       }}
     }}
+    isSecurityPolicyEnabled
     fundingLinks {{
       platform
       url
     }}
+    hasWikiEnabled
+    hasIssuesEnabled
+    hasDiscussionsEnabled
+    codeOfConduct {{
+      name
+      url
+    }}
+    licenseInfo {{
+      name
+      spdxId
+      url
+    }}
+    stargazerCount
+    forkCount
+    watchers {{
+      totalCount
+    }}
+    forks(first: 20, orderBy: {{field: PUSHED_AT, direction: DESC}}) {{
+      edges {{
+        node {{
+          createdAt
+          pushedAt
+          defaultBranchRef {{
+            target {{
+              ... on Commit {{
+                history(first: 1) {{
+                  edges {{
+                    node {{
+                      committedDate
+                    }}
+                  }}
+                }}
+              }}
+            }}
+          }}
+          owner {{
+            login
+          }}
+        }}
+      }}
+    }}
+    readmeUpperCase: object(expression: "HEAD:README.md") {{
+      ... on Blob {{
+        byteSize
+      }}
+    }}
+    readmeLowerCase: object(expression: "HEAD:readme.md") {{
+      ... on Blob {{
+        byteSize
+      }}
+    }}
+    readmeAllCaps: object(expression: "HEAD:README") {{
+      ... on Blob {{
+        byteSize
+      }}
+    }}
+    contributingFile: object(expression: "HEAD:CONTRIBUTING.md") {{
+      ... on Blob {{
+        byteSize
+      }}
+    }}
+    description
+    homepageUrl
   }}""")
 
     query_parts.append("}")
@@ -3632,8 +3789,9 @@ def analyze_repositories_batch(
     if not repo_list:
         return {}
 
-    # GitHub GraphQL has limits, so batch in groups of 5
-    batch_size = 5
+    # GitHub GraphQL has limits on query complexity
+    # Use smaller batch size (3) to avoid timeouts with large queries
+    batch_size = 3
     results: dict[tuple[str, str], AnalysisResult | None] = {}
 
     for i in range(0, len(repo_list), batch_size):
@@ -3649,6 +3807,9 @@ def analyze_repositories_batch(
                 repo_info = response.get(alias)
 
                 if repo_info is None:
+                    console.print(
+                        f"  [yellow]⚠️  No data returned for {owner}/{name}[/yellow]"
+                    )
                     results[(owner, name)] = None
                     continue
 
@@ -3658,15 +3819,26 @@ def analyze_repositories_batch(
                         owner, name, repo_info, platform=platform
                     )
                     results[(owner, name)] = result
-                except Exception:
-                    # Silently fail - error handling is done at CLI layer
+                except Exception as e:
+                    # Show error for debugging
+                    console.print(
+                        f"  [yellow]⚠️  Analysis error for {owner}/{name}: {e}[/yellow]"
+                    )
                     results[(owner, name)] = None
 
-        except Exception:
-            # Silently fail - error handling is done at CLI layer
-            # Mark all repositories in failed batch as None
+        except Exception as e:
+            # Batch query failed - fall back to individual queries
+            console.print(
+                f"  [yellow]⚠️  Batch query failed ({e}), trying individual queries...[/yellow]"
+            )
             for owner, name in batch:
-                results[(owner, name)] = None
+                try:
+                    # Fall back to single repository analysis
+                    result = analyze_repository(owner, name, platform=platform)
+                    results[(owner, name)] = result
+                except Exception:
+                    # If individual query also fails, mark as None
+                    results[(owner, name)] = None
 
     return results
 
@@ -4027,8 +4199,12 @@ def _analyze_repository_data(
     # Extract funding information directly from repo data
     funding_links = repo_info.get("fundingLinks", [])
 
-    # Determine if project is community-driven using proper detection
-    is_community = not is_corporate_backed(repo_info)
+    # Determine if project is community-driven
+    # Projects with funding links are considered community-driven (seeking support)
+    # Projects owned by Users (not Organizations) are also community-driven
+    has_funding = len(funding_links) > 0
+    is_user_owned = repo_info.get("owner", {}).get("__typename", "") == "User"
+    is_community = has_funding or is_user_owned
 
     # Generate CHAOSS metric models (placeholder for now)
     models: list[MetricModel] = []

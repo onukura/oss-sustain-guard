@@ -55,7 +55,7 @@ from oss_sustain_guard.resolvers import (
 from oss_sustain_guard.resolvers.base import close_resolver_http_client
 
 # Schema version for cached data compatibility
-ANALYSIS_VERSION = "1.1"  # Updated: Fixed cache validation to check analysis_version
+ANALYSIS_VERSION = "1.2"  # Updated: Fixed community-driven detection to include projects with funding links
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -625,7 +625,7 @@ def analyze_packages_parallel(
         # Step 2: Batch query for uncached packages
         if use_batch_queries and uncached_packages:
             # Process in batches to update progress incrementally
-            batch_size = 5  # Match the batch size in analyze_repositories_batch
+            batch_size = 3  # Match the batch size in analyze_repositories_batch
             for batch_idx in range(0, len(uncached_packages), batch_size):
                 batch_end = min(batch_idx + batch_size, len(uncached_packages))
                 current_batch = uncached_packages[batch_idx:batch_end]
