@@ -548,7 +548,7 @@ wheels = [
 
 [[package]]
 name = "oss-sustain-guard"
-version = "0.13.2"
+version = "0.13.3"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
