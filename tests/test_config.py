@@ -15,6 +15,7 @@ from oss_sustain_guard.config import (
     is_cache_enabled,
     is_package_excluded,
     is_verbose_enabled,
+    load_profile_config,
     set_cache_dir,
     set_cache_ttl,
 )
@@ -318,3 +319,55 @@ verbose = false
     )
 
     assert is_verbose_enabled() is False
+
+
+def test_load_profile_config_from_local_config(temp_project_root):
+    """Test loading profile config from .oss-sustain-guard.toml."""
+    config_file = temp_project_root / ".oss-sustain-guard.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard.profiles.custom]
+name = "Custom"
+description = "Custom profile"
+
+[tool.oss-sustain-guard.profiles.custom.weights]
+"Contributor Redundancy" = 1
+"""
+    )
+
+    profiles = load_profile_config()
+    assert "custom" in profiles
+    assert profiles["custom"]["name"] == "Custom"
+    assert profiles["custom"]["weights"]["Contributor Redundancy"] == 1
+
+
+def test_load_profile_config_from_profile_file(tmp_path):
+    """Test loading profile config from explicit profile file."""
+    profile_file = tmp_path / "profiles.toml"
+    profile_file.write_text(
+        """
+[profiles.custom_profile]
+name = "Custom Profile"
+
+[profiles.custom_profile.weights]
+"Contributor Redundancy" = 2
+"""
+    )
+
+    profiles = load_profile_config(profile_file)
+    assert "custom_profile" in profiles
+    assert profiles["custom_profile"]["weights"]["Contributor Redundancy"] == 2
+
+
+def test_load_profile_config_missing_profiles_raises(tmp_path):
+    """Test missing profiles in explicit profile file raises."""
+    profile_file = tmp_path / "profiles.toml"
+    profile_file.write_text(
+        """
+[tool.oss-sustain-guard]
+output_style = "compact"
+"""
+    )
+
+    with pytest.raises(ValueError, match="No profiles found"):
+        load_profile_config(profile_file)

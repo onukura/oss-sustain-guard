@@ -32,6 +32,7 @@ from oss_sustain_guard.config import (
     is_cache_enabled,
     is_package_excluded,
     is_verbose_enabled,
+    load_profile_config,
     set_cache_dir,
     set_cache_ttl,
     set_verify_ssl,
@@ -42,6 +43,7 @@ from oss_sustain_guard.core import (
     Metric,
     analyze_repositories_batch,
     analyze_repository,
+    apply_profile_overrides,
     close_http_client,
     compute_weighted_total_score,
     get_metric_weights,
@@ -96,6 +98,16 @@ def clear_lockfile_cache():
 
 
 # --- Helper Functions ---
+
+
+def apply_scoring_profiles(profile_file: Path | None) -> None:
+    """Apply scoring profile overrides from configuration."""
+    try:
+        profile_overrides = load_profile_config(profile_file)
+        apply_profile_overrides(profile_overrides)
+    except ValueError as exc:
+        console.print(f"[yellow]⚠️  {exc}[/yellow]")
+        raise typer.Exit(code=1) from exc
 
 
 def load_database(
@@ -1075,6 +1087,11 @@ def check(
         "-p",
         help="Scoring profile: balanced (default), security_first, contributor_experience, long_term_stability.",
     ),
+    profile_file: Path | None = typer.Option(
+        None,
+        "--profile-file",
+        help="Path to a TOML file with scoring profile definitions.",
+    ),
     enable_dependents: bool = typer.Option(
         False,
         "--enable-dependents",
@@ -1142,6 +1159,8 @@ def check(
         verbose = is_verbose_enabled()
     if output_style is None:
         output_style = get_output_style()
+
+    apply_scoring_profiles(profile_file)
 
     # Validate profile
     if profile not in SCORING_PROFILES:
@@ -1634,6 +1653,11 @@ def list_cache_command(
         "-p",
         help="Scoring profile for score calculation: balanced (default), security_first, contributor_experience, long_term_stability.",
     ),
+    profile_file: Path | None = typer.Option(
+        None,
+        "--profile-file",
+        help="Path to a TOML file with scoring profile definitions.",
+    ),
     limit: int | None = typer.Option(
         100,
         "--limit",
@@ -1663,6 +1687,8 @@ def list_cache_command(
     """
     if cache_dir:
         set_cache_dir(cache_dir)
+
+    apply_scoring_profiles(profile_file)
 
     # Validate profile
     if profile not in SCORING_PROFILES:

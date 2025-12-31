@@ -449,6 +449,65 @@ def get_output_style() -> str:
     return "normal"
 
 
+def _extract_profile_config(config: dict) -> dict[str, dict[str, object]]:
+    """
+    Extract scoring profile configuration from a TOML config dict.
+
+    Supports:
+    - [tool.oss-sustain-guard.profiles] (pyproject.toml or .oss-sustain-guard.toml)
+    - [profiles] (standalone profile file)
+    """
+    tool_profiles = (
+        config.get("tool", {}).get("oss-sustain-guard", {}).get("profiles", {})
+    )
+    if tool_profiles:
+        return tool_profiles
+    return config.get("profiles", {})
+
+
+def load_profile_config(
+    profile_path: Path | None = None,
+) -> dict[str, dict[str, object]]:
+    """
+    Load scoring profile configuration from config files.
+
+    Priority:
+    1. Explicit profile_path if provided
+    2. .oss-sustain-guard.toml config
+    3. pyproject.toml config
+
+    Returns:
+        Dictionary of profile configurations (may be empty).
+    """
+    if profile_path is not None:
+        if not profile_path.exists():
+            raise ValueError(f"Profile file not found: {profile_path}")
+        config = load_config_file(profile_path)
+        profiles = _extract_profile_config(config)
+        if not profiles:
+            raise ValueError(
+                f"No profiles found in {profile_path}. "
+                "Expected [profiles.<name>] tables."
+            )
+        return profiles
+
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        profiles = _extract_profile_config(config)
+        if profiles:
+            return profiles
+
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists():
+        config = load_config_file(pyproject_path)
+        profiles = _extract_profile_config(config)
+        if profiles:
+            return profiles
+
+    return {}
+
+
 def is_verbose_enabled() -> bool:
     """
     Check if verbose logging is enabled by default in configuration.
