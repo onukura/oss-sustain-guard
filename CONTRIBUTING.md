@@ -365,54 +365,168 @@ Before creating a release:
 
 ### Adding a New Metric
 
-1. **Define the metric in `core.py`:**
+OSS Sustain Guard uses a **plugin-based metric system**. Metrics are discovered automatically via entry points and modular metric specs.
 
-   ```python
-   def check_dependency_freshness(repo_data: dict[str, Any]) -> Metric:
-       """Check how up-to-date dependencies are."""
-       # Implementation
-       return Metric(
-           name="Dependency Freshness",
-           score=score,
-           max_score=10,
-           message=message,
-           risk=risk,
-       )
-   ```
+#### 1. Create a New Metric Module
 
-2. **Add to `analyze_repository()`:**
+Create a new file in `oss_sustain_guard/metrics/`:
 
-   ```python
-   metrics.append(check_dependency_freshness(repo_data))
-   ```
+```bash
+touch oss_sustain_guard/metrics/dependency_freshness.py
+```
 
-3. **Write tests:**
+#### 2. Implement the Metric
 
-   ```python
-   def test_check_dependency_freshness_up_to_date():
-       mock_data = {"dependencies": {"outdated": 0}}
-       result = check_dependency_freshness(mock_data)
-       assert result.score == 10  # All metrics use 0-10 scale
-       assert result.max_score == 10
-   ```
+```python
+"""Dependency freshness metric."""
 
-4. **Add metric to all scoring profiles in `core.py`:**
+from typing import Any
 
-   ```python
-   SCORING_PROFILES = {
-       "balanced": {
-           "weights": {
-               # ... existing metrics ...
-               "Dependency Freshness": 2,  # Assign appropriate weight (1+)
-           },
-       },
-       # Update all 4 profiles: balanced, security_first, contributor_experience, long_term_stability
-   }
-   ```
+from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 
-5. **Update documentation:**
-   - README.md (if adding to metric count)
-   - docs/SCORING_PROFILES_GUIDE.md (if significant new metric)
+
+def check_dependency_freshness(repo_data: dict[str, Any]) -> Metric:
+    """
+    Check how up-to-date dependencies are.
+
+    Scoring:
+    - All dependencies up-to-date: 10/10
+    - 1-2 outdated: 7/10
+    - 3-5 outdated: 4/10
+    - 6+ outdated: 0/10
+    """
+    max_score = 10
+
+    # Implementation
+    outdated_count = 0  # Calculate from repo_data
+
+    if outdated_count == 0:
+        score = 10
+        risk = "None"
+        message = "All dependencies are up-to-date."
+    elif outdated_count <= 2:
+        score = 7
+        risk = "Low"
+        message = f"{outdated_count} outdated dependencies."
+    elif outdated_count <= 5:
+        score = 4
+        risk = "Medium"
+        message = f"{outdated_count} outdated dependencies."
+    else:
+        score = 0
+        risk = "High"
+        message = f"{outdated_count} outdated dependencies."
+
+    return Metric("Dependency Freshness", score, max_score, message, risk)
+
+
+def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
+    """Wrapper for metric spec."""
+    return check_dependency_freshness(repo_data)
+
+
+def _on_error(error: Exception) -> Metric:
+    """Error handler for metric spec."""
+    return Metric(
+        "Dependency Freshness",
+        0,
+        10,
+        f"Note: Analysis incomplete - {error}",
+        "Medium",
+    )
+
+
+# Export MetricSpec for automatic discovery
+METRIC = MetricSpec(
+    name="Dependency Freshness",
+    checker=_check,
+    on_error=_on_error,
+)
+```
+
+#### 3. Register Metric Entry Point
+
+Add to `pyproject.toml` under `[project.entry-points."oss_sustain_guard.metrics"]`:
+
+```toml
+[project.entry-points."oss_sustain_guard.metrics"]
+dependency_freshness = "oss_sustain_guard.metrics.dependency_freshness:METRIC"
+```
+
+#### 4. Add to Built-in Registry
+
+Update `oss_sustain_guard/metrics/__init__.py`:
+
+```python
+_BUILTIN_MODULES = [
+    # ... existing modules ...
+    "oss_sustain_guard.metrics.dependency_freshness",
+]
+```
+
+#### 5. Write Tests
+
+Create `tests/metrics/test_dependency_freshness.py`:
+
+```python
+from oss_sustain_guard.metrics.dependency_freshness import check_dependency_freshness
+
+
+def test_check_dependency_freshness_up_to_date():
+    mock_data = {"dependencies": {"outdated": 0}}
+    result = check_dependency_freshness(mock_data)
+    assert result.score == 10
+    assert result.max_score == 10
+    assert result.risk == "None"
+
+
+def test_check_dependency_freshness_some_outdated():
+    mock_data = {"dependencies": {"outdated": 3}}
+    result = check_dependency_freshness(mock_data)
+    assert result.score == 4
+    assert result.max_score == 10
+    assert result.risk == "Medium"
+```
+
+#### 6. Update Scoring Profiles
+
+Add metric to all scoring profiles in `core.py`:
+
+```python
+SCORING_PROFILES = {
+    "balanced": {
+        "weights": {
+            # ... existing metrics ...
+            "Dependency Freshness": 2,  # Assign appropriate weight (1+)
+        },
+    },
+    # Update all 4 profiles: balanced, security_first, contributor_experience, long_term_stability
+}
+```
+
+#### 7. Test & Document
+
+```bash
+# Run tests
+uv run pytest tests/metrics/test_dependency_freshness.py -v
+
+# Verify metric is loaded
+uv run os4g check fastapi --insecure --no-cache -o detail
+
+# Update documentation (if needed)
+# - README.md (metric count)
+# - docs/SCORING_PROFILES_GUIDE.md (if significant)
+```
+
+#### Custom External Metrics
+
+For external plugins (not part of the core package), you can:
+
+1. Create a separate Python package with your metric
+2. Register it via entry points in your package's `pyproject.toml`
+3. Install alongside `oss-sustain-guard`
+
+See [Custom Metrics Guide](docs/CUSTOM_METRICS_GUIDE.md) for details.
 
 ### Adding a New Language Resolver
 
