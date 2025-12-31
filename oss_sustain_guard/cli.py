@@ -1958,9 +1958,18 @@ def gratitude(
     # Display top N
     top_projects = support_candidates[:top_n]
 
-    console.print(
-        f"[bold green]Top {len(top_projects)} projects that would appreciate your support:[/bold green]\n"
-    )
+    # Show informative message about how many were requested vs found
+    if len(support_candidates) < top_n:
+        console.print(
+            f"[bold green]Found {len(support_candidates)} project(s) that would appreciate your support:[/bold green]"
+        )
+        console.print(
+            f"[dim](Requested top {top_n}, but only {len(support_candidates)} community-driven project(s) with funding links available)[/dim]\n"
+        )
+    else:
+        console.print(
+            f"[bold green]Top {len(top_projects)} projects that would appreciate your support:[/bold green]\n"
+        )
 
     for i, project in enumerate(top_projects, 1):
         ecosystem, package_name = project["key"].split(":", 1)
