@@ -20,6 +20,7 @@ from rich.table import Table
 
 from oss_sustain_guard.cache import (
     clear_cache,
+    clear_expired_cache,
     get_cache_stats,
     get_cached_packages,
     load_cache,
@@ -1467,7 +1468,7 @@ def cache_stats(
     ),
 ):
     """Display cache statistics."""
-    stats = get_cache_stats(ecosystem)
+    stats = get_cache_stats(ecosystem, expected_version=ANALYSIS_VERSION)
 
     if not stats["exists"]:
         console.print(
@@ -1511,33 +1512,61 @@ def clear_cache_command(
         "--cache-dir",
         help="Cache directory path (default: ~/.cache/oss-sustain-guard).",
     ),
+    expired_only: bool = typer.Option(
+        False,
+        "--expired-only",
+        help="Remove only expired entries, keeping valid ones.",
+    ),
 ):
     """Clear the local cache.
 
     Examples:
-      os4g clear-cache              # Clear all caches
-      os4g clear-cache python       # Clear only Python cache
-      os4g clear-cache javascript   # Clear only JavaScript cache
+      os4g clear-cache                    # Clear all caches
+      os4g clear-cache python             # Clear only Python cache
+      os4g clear-cache javascript         # Clear only JavaScript cache
+      os4g clear-cache --expired-only     # Remove only expired entries
+      os4g clear-cache python --expired-only  # Remove expired Python entries only
     """
     if cache_dir:
         set_cache_dir(cache_dir)
 
-    cleared = clear_cache(ecosystem)
+    if expired_only:
+        cleared = clear_expired_cache(ecosystem, expected_version=ANALYSIS_VERSION)
+        entry_word = "entry" if cleared == 1 else "entries"
 
-    if cleared == 0:
-        if ecosystem:
-            console.print(
-                f"[yellow]ℹ️  No cache files found for ecosystem: {ecosystem}[/yellow]"
-            )
+        if cleared == 0:
+            if ecosystem:
+                console.print(
+                    f"[yellow]ℹ️  No expired cache entries found for ecosystem: {ecosystem}[/yellow]"
+                )
+            else:
+                console.print("[yellow]ℹ️  No expired cache entries found[/yellow]")
         else:
-            console.print("[yellow]ℹ️  No cache files found[/yellow]")
+            if ecosystem:
+                console.print(
+                    f"[green]✨ Cleared {cleared} expired {entry_word} for {ecosystem}[/green]"
+                )
+            else:
+                console.print(
+                    f"[green]✨ Cleared {cleared} expired {entry_word}[/green]"
+                )
     else:
-        if ecosystem:
-            console.print(
-                f"[green]✨ Cleared {cleared} cache file(s) for {ecosystem}[/green]"
-            )
+        cleared = clear_cache(ecosystem)
+
+        if cleared == 0:
+            if ecosystem:
+                console.print(
+                    f"[yellow]ℹ️  No cache files found for ecosystem: {ecosystem}[/yellow]"
+                )
+            else:
+                console.print("[yellow]ℹ️  No cache files found[/yellow]")
         else:
-            console.print(f"[green]✨ Cleared {cleared} cache file(s)[/green]")
+            if ecosystem:
+                console.print(
+                    f"[green]✨ Cleared {cleared} cache file(s) for {ecosystem}[/green]"
+                )
+            else:
+                console.print(f"[green]✨ Cleared {cleared} cache file(s)[/green]")
 
 
 @app.command(name="list-cache")

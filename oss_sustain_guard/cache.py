@@ -201,6 +201,93 @@ def clear_cache(ecosystem: str | None = None) -> int:
     return cleared
 
 
+def clear_expired_cache(
+    ecosystem: str | None = None, expected_version: str = "1.0"
+) -> int:
+    """
+    Clear only expired cache entries for one or all ecosystems.
+
+    Removes expired entries while preserving valid ones.
+
+    Args:
+        ecosystem: Specific ecosystem to clear, or None to clear all.
+        expected_version: Expected analysis_version to check validity.
+
+    Returns:
+        Number of expired entries removed.
+    """
+    cache_dir = get_cache_dir()
+
+    if not cache_dir.exists():
+        return 0
+
+    ecosystems_to_check = []
+    if ecosystem:
+        ecosystems_to_check = [ecosystem]
+    else:
+        # Check both .json.gz and .json files
+        processed = set()
+        for f in list(cache_dir.glob("*.json.gz")) + list(cache_dir.glob("*.json")):
+            eco_name = f.name.replace(".json.gz", "").replace(".json", "")
+            if eco_name not in processed:
+                ecosystems_to_check.append(eco_name)
+                processed.add(eco_name)
+
+    total_cleared = 0
+
+    for eco in ecosystems_to_check:
+        cache_path = _get_cache_path(eco)
+        if not cache_path.exists():
+            continue
+
+        try:
+            # Load cache
+            if cache_path.suffix == ".gz":
+                with gzip.open(cache_path, "rt", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+            # Handle schema versions
+            if isinstance(data, dict) and "_schema_version" in data:
+                # v2.0+ format
+                all_data = data.get("packages", {})
+            else:
+                # v1.x format
+                all_data = data
+
+            # Filter out expired entries
+            valid_data = {}
+            expired_count = 0
+            for key, entry in all_data.items():
+                if is_cache_valid(entry, expected_version):
+                    valid_data[key] = entry
+                else:
+                    expired_count += 1
+
+            total_cleared += expired_count
+
+            # Save filtered cache if we removed anything
+            if expired_count > 0:
+                # Always save as gzip
+                cache_path = (
+                    cache_path.with_suffix(".json.gz")
+                    if cache_path.suffix == ".json"
+                    else cache_path
+                )
+                with gzip.open(cache_path, "wt", encoding="utf-8") as f:
+                    json.dump(
+                        valid_data, f, indent=2, ensure_ascii=False, sort_keys=True
+                    )
+
+        except (json.JSONDecodeError, IOError):
+            # Corrupted cache - skip
+            continue
+
+    return total_cleared
+
+
 def get_cached_packages(
     ecosystem: str | None = None, expected_version: str = "1.0"
 ) -> list[dict[str, Any]]:
@@ -289,12 +376,16 @@ def get_cached_packages(
     return packages
 
 
-def get_cache_stats(ecosystem: str | None = None) -> dict[str, Any]:
+def get_cache_stats(
+    ecosystem: str | None = None, expected_version: str | None = None
+) -> dict[str, Any]:
     """
     Get cache statistics.
 
     Args:
         ecosystem: Specific ecosystem to check, or None for all.
+        expected_version: Expected analysis_version to check validity.
+            If None, entries are considered valid regardless of version.
 
     Returns:
         Dictionary with cache statistics.
@@ -342,7 +433,11 @@ def get_cache_stats(ecosystem: str | None = None) -> dict[str, Any]:
                     data = json.load(f)
 
             eco_total = len(data)
-            eco_valid = sum(1 for entry in data.values() if is_cache_valid(entry))
+            eco_valid = sum(
+                1
+                for entry in data.values()
+                if expected_version is None or is_cache_valid(entry, expected_version)
+            )
             eco_expired = eco_total - eco_valid
 
             total_entries += eco_total
