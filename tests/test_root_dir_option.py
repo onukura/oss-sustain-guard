@@ -1,7 +1,11 @@
 """
-Tests for --root-dir and --manifest options in CLI.
+Tests for --root-dir and --manifest CLI options.
+
+Focuses on CLI option behavior, path resolution, and error handling.
+For manifest file parsing tests, see test_fixtures_integration.py.
 """
 
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -108,89 +112,11 @@ class TestRootDirOption:
 
 
 class TestManifestOption:
-    """Test --manifest option functionality."""
+    """Test --manifest option functionality.
 
-    @pytest.mark.slow
-    def test_manifest_with_package_json(self):
-        """Test reading from a specific package.json file."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
-        manifest_path = fixtures_dir / "package.json"
-
-        if not manifest_path.exists():
-            return  # Skip if fixture doesn't exist
-
-        with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
-            mock_analyze.return_value = None
-
-            result = runner.invoke(
-                app,
-                ["check", "--manifest", str(manifest_path), "--insecure"],
-            )
-
-            assert "Reading manifest file" in result.output
-            assert "Detected ecosystem: javascript" in result.output
-            assert "package.json" in result.output
-
-    @pytest.mark.slow
-    def test_manifest_with_requirements_txt(self):
-        """Test reading from a specific requirements.txt file."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
-        manifest_path = fixtures_dir / "requirements.txt"
-
-        if not manifest_path.exists():
-            return
-
-        with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
-            mock_analyze.return_value = None
-
-            result = runner.invoke(
-                app,
-                ["check", "--manifest", str(manifest_path), "--insecure"],
-            )
-
-            assert "Reading manifest file" in result.output
-            assert "Detected ecosystem: python" in result.output
-
-    @pytest.mark.slow
-    def test_manifest_with_pyproject_toml(self):
-        """Test reading from a specific pyproject.toml file."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
-        manifest_path = fixtures_dir / "pyproject.toml"
-
-        if not manifest_path.exists():
-            return
-
-        with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
-            mock_analyze.return_value = None
-
-            result = runner.invoke(
-                app,
-                ["check", "--manifest", str(manifest_path), "--insecure"],
-            )
-
-            assert "Reading manifest file" in result.output
-            assert "Detected ecosystem: python" in result.output
-            assert "pyproject.toml" in result.output
-
-    @pytest.mark.slow
-    def test_manifest_with_cargo_toml(self):
-        """Test reading from a specific Cargo.toml file."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
-        manifest_path = fixtures_dir / "Cargo.toml"
-
-        if not manifest_path.exists():
-            return
-
-        with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
-            mock_analyze.return_value = None
-
-            result = runner.invoke(
-                app,
-                ["check", "--manifest", str(manifest_path), "--insecure"],
-            )
-
-            assert "Reading manifest file" in result.output
-            assert "Detected ecosystem: rust" in result.output
+    Focuses on CLI behavior and error handling.
+    For detailed manifest parsing tests, see test_fixtures_integration.py.
+    """
 
     def test_manifest_nonexistent_file(self):
         """Test error handling for non-existent manifest file."""
@@ -218,9 +144,6 @@ class TestManifestOption:
 
     def test_manifest_unknown_file_type(self):
         """Test error handling for unknown manifest file type."""
-        # Create a temporary file with unknown extension
-        import tempfile
-
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".unknown", delete=False
         ) as f:
@@ -243,30 +166,16 @@ class TestManifestOption:
     def test_manifest_short_option(self):
         """Test -m short option for --manifest."""
         fixtures_dir = Path(__file__).parent / "fixtures"
-        manifest_path = fixtures_dir / "package.json"
+        # Use any existing manifest file
+        manifest_path = None
+        for candidate in ["package.json", "requirements.txt", "Cargo.toml"]:
+            path = fixtures_dir / candidate
+            if path.exists():
+                manifest_path = path
+                break
 
-        if not manifest_path.exists():
-            return
-
-        with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
-            mock_analyze.return_value = None
-
-            result = runner.invoke(
-                app,
-                ["check", "-m", str(manifest_path), "--insecure"],
-            )
-
-            assert "Reading manifest file" in result.output
-            assert "Detected ecosystem: javascript" in result.output
-
-    @pytest.mark.slow
-    def test_manifest_with_pipfile(self):
-        """Test --manifest with Pipfile."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
-        manifest_path = fixtures_dir / "Pipfile"
-
-        if not manifest_path.exists():
-            return
+        if not manifest_path:
+            pytest.skip("No manifest fixtures available")
 
         with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
             mock_analyze.return_value = None
@@ -276,17 +185,23 @@ class TestManifestOption:
                 ["check", "-m", str(manifest_path), "--insecure"],
             )
 
+            # Should work the same as --manifest
             assert "Reading manifest file" in result.output
-            assert "Detected ecosystem: python" in result.output
 
     @pytest.mark.slow
     def test_manifest_with_absolute_path(self):
-        """Test --manifest with absolute path from different directory."""
+        """Test --manifest with absolute path."""
         fixtures_dir = Path(__file__).parent / "fixtures"
-        manifest_path = (fixtures_dir / "package.json").resolve()
+        # Use any existing manifest file
+        manifest_path = None
+        for candidate in ["package.json", "requirements.txt", "Cargo.toml"]:
+            path = fixtures_dir / candidate
+            if path.exists():
+                manifest_path = path.resolve()
+                break
 
-        if not manifest_path.exists():
-            return
+        if not manifest_path:
+            pytest.skip("No manifest fixtures available")
 
         with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
             mock_analyze.return_value = None
@@ -296,5 +211,6 @@ class TestManifestOption:
                 ["check", "--manifest", str(manifest_path), "--insecure"],
             )
 
+            # Should resolve absolute path correctly
             assert "Reading manifest file" in result.output
             assert result.exit_code == 0 or "No results" in result.output
