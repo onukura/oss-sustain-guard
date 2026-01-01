@@ -332,3 +332,218 @@ def test_cache_metadata_auto_added(mock_cache_dir):
     assert "fetched_at" in saved_data["python:requests"]["cache_metadata"]
     assert "ttl_seconds" in saved_data["python:requests"]["cache_metadata"]
     assert "source" in saved_data["python:requests"]["cache_metadata"]
+
+
+def test_is_cache_valid_skip_ttl():
+    """Test skipping TTL checks."""
+    expired_time = datetime.now(timezone.utc) - timedelta(days=365)
+    entry = {
+        "analysis_version": "1.0",
+        "cache_metadata": {
+            "fetched_at": expired_time.isoformat(),
+            "ttl_seconds": 1,
+        },
+    }
+    assert cache.is_cache_valid(entry, expected_version="1.0", check_ttl=False) is True
+
+
+def test_is_cache_valid_naive_timestamp():
+    """Test naive timestamps are treated as UTC."""
+    naive_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    entry = {
+        "analysis_version": "1.0",
+        "cache_metadata": {
+            "fetched_at": naive_utc.isoformat(),
+            "ttl_seconds": 60,
+        },
+    }
+    assert cache.is_cache_valid(entry, expected_version="1.0") is True
+
+
+def test_load_cache_gzip_v2_format(mock_cache_dir, sample_cache_data):
+    """Test loading gzip cache with v2 schema."""
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
+        json.dump({"_schema_version": "2.0", "packages": sample_cache_data}, f)
+
+    result = cache.load_cache("python", expected_version="1.0")
+    assert "python:requests" in result
+    assert "python:django" not in result
+
+
+def test_save_cache_merge_legacy_json(mock_cache_dir, sample_cache_data):
+    """Test merging when existing cache is a legacy .json file."""
+    cache_file = mock_cache_dir / "python.json"
+    with open(cache_file, "w", encoding="utf-8") as f:
+        json.dump(sample_cache_data, f)
+
+    new_data = {
+        "python:flask": {
+            "ecosystem": "python",
+            "package_name": "flask",
+            "github_url": "https://github.com/pallets/flask",
+            "total_score": 88,
+            "metrics": [],
+        }
+    }
+
+    cache.save_cache("python", new_data, merge=True)
+
+    gz_cache = mock_cache_dir / "python.json.gz"
+    assert gz_cache.exists()
+    with gzip.open(gz_cache, "rt", encoding="utf-8") as f:
+        saved_data = json.load(f)
+
+    assert "python:requests" in saved_data
+    assert "python:django" in saved_data
+    assert "python:flask" in saved_data
+
+
+def test_save_cache_merge_with_corrupted_legacy_json(mock_cache_dir):
+    """Test corrupted legacy cache does not break merge."""
+    cache_file = mock_cache_dir / "python.json"
+    with open(cache_file, "w", encoding="utf-8") as f:
+        f.write("invalid json")
+
+    new_data = {
+        "python:flask": {
+            "ecosystem": "python",
+            "package_name": "flask",
+            "github_url": "https://github.com/pallets/flask",
+            "total_score": 88,
+            "metrics": [],
+        }
+    }
+
+    cache.save_cache("python", new_data, merge=True)
+
+    gz_cache = mock_cache_dir / "python.json.gz"
+    assert gz_cache.exists()
+    with gzip.open(gz_cache, "rt", encoding="utf-8") as f:
+        saved_data = json.load(f)
+
+    assert list(saved_data) == ["python:flask"]
+
+
+def test_clear_expired_cache_specific_ecosystem(mock_cache_dir, sample_cache_data):
+    """Test clearing expired entries for a specific ecosystem."""
+    cache_file = mock_cache_dir / "python.json"
+    with open(cache_file, "w", encoding="utf-8") as f:
+        json.dump(sample_cache_data, f)
+
+    cleared = cache.clear_expired_cache("python", expected_version="1.0")
+    assert cleared == 1
+
+    gz_cache = mock_cache_dir / "python.json.gz"
+    assert gz_cache.exists()
+    with gzip.open(gz_cache, "rt", encoding="utf-8") as f:
+        saved_data = json.load(f)
+
+    assert list(saved_data) == ["python:requests"]
+
+
+def test_clear_expired_cache_all_ecosystems_skips_corrupt(
+    mock_cache_dir, sample_cache_data
+):
+    """Test expired cache cleanup skips corrupted files."""
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
+        json.dump(sample_cache_data, f)
+
+    corrupted = mock_cache_dir / "ruby.json.gz"
+    with gzip.open(corrupted, "wt", encoding="utf-8") as f:
+        f.write("invalid json")
+
+    cleared = cache.clear_expired_cache()
+    assert cleared == 1
+
+
+def test_get_cached_packages_v2_format_and_key_parsing(mock_cache_dir):
+    """Test cached package listing with v2 schema and key parsing."""
+    now = datetime.now(timezone.utc)
+    data = {
+        "_schema_version": "2.0",
+        "packages": {
+            "python:requests": {
+                "ecosystem": "python",
+                "package_name": "requests",
+                "github_url": "https://github.com/psf/requests",
+                "metrics": [],
+                "analysis_version": "1.0",
+                "cache_metadata": {
+                    "fetched_at": now.isoformat(),
+                    "ttl_seconds": 604800,
+                },
+            },
+            "django": {
+                "ecosystem": "python",
+                "package_name": "django",
+                "github_url": "https://github.com/django/django",
+                "metrics": [],
+                "analysis_version": "1.0",
+                "cache_metadata": {
+                    "fetched_at": now.isoformat(),
+                    "ttl_seconds": 604800,
+                },
+            },
+        },
+    }
+
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
+        json.dump(data, f)
+
+    packages = cache.get_cached_packages()
+    assert {pkg["package_name"] for pkg in packages} == {"requests", "django"}
+    django = next(pkg for pkg in packages if pkg["package_name"] == "django")
+    assert django["ecosystem"] == "python"
+    assert django["github_url"] == "https://github.com/django/django"
+
+
+def test_get_cached_packages_missing_file(mock_cache_dir):
+    """Test listing cached packages when cache file is missing."""
+    packages = cache.get_cached_packages("python")
+    assert packages == []
+
+
+def test_get_cache_stats_missing_file(mock_cache_dir):
+    """Test stats skip missing cache files."""
+    stats = cache.get_cache_stats("python")
+    assert stats["exists"] is True
+    assert stats["total_entries"] == 0
+
+
+def test_get_cache_stats_v2_json_format(mock_cache_dir):
+    """Test stats for v2 schema stored in legacy .json file."""
+    now = datetime.now(timezone.utc)
+    data = {
+        "_schema_version": "2.0",
+        "packages": {
+            "python:requests": {
+                "analysis_version": "1.0",
+                "cache_metadata": {
+                    "fetched_at": now.isoformat(),
+                    "ttl_seconds": 604800,
+                },
+            }
+        },
+    }
+    cache_file = mock_cache_dir / "python.json"
+    with open(cache_file, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+    stats = cache.get_cache_stats("python", expected_version="1.0")
+    assert stats["total_entries"] == 1
+    assert stats["valid_entries"] == 1
+    assert stats["expired_entries"] == 0
+
+
+def test_get_cache_stats_skips_corrupted_cache(mock_cache_dir):
+    """Test stats ignore corrupted cache files."""
+    cache_file = mock_cache_dir / "python.json.gz"
+    with gzip.open(cache_file, "wt", encoding="utf-8") as f:
+        f.write("invalid json")
+
+    stats = cache.get_cache_stats()
+    assert stats["exists"] is True
+    assert stats["total_entries"] == 0
