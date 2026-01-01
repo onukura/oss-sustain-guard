@@ -14,7 +14,7 @@
 > - **Local caching** - Popular packages served from efficient local cache for faster results
 > - **SSL verification** - Use `--insecure` flag to disable SSL verification for development/testing only
 > - **Package resolution** - If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
-> - **Full documentation** - https://onukura.github.io/oss-sustain-guard/
+> - **Full documentation** - <https://onukura.github.io/oss-sustain-guard/>
 
 ## 💡 Project Philosophy
 
@@ -33,9 +33,11 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 ## 🎯 Key Features
 
 - **24 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all metrics scored 0-10)
+- **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins.
 - **Optional Dependents Analysis** - Downstream dependency metrics (informational, not affecting total score)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
+- **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case.
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks
@@ -51,6 +53,15 @@ pip install oss-sustain-guard
 # Set GitHub token (required for all package analysis)
 export GITHUB_TOKEN='your_token_here'  # Get from: https://github.com/settings/tokens/new
 
+# Check your dependencies (auto-detect from manifest files)
+os4g check
+
+# Check your dependencies including lock files
+os4g check --include-lock
+
+# Scan recursively (great for monorepos)
+os4g check --recursive
+
 # Check a single package
 os4g check requests
 
@@ -59,12 +70,6 @@ os4g check django flask numpy
 
 # Multi-language support
 os4g check python:requests npm:react rust:tokio r:ggplot2 haskell:text swift:apple/swift-nio
-
-# Auto-detect from manifest files
-os4g check --include-lock
-
-# Scan recursively (great for monorepos)
-os4g check --recursive
 
 # Export results to JSON
 os4g check requests --output-format json --output-file oss-report.json
@@ -102,99 +107,10 @@ Evaluated across 5 categories:
 
 **Score interpretation:** 80-100 (Healthy) | 50-79 (Monitor) | 0-49 (Needs Attention)
 
-### Custom Scoring Profiles
-
-You can override scoring profiles via `.oss-sustain-guard.toml`, `pyproject.toml`, or a dedicated TOML file with `--profile-file`.
-
-Profile weights must include every metric and use integer values ≥ 1.
-
-**Method 1: Configuration File (Recommended)**
-
-```toml
-# .oss-sustain-guard.toml
-[tool.oss-sustain-guard.profiles.custom_security]
-name = "Custom Security"
-description = "Security-focused profile with higher signal weight."
-
-[tool.oss-sustain-guard.profiles.custom_security.weights]
-"Contributor Redundancy" = 2
-"Maintainer Retention" = 2
-"Contributor Attraction" = 1
-"Contributor Retention" = 1
-"Organizational Diversity" = 2
-"Maintainer Load Distribution" = 1
-"Recent Activity" = 2
-"Release Rhythm" = 2
-"Build Health" = 3
-"Change Request Resolution" = 1
-"Issue Responsiveness" = 2
-"PR Acceptance Ratio" = 1
-"Review Health" = 2
-"Issue Resolution Duration" = 1
-"Stale Issue Ratio" = 1
-"PR Merge Speed" = 2
-"Documentation Presence" = 2
-"Code of Conduct" = 1
-"License Clarity" = 2
-"Project Popularity" = 1
-"Fork Activity" = 1
-"Security Signals" = 4
-"Funding Signals" = 3
-"PR Responsiveness" = 1
-```
-
-```bash
-# Automatically uses profile from .oss-sustain-guard.toml
-os4g check requests --profile custom_security
-```
-
-**Method 2: External Profile File**
-
-```toml
-# profiles.toml
-[profiles.custom_security]
-name = "Custom Security"
-description = "Security-focused profile with higher signal weight."
-
-[profiles.custom_security.weights]
-"Contributor Redundancy" = 2
-"Maintainer Retention" = 2
-"Contributor Attraction" = 1
-"Contributor Retention" = 1
-"Organizational Diversity" = 2
-"Maintainer Load Distribution" = 1
-"Recent Activity" = 2
-"Release Rhythm" = 2
-"Build Health" = 3
-"Change Request Resolution" = 1
-"Issue Responsiveness" = 2
-"PR Acceptance Ratio" = 1
-"Review Health" = 2
-"Issue Resolution Duration" = 1
-"Stale Issue Ratio" = 1
-"PR Merge Speed" = 2
-"Documentation Presence" = 2
-"Code of Conduct" = 1
-"License Clarity" = 2
-"Project Popularity" = 1
-"Fork Activity" = 1
-"Security Signals" = 4
-"Funding Signals" = 3
-"PR Responsiveness" = 1
-```
-
-```bash
-os4g check requests --profile custom_security --profile-file profiles.toml
-```
-
-**Priority Order:**
-1. `--profile-file` (if specified)
-2. `.oss-sustain-guard.toml` (local config)
-3. `pyproject.toml` (project-level config)
-
 ### Special Features
 
 - **🎁 Gratitude Vending Machine** - Discover community projects that need support
+
   ```bash
   os4g gratitude --top 5
   ```
@@ -204,7 +120,6 @@ os4g check requests --profile custom_security --profile-file profiles.toml
 ## 🤝 Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code style, and architecture documentation.
-
 
 ## 📝 Documentation
 
