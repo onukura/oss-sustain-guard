@@ -19,6 +19,7 @@ repos:
     hooks:
       - id: oss-sustain-guard
         args: [-o, compact]
+        verbose: true
 ```
 
 3. Install the hook:
