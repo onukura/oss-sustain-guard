@@ -179,7 +179,7 @@ os4g check requests --no-cache
 
    Add to your `.env` file in your project directory:
 
-   ```
+   ```shell
    GITHUB_TOKEN=your_token_here
    ```
 
@@ -211,7 +211,7 @@ GitHub's API requires authentication for repository analysis. The token allows O
 - **Need help?**: [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md)
 
 | Metric | Description |
-|--------|-------------|
+| -------- | -------- |
 | **Contributor Redundancy** | Distribution of contributions (lower = single-maintainer risk) |
 | **Recent Activity** | Project's current activity level |
 | **Release Rhythm** | Release frequency and consistency |

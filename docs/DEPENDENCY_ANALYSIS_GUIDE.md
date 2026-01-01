@@ -128,7 +128,7 @@ Output:
 Dependency scores use the same 0-100 scale as primary packages:
 
 | Score Range | Status | Interpretation |
-|-------------|--------|-----------------|
+| -------- | -------- | -------- |
 | 80-100 | ✓ Healthy | Well-maintained, actively developed |
 | 50-79 | ⚠ Needs attention | Monitor for updates, consider alternatives |
 | 0-49 | ✗ Needs support | High risk, prioritize replacement or support |

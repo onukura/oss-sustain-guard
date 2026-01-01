@@ -4,13 +4,13 @@ OSS Sustain Guard can be used as a pre-commit hook to automatically check the su
 
 ## Quick Start
 
-1. Install pre-commit:
+### 1. Install pre-commit
 
-```bash
+```shell
 pip install pre-commit
 ```
 
-2. Add a `.pre-commit-config.yaml` to your project root:
+### 2. Add a `.pre-commit-config.yaml` to your project root
 
 ```yaml
 repos:
@@ -22,26 +22,25 @@ repos:
         verbose: true
 ```
 
-3. Install the hook:
+### 3. Install the hook
 
 ```bash
 pre-commit install
 ```
+  
+### 4. Commit Changes
 
-4. Now, whenever you commit changes to dependency files, OSS Sustain Guard will automatically scan your dependencies.
+Now, whenever you commit changes to dependency files, OSS Sustain Guard will automatically scan your dependencies
 
 ## FAQ
 
-- **Do I need a GitHub token?**
-  - Yes, for real-time analysis of packages not in the cache, set `GITHUB_TOKEN`:
+- **Do I need a GitHub token?**: Yes, for real-time analysis of packages not in the cache, set `GITHUB_TOKEN`:
 
-    ```bash
-    export GITHUB_TOKEN=your_github_token
-    ```
+```bash
+export GITHUB_TOKEN=your_github_token
+```
 
-- **Does it support other languages?**
-  - Yes! You can check npm, Rust, Go, Ruby, PHP, etc. (e.g. `os4g check npm:react`)
-- **How do I run the check manually?**
-  - Run: `pre-commit run oss-sustain-guard --all-files`
+- **Does it support other languages?**: Yes! You can check npm, Rust, Go, Ruby, PHP, etc. (e.g. `os4g check npm:react`)
+- **How do I run the check manually?**: Run: `pre-commit run oss-sustain-guard --all-files`
 
 For more details or troubleshooting, see the [official pre-commit docs](https://pre-commit.com/) or [Getting Started](./GETTING_STARTED.md).

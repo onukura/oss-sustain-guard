@@ -18,7 +18,7 @@ This guide provides a comprehensive reference for all built-in metrics included 
 OSS Sustain Guard evaluates projects across **25+ built-in metrics** organized into four categories:
 
 | Category | Focus | Purpose |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | **Sustainability** | Financial, Maintainers, Releases | Long-term viability |
 | **Community** | Contributors, Responsiveness | Ecosystem health |
 | **Quality** | Build, Security, Code | Project excellence |
@@ -85,17 +85,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** Commit history (recent commits analyzed)
 
 **Calculation:**
+
 - Identifies top contributor percentage from recent commits
 - Adjusts scoring based on project maturity (total commits)
 - Analyzes contributor diversity trend
 
 **Scoring:**
+
 - <50% by single contributor: 10/10 (Excellent - healthy diversity)
 - 50-69% concentration: 5/10 (Moderate - acceptable)
 - 70-89% concentration: 3/10 (High - concentrated risk)
 - 90%+ concentration: 1/10 (Critical - single point of failure)
 
 **Risk Levels:**
+
 - **None:** <50% - Well-distributed contributions
 - **Low:** 50-69% - Acceptable concentration
 - **Medium:** 70-89% - Elevated risk
@@ -116,17 +119,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** Commit authorship over time, excluding automated commits (bots)
 
 **Calculation:**
+
 - Filters out bot contributions (Dependabot, GitHub Actions, etc.)
 - Analyzes human contributor activity trends
 - Measures percentage of human commits in recent periods
 
 **Scoring:**
+
 - Active, growing maintainers: 10/10
 - Stable maintainers: 7/10
 - Declining activity: 3/10
 - Abandoned project: 0/10
 
 **Risk Levels:**
+
 - **None:** Active, engaged maintainers
 - **Low:** Stable maintainer activity
 - **Medium:** Slight decline in activity
@@ -147,21 +153,25 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Releases API
 
 **Calculation:**
+
 - Examines time since last release
 - Evaluates release frequency pattern
 - Distinguishes between "active development" and "stable maintenance"
 
 **Scoring:**
+
 - Last release <3 months ago: 10/10 (Active development)
 - 3-6 months: 7/10 (Moderate pace)
 - 6-12 months: 4/10 (Slow maintenance)
 - >12 months: 0/10 (Possible abandonment)
 
 **Special Cases:**
+
 - Archived repositories: 10/10 (No releases expected)
 - No releases: 0/10 (Project may not be user-ready)
 
 **Risk Levels:**
+
 - **None:** Regular release cycles
 - **Low:** Periodic releases
 - **Medium:** Infrequent releases
@@ -180,20 +190,24 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Sponsors, Open Collective, funding links; Organization ownership
 
 **Calculation:**
+
 - Detects explicit funding links (GitHub Sponsors, Open Collective, etc.)
 - Identifies organization ownership (corporate backing)
 - Applies different scoring for community vs. corporate projects
 
 **Scoring - Community-Driven Projects:**
+
 - Has funding links + organization backing: 10/10 (Well-supported)
 - Has funding links only: 8/10 (Community-supported)
 - No funding links: 0/10 (No visible sustainability model)
 
 **Scoring - Corporate-Backed Projects:**
+
 - Owned by organization: 10/10 (Corporate sustainability model)
 - Funding links (optional): 10/10 (Regardless of explicit funding)
 
 **Risk Levels:**
+
 - **None:** Clear sustainability model
 - **Low:** Corporate backing present
 - **Medium:** Some community funding
@@ -216,17 +230,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub contributor data with creation date
 
 **Calculation:**
+
 - Counts new contributors joining in recent periods
 - Normalizes by project age and history
 - Detects if project is attracting fresh talent
 
 **Scoring:**
+
 - Growing contributor base: 10/10 (Healthy growth)
 - Stable contributor acquisition: 7/10 (Good)
 - Declining new contributors: 3/10 (Concerning trend)
 - No new contributors: 0/10 (Not attracting talent)
 
 **Risk Levels:**
+
 - **None:** Strong attraction of new contributors
 - **Low:** Steady contributor growth
 - **Medium:** Declining attraction
@@ -245,17 +262,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** Historical contributor activity and commit patterns
 
 **Calculation:**
+
 - Tracks contributors across multiple time periods
 - Measures return rate (percentage returning after initial contribution)
 - Identifies long-term vs. one-time contributors
 
 **Scoring:**
+
 - High retention rate (60%+): 10/10 (Strong community)
 - Moderate retention (40-60%): 7/10 (Good)
 - Low retention (20-40%): 3/10 (High churn)
 - Minimal retention (<20%): 0/10 (One-time contributors only)
 
 **Risk Levels:**
+
 - **None:** Strong contributor retention
 - **Low:** Moderate churn
 - **Medium:** Significant churn
@@ -274,21 +294,25 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Issues API (creation date, first response date)
 
 **Calculation:**
+
 - Analyzes time from issue creation to first response
 - Measures across recent issues
 - Distinguishes between acknowledgment and resolution
 
 **Scoring:**
+
 - Response within 24 hours: 10/10 (Excellent)
 - 1-7 days: 7/10 (Good)
 - 1-4 weeks: 4/10 (Moderate)
 - >4 weeks: 0/10 (Poor)
 
 **Special Cases:**
+
 - No issues: 10/10 (Nothing to respond to)
 - Issues without responses: 0/10 (Unresponsive)
 
 **Risk Levels:**
+
 - **None:** Quick response times
 - **Low:** Timely responses
 - **Medium:** Delayed responses
@@ -307,21 +331,25 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Pull Requests API (creation date, merge date)
 
 **Calculation:**
+
 - Analyzes time from PR creation to merge
 - Measures across recent PRs
 - Accounts for review cycles and feedback iterations
 
 **Scoring:**
+
 - Merge within 3 days: 10/10 (Excellent)
 - 3-10 days: 7/10 (Good)
 - 10-30 days: 4/10 (Moderate)
 - >30 days: 0/10 (Slow)
 
 **Special Cases:**
+
 - Closed without merge (rejected PRs): Scored separately
 - Stale PRs without activity: 0/10 (Abandoned)
 
 **Risk Levels:**
+
 - **None:** Fast merging
 - **Low:** Reasonable turnaround
 - **Medium:** Slow review cycle
@@ -340,17 +368,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub PR reviews (review comments, approval workflow)
 
 **Calculation:**
+
 - Counts review comments per PR
 - Measures review count before merge
 - Identifies patterns of thorough vs. rubber-stamp reviews
 
 **Scoring:**
+
 - Regular, constructive reviews (3+ comments per PR): 10/10 (Thorough)
 - Adequate reviews (1-3 comments): 7/10 (Good)
 - Minimal reviews (<1 comment avg): 3/10 (Light review)
 - Auto-merge or no reviews: 0/10 (No quality gate)
 
 **Risk Levels:**
+
 - **None:** Thorough review process
 - **Low:** Adequate review
 - **Medium:** Light review
@@ -371,17 +402,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub commit status checks, Actions CI logs
 
 **Calculation:**
+
 - Checks latest commit CI status
 - Analyzes test pass rate
 - Identifies build failures
 
 **Scoring:**
+
 - All recent builds passing: 10/10 (Healthy)
 - Most pass (>80%): 7/10 (Good)
 - Some failures (50-80%): 3/10 (Concerning)
 - Most fail (<50%): 0/10 (Broken)
 
 **Risk Levels:**
+
 - **None:** CI/CD working well
 - **Low:** Mostly passing builds
 - **Medium:** Frequent failures
@@ -400,17 +434,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Security tab (dependabot alerts, security policies)
 
 **Calculation:**
+
 - Detects SECURITY.md policy
 - Counts open security alerts
 - Checks for known vulnerabilities
 
 **Scoring:**
+
 - Security policy + no alerts: 10/10 (Excellent)
 - Security policy present: 8/10 (Good)
 - Few alerts, no policy: 4/10 (Moderate)
 - Multiple unresolved alerts: 0/10 (Poor)
 
 **Risk Levels:**
+
 - **None:** Proactive security
 - **Low:** Managed vulnerabilities
 - **Medium:** Some concerns
@@ -429,14 +466,17 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub repository (CODE_OF_CONDUCT.md or similar)
 
 **Calculation:**
+
 - Detects presence of CODE_OF_CONDUCT.md
 - Validates common CoC types (Contributor Covenant, etc.)
 
 **Scoring:**
+
 - Has code of conduct: 10/10 (Excellent)
 - No code of conduct: 2/10 (Needs attention)
 
 **Risk Levels:**
+
 - **None:** Code of conduct present
 - **Low:** Basic guidelines
 - **Medium:** No formal policy
@@ -453,16 +493,19 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub License Detection API
 
 **Calculation:**
+
 - Identifies recognized SPDX license
 - Validates LICENSE file presence
 - Checks for license clarity
 
 **Scoring:**
+
 - Clear, standard license (MIT, Apache-2.0, GPL, etc.): 10/10
 - Non-standard but present: 5/10 (Requires review)
 - No license detected: 0/10 (Ambiguous legal status)
 
 **Risk Levels:**
+
 - **None:** Clear licensing
 - **Low:** Non-standard license
 - **Medium:** Unclear licensing
@@ -479,17 +522,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub repository files (README.md, docs/, wiki)
 
 **Calculation:**
+
 - Detects README.md presence and length
 - Checks for additional documentation
 - Evaluates documentation structure
 
 **Scoring:**
+
 - Comprehensive docs (README + docs/): 10/10
 - Good README: 8/10
 - Basic README: 5/10
 - No documentation: 0/10
 
 **Risk Levels:**
+
 - **None:** Well-documented
 - **Low:** Adequate documentation
 - **Medium:** Sparse documentation
@@ -506,17 +552,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Issues API (creation date, last activity)
 
 **Calculation:**
+
 - Counts issues open >90 days without response
 - Calculates stale issue ratio
 - Measures issue triage health
 
 **Scoring:**
+
 - <10% stale issues: 10/10 (Excellent triage)
 - 10-25% stale: 7/10 (Good)
 - 25-50% stale: 3/10 (Moderate)
 - >50% stale: 0/10 (Poor triage)
 
 **Risk Levels:**
+
 - **None:** Healthy issue management
 - **Low:** Minor staleness
 - **Medium:** Significant backlog
@@ -535,17 +584,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub repository statistics (stars, watchers, forks)
 
 **Calculation:**
+
 - Analyzes stargazer count
 - Considers watchers and forks
 - Normalizes by project age
 
 **Scoring:**
+
 - High stars relative to age: 10/10
 - Moderate popularity: 7/10
 - Low visibility: 3/10
 - No adoption: 0/10
 
 **Risk Levels:**
+
 - **None:** Highly visible project
 - **Low:** Good visibility
 - **Medium:** Limited visibility
@@ -562,11 +614,13 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub fork count
 
 **Calculation:**
+
 - Analyzes fork count relative to stars
 - Identifies technical reuse
 - Measures ecosystem impact
 
 **Scoring:**
+
 - High fork ratio (forks/stars >0.5): 10/10 (Active reuse)
 - Moderate ratio (0.2-0.5): 7/10 (Good)
 - Low ratio (0.1-0.2): 4/10 (Some reuse)
@@ -585,17 +639,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Pull Requests API (merged, closed)
 
 **Calculation:**
+
 - Counts merged PRs
 - Counts rejected/closed PRs
 - Calculates acceptance ratio
 
 **Scoring:**
+
 - High acceptance (>70%): 10/10 (Collaborative)
 - Moderate (50-70%): 7/10 (Good)
 - Selective (30-50%): 4/10 (Strict)
 - Low (<30%): 1/10 (Unwelcoming)
 
 **Risk Levels:**
+
 - **None:** Highly collaborative
 - **Low:** Welcoming to PRs
 - **Medium:** Selective acceptance
@@ -614,17 +671,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Pull Requests API (time metrics)
 
 **Calculation:**
+
 - Analyzes merge time from PR creation
 - Measures recent PR velocity
 - Accounts for review cycles
 
 **Scoring:**
+
 - Quick merge (median <5 days): 10/10
 - Good pace (5-15 days): 7/10
 - Moderate (15-30 days): 4/10
 - Slow (>30 days): 1/10
 
 **Risk Levels:**
+
 - **None:** Fast-moving merges
 - **Low:** Reasonable timeline
 - **Medium:** Slower review
@@ -641,17 +701,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Pull Requests API (comment activity)
 
 **Calculation:**
+
 - Counts comments per PR
 - Measures feedback frequency
 - Identifies engagement pattern
 
 **Scoring:**
+
 - Active feedback (multiple comments): 10/10
 - Moderate feedback (1-2 comments): 7/10
 - Minimal feedback: 3/10
 - No feedback/auto-merge: 0/10
 
 **Risk Levels:**
+
 - **None:** Highly engaged reviewers
 - **Low:** Good feedback
 - **Medium:** Light feedback
@@ -668,11 +731,13 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub contributor email domains or affiliated organizations
 
 **Calculation:**
+
 - Analyzes top contributors' organizations
 - Measures organizational concentration
 - Identifies corporate vs. individual contributions
 
 **Scoring:**
+
 - Diverse orgs (top org <40% contrib): 10/10
 - Moderate diversity (40-60%): 7/10
 - Single-org dominated (60-80%): 4/10
@@ -691,17 +756,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** Libraries.io or GitHub Dependents API
 
 **Calculation:**
+
 - Counts projects depending on this package
 - Analyzes ecosystem impact
 - Normalizes by project age
 
 **Scoring:**
+
 - High dependents (>1000): 10/10 (Critical infrastructure)
 - Many (100-1000): 8/10 (Important)
 - Moderate (10-100): 6/10 (Used)
 - Few (<10): 2/10 (Limited impact)
 
 **Risk Levels:**
+
 - **None:** High ecosystem value
 - **Low:** Good ecosystem position
 - **Medium:** Niche usage
@@ -718,11 +786,13 @@ Measure project impact and ecosystem integration:
 **Data Source:** GitHub Issues and PRs (combined metrics)
 
 **Calculation:**
+
 - Combines issue response time
 - Combines PR review speed
 - Provides holistic health view
 
 **Scoring:**
+
 - All responsive (fast issues + PRs): 10/10
 - Mostly responsive: 7/10
 - Somewhat responsive: 4/10
@@ -739,17 +809,20 @@ Measure project impact and ecosystem integration:
 **Data Source:** Commit history and contributor distribution
 
 **Calculation:**
+
 - Calculates percentage of work by top maintainer
 - Analyzes load distribution
 - Identifies burnout risk
 
 **Scoring:**
+
 - Well-distributed (<40% top): 10/10 (Healthy)
 - Moderate load (40-60%): 7/10 (Acceptable)
 - High load (60-80%): 3/10 (Risk)
 - Concentrated (>80%): 0/10 (Burnout risk)
 
 **Risk Levels:**
+
 - **None:** Well-distributed load
 - **Low:** Reasonable distribution
 - **Medium:** Elevated concentration
@@ -766,7 +839,7 @@ Measure project impact and ecosystem integration:
 All metrics use a **0-10 point scale** for consistency:
 
 | Score | Meaning | Color |
-|-------|---------|-------|
+| ------ | ------ | ------ |
 | **9-10** | Excellent | 🟢 Green |
 | **7-8** | Good | 🟢 Green |
 | **4-6** | Moderate | 🟡 Yellow |
@@ -778,6 +851,7 @@ All metrics use a **0-10 point scale** for consistency:
 **Overall Score = (Sum of all metric scores / Number of metrics) × 10**
 
 Example:
+
 - 12 metrics analyzed
 - Total points: 87/120
 - Overall score: (87/120) × 10 = 7.3/10
@@ -827,7 +901,7 @@ Evaluates community health and contributor experience:
 Each metric assigns a **risk level** reflecting areas of concern:
 
 | Risk Level | Meaning | Score Range | Action |
-|-----------|---------|-------------|--------|
+| -------- | -------- | -------- | -------- |
 | **None** | Excellent health | 9-10 | ✅ No action needed |
 | **Low** | Good status | 7-8 | ✅ Monitor occasionally |
 | **Medium** | Needs attention | 4-6 | 📋 Monitor and plan improvements |
@@ -837,11 +911,13 @@ Each metric assigns a **risk level** reflecting areas of concern:
 ### Interpreting Risk Levels
 
 **For Individual Contributors:**
+
 - **High/Critical:** Consider if project is suitable for production use
 - **Medium:** Monitor before major dependency
 - **Low/None:** Generally safe to depend on
 
 **For Maintainers:**
+
 - **High/Critical:** Target for improvement efforts
 - **Medium:** Include in roadmap improvements
 - **Low/None:** Maintain current practices
@@ -870,6 +946,7 @@ oss-guard check numpy --show-models
 ```
 
 **Interpretation:**
+
 - ✅ Good choice for critical dependency
 - 📋 Note: Sustainability score indicates maintain awareness of releases
 - 👥 Strong community support
