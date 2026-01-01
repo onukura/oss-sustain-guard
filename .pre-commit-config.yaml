@@ -25,8 +25,8 @@ repos:
           )
       - id: detect-private-key
   - repo: https://github.com/onukura/oss-sustain-guard
-    rev: v0.13.0
+    rev: v0.13.3
     hooks:
       - id: oss-sustain-guard
-        args: [--insecure, --include-lock, -o, compact]
-        verbose: true
+        args: [--insecure, -o, compact]
+        verbose: false

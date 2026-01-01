@@ -203,7 +203,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code st
 ## �📝 Documentation
 
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
-
+- [Custom Metrics Guide](./docs/CUSTOM_METRICS_GUIDE.md) - Create your own sustainability metrics
 - [Pre-Commit Integration](./docs/PRE_COMMIT_INTEGRATION.md) - Hook configuration
 - [GitHub Actions Guide](./docs/GITHUB_ACTIONS_GUIDE.md) - CI/CD setup
 - [Exclude Packages Guide](./docs/EXCLUDE_PACKAGES_GUIDE.md) - Package filtering

@@ -30,6 +30,7 @@ nav:
       - Scoring Profiles (Custom): SCORING_PROFILES_GUIDE.md
   - Scoring & Metrics:
       - CHAOSS Metrics Alignment: CHAOSS_METRICS_ALIGNMENT_VALIDATION.md
+      - Custom Metrics: CUSTOM_METRICS_GUIDE.md
   - Integrations:
       - GitHub Actions: GITHUB_ACTIONS_GUIDE.md
       - Pre-commit Integration: PRE_COMMIT_INTEGRATION.md

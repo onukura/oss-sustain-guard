@@ -75,6 +75,7 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 - [Scoring Profiles](SCORING_PROFILES_GUIDE.md) - Choose the right scoring model for your needs
 - [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) - Understanding our metrics
+- [Custom Metrics](CUSTOM_METRICS_GUIDE.md) - Create your own sustainability metrics
 
 **Integrations:**
 

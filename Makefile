@@ -7,7 +7,7 @@ doc-serve:
 	uv run mkdocs serve --livereload
 
 test:
-	uv run pytest tests/ -v --cov=oss_sustain_guard --cov-report=xml --cov-report=term --cov-report=html
+	uv run pytest tests/ -v --cov=oss_sustain_guard --cov-report=xml --cov-report=term --cov-report=html -m "not slow" -vvv
 
 test-check:
 	uv run os4g check requests -v
