@@ -15,6 +15,7 @@ pip install oss-sustain-guard
 **OSS Sustain Guard requires a GitHub Personal Access Token for all package analysis.**
 
 This is needed because the tool fetches repository data directly from GitHub's API to analyze:
+
 - Contributor activity and redundancy
 - Release patterns and commit history
 - Issue/PR response times
@@ -46,6 +47,7 @@ os4g check requests
 ```
 
 > **Why is this required?**
+>
 > - GitHub's unauthenticated API has very low rate limits (60 requests/hour)
 > - Authenticated requests get 5,000 requests/hour
 > - Package analysis requires multiple API calls per repository
@@ -54,33 +56,35 @@ os4g check requests
 
 ## 🚀 First Steps
 
-### 1. Check a Single Package
+### 1. Analyze Your Project's Dependencies (Most Common)
+
+```bash
+os4g check --include-lock
+```
+
+Automatically scans `requirements.txt`, `package.json`, `Cargo.toml`, and other manifest files to analyze all your project's dependencies.
+
+Displays health scores of all packages with:
+
+- **Health Score** (0-100): Overall sustainability rating
+- **Health Status**: Healthy ✓, Monitor, or Needs attention
+- **Key Observations**: Important signals about each project
+
+### 2. Check a Single Package
 
 ```bash
 os4g check requests
 ```
 
-This shows you:
+Analyze a specific package in detail.
 
-- **Health Score** (0-100): Overall sustainability rating
-- **Health Status**: Healthy ✓, Monitor, or Needs attention
-- **Key Observations**: Important signals about the project
-
-### 2. Check Multiple Packages
+### 3. Check Multiple Packages
 
 ```bash
 os4g check python:django npm:react rust:tokio
 ```
 
 Mix any languages you use in one command.
-
-### 3. Auto-Detect Your Project Dependencies
-
-```bash
-os4g check --include-lock
-```
-
-Automatically scans `requirements.txt`, `package.json`, `Cargo.toml`, and other manifest files.
 
 ### 4. Scan Entire Projects (Monorepos)
 
@@ -89,14 +93,6 @@ os4g check --recursive
 ```
 
 Recursively finds and analyzes all dependencies in subdirectories.
-
-### 5. Analyze Your Project's Dependencies
-
-```bash
-os4g check --show-dependencies
-```
-
-Displays health scores of all your project's dependencies (requires lockfiles like `uv.lock`, `package-lock.json`, etc.).
 
 See [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) for details.
 
@@ -159,7 +155,8 @@ os4g check requests --no-cache
 ### Quick Setup (5 minutes)
 
 1. **Create a token:**
-   - Visit: https://github.com/settings/tokens/new
+
+   - Visit: <https://github.com/settings/tokens/new>
    - Token name: `oss-sustain-guard`
    - Select scopes: ✓ `public_repo` (for public repositories)
    - Click "Generate token" and **copy it immediately**
@@ -167,22 +164,27 @@ os4g check requests --no-cache
 2. **Set the token:**
 
    **Linux/macOS:**
+
    ```bash
    export GITHUB_TOKEN='your_token_here'
    ```
 
    **Windows (PowerShell):**
+
    ```powershell
    $env:GITHUB_TOKEN='your_token_here'
    ```
 
    **Persistent (recommended):**
+
    Add to your `.env` file in your project directory:
+
    ```
    GITHUB_TOKEN=your_token_here
    ```
 
 3. **Verify:**
+
    ```bash
    os4g check requests
    ```
@@ -190,6 +192,7 @@ os4g check requests --no-cache
 ### Why is a token needed?
 
 GitHub's API requires authentication for repository analysis. The token allows OSS Sustain Guard to:
+
 - Query repository metadata (contributors, releases, issues)
 - Access funding information
 - Analyze project health metrics
@@ -197,12 +200,6 @@ GitHub's API requires authentication for repository analysis. The token allows O
 **Rate Limits:** With a token, you get 5,000 requests/hour (vs 60 without). Local caching minimizes API calls.
 
 **Security:** Your token is only stored locally and never sent anywhere except GitHub's API.
-
-## 💡 Key Concepts
-
-### CHAOSS-Aligned Metrics
-
-All metrics follow [CHAOSS (Community Health Analytics in Open Source Software)](https://chaoss.community) standards. See [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) for details.
 
 ## 📚 Next Steps
 
@@ -301,13 +298,3 @@ For help, see [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md).
 - C# / .NET (NuGet)
 - Go (Go Modules)
 - Kotlin
-
-## 💡 Key Concepts
-
-### When Do I Need a GitHub Token?
-
-For most popular packages, OSS Sustain Guard uses **pre-computed cached data** without needing a token. You'll only need `GITHUB_TOKEN` if analyzing new packages not in the cache or if you hit GitHub API rate limits. See [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md) for details.
-
-### CHAOSS Alignment
-
-All metrics are based on [CHAOSS (Community Health Analytics in Open Source Software)](https://chaoss.community) best practices. See [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) for details.

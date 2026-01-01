@@ -1,249 +1,46 @@
-# Pre-Commit Integration Guide
+# Pre-Commit Integration (Quick Guide)
 
-OSS Sustain Guard can be used as a Pre-Commit hook, automatically checking the sustainability of dependency packages before committing code.
+OSS Sustain Guard can be used as a pre-commit hook to automatically check the sustainability of your dependencies before every commit.
 
-## Setup
+## Quick Start
 
-### 1. Install Pre-Commit
+1. Install pre-commit:
 
 ```bash
 pip install pre-commit
 ```
 
-### 2. Configure `.pre-commit-config.yaml`
-
-Create a `.pre-commit-config.yaml` file in your project root with the following configuration:
+2. Add a `.pre-commit-config.yaml` to your project root:
 
 ```yaml
 repos:
   - repo: https://github.com/onukura/oss-sustain-guard
-    rev: v0.1.0
+    rev: v0.14.0
     hooks:
-      - id: oss-sustain-guard-requirements
+      - id: oss-sustain-guard
+        args: [-o, compact]
 ```
 
-For multi-language support, add language-specific resolvers as needed.
-
-### 3. Install Pre-Commit Hooks
+3. Install the hook:
 
 ```bash
 pre-commit install
 ```
 
-The hooks will automatically run on your next commit.
+4. Now, whenever you commit changes to dependency files, OSS Sustain Guard will automatically scan your dependencies.
 
-## Usage
+## FAQ
 
-### Automatic Execution on Commit
+- **Do I need a GitHub token?**
+  - Yes, for real-time analysis of packages not in the cache, set `GITHUB_TOKEN`:
 
-When `requirements.txt` is staged, the hook automatically runs:
+    ```bash
+    export GITHUB_TOKEN=your_github_token
+    ```
 
-```bash
-git commit -m "Update dependencies"
-```
+- **Does it support other languages?**
+  - Yes! You can check npm, Rust, Go, Ruby, PHP, etc. (e.g. `os4g check npm:react`)
+- **How do I run the check manually?**
+  - Run: `pre-commit run oss-sustain-guard --all-files`
 
-### Manual Hook Execution
-
-Run the hook manually on all files:
-
-```bash
-pre-commit run oss-sustain-guard-requirements --all-files
-```
-
-Skip the hook if needed:
-
-```bash
-git commit -m "Your message" --no-verify
-```
-
-## Hook Configuration
-
-### Hook 1: Automatic `requirements.txt` Check
-
-```yaml
-- id: oss-sustain-guard-requirements
-```
-
-- **Trigger:** Automatically runs when `requirements.txt` is committed
-- **Files:** Only monitors `requirements.txt` (Python dependencies)
-- **Scope:** Analyzes all packages listed in the file
-- **💡 Tip:** Use the `--output-style compact` (or `-o compact`) format for cleaner pre-commit output
-
-### Hook 2: Interactive Manual Check
-
-```yaml
-- id: oss-sustain-guard-pyproject
-  stages: [manual]
-```
-
-For manual execution with specific packages:
-
-```bash
-pre-commit run oss-sustain-guard-pyproject --hook-stage manual
-```
-
-Then provide package names as arguments:
-
-```bash
-os4g check flask django numpy --output-style compact
-```
-
-**Best Practice:** Add `-o compact` to your hook configuration for readable output:
-
-```yaml
-repos:
-  - repo: https://github.com/onukura/oss-sustain-guard
-    rev: v0.1.0
-    hooks:
-      - id: oss-sustain-guard-requirements
-        args: ['-o', 'compact']
-```
-
-## Multi-Language Support
-
-OSS Sustain Guard supports multiple package ecosystems:
-
-```bash
-# Python packages
-os4g check requests flask
-
-# JavaScript (npm)
-os4g check npm:react npm:vue
-
-# Rust (crates.io)
-os4g check rust:tokio rust:serde
-
-# Go
-os4g check go:github.com/golang/go
-
-# Other languages
-os4g check ruby:rails php:symfony/console
-```
-
-## Hook Behavior
-
-1. **Package Detection:** Reads package names from the monitored file or command arguments
-2. **Sustainability Analysis:** Evaluates each package using core metrics:
-   - Contributor Redundancy
-   - Maintainer Retention
-   - Recent Activity
-   - Change Request Resolution
-   - Build Health
-   - Funding Signals
-   - Release Rhythm
-   - Security Signals
-   - Issue Responsiveness
-3. **Cache-Based Lookup:** Uses pre-computed scores from `data/database.json` for fast results
-4. **Result Display:** Shows results in a rich formatted table with color-coded risk levels
-
-### Output Example
-
-```text
-🔍 Analyzing 3 package(s)...
-  -> Found flask in cache.
-  -> Found django in cache.
-  -> requests not in cache. Performing real-time analysis...
-
-OSS Sustain Guard Report
-┏━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
-┃ Package ┃ Score ┃ Risk   ┃ Details         ┃
-┡━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
-│ flask   │  80   │ ⚠️ Med  │ Release Good    │
-│ django  │  82   │ ✅ Low  │ Security Good   │
-│ requests│  85   │ ✅ Low  │ Excellent       │
-└─────────┴───────┴────────┴─────────────────┘
-```
-
-### Risk Levels
-
-| Score | Risk Level | Color |
-|-------|-----------|-------|
-| < 50  | Critical  | 🔴 Red |
-| 50-79 | Warning   | 🟡 Yellow |
-| ≥ 80  | Safe      | 🟢 Green |
-
-## Troubleshooting
-
-### Hook Not Running
-
-Reinstall the hooks:
-
-```bash
-pre-commit uninstall
-pre-commit install
-```
-
-### Missing GitHub Token Error
-
-OSS Sustain Guard uses the GitHub GraphQL API. For packages not in the cache, a GitHub token is required:
-
-```bash
-export GITHUB_TOKEN=your_github_token
-```
-
-Or configure in `.env`:
-
-```bash
-GITHUB_TOKEN=your_github_token
-```
-
-**Important:** Set the token before running hooks.
-
-### Cache Issues
-
-To refresh or update the sustainability database:
-
-```bash
-python builder/build_db.py
-```
-
-This updates `data/database.json` with the latest package scores.
-
-## Best Practices
-
-1. **Use `-o compact` for better readability**
-
-   The compact format produces one-line-per-package output, perfect for pre-commit hooks:
-
-   ```yaml
-   repos:
-     - repo: https://github.com/onukura/oss-sustain-guard
-       rev: v0.1.0
-       hooks:
-         - id: oss-sustain-guard-requirements
-           args: ['-o', 'compact']
-   ```
-
-2. **Keep Cache Updated**
-
-   Regularly update the database for latest metrics:
-
-   ```bash
-   python builder/build_db.py
-   ```
-
-3. **Handle Failures Gracefully**
-
-   - Network errors are handled gracefully and don't block commits
-   - Use `--no-verify` to bypass hooks in emergencies
-
-4. **Multi-Stage Hooks**
-
-   Configure hooks to run at different stages:
-
-   ```yaml
-   hooks:
-     - id: oss-sustain-guard-requirements
-       stages: [commit, push, manual]
-   ```
-
-5. **Exclude Problematic Packages**
-
-   Configure excluded packages in `oss_sustain_guard/config.py` if needed.
-
-## Related Documentation
-
-- [Pre-Commit Documentation](https://pre-commit.com/)
-- [Getting Started](./GETTING_STARTED.md)
-- Database Schema
-- [GitHub Token Setup](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+For more details or troubleshooting, see the [official pre-commit docs](https://pre-commit.com/) or [Getting Started](./GETTING_STARTED.md).
