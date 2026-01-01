@@ -20,3 +20,39 @@ use_defaults = true
 # Respect .gitignore patterns when scanning directories
 # Default: true
 use_gitignore = true
+
+# Scoring profiles for health assessment
+# You can define custom profiles here instead of using --profile-file
+# Each profile assigns weights to individual metrics (integers ≥1)
+# Available profiles: balanced (default), security_first, contributor_experience, long_term_stability
+#
+# Example custom profile (uncomment to use):
+# [tool.oss-sustain-guard.profiles.my_custom]
+# name = "My Custom Profile"
+# description = "Custom scoring focused on specific needs"
+#
+# [tool.oss-sustain-guard.profiles.my_custom.weights]
+# "Contributor Redundancy" = 5
+# "Maintainer Retention" = 4
+# "Contributor Attraction" = 3
+# "Contributor Retention" = 3
+# "Organizational Diversity" = 2
+# "Maintainer Load Distribution" = 2
+# "Recent Activity" = 3
+# "Release Rhythm" = 2
+# "Build Health" = 2
+# "Change Request Resolution" = 1
+# "Issue Responsiveness" = 2
+# "PR Acceptance Ratio" = 2
+# "Review Health" = 2
+# "Issue Resolution Duration" = 1
+# "Stale Issue Ratio" = 1
+# "PR Merge Speed" = 2
+# "Documentation Presence" = 2
+# "Code of Conduct" = 1
+# "License Clarity" = 2
+# "Project Popularity" = 1
+# "Fork Activity" = 1
+# "Security Signals" = 4
+# "Funding Signals" = 3
+# "PR Responsiveness" = 2

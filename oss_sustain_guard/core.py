@@ -2,6 +2,7 @@
 Core analysis logic for OSS Sustain Guard.
 """
 
+import copy
 import os
 from typing import Any, NamedTuple
 
@@ -402,7 +403,7 @@ def _get_repository_query() -> str:
 
 # Scoring profiles for different use cases
 # Each profile adjusts metric weights based on specific priorities
-SCORING_PROFILES = {
+DEFAULT_SCORING_PROFILES = {
     "balanced": {
         "name": "Balanced",
         "description": "Balanced view across all sustainability dimensions",
@@ -548,6 +549,88 @@ SCORING_PROFILES = {
         },
     },
 }
+
+SCORING_PROFILES = copy.deepcopy(DEFAULT_SCORING_PROFILES)
+
+
+def apply_profile_overrides(profile_overrides: dict[str, dict[str, object]]) -> None:
+    """
+    Apply external scoring profile overrides on top of defaults.
+
+    Args:
+        profile_overrides: Profile definitions loaded from config.
+
+    Raises:
+        ValueError: If profile definitions are missing metrics or include invalid values.
+    """
+    global SCORING_PROFILES
+    if not profile_overrides:
+        SCORING_PROFILES = copy.deepcopy(DEFAULT_SCORING_PROFILES)
+        return
+
+    required_metrics = set(DEFAULT_SCORING_PROFILES["balanced"]["weights"].keys())
+    merged = copy.deepcopy(DEFAULT_SCORING_PROFILES)
+
+    for profile_key, profile_data in profile_overrides.items():
+        if not isinstance(profile_data, dict):
+            raise ValueError(
+                f"Profile '{profile_key}' should be a table with name, description, and weights."
+            )
+
+        weights = profile_data.get("weights")
+        if weights is None:
+            if profile_key not in merged:
+                raise ValueError(
+                    f"Profile '{profile_key}' needs a weights table to be defined."
+                )
+            weights = merged[profile_key]["weights"]
+        else:
+            if not isinstance(weights, dict):
+                raise ValueError(
+                    f"Profile '{profile_key}' weights should be a table of metric names to integers."
+                )
+
+            missing_metrics = required_metrics - weights.keys()
+            if missing_metrics:
+                missing_list = ", ".join(sorted(missing_metrics))
+                raise ValueError(
+                    f"Profile '{profile_key}' is missing metrics: {missing_list}."
+                )
+
+            unknown_metrics = set(weights.keys()) - required_metrics
+            if unknown_metrics:
+                unknown_list = ", ".join(sorted(unknown_metrics))
+                raise ValueError(
+                    f"Profile '{profile_key}' includes unknown metrics: {unknown_list}."
+                )
+
+            invalid_weights = {
+                metric: value
+                for metric, value in weights.items()
+                if type(value) is not int or value < 1
+            }
+            if invalid_weights:
+                invalid_list = ", ".join(
+                    f"{metric}={value}" for metric, value in invalid_weights.items()
+                )
+                raise ValueError(
+                    "Profile weights must be integers greater than or equal to 1. "
+                    f"Invalid values: {invalid_list}."
+                )
+
+        profile_name = profile_data.get(
+            "name", merged.get(profile_key, {}).get("name", profile_key)
+        )
+        profile_description = profile_data.get(
+            "description", merged.get(profile_key, {}).get("description", "")
+        )
+        merged[profile_key] = {
+            "name": profile_name,
+            "description": profile_description,
+            "weights": weights,
+        }
+
+    SCORING_PROFILES = merged
 
 
 def compute_weighted_total_score(

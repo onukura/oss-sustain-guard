@@ -7,12 +7,15 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
+import oss_sustain_guard.core as core
 from oss_sustain_guard.core import (
+    DEFAULT_SCORING_PROFILES,
     SCORING_PROFILES,
     AnalysisResult,
     Metric,
     _query_github_graphql,
     analyze_repository,
+    apply_profile_overrides,
     check_attraction,
     check_code_of_conduct,
     check_documentation_presence,
@@ -114,6 +117,7 @@ def test_total_score_is_sum_of_metric_scores(mock_graphql_query):
 
 
 @patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)
+@patch("oss_sustain_guard.core.GITHUB_TOKEN", "fake_token")
 @patch("httpx.Client.post")
 def test_query_github_graphql_success(mock_post):
     """
@@ -134,6 +138,7 @@ def test_query_github_graphql_success(mock_post):
 
 
 @patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)
+@patch("oss_sustain_guard.core.GITHUB_TOKEN", "fake_token")
 @patch("httpx.Client.post")
 def test_query_github_graphql_api_error(mock_post):
     """
@@ -1307,6 +1312,86 @@ def test_scoring_profiles_return_structure():
         assert "weights" in profile_data
         assert isinstance(profile_data["total_score"], int)
         assert 0 <= profile_data["total_score"] <= 100
+
+
+def test_apply_profile_overrides_adds_custom_profile():
+    """Test applying profile overrides adds a new profile."""
+    required_metrics = DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    custom_weights = dict.fromkeys(required_metrics, 2)
+    overrides = {
+        "custom_profile": {
+            "name": "Custom Profile",
+            "description": "Custom description",
+            "weights": custom_weights,
+        }
+    }
+
+    try:
+        apply_profile_overrides(overrides)
+        assert "custom_profile" in core.SCORING_PROFILES
+        assert core.SCORING_PROFILES["custom_profile"]["weights"] == custom_weights
+    finally:
+        apply_profile_overrides({})
+
+
+def test_apply_profile_overrides_missing_metrics_raises():
+    """Test missing metrics in overrides raises."""
+    required_metrics = DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    custom_weights = dict.fromkeys(required_metrics, 1)
+    custom_weights.pop(next(iter(custom_weights)))
+
+    overrides = {
+        "custom_profile": {
+            "name": "Custom Profile",
+            "weights": custom_weights,
+        }
+    }
+
+    try:
+        with pytest.raises(ValueError, match="missing metrics"):
+            apply_profile_overrides(overrides)
+    finally:
+        apply_profile_overrides({})
+
+
+def test_apply_profile_overrides_unknown_metric_raises():
+    """Test unknown metrics in overrides raise."""
+    required_metrics = DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    custom_weights = dict.fromkeys(required_metrics, 1)
+    custom_weights["Unknown Metric"] = 2
+
+    overrides = {
+        "custom_profile": {
+            "name": "Custom Profile",
+            "weights": custom_weights,
+        }
+    }
+
+    try:
+        with pytest.raises(ValueError, match="unknown metrics"):
+            apply_profile_overrides(overrides)
+    finally:
+        apply_profile_overrides({})
+
+
+def test_apply_profile_overrides_invalid_weight_raises():
+    """Test invalid weight values raise."""
+    required_metrics = DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    custom_weights = dict.fromkeys(required_metrics, 1)
+    custom_weights[next(iter(custom_weights))] = 0
+
+    overrides = {
+        "custom_profile": {
+            "name": "Custom Profile",
+            "weights": custom_weights,
+        }
+    }
+
+    try:
+        with pytest.raises(ValueError, match="Invalid values"):
+            apply_profile_overrides(overrides)
+    finally:
+        apply_profile_overrides({})
 
 
 # --- Tests for _query_librariesio_api ---

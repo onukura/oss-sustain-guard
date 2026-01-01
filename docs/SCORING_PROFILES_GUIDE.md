@@ -229,6 +229,59 @@ Different profiles can produce significantly different scores:
 
 ## Advanced Usage: Custom Weights
 
+### Method 1: Configuration File (Recommended)
+
+Define custom profiles in `.oss-sustain-guard.toml` or `pyproject.toml`:
+
+```toml
+# .oss-sustain-guard.toml
+[tool.oss-sustain-guard.profiles.my_custom]
+name = "My Custom Profile"
+description = "Custom scoring focused on specific needs"
+
+[tool.oss-sustain-guard.profiles.my_custom.weights]
+"Contributor Redundancy" = 5
+"Security Signals" = 4
+"Recent Activity" = 3
+"Maintainer Retention" = 3
+"Funding Signals" = 2
+"Build Health" = 2
+"Issue Responsiveness" = 2
+"PR Acceptance Ratio" = 2
+"Review Health" = 2
+"PR Responsiveness" = 2
+"Documentation Presence" = 2
+"License Clarity" = 2
+"Organizational Diversity" = 2
+"Contributor Attraction" = 2
+"Release Rhythm" = 1
+"Test Coverage" = 1
+"Dependency Health" = 1
+"Code Quality" = 1
+"Security Response" = 1
+"Code of Conduct" = 1
+"Community Diversity" = 1
+"Contributor Growth" = 1
+"Project Maturity" = 1
+"Release Freshness" = 1
+```
+
+**Usage:**
+```bash
+# Automatically uses profile from .oss-sustain-guard.toml
+os4g check --profile my_custom requests
+
+# Or use external profile file
+os4g check --profile-file my_profiles.toml --profile my_custom requests
+```
+
+**Priority Order:**
+1. `--profile-file` (if specified)
+2. `.oss-sustain-guard.toml` (local config)
+3. `pyproject.toml` (project-level config)
+
+### Method 2: Python Code
+
 You can modify `SCORING_PROFILES` in `core.py` to create custom profiles:
 
 ```python
@@ -348,5 +401,5 @@ for metric_name, weight in profile["weights"].items():
 
 ## See Also
 
-- [Database Schema](DATABASE_SCHEMA.md) - Stored metric details
 - [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) - Metric definitions
+- [Exclude Packages Guide](EXCLUDE_PACKAGES_GUIDE.md) - Configuration management

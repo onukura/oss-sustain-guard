@@ -96,6 +96,96 @@ Evaluated across 5 categories:
 
 **Score interpretation:** 80-100 (Healthy) | 50-79 (Monitor) | 0-49 (Needs Attention)
 
+### Custom Scoring Profiles
+
+You can override scoring profiles via `.oss-sustain-guard.toml`, `pyproject.toml`, or a dedicated TOML file with `--profile-file`.
+
+Profile weights must include every metric and use integer values ≥ 1.
+
+**Method 1: Configuration File (Recommended)**
+
+```toml
+# .oss-sustain-guard.toml
+[tool.oss-sustain-guard.profiles.custom_security]
+name = "Custom Security"
+description = "Security-focused profile with higher signal weight."
+
+[tool.oss-sustain-guard.profiles.custom_security.weights]
+"Contributor Redundancy" = 2
+"Maintainer Retention" = 2
+"Contributor Attraction" = 1
+"Contributor Retention" = 1
+"Organizational Diversity" = 2
+"Maintainer Load Distribution" = 1
+"Recent Activity" = 2
+"Release Rhythm" = 2
+"Build Health" = 3
+"Change Request Resolution" = 1
+"Issue Responsiveness" = 2
+"PR Acceptance Ratio" = 1
+"Review Health" = 2
+"Issue Resolution Duration" = 1
+"Stale Issue Ratio" = 1
+"PR Merge Speed" = 2
+"Documentation Presence" = 2
+"Code of Conduct" = 1
+"License Clarity" = 2
+"Project Popularity" = 1
+"Fork Activity" = 1
+"Security Signals" = 4
+"Funding Signals" = 3
+"PR Responsiveness" = 1
+```
+
+```bash
+# Automatically uses profile from .oss-sustain-guard.toml
+os4g check requests --profile custom_security
+```
+
+**Method 2: External Profile File**
+
+```toml
+# profiles.toml
+[profiles.custom_security]
+name = "Custom Security"
+description = "Security-focused profile with higher signal weight."
+
+[profiles.custom_security.weights]
+"Contributor Redundancy" = 2
+"Maintainer Retention" = 2
+"Contributor Attraction" = 1
+"Contributor Retention" = 1
+"Organizational Diversity" = 2
+"Maintainer Load Distribution" = 1
+"Recent Activity" = 2
+"Release Rhythm" = 2
+"Build Health" = 3
+"Change Request Resolution" = 1
+"Issue Responsiveness" = 2
+"PR Acceptance Ratio" = 1
+"Review Health" = 2
+"Issue Resolution Duration" = 1
+"Stale Issue Ratio" = 1
+"PR Merge Speed" = 2
+"Documentation Presence" = 2
+"Code of Conduct" = 1
+"License Clarity" = 2
+"Project Popularity" = 1
+"Fork Activity" = 1
+"Security Signals" = 4
+"Funding Signals" = 3
+"PR Responsiveness" = 1
+```
+
+```bash
+os4g check requests --profile custom_security --profile-file profiles.toml
+```
+
+**Priority Order:**
+1. `--profile-file` (if specified)
+2. `.oss-sustain-guard.toml` (local config)
+3. `pyproject.toml` (project-level config)
+
 ### Special Features
 
 - **🎁 Gratitude Vending Machine** - Discover community projects that need support
