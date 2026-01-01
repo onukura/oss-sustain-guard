@@ -2,8 +2,11 @@
 Command-line interface for OSS Sustain Guard.
 """
 
+import json
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from html import escape
 from pathlib import Path
 
 import typer
@@ -43,6 +46,7 @@ from oss_sustain_guard.core import (
     Metric,
     analyze_repositories_batch,
     analyze_repository,
+    analysis_result_to_dict,
     apply_profile_overrides,
     compute_weighted_total_score,
     get_metric_weights,
@@ -171,6 +175,143 @@ def load_database(
     return merged
 
 
+def _summarize_observations(metrics: list[Metric]) -> str:
+    """Summarize key observations from metrics with supportive language."""
+    observations = [
+        metric.message for metric in metrics if metric.risk in ("High", "Critical")
+    ]
+    if observations:
+        observation_text = " • ".join(observations[:2])
+        if len(observations) > 2:
+            observation_text += f" (+{len(observations) - 2} more)"
+        return observation_text
+    return "No significant concerns detected"
+
+
+def _format_health_status(score: int) -> tuple[str, str]:
+    """Return (status_text, color) for a score."""
+    if score >= 80:
+        return "Healthy", "green"
+    if score >= 50:
+        return "Needs attention", "yellow"
+    return "Needs support", "red"
+
+
+def _build_summary(results: list[AnalysisResult]) -> dict[str, int | float]:
+    """Build summary statistics for report outputs."""
+    scores = [result.total_score for result in results]
+    total_packages = len(scores)
+    average_score = round(sum(scores) / total_packages, 1) if total_packages else 0.0
+    healthy_count = sum(1 for score in scores if score >= 80)
+    needs_attention_count = sum(1 for score in scores if 50 <= score < 80)
+    needs_support_count = sum(1 for score in scores if score < 50)
+    return {
+        "total_packages": total_packages,
+        "average_score": average_score,
+        "healthy_count": healthy_count,
+        "needs_attention_count": needs_attention_count,
+        "needs_support_count": needs_support_count,
+    }
+
+
+def _write_json_results(
+    results: list[AnalysisResult],
+    profile: str,
+    output_file: Path | None,
+) -> None:
+    """Write results as JSON to stdout or a file."""
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "profile": profile,
+        "summary": _build_summary(results),
+        "results": [analysis_result_to_dict(result) for result in results],
+    }
+    json_text = json.dumps(payload, ensure_ascii=False, indent=2)
+    if output_file:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(json_text + "\n", encoding="utf-8")
+        console.print(f"[green]✅ JSON report saved to {output_file}[/green]")
+    else:
+        sys.stdout.write(json_text + "\n")
+
+
+def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
+    """Render HTML report from template and results."""
+    template_path = project_root / "docs" / "assets" / "report_template.html"
+    if not template_path.exists():
+        raise FileNotFoundError(
+            "HTML report template not found. Expected: "
+            f"{template_path}"
+        )
+
+    summary = _build_summary(results)
+    summary_cards = [
+        ("Packages analyzed", str(summary["total_packages"])),
+        ("Average score", f"{summary['average_score']:.1f}"),
+        ("Healthy", str(summary["healthy_count"])),
+        ("Needs attention", str(summary["needs_attention_count"])),
+        ("Needs support", str(summary["needs_support_count"])),
+    ]
+    summary_cards_html = "\n".join(
+        f"<div class=\"summary-card\"><div class=\"label\">{escape(label)}</div>"
+        f"<div class=\"value\">{escape(value)}</div></div>"
+        for label, value in summary_cards
+    )
+
+    rows_html = []
+    for result in results:
+        status_text, status_color = _format_health_status(result.total_score)
+        repo_name = result.repo_url.replace("https://github.com/", "")
+        rows_html.append(
+            "<tr>"
+            f"<td>{escape(repo_name)}</td>"
+            f"<td>{escape(result.ecosystem or 'unknown')}</td>"
+            f"<td class=\"score {status_color}\">{result.total_score}/100</td>"
+            f"<td class=\"status {status_color}\">{escape(status_text)}</td>"
+            f"<td>{escape(_summarize_observations(result.metrics))}</td>"
+            "</tr>"
+        )
+
+    json_payload = json.dumps(
+        {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "profile": profile,
+            "summary": summary,
+            "results": [analysis_result_to_dict(result) for result in results],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    json_payload = json_payload.replace("</", "<\\/")
+
+    template = template_path.read_text(encoding="utf-8")
+    return template.format(
+        report_title="OSS Sustain Guard Report",
+        generated_at=escape(datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")),
+        profile=escape(profile),
+        summary_cards=summary_cards_html,
+        results_table_rows="\n".join(rows_html),
+        results_json=json_payload,
+    )
+
+
+def _write_html_results(
+    results: list[AnalysisResult],
+    profile: str,
+    output_file: Path | None,
+) -> None:
+    """Write results as HTML to a file."""
+    output_path = output_file or Path("oss-sustain-guard-report.html")
+    output_path = output_path.expanduser()
+    if output_path.exists() and output_path.is_dir():
+        raise IsADirectoryError(f"Output path is a directory: {output_path}")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    html_text = _render_html_report(results, profile)
+    output_path.write_text(html_text, encoding="utf-8")
+    console.print(f"[green]✅ HTML report saved to {output_path}[/green]")
+
+
 def display_results_compact(
     results: list[AnalysisResult], show_dependencies: bool = False
 ):
@@ -222,7 +363,7 @@ def display_results_compact(
                 )
 
 
-def display_results(
+def display_results_table(
     results: list[AnalysisResult],
     show_models: bool = False,
     show_dependencies: bool = False,
@@ -250,19 +391,7 @@ def display_results(
         else:
             health_status = "[red]Needs support[/red]"
 
-        # Gather key observations (areas needing attention)
-        observations = []
-        for metric in result.metrics:
-            if metric.risk in ("High", "Critical"):
-                observations.append(metric.message)
-
-        # Create friendly observation text
-        if observations:
-            observation_text = " • ".join(observations[:2])  # Show top 2 observations
-            if len(observations) > 2:
-                observation_text += f" (+{len(observations) - 2} more)"
-        else:
-            observation_text = "No significant concerns detected"
+        observation_text = _summarize_observations(result.metrics)
 
         table.add_row(
             result.repo_url.replace("https://github.com/", ""),
@@ -338,6 +467,44 @@ def display_results(
                     console.print(
                         f"   • {model.name}: [{model_color}]{model.score}/{model.max_score}[/{model_color}] - {model.observation}"
                     )
+
+
+def display_results(
+    results: list[AnalysisResult],
+    show_models: bool = False,
+    show_dependencies: bool = False,
+    output_format: str = "terminal",
+    output_file: Path | None = None,
+    output_style: str = "normal",
+    profile: str = "balanced",
+) -> None:
+    """Display or export analysis results by format."""
+    if output_format in {"json", "html"}:
+        try:
+            if output_format == "json":
+                _write_json_results(results, profile, output_file)
+            else:
+                _write_html_results(results, profile, output_file)
+        except (FileNotFoundError, IsADirectoryError, OSError) as exc:
+            console.print(f"[yellow]⚠️  Unable to write report: {exc}[/yellow]")
+            raise typer.Exit(code=1) from exc
+        return
+
+    if output_style == "compact":
+        display_results_compact(results, show_dependencies=show_dependencies)
+    elif output_style == "detail":
+        display_results_detailed(
+            results,
+            show_signals=True,
+            show_models=show_models,
+            profile=profile,
+        )
+    else:
+        display_results_table(
+            results,
+            show_models=show_models,
+            show_dependencies=show_dependencies,
+        )
 
 
 def display_results_detailed(
@@ -1067,7 +1234,19 @@ def check(
         None,
         "--output-style",
         "-o",
-        help="Output format style: compact (one line per package, CI/CD-friendly), normal (table with key observations), detail (full metrics table with signals). If not specified, uses config file default.",
+        help="Output format style for terminal output: compact (one line per package, CI/CD-friendly), normal (table with key observations), detail (full metrics table with signals). If not specified, uses config file default.",
+    ),
+    output_format: str = typer.Option(
+        "terminal",
+        "--output-format",
+        "-F",
+        help="Output format: terminal (default), json, html.",
+    ),
+    output_file: Path | None = typer.Option(
+        None,
+        "--output-file",
+        "-O",
+        help="Write output to a file (recommended for json or html).",
     ),
     show_models: bool = typer.Option(
         False,
@@ -1180,6 +1359,22 @@ def check(
         )
         console.print(f"[dim]Available styles: {', '.join(valid_output_styles)}[/dim]")
         raise typer.Exit(code=1)
+
+    valid_output_formats = ["terminal", "json", "html"]
+    if output_format not in valid_output_formats:
+        console.print(
+            f"[red]❌ Unknown output format '{output_format}'.[/red]",
+        )
+        console.print(
+            f"[dim]Available formats: {', '.join(valid_output_formats)}[/dim]"
+        )
+        raise typer.Exit(code=1)
+
+    if output_format == "terminal" and output_file:
+        console.print(
+            "[yellow]ℹ️  --output-file is ignored for terminal output. "
+            "Use --output-format json or html to save a report.[/yellow]"
+        )
 
     # Handle --clear-cache option
     if clear_cache_flag:
@@ -1483,23 +1678,15 @@ def check(
         results_to_display = [r for r in results if r is not None]
 
     if results_to_display:
-        if output_style == "compact":
-            display_results_compact(
-                results_to_display, show_dependencies=show_dependencies
-            )
-        elif output_style == "detail":
-            display_results_detailed(
-                results_to_display,
-                show_signals=True,
-                show_models=show_models,
-                profile=profile,
-            )
-        else:  # normal
-            display_results(
-                results_to_display,
-                show_models=show_models,
-                show_dependencies=show_dependencies,
-            )
+        display_results(
+            results_to_display,
+            show_models=show_models,
+            show_dependencies=show_dependencies,
+            output_format=output_format,
+            output_file=output_file,
+            output_style=output_style,
+            profile=profile,
+        )
         if excluded_count > 0:
             console.print(
                 f"\n⏭️  Skipped {excluded_count} excluded package(s).",

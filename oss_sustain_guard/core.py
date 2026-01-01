@@ -115,6 +115,54 @@ class AnalysisResult(NamedTuple):
 # --- Helper Functions ---
 
 
+def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
+    """Serialize an AnalysisResult to a JSON-friendly dictionary."""
+    metrics: list[dict[str, Any]] = []
+    for metric in result.metrics:
+        if isinstance(metric, dict):
+            metrics.append(metric)
+        elif hasattr(metric, "_asdict"):
+            metrics.append(metric._asdict())
+        else:
+            metrics.append(
+                {
+                    "name": getattr(metric, "name", ""),
+                    "score": getattr(metric, "score", 0),
+                    "max_score": getattr(metric, "max_score", 0),
+                    "message": getattr(metric, "message", ""),
+                    "risk": getattr(metric, "risk", "None"),
+                }
+            )
+
+    models: list[dict[str, Any]] = []
+    for model in result.models:
+        if isinstance(model, dict):
+            models.append(model)
+        elif hasattr(model, "_asdict"):
+            models.append(model._asdict())
+        else:
+            models.append(
+                {
+                    "name": getattr(model, "name", ""),
+                    "score": getattr(model, "score", 0),
+                    "max_score": getattr(model, "max_score", 0),
+                    "observation": getattr(model, "observation", ""),
+                }
+            )
+
+    return {
+        "repo_url": result.repo_url,
+        "total_score": result.total_score,
+        "metrics": metrics,
+        "funding_links": result.funding_links,
+        "is_community_driven": result.is_community_driven,
+        "models": models,
+        "signals": result.signals,
+        "dependency_scores": result.dependency_scores,
+        "ecosystem": result.ecosystem,
+    }
+
+
 def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
     """
     Executes a GraphQL query against the GitHub API.

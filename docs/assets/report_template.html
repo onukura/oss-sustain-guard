@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{report_title}</title>
+    <style>
+      :root {{
+        color-scheme: light dark;
+        --bg: #f6f7fb;
+        --surface: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --green: #10b981;
+        --yellow: #f59e0b;
+        --red: #ef4444;
+      }}
+      body {{
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }}
+      header {{
+        background: #111827;
+        color: #ffffff;
+        padding: 32px 40px;
+      }}
+      header h1 {{
+        margin: 0 0 8px;
+        font-size: 28px;
+      }}
+      header p {{
+        margin: 0;
+        color: #d1d5db;
+      }}
+      main {{
+        padding: 32px 40px 48px;
+      }}
+      .summary {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }}
+      .summary-card {{
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }}
+      .summary-card .label {{
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }}
+      .summary-card .value {{
+        font-size: 22px;
+        font-weight: 600;
+        margin-top: 8px;
+      }}
+      table {{
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }}
+      thead {{
+        background: #111827;
+        color: #ffffff;
+      }}
+      th,
+      td {{
+        padding: 14px 16px;
+        text-align: left;
+        vertical-align: top;
+      }}
+      tbody tr:nth-child(even) {{
+        background: #f9fafb;
+      }}
+      .score.green,
+      .status.green {{
+        color: var(--green);
+        font-weight: 600;
+      }}
+      .score.yellow,
+      .status.yellow {{
+        color: var(--yellow);
+        font-weight: 600;
+      }}
+      .score.red,
+      .status.red {{
+        color: var(--red);
+        font-weight: 600;
+      }}
+      footer {{
+        padding: 24px 40px;
+        color: var(--muted);
+        font-size: 12px;
+      }}
+      @media (prefers-color-scheme: dark) {{
+        :root {{
+          --bg: #0f172a;
+          --surface: #111827;
+          --text: #e5e7eb;
+          --muted: #9ca3af;
+        }}
+        tbody tr:nth-child(even) {{
+          background: #0f172a;
+        }}
+      }}
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>{report_title}</h1>
+      <p>Generated at {generated_at} · Profile: {profile}</p>
+    </header>
+    <main>
+      <section class="summary">
+        {summary_cards}
+      </section>
+      <table>
+        <thead>
+          <tr>
+            <th>Package</th>
+            <th>Ecosystem</th>
+            <th>Score</th>
+            <th>Health Status</th>
+            <th>Key Observations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results_table_rows}
+        </tbody>
+      </table>
+    </main>
+    <footer>
+      This report is designed to encourage constructive conversations about open-source sustainability.
+    </footer>
+    <script id="oss-sustain-guard-data" type="application/json">
+{results_json}
+    </script>
+  </body>
+</html>

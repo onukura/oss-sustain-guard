@@ -65,6 +65,12 @@ os4g check --include-lock
 
 # Scan recursively (great for monorepos)
 os4g check --recursive
+
+# Export results to JSON
+os4g check requests --output-format json --output-file oss-report.json
+
+# Generate an HTML report
+os4g check requests --output-format html --output-file oss-report.html
 ```
 
 ## 📚 Documentation
