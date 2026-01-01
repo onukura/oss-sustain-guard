@@ -30,7 +30,7 @@ from oss_sustain_guard.cache import (
     save_cache,
 )
 from oss_sustain_guard.config import (
-    DEFAULT_CACHE_TTL,
+    get_cache_ttl,
     get_output_style,
     is_cache_enabled,
     is_package_excluded,
@@ -102,6 +102,36 @@ def clear_lockfile_cache():
 
 
 # --- Helper Functions ---
+
+
+def _cache_analysis_result(
+    ecosystem: str,
+    package_name: str,
+    result: AnalysisResult,
+    source: str = "realtime",
+) -> None:
+    """Persist analysis results to the local cache for reuse."""
+    db_key = f"{ecosystem}:{package_name}"
+    payload = analysis_result_to_dict(result)
+    cache_entry = {
+        db_key: {
+            "ecosystem": ecosystem,
+            "package_name": package_name,
+            "github_url": result.repo_url,
+            "metrics": payload.get("metrics", []),
+            "funding_links": result.funding_links,
+            "is_community_driven": result.is_community_driven,
+            "models": result.models,
+            "signals": result.signals,
+            "analysis_version": ANALYSIS_VERSION,
+            "cache_metadata": {
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "ttl_seconds": get_cache_ttl(),
+                "source": source,
+            },
+        }
+    }
+    save_cache(ecosystem, cache_entry)
 
 
 def apply_scoring_profiles(profile_file: Path | None) -> None:
@@ -823,28 +853,7 @@ def analyze_packages_parallel(
                         # Add ecosystem to result
                         result = result._replace(ecosystem=ecosystem)
 
-                        # Cache the result
-                        db_key = f"{ecosystem}:{pkg}"
-                        cache_entry = {
-                            "github_url": result.repo_url,
-                            "metrics": [
-                                {
-                                    "name": m.name,
-                                    "score": m.score,
-                                    "max_score": m.max_score,
-                                    "message": m.message,
-                                    "risk": m.risk,
-                                }
-                                for m in result.metrics
-                            ],
-                            "analysis_version": ANALYSIS_VERSION,
-                            "funding_links": result.funding_links,
-                            "is_community_driven": result.is_community_driven,
-                            "models": result.models,
-                            "signals": result.signals,
-                        }
-                        # save_cache expects dict[str, dict] format
-                        save_cache(ecosystem, {db_key: cache_entry})
+                        _cache_analysis_result(ecosystem, pkg, result)
 
                     results_map[idx] = result
                     progress.advance(task)
@@ -1169,26 +1178,8 @@ def analyze_package(
         analysis_result = analysis_result._replace(ecosystem=ecosystem)
 
         # Save to cache for future use (without total_score - it will be recalculated based on profile)
-        cache_entry = {
-            db_key: {
-                "ecosystem": ecosystem,
-                "package_name": package_name,
-                "github_url": analysis_result.repo_url,
-                "metrics": [metric._asdict() for metric in analysis_result.metrics],
-                "funding_links": analysis_result.funding_links,
-                "is_community_driven": analysis_result.is_community_driven,
-                "analysis_version": ANALYSIS_VERSION,
-                "cache_metadata": {
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
-                    "ttl_seconds": DEFAULT_CACHE_TTL,
-                    "source": "realtime",
-                },
-            }
-        }
-
-        if is_cache_enabled():
-            save_cache(ecosystem, cache_entry)
-            console.print("    [dim]💾 Cached for future use[/dim]")
+        _cache_analysis_result(ecosystem, package_name, analysis_result)
+        console.print("    [dim]💾 Cached for future use[/dim]")
 
         # If show_dependencies is requested, analyze dependencies
         if show_dependencies and lockfile_path:
