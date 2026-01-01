@@ -199,3 +199,70 @@ golang.org/x/sys v0.10.0 h1:yetAnotherHash
         resolver = GoResolver()
         with pytest.raises(ValueError, match="Unknown Go lockfile type"):
             resolver.parse_lockfile(str(unknown_file))
+
+    def test_parse_lockfile_read_error(self, tmp_path, monkeypatch):
+        """Test parsing go.sum with read error."""
+        sum_file = tmp_path / "go.sum"
+        sum_file.write_text("github.com/golang/go v1.21.0 h1:hash")
+
+        def _raise(*_args, **_kwargs):
+            raise OSError("read error")
+
+        monkeypatch.setattr("builtins.open", _raise)
+
+        resolver = GoResolver()
+        packages = resolver.parse_lockfile(str(sum_file))
+        assert packages == []
+
+    def test_parse_manifest_not_found(self):
+        """Test parsing missing go.mod."""
+        resolver = GoResolver()
+        with pytest.raises(FileNotFoundError):
+            resolver.parse_manifest("/missing/go.mod")
+
+    def test_parse_manifest_unknown_type(self, tmp_path):
+        """Test parsing unknown manifest type."""
+        manifest = tmp_path / "go.txt"
+        manifest.touch()
+
+        resolver = GoResolver()
+        with pytest.raises(ValueError, match="Unknown Go manifest file type"):
+            resolver.parse_manifest(manifest)
+
+    def test_parse_manifest_go_mod(self, tmp_path):
+        """Test parsing go.mod with block and single-line requires."""
+        manifest = tmp_path / "go.mod"
+        manifest.write_text(
+            "module github.com/example/project\n"
+            "go 1.21\n"
+            "require (\n"
+            "  github.com/user/repo v1.2.3\n"
+            "  // comment\n"
+            "  github.com/other/repo v0.1.0\n"
+            ")\n"
+            "require github.com/single/repo v0.9.0\n"
+        )
+
+        resolver = GoResolver()
+        packages = resolver.parse_manifest(manifest)
+
+        names = {pkg.name for pkg in packages}
+        assert names == {
+            "github.com/user/repo",
+            "github.com/other/repo",
+            "github.com/single/repo",
+        }
+
+    def test_parse_manifest_read_error(self, tmp_path, monkeypatch):
+        """Test parsing go.mod with read error."""
+        manifest = tmp_path / "go.mod"
+        manifest.write_text("module example\n")
+
+        def _raise(*_args, **_kwargs):
+            raise OSError("read error")
+
+        monkeypatch.setattr("builtins.open", _raise)
+
+        resolver = GoResolver()
+        with pytest.raises(ValueError, match="Failed to parse go.mod"):
+            resolver.parse_manifest(manifest)

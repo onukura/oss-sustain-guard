@@ -133,3 +133,96 @@ version = "1.9.0"
         resolver = RustResolver()
         with pytest.raises(ValueError, match="Unknown Rust lockfile type"):
             resolver.parse_lockfile(str(unknown_file))
+
+    def test_parse_lockfile_missing_tomllib(self, tmp_path, monkeypatch):
+        """Test parsing Cargo.lock without tomllib/tomli."""
+        lock_file = tmp_path / "Cargo.lock"
+        lock_file.write_text('[[package]]\nname = "tokio"\nversion = "1.0.0"\n')
+
+        import builtins
+
+        original_import = builtins.__import__
+
+        def _fake_import(name, *args, **kwargs):
+            if name in {"tomllib", "tomli"}:
+                raise ImportError("missing")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _fake_import)
+
+        resolver = RustResolver()
+        packages = resolver.parse_lockfile(lock_file)
+
+        assert packages == []
+
+    def test_parse_lockfile_tomllib_error(self, tmp_path, monkeypatch):
+        """Test handling tomllib errors when parsing Cargo.lock."""
+        lock_file = tmp_path / "Cargo.lock"
+        lock_file.write_text('[[package]]\nname = "tokio"\nversion = "1.0.0"\n')
+
+        import sys
+        import types
+
+        def _raise(*_args, **_kwargs):
+            raise ValueError("parse error")
+
+        fake_tomllib = types.ModuleType("tomllib")
+        fake_tomllib.load = _raise
+        monkeypatch.setitem(sys.modules, "tomllib", fake_tomllib)
+
+        resolver = RustResolver()
+        packages = resolver.parse_lockfile(lock_file)
+
+        assert packages == []
+
+    def test_parse_manifest_not_found(self):
+        """Test parsing missing Cargo.toml."""
+        resolver = RustResolver()
+        with pytest.raises(FileNotFoundError):
+            resolver.parse_manifest("/missing/Cargo.toml")
+
+    def test_parse_manifest_unknown(self, tmp_path):
+        """Test parsing unknown manifest type."""
+        manifest = tmp_path / "Cargo.lock"
+        manifest.touch()
+
+        resolver = RustResolver()
+        with pytest.raises(ValueError, match="Unknown Rust manifest file type"):
+            resolver.parse_manifest(manifest)
+
+    def test_parse_manifest_cargo_toml(self, tmp_path):
+        """Test parsing Cargo.toml."""
+        manifest = tmp_path / "Cargo.toml"
+        manifest.write_text(
+            '[package]\nname = "example"\nversion = "0.1.0"\n\n'
+            '[dependencies]\nserde = "1.0"\n'
+            'tokio = { version = "1", features = ["full"] }\n\n'
+            '[dev-dependencies]\nrstest = "0.18"\n\n'
+            '[build-dependencies]\ncc = "1.0"\n'
+        )
+
+        resolver = RustResolver()
+        packages = resolver.parse_manifest(manifest)
+
+        names = {pkg.name for pkg in packages}
+        assert names == {"serde", "tokio", "rstest", "cc"}
+
+    def test_parse_manifest_missing_tomllib(self, tmp_path, monkeypatch):
+        """Test parsing Cargo.toml without tomllib/tomli."""
+        manifest = tmp_path / "Cargo.toml"
+        manifest.write_text('[dependencies]\nserde = "1.0"\n')
+
+        import builtins
+
+        original_import = builtins.__import__
+
+        def _fake_import(name, *args, **kwargs):
+            if name in {"tomllib", "tomli"}:
+                raise ImportError("missing")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _fake_import)
+
+        resolver = RustResolver()
+        with pytest.raises(ValueError, match="tomllib or tomli is required"):
+            resolver.parse_manifest(manifest)

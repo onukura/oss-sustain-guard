@@ -44,6 +44,16 @@ class TestRResolver:
         resolver = RResolver()
         assert resolver.resolve_repository("missing") is None
 
+    @patch("httpx.Client.get")
+    def test_resolve_repository_request_error(self, mock_get):
+        """Test handling CRAN request errors."""
+        import httpx
+
+        mock_get.side_effect = httpx.RequestError("Network error")
+
+        resolver = RResolver()
+        assert resolver.resolve_repository("ggplot2") is None
+
     def test_parse_lockfile(self, tmp_path):
         """Test parsing renv.lock."""
         lock_data = {
@@ -62,6 +72,18 @@ class TestRResolver:
         names = {pkg.name for pkg in packages}
         assert names == {"dplyr", "ggplot2"}
 
+    def test_parse_lockfile_skips_invalid_entries(self, tmp_path):
+        """Test parsing renv.lock with invalid package entries."""
+        lock_data = {"Packages": {"": {}, "valid": {"Version": "1.0.0"}}}
+        lockfile = tmp_path / "renv.lock"
+        lockfile.write_text(json.dumps(lock_data))
+
+        resolver = RResolver()
+        packages = resolver.parse_lockfile(lockfile)
+
+        assert len(packages) == 1
+        assert packages[0].name == "valid"
+
     def test_parse_lockfile_not_found(self):
         """Test parsing missing lockfile."""
         resolver = RResolver()
@@ -77,6 +99,15 @@ class TestRResolver:
         with pytest.raises(ValueError, match="Unknown R lockfile type"):
             resolver.parse_lockfile(unknown)
 
+    def test_parse_lockfile_invalid_json(self, tmp_path):
+        """Test parsing invalid renv.lock."""
+        lockfile = tmp_path / "renv.lock"
+        lockfile.write_text("{ invalid json }")
+
+        resolver = RResolver()
+        with pytest.raises(ValueError, match="Failed to parse renv.lock"):
+            resolver.parse_lockfile(lockfile)
+
     def test_parse_manifest(self, tmp_path):
         """Test parsing DESCRIPTION manifest."""
         description = tmp_path / "DESCRIPTION"
@@ -89,6 +120,19 @@ class TestRResolver:
 
         names = {pkg.name for pkg in packages}
         assert names == {"dplyr", "ggplot2", "testthat"}
+
+    def test_parse_manifest_continuation_lines(self, tmp_path):
+        """Test parsing DESCRIPTION with continuation lines."""
+        description = tmp_path / "DESCRIPTION"
+        description.write_text(
+            "Imports: dplyr,\n ggplot2,\nDepends: dplyr\nSuggests: dplyr\n"
+        )
+
+        resolver = RResolver()
+        packages = resolver.parse_manifest(description)
+
+        names = {pkg.name for pkg in packages}
+        assert names == {"dplyr", "ggplot2"}
 
     def test_parse_manifest_not_found(self):
         """Test missing DESCRIPTION."""
@@ -104,3 +148,23 @@ class TestRResolver:
         resolver = RResolver()
         with pytest.raises(ValueError, match="Unknown R manifest file type"):
             resolver.parse_manifest(unknown)
+
+    def test_parse_manifest_read_error(self, tmp_path, monkeypatch):
+        """Test error reading DESCRIPTION."""
+        description = tmp_path / "DESCRIPTION"
+        description.write_text("Imports: dplyr\n")
+
+        def _raise(*_args, **_kwargs):
+            raise OSError("read error")
+
+        monkeypatch.setattr("builtins.open", _raise)
+
+        resolver = RResolver()
+        with pytest.raises(ValueError, match="Failed to read DESCRIPTION"):
+            resolver.parse_manifest(description)
+
+    def test_split_urls_non_string(self):
+        """Test splitting URL fields with non-string values."""
+        from oss_sustain_guard.resolvers.r import _split_urls
+
+        assert _split_urls(None) == []

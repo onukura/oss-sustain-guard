@@ -145,6 +145,20 @@ def test_parse_lockfile_invalid_format(tmp_path, ruby_resolver):
     assert len(packages) == 0
 
 
+def test_parse_lockfile_read_error(tmp_path, ruby_resolver, monkeypatch):
+    """Test error reading Gemfile.lock."""
+    lockfile = tmp_path / "Gemfile.lock"
+    lockfile.write_text("GEM\n  specs:\n")
+
+    def _raise(*_args, **_kwargs):
+        raise OSError("read error")
+
+    monkeypatch.setattr("builtins.open", _raise)
+
+    with pytest.raises(ValueError, match="Failed to parse Gemfile.lock"):
+        ruby_resolver.parse_lockfile(lockfile)
+
+
 def test_detect_lockfiles(tmp_path, ruby_resolver):
     """Test detecting Gemfile.lock."""
     gemfile_lock = tmp_path / "Gemfile.lock"
@@ -169,3 +183,52 @@ def test_get_manifest_files(ruby_resolver):
 
     assert "Gemfile" in manifests
     assert "Gemfile.lock" in manifests
+
+
+def test_parse_manifest_gemfile(tmp_path, ruby_resolver):
+    """Test parsing Gemfile."""
+    manifest = tmp_path / "Gemfile"
+    manifest.write_text(
+        "source 'https://rubygems.org'\n"
+        "\n"
+        "gem 'rails', '~> 7.0.0'\n"
+        'gem "devise"\n'
+        "# comment\n"
+        "group :development do\n"
+        "  gem 'byebug'\n"
+        "end\n"
+    )
+
+    packages = ruby_resolver.parse_manifest(manifest)
+
+    names = {pkg.name for pkg in packages}
+    assert names == {"rails", "devise", "byebug"}
+
+
+def test_parse_manifest_not_found(ruby_resolver):
+    """Test missing Gemfile."""
+    with pytest.raises(FileNotFoundError):
+        ruby_resolver.parse_manifest("/missing/Gemfile")
+
+
+def test_parse_manifest_unknown(tmp_path, ruby_resolver):
+    """Test unknown manifest type."""
+    manifest = tmp_path / "Gemfile.lock"
+    manifest.touch()
+
+    with pytest.raises(ValueError, match="Unknown Ruby manifest file type"):
+        ruby_resolver.parse_manifest(manifest)
+
+
+def test_parse_manifest_read_error(tmp_path, ruby_resolver, monkeypatch):
+    """Test error reading Gemfile."""
+    manifest = tmp_path / "Gemfile"
+    manifest.write_text("gem 'rails'\n")
+
+    def _raise(*_args, **_kwargs):
+        raise OSError("read error")
+
+    monkeypatch.setattr("builtins.open", _raise)
+
+    with pytest.raises(ValueError, match="Failed to parse Gemfile"):
+        ruby_resolver.parse_manifest(manifest)

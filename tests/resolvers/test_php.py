@@ -71,6 +71,41 @@ class TestPhpResolver:
         result = resolver.resolve_github_url("symfony/console")
         assert result is None
 
+    @patch("httpx.Client.get")
+    def test_resolve_github_url_empty_version_list(self, mock_get):
+        """Test resolving when package version list is empty."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "packages": {
+                "vendor/package": [],
+            }
+        }
+        mock_get.return_value = mock_response
+
+        resolver = PhpResolver()
+        result = resolver.resolve_github_url("vendor/package")
+        assert result is None
+
+    @patch("httpx.Client.get")
+    def test_resolve_github_url_support_fallback(self, mock_get):
+        """Test resolving repository from support source URL."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "packages": {
+                "vendor/package": [
+                    {
+                        "source": {"url": "https://example.com/repo.git"},
+                        "support": {"source": "https://github.com/vendor/package"},
+                    }
+                ]
+            }
+        }
+        mock_get.return_value = mock_response
+
+        resolver = PhpResolver()
+        result = resolver.resolve_github_url("vendor/package")
+        assert result == ("vendor", "package")
+
     def test_detect_lockfiles(self, tmp_path):
         """Test detecting PHP lockfiles."""
         (tmp_path / "composer.lock").touch()
@@ -137,6 +172,50 @@ class TestPhpResolver:
         resolver = PhpResolver()
         with pytest.raises(ValueError):
             resolver.parse_lockfile(str(lockfile))
+
+    def test_parse_manifest(self, tmp_path):
+        """Test parsing composer.json."""
+        manifest = tmp_path / "composer.json"
+        manifest.write_text(
+            """{
+            "require": {
+                "symfony/console": "^6.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10.0"
+            }
+        }"""
+        )
+
+        resolver = PhpResolver()
+        packages = resolver.parse_manifest(manifest)
+
+        names = {pkg.name for pkg in packages}
+        assert names == {"symfony/console", "phpunit/phpunit"}
+
+    def test_parse_manifest_invalid(self, tmp_path):
+        """Test parsing invalid composer.json."""
+        manifest = tmp_path / "composer.json"
+        manifest.write_text("{ invalid json }")
+
+        resolver = PhpResolver()
+        with pytest.raises(ValueError, match="Failed to parse composer.json"):
+            resolver.parse_manifest(manifest)
+
+    def test_parse_manifest_not_found(self):
+        """Test parsing missing composer.json."""
+        resolver = PhpResolver()
+        with pytest.raises(FileNotFoundError):
+            resolver.parse_manifest("/missing/composer.json")
+
+    def test_parse_manifest_unknown(self, tmp_path):
+        """Test parsing unknown manifest type."""
+        manifest = tmp_path / "composer.lock"
+        manifest.touch()
+
+        resolver = PhpResolver()
+        with pytest.raises(ValueError, match="Unknown PHP manifest file type"):
+            resolver.parse_manifest(manifest)
 
     def test_parse_repository_url_github(self):
         """Test parsing valid GitHub URL."""

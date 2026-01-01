@@ -2,7 +2,9 @@
 Tests for the single_maintainer_load metric.
 """
 
+from oss_sustain_guard.metrics.base import MetricContext
 from oss_sustain_guard.metrics.single_maintainer_load import (
+    METRIC,
     check_single_maintainer_load,
 )
 
@@ -101,3 +103,76 @@ class TestSingleMaintainerLoadMetric:
         assert result.max_score == 10
         assert "Needs support: Very high workload concentration" in result.message
         assert result.risk == "High"
+
+    def test_single_maintainer_load_issue_closers(self):
+        """Test workload distribution with issue timeline closers."""
+        repo_data = {
+            "pullRequests": {"edges": []},
+            "closedIssues": {
+                "edges": [
+                    {
+                        "node": {
+                            "timelineItems": {
+                                "edges": [
+                                    {"node": {"actor": {"login": "user1"}}},
+                                    {"node": {"actor": {"login": "user2"}}},
+                                ]
+                            }
+                        }
+                    }
+                ]
+            },
+        }
+        result = check_single_maintainer_load(repo_data)
+        assert result.score == 2
+        assert "Needs support: Very high workload concentration" in result.message
+        assert result.risk == "High"
+
+    def test_single_maintainer_load_moderate_gini(self):
+        """Test with moderate workload concentration (Gini 0.3-0.5)."""
+        repo_data = {
+            "pullRequests": {
+                "edges": [
+                    {"node": {"mergedBy": {"login": "user1"}}},
+                    {"node": {"mergedBy": {"login": "user1"}}},
+                    {"node": {"mergedBy": {"login": "user1"}}},
+                    {"node": {"mergedBy": {"login": "user1"}}},
+                    {"node": {"mergedBy": {"login": "user2"}}},
+                ]
+            },
+            "closedIssues": {"edges": []},
+        }
+        result = check_single_maintainer_load(repo_data)
+        assert result.score == 6
+        assert "Moderate: Some workload concentration" in result.message
+        assert result.risk == "Low"
+
+    def test_single_maintainer_load_high_gini(self):
+        """Test with high workload concentration (Gini 0.5-0.7)."""
+        repo_data = {
+            "pullRequests": {
+                "edges": [{"node": {"mergedBy": {"login": "user1"}}}] * 20
+                + [
+                    {"node": {"mergedBy": {"login": "user2"}}},
+                    {"node": {"mergedBy": {"login": "user3"}}},
+                ]
+            },
+            "closedIssues": {"edges": []},
+        }
+        result = check_single_maintainer_load(repo_data)
+        assert result.score == 4
+        assert "Observe: High workload concentration" in result.message
+        assert result.risk == "Medium"
+
+    def test_single_maintainer_load_metric_spec_checker(self):
+        """Test MetricSpec checker delegates to the metric function."""
+        repo_data = {"pullRequests": {"edges": []}, "closedIssues": {"edges": []}}
+        context = MetricContext(owner="owner", name="repo", repo_url="url")
+        result = METRIC.checker(repo_data, context)
+        assert result.name == "Maintainer Load Distribution"
+
+    def test_single_maintainer_load_metric_spec_on_error(self):
+        """Test MetricSpec error handler formatting."""
+        result = METRIC.on_error(RuntimeError("boom"))
+        assert result.score == 0
+        assert "Analysis incomplete" in result.message

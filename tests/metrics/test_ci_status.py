@@ -2,7 +2,8 @@
 Tests for the ci_status metric.
 """
 
-from oss_sustain_guard.metrics.ci_status import check_ci_status
+from oss_sustain_guard.metrics.base import MetricContext
+from oss_sustain_guard.metrics.ci_status import METRIC, check_ci_status
 
 
 class TestCiStatusMetric:
@@ -145,3 +146,56 @@ class TestCiStatusMetric:
         assert result.max_score == 10
         assert "skipped" in result.message
         assert result.risk == "Low"
+
+    def test_ci_status_latest_suite_not_dict(self):
+        """Test when latest check suite is not a dict."""
+        repo_data = {
+            "defaultBranchRef": {"target": {"checkSuites": {"nodes": ["oops"]}}}
+        }
+        result = check_ci_status(repo_data)
+        assert result.score == 0
+        assert "No recent CI checks" in result.message
+        assert result.risk == "High"
+
+    def test_ci_status_non_string_values(self):
+        """Test when conclusion and status are not strings."""
+        repo_data = {
+            "defaultBranchRef": {
+                "target": {
+                    "checkSuites": {"nodes": [{"conclusion": 123, "status": 456}]}
+                }
+            }
+        }
+        result = check_ci_status(repo_data)
+        assert result.score == 6
+        assert "Configured" in result.message
+        assert result.risk == "Low"
+
+    def test_ci_status_unknown_conclusion(self):
+        """Test when CI status is unknown."""
+        repo_data = {
+            "defaultBranchRef": {
+                "target": {
+                    "checkSuites": {
+                        "nodes": [{"conclusion": "WEIRD", "status": "COMPLETED"}]
+                    }
+                }
+            }
+        }
+        result = check_ci_status(repo_data)
+        assert result.score == 4
+        assert "Unknown" in result.message
+        assert result.risk == "Low"
+
+    def test_ci_status_metric_spec_checker(self):
+        """Test MetricSpec checker delegates to the metric function."""
+        repo_data = {"isArchived": True}
+        context = MetricContext(owner="owner", name="repo", repo_url="url")
+        result = METRIC.checker(repo_data, context)
+        assert result.name == "Build Health"
+
+    def test_ci_status_metric_spec_on_error(self):
+        """Test MetricSpec error handler formatting."""
+        result = METRIC.on_error(RuntimeError("boom"))
+        assert result.score == 0
+        assert "Analysis incomplete" in result.message
