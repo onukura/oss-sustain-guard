@@ -68,7 +68,7 @@ def check_review_health(repo_data: dict[str, Any]) -> Metric:
                 except (ValueError, AttributeError):
                     pass
 
-    if not review_times and not review_counts:
+    if not review_times:
         return Metric(
             "Review Health",
             0,

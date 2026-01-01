@@ -108,21 +108,21 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
     reduction_percentage = (1 - drain_ratio) * 100
 
     # Scoring logic with graduated risk levels
-    if drain_ratio < 0.1:  # 90% reduction
+    if drain_ratio <= 0.1:  # 90%+ reduction
         score = 0
         risk = "Critical"
         message = (
             f"Critical: {reduction_percentage:.0f}% reduction in maintainers. "
             f"From {len(older_authors)} → {len(recent_authors)} active contributors."
         )
-    elif drain_ratio < 0.3:  # 70% reduction
+    elif drain_ratio <= 0.3:  # 70-89% reduction
         score = 3
         risk = "High"
         message = (
             f"High: {reduction_percentage:.0f}% reduction in maintainers. "
             f"From {len(older_authors)} → {len(recent_authors)} contributors."
         )
-    elif drain_ratio < 0.5:  # 50% reduction
+    elif drain_ratio <= 0.5:  # 50-69% reduction
         score = 5
         risk = "Medium"
         message = (

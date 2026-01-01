@@ -42,7 +42,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
         )
 
     target = default_branch.get("target")
-    if not target:
+    if target is None:
         return Metric(
             "Build Health",
             0,
@@ -51,14 +51,24 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
             "High",
         )
 
-    check_suites = target.get("checkSuites", {}).get("nodes", [])
+    check_suites_data = target.get("checkSuites")
+    if not check_suites_data:
+        return Metric(
+            "Build Health",
+            0,
+            max_score,
+            "No CI configuration detected.",
+            "High",
+        )
+
+    check_suites = check_suites_data.get("nodes", [])
 
     if not check_suites:
         return Metric(
             "Build Health",
             0,
             max_score,
-            "No CI configuration detected.",
+            "No recent CI checks.",
             "High",
         )
 
