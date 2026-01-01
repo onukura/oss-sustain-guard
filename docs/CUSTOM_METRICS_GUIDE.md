@@ -717,12 +717,12 @@ METRIC = MetricSpec(
 ## Resources
 
 - [CHAOSS Metrics](https://chaoss.community/metrics/) - Industry-standard OSS metrics
-- [OSS Sustain Guard Architecture](../CONTRIBUTING.md#architecture)
-- [Adding New Metric Skill](../.claude/skills/adding-new-metric/SKILL.md)
+- [OSS Sustain Guard Architecture](https://github.com/onukura/oss-sustain-guard/blob/main/CONTRIBUTING.md#architecture)
+- [Adding New Metric Skill](https://github.com/onukura/oss-sustain-guard/blob/main/.claude/skills/adding-new-metric/SKILL.md)
 - [Scoring Profiles Guide](SCORING_PROFILES_GUIDE.md)
 
 ## Getting Help
 
 - **Issues**: [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/onukura/oss-sustain-guard/discussions)
-- **Contributing**: See [CONTRIBUTING.md](../CONTRIBUTING.md)
+- **Contributing**: See [CONTRIBUTING.md](https://github.com/onukura/oss-sustain-guard/blob/main/CONTRIBUTING.md)

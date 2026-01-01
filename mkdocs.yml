@@ -18,6 +18,8 @@ markdown_extensions:
   - codehilite
   - footnotes
   - tables
+exclude_docs: |
+  local/**
 nav:
   - Home: index.md
   - Getting Started: GETTING_STARTED.md

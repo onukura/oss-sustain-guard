@@ -64,7 +64,6 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 **Usage:**
 
 - [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md) - Analyze entire projects and monorepos
-- [Time Series Analysis](TREND_ANALYSIS_GUIDE.md) - Track health evolution and compare snapshots
 - [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects to support
 
 **Configuration:**
@@ -85,10 +84,6 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 **Support:**
 
 - [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md) - Common issues and solutions
-
-**Reference:**
-
-- [Database Schema](DATABASE_SCHEMA.md) - Understanding cached data format
 
 ## Installation
 

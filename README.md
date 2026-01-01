@@ -199,14 +199,14 @@ os4g check requests --profile custom_security --profile-file profiles.toml
   os4g gratitude --top 5
   ```
 
-- **� Community Funding Links** - Auto-displays funding options for community-driven projects
+- **💰 Community Funding Links** - Auto-displays funding options for community-driven projects
 
 ## 🤝 Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code style, and architecture documentation.
 
 
-## �📝 Documentation
+## 📝 Documentation
 
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
 - [Custom Metrics Guide](./docs/CUSTOM_METRICS_GUIDE.md) - Create your own sustainability metrics

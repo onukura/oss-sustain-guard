@@ -248,8 +248,6 @@ os4g compare requests 2025-12-11 2025-12-12
 os4g list-snapshots
 ```
 
-See [Time Series Analysis Guide](TREND_ANALYSIS_GUIDE.md) for details.
-
 ### Q8: What do the metrics mean?
 
 **A:** Each metric is CHAOSS-based
@@ -360,7 +358,6 @@ export GITHUB_TOKEN="your_token"
 
 - [Getting Started](GETTING_STARTED.md) - Beginner's guide
 - [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) - Scan entire projects
-- [Time Series Analysis Guide](TREND_ANALYSIS_GUIDE.md) - Track changes
 - [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) - CI/CD integration
 - [All Documentation](index.md) - Complete documentation
 

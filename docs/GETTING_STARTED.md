@@ -10,7 +10,7 @@ Install easily from PyPI:
 pip install oss-sustain-guard
 ```
 
-## � GitHub Token Setup (Required)
+## 🔐 GitHub Token Setup (Required)
 
 **OSS Sustain Guard requires a GitHub Personal Access Token for all package analysis.**
 
@@ -52,7 +52,7 @@ os4g check requests
 >
 > **Security:** The token only needs `public_repo` scope (read access to public repositories). Never commit tokens to version control.
 
-## �🚀 First Steps
+## 🚀 First Steps
 
 ### 1. Check a Single Package
 
@@ -152,7 +152,7 @@ os4g check requests --profile long_term_stability
 os4g check requests --no-cache
 ```
 
-## � GitHub Token Setup
+## 🔐 GitHub Token Setup
 
 **Required:** OSS Sustain Guard requires a GitHub Personal Access Token to analyze repositories.
 
@@ -276,7 +276,7 @@ os4g check requests --no-cache
 
 - **Configure Exclusions**: [Exclude Configuration Guide](EXCLUDE_PACKAGES_GUIDE.md) - Exclude internal packages
 - **Scan Entire Project**: [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) - Scan monorepos and complex projects
-- **Track Changes**: [Time Series Analysis Guide](TREND_ANALYSIS_GUIDE.md) - Monitor dependency health over time
+- **Track Changes**: Monitor dependency health over time
 - **CI/CD Integration**: [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) - Integrate with your workflow
 - **Discover Projects to Support**: [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects that need support
 

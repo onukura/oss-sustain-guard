@@ -495,4 +495,4 @@ For issues or questions:
 
 - [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues)
 - [Getting Started](./GETTING_STARTED.md)
-- [Documentation](./DATABASE_SCHEMA.md)
+- Documentation

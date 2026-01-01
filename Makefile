@@ -6,6 +6,9 @@ lint:
 doc-serve:
 	uv run mkdocs serve --livereload
 
+doc-build:
+	uv run mkdocs build --strict
+
 test:
 	uv run pytest tests/ -v --cov=oss_sustain_guard --cov-report=xml --cov-report=term --cov-report=html -m "not slow" -vvv
 
