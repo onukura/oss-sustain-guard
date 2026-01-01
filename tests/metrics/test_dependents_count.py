@@ -5,6 +5,9 @@ Tests for the Downstream Dependents metric using Libraries.io API.
 import os
 from unittest.mock import MagicMock, patch
 
+from oss_sustain_guard.core import check_dependents_count
+from oss_sustain_guard.librariesio import query_librariesio_api
+
 
 class TestLibrariesioAPIIntegration:
     """Test Libraries.io API query functionality."""
@@ -28,14 +31,7 @@ class TestLibrariesioAPIIntegration:
         mock_client.get.return_value = mock_response
         mock_get_client.return_value = mock_client
 
-        # Reload module to get updated environment variable
-        from importlib import reload
-
-        import oss_sustain_guard.core as core_module
-
-        reload(core_module)
-
-        result = core_module._query_librariesio_api("Pypi", "requests")
+        result = query_librariesio_api("Pypi", "requests")
 
         assert result is not None
         assert result["dependents_count"] == 500000
@@ -44,14 +40,7 @@ class TestLibrariesioAPIIntegration:
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": ""}, clear=True)
     def test_query_librariesio_api_no_key(self):
         """Test that API query returns None when API key not set."""
-        # Reload module to get updated environment variable
-        from importlib import reload
-
-        import oss_sustain_guard.core as core_module
-
-        core_module = reload(core_module)
-
-        result = core_module._query_librariesio_api("Pypi", "requests")
+        result = query_librariesio_api("Pypi", "requests")
         assert result is None
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_api_key"})
@@ -66,14 +55,7 @@ class TestLibrariesioAPIIntegration:
         mock_client.get.return_value = mock_response
         mock_get_client.return_value = mock_client
 
-        # Reload module
-        from importlib import reload
-
-        import oss_sustain_guard.core as core_module
-
-        reload(core_module)
-
-        result = core_module._query_librariesio_api("Pypi", "nonexistent-package")
+        result = query_librariesio_api("Pypi", "nonexistent-package")
         assert result is None
 
 
@@ -83,14 +65,7 @@ class TestDependentsCountMetric:
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": ""}, clear=True)
     def test_dependents_count_no_api_key(self):
         """Test that metric returns None when API key not configured."""
-        # Reload module to get updated environment variable
-        from importlib import reload
-
-        import oss_sustain_guard.core as core_module
-
-        reload(core_module)
-
-        result = core_module.check_dependents_count(
+        result = check_dependents_count(
             "https://github.com/psf/requests", "Pypi", "requests"
         )
         assert result is None
@@ -103,8 +78,6 @@ class TestDependentsCountMetric:
             "dependents_count": 15000,
             "dependent_repos_count": 5000,
         }
-
-        from oss_sustain_guard.core import check_dependents_count
 
         result = check_dependents_count(
             "https://github.com/psf/requests", "Pypi", "requests"
@@ -127,8 +100,6 @@ class TestDependentsCountMetric:
             "dependent_repos_count": 800,
         }
 
-        from oss_sustain_guard.core import check_dependents_count
-
         result = check_dependents_count(
             "https://github.com/example/package", "NPM", "example-package"
         )
@@ -147,8 +118,6 @@ class TestDependentsCountMetric:
             "dependent_repos_count": 0,
         }
 
-        from oss_sustain_guard.core import check_dependents_count
-
         result = check_dependents_count(
             "https://github.com/example/new-package", "Cargo", "new-package"
         )
@@ -164,8 +133,6 @@ class TestDependentsCountMetric:
         """Test metric when package not found on Libraries.io."""
         mock_query.return_value = None
 
-        from oss_sustain_guard.core import check_dependents_count
-
         result = check_dependents_count(
             "https://github.com/example/unknown", "Pypi", "unknown-package"
         )
@@ -177,8 +144,6 @@ class TestDependentsCountMetric:
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
     def test_dependents_count_no_platform(self):
         """Test metric returns None when platform not provided."""
-        from oss_sustain_guard.core import check_dependents_count
-
         result = check_dependents_count(
             "https://github.com/example/package", platform=None, package_name="package"
         )
@@ -187,8 +152,6 @@ class TestDependentsCountMetric:
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
     def test_dependents_count_no_package_name(self):
         """Test metric returns None when package_name not provided."""
-        from oss_sustain_guard.core import check_dependents_count
-
         result = check_dependents_count(
             "https://github.com/example/package", platform="Pypi", package_name=None
         )
@@ -198,8 +161,6 @@ class TestDependentsCountMetric:
     @patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
     def test_dependents_count_scoring_tiers(self, mock_query):
         """Test all scoring tiers for dependents count."""
-        from oss_sustain_guard.core import check_dependents_count
-
         # Test data: (dependents_count, expected_score, expected_risk)
         test_cases = [
             (15000, 10, "None"),  # Critical infrastructure: 20/20 → 10/10

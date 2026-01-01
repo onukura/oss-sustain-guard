@@ -152,8 +152,6 @@ def test_query_github_graphql_no_token():
 
 def test_analyze_repository_not_found(mock_graphql_query):
     """Test analyze_repository raises error for non-existent repository."""
-    from oss_sustain_guard.core import analyze_repository
-
     mock_graphql_query.return_value = {}
 
     with pytest.raises(ValueError, match="not found or is inaccessible"):

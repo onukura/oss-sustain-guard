@@ -462,6 +462,418 @@ class TestGoFixtures:
                 assert result.exit_code == 0
 
 
+class TestDartFixtures:
+    """Test with real Dart pubspec.yaml files."""
+
+    def test_parse_pubspec_yaml(self):
+        """Test parsing pubspec.yaml fixture."""
+        pubspec_path = FIXTURES_DIR / "pubspec.yaml"
+        assert pubspec_path.exists(), "pubspec.yaml fixture not found"
+
+        with open(pubspec_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "http:" in content
+        assert "path:" in content
+        assert "lints:" in content
+
+    def test_parse_pubspec_lock(self):
+        """Test parsing pubspec.lock fixture."""
+        lock_path = FIXTURES_DIR / "pubspec.lock"
+        assert lock_path.exists(), "pubspec.lock fixture not found"
+
+        with open(lock_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "http:" in content
+        assert "collection:" in content
+        assert "lints:" in content
+
+    @patch("oss_sustain_guard.cache.load_cache")
+    @patch("oss_sustain_guard.cli.is_package_excluded")
+    def test_check_dart_packages_from_fixture(self, mock_excluded, mock_load_cache):
+        """Test checking Dart packages from pubspec.yaml fixture."""
+        mock_excluded.return_value = False
+        mock_load_cache.return_value = None
+
+        test_packages = ["http", "path", "lints", "test"]
+
+        for pkg in test_packages:
+            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+                mock_analyze.return_value = AnalysisResult(
+                    repo_url=f"https://github.com/example/{pkg}",
+                    total_score=81,
+                    metrics=[
+                        Metric(
+                            name="Test Metric",
+                            score=81,
+                            max_score=100,
+                            message="Package analyzed successfully",
+                            risk="Low",
+                        )
+                    ],
+                )
+                result = runner.invoke(app, ["check", f"dart:{pkg}", "--insecure"])
+                assert result.exit_code == 0
+
+
+class TestElixirFixtures:
+    """Test with real Elixir mix.exs files."""
+
+    def test_parse_mix_exs(self):
+        """Test parsing mix.exs fixture."""
+        mix_path = FIXTURES_DIR / "mix.exs"
+        assert mix_path.exists(), "mix.exs fixture not found"
+
+        with open(mix_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "phoenix" in content
+        assert "ecto_sql" in content
+
+    def test_parse_mix_lock(self):
+        """Test parsing mix.lock fixture."""
+        lock_path = FIXTURES_DIR / "mix.lock"
+        assert lock_path.exists(), "mix.lock fixture not found"
+
+        with open(lock_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "phoenix" in content
+        assert "ecto_sql" in content
+
+    @patch("oss_sustain_guard.cache.load_cache")
+    @patch("oss_sustain_guard.cli.is_package_excluded")
+    def test_check_elixir_packages_from_fixture(self, mock_excluded, mock_load_cache):
+        """Test checking Elixir packages from mix.exs fixture."""
+        mock_excluded.return_value = False
+        mock_load_cache.return_value = None
+
+        test_packages = ["phoenix", "ecto_sql"]
+
+        for pkg in test_packages:
+            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+                mock_analyze.return_value = AnalysisResult(
+                    repo_url=f"https://github.com/example/{pkg}",
+                    total_score=79,
+                    metrics=[
+                        Metric(
+                            name="Test Metric",
+                            score=79,
+                            max_score=100,
+                            message="Package analyzed successfully",
+                            risk="Low",
+                        )
+                    ],
+                )
+                result = runner.invoke(app, ["check", f"elixir:{pkg}", "--insecure"])
+                assert result.exit_code == 0
+
+
+class TestHaskellFixtures:
+    """Test with real Haskell cabal/stack files."""
+
+    def test_parse_cabal_project(self):
+        """Test parsing cabal.project fixture."""
+        cabal_path = FIXTURES_DIR / "cabal.project"
+        assert cabal_path.exists(), "cabal.project fixture not found"
+
+        with open(cabal_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "text" in content
+        assert "bytestring" in content
+
+    def test_parse_stack_yaml(self):
+        """Test parsing stack.yaml fixture."""
+        stack_path = FIXTURES_DIR / "stack.yaml"
+        assert stack_path.exists(), "stack.yaml fixture not found"
+
+        with open(stack_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "text-1.2.5.0" in content
+
+    def test_parse_cabal_project_freeze(self):
+        """Test parsing cabal.project.freeze fixture."""
+        freeze_path = FIXTURES_DIR / "cabal.project.freeze"
+        assert freeze_path.exists(), "cabal.project.freeze fixture not found"
+
+        with open(freeze_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "text" in content
+        assert "bytestring" in content
+
+    def test_parse_stack_yaml_lock(self):
+        """Test parsing stack.yaml.lock fixture."""
+        lock_path = FIXTURES_DIR / "stack.yaml.lock"
+        assert lock_path.exists(), "stack.yaml.lock fixture not found"
+
+        with open(lock_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "text-1.2.5.0" in content
+
+    @patch("oss_sustain_guard.cache.load_cache")
+    @patch("oss_sustain_guard.cli.is_package_excluded")
+    def test_check_haskell_packages_from_fixture(self, mock_excluded, mock_load_cache):
+        """Test checking Haskell packages from cabal/stack fixtures."""
+        mock_excluded.return_value = False
+        mock_load_cache.return_value = None
+
+        test_packages = ["text", "bytestring"]
+
+        for pkg in test_packages:
+            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+                mock_analyze.return_value = AnalysisResult(
+                    repo_url=f"https://github.com/example/{pkg}",
+                    total_score=76,
+                    metrics=[
+                        Metric(
+                            name="Test Metric",
+                            score=76,
+                            max_score=100,
+                            message="Package analyzed successfully",
+                            risk="Low",
+                        )
+                    ],
+                )
+                result = runner.invoke(app, ["check", f"haskell:{pkg}", "--insecure"])
+                assert result.exit_code == 0
+
+
+class TestKotlinFixtures:
+    """Test with real Kotlin Gradle build files."""
+
+    def test_parse_build_gradle_kts(self):
+        """Test parsing build.gradle.kts fixture."""
+        gradle_path = FIXTURES_DIR / "build.gradle.kts"
+        assert gradle_path.exists(), "build.gradle.kts fixture not found"
+
+        with open(gradle_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "kotlin-stdlib" in content
+        assert "ktor-server-core" in content
+        assert "junit-jupiter" in content
+
+    @patch("oss_sustain_guard.cache.load_cache")
+    @patch("oss_sustain_guard.cli.is_package_excluded")
+    def test_check_kotlin_packages_from_fixture(self, mock_excluded, mock_load_cache):
+        """Test checking Kotlin packages from build.gradle.kts fixture."""
+        mock_excluded.return_value = False
+        mock_load_cache.return_value = None
+
+        test_packages = [
+            "org.jetbrains.kotlin:kotlin-stdlib",
+            "io.ktor:ktor-server-core",
+            "org.junit.jupiter:junit-jupiter",
+        ]
+
+        for pkg in test_packages:
+            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+                mock_analyze.return_value = AnalysisResult(
+                    repo_url=f"https://github.com/example/{pkg.split(':')[-1]}",
+                    total_score=77,
+                    metrics=[
+                        Metric(
+                            name="Test Metric",
+                            score=77,
+                            max_score=100,
+                            message="Package analyzed successfully",
+                            risk="Low",
+                        )
+                    ],
+                )
+                result = runner.invoke(app, ["check", f"kotlin:{pkg}", "--insecure"])
+                assert result.exit_code == 0
+
+
+class TestPerlFixtures:
+    """Test with real Perl cpanfile files."""
+
+    def test_parse_cpanfile(self):
+        """Test parsing cpanfile fixture."""
+        cpan_path = FIXTURES_DIR / "cpanfile"
+        assert cpan_path.exists(), "cpanfile fixture not found"
+
+        with open(cpan_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "Mojolicious" in content
+        assert "DBI" in content
+
+    def test_parse_cpanfile_snapshot(self):
+        """Test parsing cpanfile.snapshot fixture."""
+        snapshot_path = FIXTURES_DIR / "cpanfile.snapshot"
+        assert snapshot_path.exists(), "cpanfile.snapshot fixture not found"
+
+        with open(snapshot_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "Mojolicious" in content
+        assert "Test-Simple" in content
+
+    @patch("oss_sustain_guard.cache.load_cache")
+    @patch("oss_sustain_guard.cli.is_package_excluded")
+    def test_check_perl_packages_from_fixture(self, mock_excluded, mock_load_cache):
+        """Test checking Perl packages from cpanfile fixture."""
+        mock_excluded.return_value = False
+        mock_load_cache.return_value = None
+
+        test_packages = ["Mojolicious", "DBI"]
+
+        for pkg in test_packages:
+            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+                mock_analyze.return_value = AnalysisResult(
+                    repo_url=f"https://github.com/example/{pkg}",
+                    total_score=74,
+                    metrics=[
+                        Metric(
+                            name="Test Metric",
+                            score=74,
+                            max_score=100,
+                            message="Package analyzed successfully",
+                            risk="Low",
+                        )
+                    ],
+                )
+                result = runner.invoke(app, ["check", f"perl:{pkg}", "--insecure"])
+                assert result.exit_code == 0
+
+
+class TestRFixtures:
+    """Test with real R DESCRIPTION files."""
+
+    def test_parse_description(self):
+        """Test parsing DESCRIPTION fixture."""
+        description_path = FIXTURES_DIR / "DESCRIPTION"
+        assert description_path.exists(), "DESCRIPTION fixture not found"
+
+        with open(description_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "dplyr" in content
+        assert "ggplot2" in content
+        assert "testthat" in content
+
+    def test_parse_renv_lock(self):
+        """Test parsing renv.lock fixture."""
+        lock_path = FIXTURES_DIR / "renv.lock"
+        assert lock_path.exists(), "renv.lock fixture not found"
+
+        with open(lock_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Verify expected packages
+        assert "Packages" in data
+        assert "dplyr" in data["Packages"]
+        assert "ggplot2" in data["Packages"]
+
+    @patch("oss_sustain_guard.cache.load_cache")
+    @patch("oss_sustain_guard.cli.is_package_excluded")
+    def test_check_r_packages_from_fixture(self, mock_excluded, mock_load_cache):
+        """Test checking R packages from DESCRIPTION fixture."""
+        mock_excluded.return_value = False
+        mock_load_cache.return_value = None
+
+        test_packages = ["dplyr", "ggplot2", "testthat"]
+
+        for pkg in test_packages:
+            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+                mock_analyze.return_value = AnalysisResult(
+                    repo_url=f"https://github.com/example/{pkg}",
+                    total_score=73,
+                    metrics=[
+                        Metric(
+                            name="Test Metric",
+                            score=73,
+                            max_score=100,
+                            message="Package analyzed successfully",
+                            risk="Low",
+                        )
+                    ],
+                )
+                result = runner.invoke(app, ["check", f"r:{pkg}", "--insecure"])
+                assert result.exit_code == 0
+
+
+class TestSwiftFixtures:
+    """Test with real Swift Package Manager files."""
+
+    def test_parse_package_swift(self):
+        """Test parsing Package.swift fixture."""
+        package_path = FIXTURES_DIR / "Package.swift"
+        assert package_path.exists(), "Package.swift fixture not found"
+
+        with open(package_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "swift-nio" in content
+        assert "Alamofire" in content
+
+    def test_parse_package_resolved(self):
+        """Test parsing Package.resolved fixture."""
+        resolved_path = FIXTURES_DIR / "Package.resolved"
+        assert resolved_path.exists(), "Package.resolved fixture not found"
+
+        with open(resolved_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        pins = data.get("object", {}).get("pins", [])
+        locations = [pin.get("location") for pin in pins if isinstance(pin, dict)]
+
+        assert any(
+            isinstance(location, str) and "swift-nio" in location
+            for location in locations
+        )
+        assert any(
+            isinstance(location, str) and "Alamofire" in location
+            for location in locations
+        )
+
+    @patch("oss_sustain_guard.cache.load_cache")
+    @patch("oss_sustain_guard.cli.is_package_excluded")
+    def test_check_swift_packages_from_fixture(self, mock_excluded, mock_load_cache):
+        """Test checking Swift packages from Package.swift fixture."""
+        mock_excluded.return_value = False
+        mock_load_cache.return_value = None
+
+        test_packages = ["apple/swift-nio", "Alamofire/Alamofire"]
+
+        for pkg in test_packages:
+            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+                mock_analyze.return_value = AnalysisResult(
+                    repo_url=f"https://github.com/{pkg}",
+                    total_score=72,
+                    metrics=[
+                        Metric(
+                            name="Test Metric",
+                            score=72,
+                            max_score=100,
+                            message="Package analyzed successfully",
+                            risk="Low",
+                        )
+                    ],
+                )
+                result = runner.invoke(app, ["check", f"swift:{pkg}", "--insecure"])
+                assert result.exit_code == 0
+
+
 class TestMultiLanguageFixtures:
     """Test cross-language fixture integration."""
 
@@ -472,10 +884,25 @@ class TestMultiLanguageFixtures:
             "requirements.txt",
             "Cargo.toml",
             "pom.xml",
+            "build.gradle.kts",
             "composer.json",
             "Gemfile",
             "packages.config",
             "go.mod",
+            "pubspec.yaml",
+            "pubspec.lock",
+            "mix.exs",
+            "mix.lock",
+            "cabal.project",
+            "cabal.project.freeze",
+            "stack.yaml",
+            "stack.yaml.lock",
+            "cpanfile",
+            "cpanfile.snapshot",
+            "DESCRIPTION",
+            "renv.lock",
+            "Package.swift",
+            "Package.resolved",
         ]
 
         for fixture in expected_fixtures:
@@ -495,10 +922,17 @@ class TestMultiLanguageFixtures:
             ("python:Django", "Python"),
             ("rust:tokio", "Rust"),
             ("maven:com.google.guava:guava", "Java"),
+            ("kotlin:org.jetbrains.kotlin:kotlin-stdlib", "Kotlin"),
             ("php:laravel/framework", "PHP"),
             ("ruby:rails", "Ruby"),
             ("nuget:Newtonsoft.Json", "C#"),
             ("go:github.com/gin-gonic/gin", "Go"),
+            ("dart:http", "Dart"),
+            ("elixir:phoenix", "Elixir"),
+            ("haskell:text", "Haskell"),
+            ("perl:Mojolicious", "Perl"),
+            ("r:dplyr", "R"),
+            ("swift:apple/swift-nio", "Swift"),
         ]
 
         for package_spec, lang in test_cases:

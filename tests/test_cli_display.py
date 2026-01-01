@@ -9,7 +9,7 @@ from oss_sustain_guard.cli import (
     display_results_compact,
     display_results_detailed,
 )
-from oss_sustain_guard.core import AnalysisResult, Metric
+from oss_sustain_guard.core import AnalysisResult, Metric, MetricModel
 
 
 def strip_ansi(text: str) -> str:
@@ -201,9 +201,6 @@ class TestDisplayResults:
 
     def test_display_results_with_models(self, capsys):
         """Test display with CHAOSS models."""
-        # Import the Metric/Model classes
-        from oss_sustain_guard.core import MetricModel
-
         results = [
             AnalysisResult(
                 repo_url="https://github.com/psf/requests",
@@ -293,8 +290,6 @@ class TestDisplayResultsDetailed:
 
     def test_display_results_detailed_with_models(self, capsys):
         """Test detailed display with CHAOSS models."""
-        from oss_sustain_guard.core import MetricModel
-
         results = [
             AnalysisResult(
                 repo_url="https://github.com/psf/requests",

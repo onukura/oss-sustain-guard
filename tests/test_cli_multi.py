@@ -12,6 +12,7 @@ from oss_sustain_guard.cli import (
     load_database,
     parse_package_spec,
 )
+from oss_sustain_guard.core import AnalysisResult, Metric
 from oss_sustain_guard.repository import RepositoryReference
 
 runner = CliRunner()
@@ -120,8 +121,6 @@ class TestAnalyzePackage:
         self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
     ):
         """Test successful package analysis."""
-        from oss_sustain_guard.core import AnalysisResult, Metric
-
         mock_resolver = MagicMock()
         mock_resolver.resolve_repository.return_value = RepositoryReference(
             provider="github",
@@ -163,8 +162,6 @@ class TestAnalyzePackage:
         self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
     ):
         """Test package analysis with dependents enabled."""
-        from oss_sustain_guard.core import AnalysisResult, Metric
-
         mock_resolver = MagicMock()
         mock_resolver.resolve_repository.return_value = RepositoryReference(
             provider="github",
@@ -391,7 +388,6 @@ class TestAnalyzeDependenciesForPackage:
     ):
         """Test dependency analysis when some dependencies are not in cache."""
         from oss_sustain_guard.cli import ANALYSIS_VERSION
-        from oss_sustain_guard.core import AnalysisResult, Metric
 
         # Mock get_package_dependencies to return 3 dependencies
         mock_get_deps.return_value = ["dep1", "dep2", "dep3"]

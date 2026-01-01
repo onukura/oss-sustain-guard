@@ -44,9 +44,9 @@ from oss_sustain_guard.core import (
     SCORING_PROFILES,
     AnalysisResult,
     Metric,
+    analysis_result_to_dict,
     analyze_repositories_batch,
     analyze_repository,
-    analysis_result_to_dict,
     apply_profile_overrides,
     compute_weighted_total_score,
     get_metric_weights,
@@ -240,8 +240,7 @@ def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
     template_path = project_root / "docs" / "assets" / "report_template.html"
     if not template_path.exists():
         raise FileNotFoundError(
-            "HTML report template not found. Expected: "
-            f"{template_path}"
+            f"HTML report template not found. Expected: {template_path}"
         )
 
     summary = _build_summary(results)
@@ -253,8 +252,8 @@ def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
         ("Needs support", str(summary["needs_support_count"])),
     ]
     summary_cards_html = "\n".join(
-        f"<div class=\"summary-card\"><div class=\"label\">{escape(label)}</div>"
-        f"<div class=\"value\">{escape(value)}</div></div>"
+        f'<div class="summary-card"><div class="label">{escape(label)}</div>'
+        f'<div class="value">{escape(value)}</div></div>'
         for label, value in summary_cards
     )
 
@@ -266,8 +265,8 @@ def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
             "<tr>"
             f"<td>{escape(repo_name)}</td>"
             f"<td>{escape(result.ecosystem or 'unknown')}</td>"
-            f"<td class=\"score {status_color}\">{result.total_score}/100</td>"
-            f"<td class=\"status {status_color}\">{escape(status_text)}</td>"
+            f'<td class="score {status_color}">{result.total_score}/100</td>'
+            f'<td class="status {status_color}">{escape(status_text)}</td>'
             f"<td>{escape(_summarize_observations(result.metrics))}</td>"
             "</tr>"
         )
