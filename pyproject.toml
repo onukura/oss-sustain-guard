@@ -96,7 +96,6 @@ source = ["oss_sustain_guard"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
-    "*/builder/*",
     "*/__pycache__/*",
     "*/venv/*",
     "*/.venv/*",

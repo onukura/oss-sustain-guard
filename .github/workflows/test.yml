@@ -44,12 +44,12 @@ jobs:
 
       - name: Run linter (ruff)
         run: |
-          uv run ruff check oss_sustain_guard tests builder
+          uv run ruff check oss_sustain_guard tests
         continue-on-error: true
 
       - name: Run formatter check (ruff)
         run: |
-          uv run ruff format --check oss_sustain_guard tests builder
+          uv run ruff format --check oss_sustain_guard tests
         continue-on-error: true
 
       - name: Run tests with coverage
