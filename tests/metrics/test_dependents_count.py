@@ -128,7 +128,7 @@ class TestDependentsCountMetric:
         assert "No downstream dependencies" in result.message
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})
-    @patch("oss_sustain_guard.core._query_librariesio_api")
+    @patch("oss_sustain_guard.metrics.dependents_count.query_librariesio_api")
     def test_dependents_count_package_not_found(self, mock_query):
         """Test metric when package not found on Libraries.io."""
         mock_query.return_value = None
