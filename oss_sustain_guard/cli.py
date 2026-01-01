@@ -43,6 +43,7 @@ from oss_sustain_guard.core import (
     Metric,
     analyze_repositories_batch,
     analyze_repository,
+    apply_profile_overrides,
     compute_weighted_total_score,
     get_metric_weights,
 )

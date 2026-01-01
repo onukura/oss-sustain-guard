@@ -10,8 +10,8 @@ class TestLibrariesioAPIIntegration:
     """Test Libraries.io API query functionality."""
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_api_key"})
-    @patch("oss_sustain_guard.librariesio.httpx.Client")
-    def test_query_librariesio_api_success(self, mock_client_class):
+    @patch("oss_sustain_guard.librariesio._get_http_client")
+    def test_query_librariesio_api_success(self, mock_get_client):
         """Test successful Libraries.io API query."""
         # Mock response
         mock_response = MagicMock()
@@ -23,11 +23,10 @@ class TestLibrariesioAPIIntegration:
             "dependent_repos_count": 150000,
         }
 
-        # Mock client context manager
+        # Mock client
         mock_client = MagicMock()
-        mock_client.__enter__.return_value = mock_client
         mock_client.get.return_value = mock_response
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
 
         # Reload module to get updated environment variable
         from importlib import reload
@@ -56,17 +55,16 @@ class TestLibrariesioAPIIntegration:
         assert result is None
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_api_key"})
-    @patch("oss_sustain_guard.librariesio.httpx.Client")
-    def test_query_librariesio_api_not_found(self, mock_client_class):
+    @patch("oss_sustain_guard.librariesio._get_http_client")
+    def test_query_librariesio_api_not_found(self, mock_get_client):
         """Test Libraries.io API query when package not found."""
         # Mock 404 response
         mock_response = MagicMock()
         mock_response.status_code = 404
 
         mock_client = MagicMock()
-        mock_client.__enter__.return_value = mock_client
         mock_client.get.return_value = mock_response
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
 
         # Reload module
         from importlib import reload

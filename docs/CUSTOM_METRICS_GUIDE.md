@@ -53,21 +53,21 @@ from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 def check_my_metric(repo_data: dict[str, Any]) -> Metric:
     """
     Evaluates [metric purpose].
-    
+
     Scoring:
     - Excellent: 10/10
     - Good: 7-9/10
     - Moderate: 4-6/10
     - Needs attention: 1-3/10
     - Critical: 0/10
-    
+
     CHAOSS Aligned: [CHAOSS metric name] (if applicable)
     """
     max_score = 10  # Always use 10 for consistency
-    
+
     # Extract data
     data = repo_data.get("fieldName", {})
-    
+
     if not data:
         return Metric(
             "My Metric",
@@ -76,10 +76,10 @@ def check_my_metric(repo_data: dict[str, Any]) -> Metric:
             "Note: No data available.",
             "None",
         )
-    
+
     # Calculate score based on data
     value = data.get("value", 0)
-    
+
     if value >= 90:
         score = 10
         risk = "None"
@@ -92,7 +92,7 @@ def check_my_metric(repo_data: dict[str, Any]) -> Metric:
         score = 2
         risk = "High"
         message = f"Needs attention: {value}%."
-    
+
     return Metric("My Metric", score, max_score, message, risk)
 
 
@@ -248,21 +248,21 @@ from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 def check_custom_metric(repo_data: dict[str, Any], context: MetricContext) -> Metric:
     """
     Custom metric logic.
-    
+
     Args:
         repo_data: Repository data from GitHub GraphQL API
         context: Metric context with owner, name, repo_url, etc.
-    
+
     Returns:
         Metric with score, message, and risk level
     """
     # Your custom logic here
     owner = context.owner
     repo_name = context.name
-    
+
     # Example: check if repo has certain keywords
     description = repo_data.get("description", "")
-    
+
     if "security" in description.lower():
         score = 10
         risk = "None"
@@ -271,7 +271,7 @@ def check_custom_metric(repo_data: dict[str, Any], context: MetricContext) -> Me
         score = 5
         risk = "Low"
         message = "Moderate: No security focus detected."
-    
+
     return Metric("Custom Security Focus", score, 10, message, risk)
 
 
@@ -334,16 +334,16 @@ pip install oss-sustain-guard my-custom-metric
 ```python
 class MetricSpec(NamedTuple):
     """Specification for a metric check."""
-    
+
     name: str
     """Display name of the metric."""
-    
+
     checker: Callable[[dict[str, Any], MetricContext], Metric | None]
     """Main evaluation function."""
-    
+
     on_error: Callable[[Exception], Metric] | None = None
     """Error handler (optional)."""
-    
+
     error_log: str | None = None
     """Error log format string (optional)."""
 ```
@@ -355,19 +355,19 @@ Context provided to metric checkers:
 ```python
 class MetricContext(NamedTuple):
     """Context provided to metric checks."""
-    
+
     owner: str
     """GitHub repository owner."""
-    
+
     name: str
     """Repository name."""
-    
+
     repo_url: str
     """Full GitHub repository URL."""
-    
+
     platform: str | None = None
     """Package platform (e.g., 'pypi', 'npm')."""
-    
+
     package_name: str | None = None
     """Original package name."""
 ```
@@ -377,19 +377,19 @@ class MetricContext(NamedTuple):
 ```python
 class Metric(NamedTuple):
     """A single sustainability metric result."""
-    
+
     name: str
     """Metric display name."""
-    
+
     score: int | float
     """Metric score (0-10)."""
-    
+
     max_score: int
     """Maximum possible score (always 10)."""
-    
+
     message: str
     """Human-readable result message."""
-    
+
     risk: str
     """Risk level: "None", "Low", "Medium", "High", "Critical"."""
 ```
@@ -404,29 +404,29 @@ def check_my_metric(repo_data: dict[str, Any], context: MetricContext) -> Metric
     name = repo_data.get("name")
     description = repo_data.get("description")
     created_at = repo_data.get("createdAt")
-    
+
     # Owner information
     owner = repo_data.get("owner", {})
     owner_type = owner.get("__typename")  # "Organization" or "User"
-    
+
     # Stars, forks, watchers
     stargazers = repo_data.get("stargazerCount", 0)
     forks = repo_data.get("forkCount", 0)
-    
+
     # Issues and PRs
     open_issues = repo_data.get("openIssues", {}).get("totalCount", 0)
     closed_issues = repo_data.get("closedIssues", {}).get("totalCount", 0)
-    
+
     # Commit history
     default_branch = repo_data.get("defaultBranchRef", {})
     commits = default_branch.get("target", {}).get("history", {}).get("edges", [])
-    
+
     # Funding
     funding_links = repo_data.get("fundingLinks", [])
-    
+
     # License
     license_info = repo_data.get("licenseInfo", {})
-    
+
     # ... your metric logic
 ```
 
@@ -559,7 +559,7 @@ from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 def check_code_coverage(repo_data: dict[str, Any], context: MetricContext) -> Metric:
     """
     Evaluates code coverage percentage.
-    
+
     Scoring:
     - 90-100%: 10/10 (Excellent)
     - 70-89%: 7/10 (Good)
@@ -568,9 +568,9 @@ def check_code_coverage(repo_data: dict[str, Any], context: MetricContext) -> Me
     """
     # Note: This is a simplified example
     # Real implementation would fetch coverage from CI badges or APIs
-    
+
     description = repo_data.get("description", "").lower()
-    
+
     # Simplified logic: check for coverage badge
     if "coverage" in description:
         score = 8
@@ -580,7 +580,7 @@ def check_code_coverage(repo_data: dict[str, Any], context: MetricContext) -> Me
         score = 3
         risk = "High"
         message = "Needs attention: No coverage tracking detected."
-    
+
     return Metric("Code Coverage", score, 10, message, risk)
 
 
@@ -604,7 +604,7 @@ from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 def check_dependency_updates(repo_data: dict[str, Any], context: MetricContext) -> Metric:
     """
     Evaluates how frequently dependencies are updated.
-    
+
     Looks for dependency update commits (Dependabot, Renovate, etc.).
     """
     commits = (
@@ -613,7 +613,7 @@ def check_dependency_updates(repo_data: dict[str, Any], context: MetricContext) 
         .get("history", {})
         .get("edges", [])
     )
-    
+
     if not commits:
         return Metric(
             "Dependency Updates",
@@ -622,18 +622,18 @@ def check_dependency_updates(repo_data: dict[str, Any], context: MetricContext) 
             "Note: No commit history available.",
             "None",
         )
-    
+
     # Count dependency update commits
     dep_keywords = ["bump", "update", "dependabot", "renovate", "dependencies"]
     dep_commits = [
         c for c in commits
         if any(kw in c.get("node", {}).get("message", "").lower() for kw in dep_keywords)
     ]
-    
+
     total = len(commits)
     dep_count = len(dep_commits)
     percentage = (dep_count / total * 100) if total > 0 else 0
-    
+
     if percentage >= 20:
         score = 10
         risk = "None"
@@ -650,7 +650,7 @@ def check_dependency_updates(repo_data: dict[str, Any], context: MetricContext) 
         score = 1
         risk = "High"
         message = f"Needs attention: Only {percentage:.1f}% of commits are dependency updates."
-    
+
     return Metric("Dependency Updates", score, 10, message, risk)
 
 
@@ -672,21 +672,21 @@ from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 def check_technical_fork(repo_data: dict[str, Any], context: MetricContext) -> Metric:
     """
     Evaluates technical fork activity (downstream projects).
-    
+
     CHAOSS Aligned: Technical Fork
     https://chaoss.community/kb/metric-technical-fork/
-    
+
     Measures project reuse and impact via fork count.
     """
     forks = repo_data.get("forkCount", 0)
     stargazers = repo_data.get("stargazerCount", 0)
-    
+
     # Calculate fork ratio (forks relative to stars)
     if stargazers > 0:
         fork_ratio = forks / stargazers
     else:
         fork_ratio = 0
-    
+
     # High fork ratio indicates active reuse
     if fork_ratio >= 0.5:
         score = 10
@@ -704,7 +704,7 @@ def check_technical_fork(repo_data: dict[str, Any], context: MetricContext) -> M
         score = 1
         risk = "High"
         message = f"Low: Limited fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
-    
+
     return Metric("Technical Fork", score, 10, message, risk)
 
 
