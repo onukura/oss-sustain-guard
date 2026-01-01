@@ -118,7 +118,7 @@ def _on_error(error: Exception) -> Metric:
     return Metric(
         "Maintainer Load Distribution",
         0,
-        5,
+        10,
         f"Note: Analysis incomplete - {error}",
         "Medium",
     )

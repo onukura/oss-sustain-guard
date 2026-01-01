@@ -31,15 +31,15 @@ def check_dependents_count(
     Returns:
         Metric with dependents count analysis, or None if API not configured
 
-    Scoring:
-        - 10000+ dependents: 20/20 (Critical infrastructure)
-        - 1000+ dependents: 18/20 (Widely adopted)
-        - 500+ dependents: 15/20 (Popular)
-        - 100+ dependents: 12/20 (Established)
-        - 50+ dependents: 9/20 (Growing adoption)
-        - 10+ dependents: 6/20 (Early adoption)
-        - 1+ dependents: 3/20 (Used by others)
-        - 0 dependents: 0/20 (No downstream dependencies)
+    Scoring (out of 10):
+        - 10000+ dependents: 10/10 (Critical infrastructure)
+        - 1000+ dependents: 9/10 (Widely adopted)
+        - 500+ dependents: 8/10 (Popular)
+        - 100+ dependents: 6/10 (Established)
+        - 50+ dependents: 5/10 (Growing adoption)
+        - 10+ dependents: 3/10 (Early adoption)
+        - 1+ dependents: 2/10 (Used by others)
+        - 0 dependents: 0/10 (No downstream dependencies)
 
     Note: Docstring shows old 20-point scale but function now uses 10-point scale internally.
     """

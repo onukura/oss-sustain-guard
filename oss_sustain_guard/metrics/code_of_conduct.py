@@ -42,7 +42,7 @@ def _on_error(error: Exception) -> Metric:
     return Metric(
         "Code of Conduct",
         0,
-        5,
+        10,
         f"Note: Analysis incomplete - {error}",
         "Low",
     )

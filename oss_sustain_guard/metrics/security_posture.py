@@ -92,7 +92,7 @@ def _on_error(error: Exception) -> Metric:
     return Metric(
         "Security Signals",
         0,
-        15,
+        10,
         f"Note: Analysis incomplete - {error}",
         "High",
     )

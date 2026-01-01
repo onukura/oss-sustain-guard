@@ -103,7 +103,7 @@ def _on_error(error: Exception) -> Metric:
     return Metric(
         "PR Merge Speed",
         0,
-        5,
+        10,
         f"Note: Analysis incomplete - {error}",
         "Medium",
     )

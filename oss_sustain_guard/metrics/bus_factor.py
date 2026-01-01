@@ -177,7 +177,7 @@ def _on_error(error: Exception) -> Metric:
     return Metric(
         "Contributor Redundancy",
         0,
-        20,
+        10,
         f"Note: Analysis incomplete - {error}",
         "High",
     )
