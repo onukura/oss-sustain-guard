@@ -27,7 +27,7 @@ repos:
 ```bash
 pre-commit install
 ```
-  
+
 ### 4. Commit Changes
 
 Now, whenever you commit changes to dependency files, OSS Sustain Guard will automatically scan your dependencies
