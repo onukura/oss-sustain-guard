@@ -60,6 +60,14 @@
         font-weight: 600;
         margin-top: 8px;
       }}
+      .notice {{
+        background: #fff7ed;
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        color: #92400e;
+        margin-bottom: 20px;
+        padding: 12px 16px;
+      }}
       table {{
         width: 100%;
         border-collapse: collapse;
@@ -111,6 +119,10 @@
         tbody tr:nth-child(even) {{
           background: #0f172a;
         }}
+        .notice {{
+          background: #1f2937;
+          color: #fbbf24;
+        }}
       }}
     </style>
   </head>
@@ -120,6 +132,7 @@
       <p>Generated at {generated_at} - Profile: {profile}</p>
     </header>
     <main>
+      {demo_notice_block}
       <section class="summary">
         {summary_cards}
       </section>

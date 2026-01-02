@@ -3,14 +3,12 @@ Core analysis logic for OSS Sustain Guard.
 """
 
 import copy
-import os
 from typing import Any, NamedTuple
 
 import httpx
 from dotenv import load_dotenv
 from rich.console import Console
 
-from oss_sustain_guard.http_client import _get_http_client
 from oss_sustain_guard.librariesio import query_librariesio_api
 from oss_sustain_guard.metrics import load_metric_specs
 from oss_sustain_guard.metrics.attraction import check_attraction  # noqa: F401
@@ -72,27 +70,12 @@ from oss_sustain_guard.metrics.stale_issue_ratio import (  # noqa: F401
     check_stale_issue_ratio,
 )
 from oss_sustain_guard.metrics.zombie_status import check_zombie_status  # noqa: F401
+from oss_sustain_guard.vcs import get_vcs_provider
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
 # Load environment variables from .env file
 load_dotenv()
 console = Console()
-
-# --- Constants ---
-
-GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
-
-# Sample size constants from GraphQL queries
-# These are the limits used in _get_repository_query()
-GRAPHQL_SAMPLE_LIMITS = {
-    "commits": 100,  # history(first: 100)
-    "merged_prs": 50,  # pullRequests(first: 50, states: MERGED)
-    "closed_prs": 50,  # pullRequests(first: 50, states: CLOSED)
-    "issues": 20,  # issues(first: 20, states: OPEN)
-    "closed_issues": 50,  # issues(first: 50, states: CLOSED)
-    "releases": 10,  # releases(first: 10)
-    "vulnerability_alerts": 10,  # vulnerabilityAlerts(first: 10)
-    "forks": 20,  # forks(first: 20)
-}
 
 
 # --- Data Structures ---
@@ -178,53 +161,6 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
     }
 
 
-def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
-    """
-    Executes a GraphQL query against the GitHub API.
-
-    Raises:
-        ValueError: If the GITHUB_TOKEN is not set.
-        httpx.HTTPStatusError: If the API returns an error.
-    """
-    github_token = os.getenv("GITHUB_TOKEN")
-    if not github_token:
-        raise ValueError(
-            "GITHUB_TOKEN environment variable is required.\n"
-            "\n"
-            "To get started:\n"
-            "1. Create a GitHub Personal Access Token (classic):\n"
-            "   → https://github.com/settings/tokens/new\n"
-            "2. Select scopes: 'public_repo' and 'security_events'\n"
-            "3. Set the token:\n"
-            "   export GITHUB_TOKEN='your_token_here'  # Linux/macOS\n"
-            "   or add to your .env file: GITHUB_TOKEN=your_token_here\n"
-            "\n"
-            "For detailed instructions, visit:\n"
-            "https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/#github-token-setup"
-        )
-
-    headers = {
-        "Authorization": f"bearer {github_token}",
-        "Content-Type": "application/json",
-    }
-    client = _get_http_client()
-    response = client.post(
-        GITHUB_GRAPHQL_API,
-        json={"query": query, "variables": variables},
-        headers=headers,
-        timeout=30,  # Longer timeout for batch queries with complex data
-    )
-    response.raise_for_status()
-    data = response.json()
-    if "errors" in data:
-        raise httpx.HTTPStatusError(
-            f"GitHub API Errors: {data['errors']}",
-            request=response.request,
-            response=response,
-        )
-    return data.get("data", {})
-
-
 def _query_librariesio_api(platform: str, package_name: str) -> dict[str, Any] | None:
     """
     Queries Libraries.io API for package information including dependents count.
@@ -243,218 +179,90 @@ def _query_librariesio_api(platform: str, package_name: str) -> dict[str, Any] |
     return query_librariesio_api(platform, package_name)
 
 
-# --- GraphQL Query Templates ---
+# --- Helper Functions for VCS Data Conversion ---
 
 
-def _get_repository_query() -> str:
-    """Returns the GraphQL query to fetch repository metrics."""
-    return """
-    query GetRepository($owner: String!, $name: String!) {
-      repository(owner: $owner, name: $name) {
-        isArchived
-        pushedAt
-        owner {
-          __typename
-          login
-          ... on Organization {
-            name
-            login
-          }
-        }
-        defaultBranchRef {
-          target {
-            ... on Commit {
-              history(first: 100) {
-                edges {
-                  node {
-                    authoredDate
-                    author {
-                      user {
-                        login
-                        company
-                      }
-                      email
-                    }
-                  }
-                }
-                totalCount
-              }
-              checkSuites(last: 1) {
-                nodes {
-                  conclusion
-                  status
-                }
-              }
-            }
-          }
-        }
-        pullRequests(first: 50, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
-          edges {
-            node {
-              mergedAt
-              createdAt
-              mergedBy {
-                login
-              }
-              reviews(first: 10) {
-                totalCount
-                edges {
-                  node {
-                    createdAt
-                  }
-                }
-              }
-            }
-          }
-        }
-        closedPullRequests: pullRequests(first: 50, states: CLOSED, orderBy: {field: UPDATED_AT, direction: DESC}) {
-          totalCount
-          edges {
-            node {
-              closedAt
-              createdAt
-              merged
-              reviews(first: 1) {
-                edges {
-                  node {
-                    createdAt
-                  }
-                }
-              }
-            }
-          }
-        }
-        mergedPullRequestsCount: pullRequests(states: MERGED) {
-          totalCount
-        }
-        releases(first: 10, orderBy: {field: CREATED_AT, direction: DESC}) {
-          edges {
-            node {
-              publishedAt
-              tagName
-            }
-          }
-        }
-        issues(first: 20, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) {
-          edges {
-            node {
-              createdAt
-              comments(first: 1) {
-                edges {
-                  node {
-                    createdAt
-                  }
-                }
-              }
-            }
-          }
-        }
-        closedIssues: issues(first: 50, states: CLOSED, orderBy: {field: UPDATED_AT, direction: DESC}) {
-          totalCount
-          edges {
-            node {
-              createdAt
-              closedAt
-              updatedAt
-              timelineItems(first: 1, itemTypes: CLOSED_EVENT) {
-                edges {
-                  node {
-                    ... on ClosedEvent {
-                      actor {
-                        login
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        vulnerabilityAlerts(first: 10) {
-          edges {
-            node {
-              securityVulnerability {
-                severity
-              }
-              dismissedAt
-            }
-          }
-        }
-        isSecurityPolicyEnabled
-        fundingLinks {
-          platform
-          url
-        }
-        # New fields for additional metrics
-        hasWikiEnabled
-        hasIssuesEnabled
-        hasDiscussionsEnabled
-        codeOfConduct {
-          name
-          url
-        }
-        licenseInfo {
-          name
-          spdxId
-          url
-        }
-        stargazerCount
-        forkCount
-        watchers {
-          totalCount
-        }
-        forks(first: 20, orderBy: {field: PUSHED_AT, direction: DESC}) {
-          edges {
-            node {
-              createdAt
-              pushedAt
-              defaultBranchRef {
-                target {
-                  ... on Commit {
-                    history(first: 1) {
-                      edges {
-                        node {
-                          committedDate
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              owner {
-                login
-              }
-            }
-          }
-        }
-        readmeUpperCase: object(expression: "HEAD:README.md") {
-          ... on Blob {
-            byteSize
-            text
-          }
-        }
-        readmeLowerCase: object(expression: "HEAD:readme.md") {
-          ... on Blob {
-            byteSize
-            text
-          }
-        }
-        readmeAllCaps: object(expression: "HEAD:README") {
-          ... on Blob {
-            byteSize
-            text
-          }
-        }
-        contributingFile: object(expression: "HEAD:CONTRIBUTING.md") {
-          ... on Blob {
-            byteSize
-          }
-        }
-        description
-        homepageUrl
-      }
-    }
+def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
     """
+    Convert VCSRepositoryData to legacy repo_info format for metrics.
+
+    This maintains compatibility with existing metric functions that expect
+    the GitHub GraphQL response structure.
+
+    Args:
+        vcs_data: Normalized VCSRepositoryData from any VCS provider
+
+    Returns:
+        Dictionary matching the legacy GitHub GraphQL response format
+    """
+    # Use raw_data if available (for GitHub), otherwise reconstruct from normalized data
+    if vcs_data.raw_data:
+        return vcs_data.raw_data
+
+    # Reconstruct the structure that metrics expect
+    # Handle case where commits or ci_status may be empty
+    default_branch_data = None
+    if vcs_data.commits or vcs_data.ci_status:
+        default_branch_data = {
+            "target": {
+                "history": {
+                    "edges": [{"node": commit} for commit in vcs_data.commits],
+                    "totalCount": vcs_data.total_commits,
+                },
+                "checkSuites": {
+                    "nodes": [vcs_data.ci_status] if vcs_data.ci_status else [],
+                },
+            }
+        }
+
+    return {
+        "isArchived": vcs_data.is_archived,
+        "pushedAt": vcs_data.pushed_at,
+        "owner": {
+            "__typename": vcs_data.owner_type,
+            "login": vcs_data.owner_login,
+            "name": vcs_data.owner_name,
+        },
+        "defaultBranchRef": default_branch_data,
+        "pullRequests": {
+            "edges": [{"node": pr} for pr in vcs_data.merged_prs],
+        },
+        "closedPullRequests": {
+            "totalCount": len(vcs_data.closed_prs),
+            "edges": [{"node": pr} for pr in vcs_data.closed_prs],
+        },
+        "mergedPullRequestsCount": {
+            "totalCount": vcs_data.total_merged_prs,
+        },
+        "releases": {
+            "edges": [{"node": release} for release in vcs_data.releases],
+        },
+        "issues": {
+            "edges": [{"node": issue} for issue in vcs_data.open_issues],
+        },
+        "closedIssues": {
+            "totalCount": vcs_data.total_closed_issues,
+            "edges": [{"node": issue} for issue in vcs_data.closed_issues],
+        },
+        "vulnerabilityAlerts": {
+            "edges": [
+                {"node": alert} for alert in (vcs_data.vulnerability_alerts or [])
+            ],
+        }
+        if vcs_data.vulnerability_alerts
+        else None,
+        "isSecurityPolicyEnabled": vcs_data.has_security_policy,
+        "fundingLinks": vcs_data.funding_links,
+        "hasWikiEnabled": vcs_data.has_wiki,
+        "hasIssuesEnabled": vcs_data.has_issues,
+        "hasDiscussionsEnabled": vcs_data.has_discussions,
+        "codeOfConduct": vcs_data.code_of_conduct,
+        "licenseInfo": vcs_data.license_info,
+        "forks": {
+            "edges": [{"node": fork} for fork in vcs_data.forks],
+        },
+        "forkCount": vcs_data.total_forks,
+    }
 
 
 # --- Scoring System ---
@@ -1340,7 +1148,10 @@ def analyze_repositories_batch(
     *,
     profile: str = "balanced",
 ) -> dict[tuple[str, str], AnalysisResult | None]:
-    """Analyze multiple repositories in a single GraphQL query.
+    """Analyze multiple repositories (now using individual VCS provider calls).
+
+    Note: With VCS abstraction layer, batch optimization is handled by
+    individual providers. This function now calls analyze_repository for each item.
 
     Args:
         repo_list: List of (owner, name) or (owner, name, platform, package_name).
@@ -1353,9 +1164,6 @@ def analyze_repositories_batch(
     if not repo_list:
         return {}
 
-    # GitHub GraphQL has limits on query complexity
-    # Use smaller batch size (3) to avoid timeouts with large queries
-    batch_size = 3
     results: dict[tuple[str, str], AnalysisResult | None] = {}
 
     def _normalize_batch_item(
@@ -1373,138 +1181,89 @@ def analyze_repositories_batch(
 
     normalized = [_normalize_batch_item(item) for item in repo_list]
 
-    for i in range(0, len(normalized), batch_size):
-        batch = normalized[i : i + batch_size]
-
+    # Analyze each repository individually using VCS provider
+    for owner, name, item_platform, package_name in normalized:
         try:
-            query = _get_batch_repository_query(
-                [(owner, name) for owner, name, _, _ in batch]
+            result = analyze_repository(
+                owner,
+                name,
+                platform=item_platform,
+                package_name=package_name,
+                profile=profile,
             )
-            response = _query_github_graphql(query, {})
-
-            # Process each repository in the batch
-            for idx, (owner, name, platform, package_name) in enumerate(batch):
-                alias = f"repo{idx}"
-                repo_info = response.get(alias)
-
-                if repo_info is None:
-                    console.print(
-                        f"  [yellow]⚠️  No data returned for {owner}/{name}[/yellow]"
-                    )
-                    results[(owner, name)] = None
-                    continue
-
-                # Analyze the repository using the retrieved data
-                try:
-                    result = _analyze_repository_data(
-                        owner,
-                        name,
-                        repo_info,
-                        platform=platform,
-                        package_name=package_name,
-                        profile=profile,
-                    )
-                    results[(owner, name)] = result
-                except Exception as e:
-                    # Show error for debugging
-                    console.print(
-                        f"  [yellow]⚠️  Analysis issue for {owner}/{name}: {e}[/yellow]"
-                    )
-                    results[(owner, name)] = None
-
+            results[(owner, name)] = result
         except Exception as e:
-            # Batch query failed - fall back to individual queries
             console.print(
-                f"  [yellow]⚠️  Batch query unavailable ({e}), trying individual queries...[/yellow]"
+                f"  [yellow]⚠️  Analysis issue for {owner}/{name}: {e}[/yellow]"
             )
-            for owner, name, platform, package_name in batch:
-                try:
-                    # Fall back to single repository analysis
-                    result = analyze_repository(
-                        owner,
-                        name,
-                        platform=platform,
-                        package_name=package_name,
-                        profile=profile,
-                    )
-                    results[(owner, name)] = result
-                except Exception:
-                    # If individual query also fails, mark as None
-                    results[(owner, name)] = None
+            results[(owner, name)] = None
 
     return results
 
 
 def _extract_sample_counts(repo_info: dict[str, Any]) -> dict[str, int]:
-    """Extract actual sample counts from GraphQL response."""
+    """Extract actual sample counts from repository data."""
     samples = {}
 
     # Commits
     try:
-        commits_history = (
-            repo_info.get("defaultBranchRef", {})
-            .get("target", {})
-            .get("history", {})
-            .get("edges", [])
-        )
-        samples["commits"] = min(len(commits_history), GRAPHQL_SAMPLE_LIMITS["commits"])
-    except (TypeError, KeyError):
+        default_branch = repo_info.get("defaultBranchRef")
+        if default_branch and default_branch.get("target"):
+            commits_history = (
+                default_branch.get("target", {}).get("history", {}).get("edges", [])
+            )
+            samples["commits"] = len(commits_history)
+        else:
+            samples["commits"] = 0
+    except (TypeError, KeyError, AttributeError):
         samples["commits"] = 0
 
     # Merged PRs
     try:
         merged_prs = repo_info.get("pullRequests", {}).get("edges", [])
-        samples["merged_prs"] = min(
-            len(merged_prs), GRAPHQL_SAMPLE_LIMITS["merged_prs"]
-        )
+        samples["merged_prs"] = len(merged_prs)
     except (TypeError, KeyError):
         samples["merged_prs"] = 0
 
     # Closed PRs
     try:
         closed_prs = repo_info.get("closedPullRequests", {}).get("edges", [])
-        samples["closed_prs"] = min(
-            len(closed_prs), GRAPHQL_SAMPLE_LIMITS["closed_prs"]
-        )
+        samples["closed_prs"] = len(closed_prs)
     except (TypeError, KeyError):
         samples["closed_prs"] = 0
 
     # Open Issues
     try:
         open_issues = repo_info.get("issues", {}).get("edges", [])
-        samples["open_issues"] = min(len(open_issues), GRAPHQL_SAMPLE_LIMITS["issues"])
+        samples["open_issues"] = len(open_issues)
     except (TypeError, KeyError):
         samples["open_issues"] = 0
 
     # Closed Issues
     try:
         closed_issues = repo_info.get("closedIssues", {}).get("edges", [])
-        samples["closed_issues"] = min(
-            len(closed_issues), GRAPHQL_SAMPLE_LIMITS["closed_issues"]
-        )
+        samples["closed_issues"] = len(closed_issues)
     except (TypeError, KeyError):
         samples["closed_issues"] = 0
 
     # Releases
     try:
         releases = repo_info.get("releases", {}).get("edges", [])
-        samples["releases"] = min(len(releases), GRAPHQL_SAMPLE_LIMITS["releases"])
+        samples["releases"] = len(releases)
     except (TypeError, KeyError):
         samples["releases"] = 0
 
     # Vulnerability alerts
     try:
         vuln_alerts = repo_info.get("vulnerabilityAlerts", {}).get("edges", [])
-        samples["vulnerability_alerts"] = min(
-            len(vuln_alerts), GRAPHQL_SAMPLE_LIMITS["vulnerability_alerts"]
-        )
+        samples["vulnerability_alerts"] = len(vuln_alerts)
     except (TypeError, KeyError):
         samples["vulnerability_alerts"] = 0
 
     # Forks
     try:
         forks = repo_info.get("forks", {}).get("edges", [])
-        samples["forks"] = min(len(forks), GRAPHQL_SAMPLE_LIMITS["forks"])
+        samples["forks"] = len(forks)
     except (TypeError, KeyError):
         samples["forks"] = 0
 
@@ -1636,45 +1395,45 @@ def analyze_repository(
     platform: str | None = None,
     package_name: str | None = None,
     profile: str = "balanced",
+    vcs_platform: str = "github",
 ) -> AnalysisResult:
     """
     Performs a full sustainability analysis on a given repository.
 
-    Queries the GitHub GraphQL API to retrieve repository metrics,
-    then calculates sustainability scores across multiple dimensions.
+    Uses VCS abstraction layer to fetch repository data from various platforms
+    (GitHub, GitLab, etc.), then calculates sustainability scores.
 
     Args:
-        owner: GitHub repository owner (username or organization)
-        name: GitHub repository name
+        owner: Repository owner (username or organization)
+        name: Repository name
         platform: Optional package platform (e.g., 'Pypi', 'NPM', 'Cargo')
                   for dependents analysis via Libraries.io
         package_name: Optional package name on the registry for dependents analysis
-        profile: Scoring profile name.
+        profile: Scoring profile name
+        vcs_platform: VCS platform ('github', 'gitlab', etc.). Default: 'github'
 
     Returns:
         AnalysisResult containing repo_url, total_score, and list of metrics
 
     Raises:
-        ValueError: If GITHUB_TOKEN is not set
-        httpx.HTTPStatusError: If GitHub API returns an error
+        ValueError: If credentials not set or repository not found
+        httpx.HTTPStatusError: If VCS API returns an error
     """
 
     console.print(f"Analyzing [bold cyan]{owner}/{name}[/bold cyan]...")
 
     try:
-        # Execute the GraphQL query
-        query = _get_repository_query()
-        variables = {"owner": owner, "name": name}
-        repo_data = _query_github_graphql(query, variables)
+        # Get VCS provider instance
+        vcs = get_vcs_provider(vcs_platform)
 
-        # Extract repository data from response
-        if "repository" not in repo_data:
-            raise ValueError(f"Repository {owner}/{name} not found or is inaccessible.")
+        # Fetch normalized repository data from VCS
+        vcs_data = vcs.get_repository_data(owner, name)
 
-        repo_info = repo_data["repository"]
+        # Convert VCS data to legacy format for metrics compatibility
+        repo_info = _vcs_data_to_repo_info(vcs_data)
 
         # Use the shared analysis logic
-        return _analyze_repository_data(
+        result = _analyze_repository_data(
             owner,
             name,
             repo_info,
@@ -1683,8 +1442,15 @@ def analyze_repository(
             profile=profile,
         )
 
+        # Update repo_url with actual VCS platform URL
+        result = result._replace(repo_url=vcs.get_repository_url(owner, name))
+
+        return result
+
     except httpx.HTTPStatusError as e:
-        console.print(f"[yellow]Note: Unable to reach GitHub API ({e}).[/yellow]")
+        console.print(
+            f"[yellow]Note: Unable to reach {vcs_platform.upper()} API ({e}).[/yellow]"
+        )
         raise
     except ValueError as e:
         console.print(f"[yellow]Note: Unable to complete analysis: {e}[/yellow]")

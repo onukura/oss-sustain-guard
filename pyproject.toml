@@ -84,7 +84,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["oss_sustain_guard"]
-include = ["oss_sustain_guard/assets/*.html"]
+include = ["oss_sustain_guard/assets/*.html", "oss_sustain_guard/assets/**/*.json"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

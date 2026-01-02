@@ -44,9 +44,9 @@ Metrics are one lens among many; they work best alongside project context and re
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
-- **Minimal Setup** - Requires a GitHub token for real-time analysis
+- **Minimal Setup** - Requires a GitHub token for real-time analysis (use `--demo` to try it without one)
 
-## � Privacy & Security
+## 🔒 Privacy & Security
 
 **Your data stays local:**
 
@@ -75,11 +75,15 @@ For performance reasons, we sample GitHub data with these limits (per analysis):
 
 These samples are sufficient for evaluating sustainability trends. Results include **sample counts** so you can see exactly what data was used. For large projects with high activity, these limits mean you're seeing representative data rather than exhaustive data—which is intentional for API efficiency and speed.
 
-## �🚀 Quick Start
+## 🚀 Quick Start
 
 ```bash
 # Install
 pip install oss-sustain-guard
+
+# Try built-in demo data (no token required)
+os4g check --demo
+# Demo data is a snapshot for illustration and may differ from current repository status.
 
 # Set GitHub token (classic) with public_repo and security_events scopes
 export GITHUB_TOKEN='your_token_here'  # Get from: https://github.com/settings/tokens/new

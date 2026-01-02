@@ -10,7 +10,6 @@ import pytest
 from oss_sustain_guard.core import (
     AnalysisResult,
     Metric,
-    _query_github_graphql,
     analyze_repository,
 )
 
@@ -18,25 +17,58 @@ from oss_sustain_guard.core import (
 
 
 @pytest.fixture
-def mock_graphql_query():
-    """Fixture to patch _query_github_graphql."""
-    with patch("oss_sustain_guard.core._query_github_graphql") as mock_query:
-        yield mock_query
+def mock_vcs_provider():
+    """Fixture to patch VCS provider."""
+    with patch("oss_sustain_guard.core.get_vcs_provider") as mock_provider:
+        yield mock_provider
 
 
 # --- Tests ---
 
 
-def test_analyze_repository_structure(mock_graphql_query):
+def test_analyze_repository_structure(mock_vcs_provider):
     """
     Tests that analyze_repository returns the correct data structure.
-    This test uses the placeholder logic in core.py.
+    This test uses the VCS abstraction layer.
     """
-    # Arrange
-    mock_graphql_query.return_value = {
-        "repository": {
+    # Arrange - Mock VCS provider
+    mock_provider_instance = MagicMock()
+    mock_vcs_provider.return_value = mock_provider_instance
+
+    # Mock VCSRepositoryData
+    from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+    mock_vcs_data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at="2024-12-06T10:00:00Z",
+        owner_type="User",
+        owner_login="testuser",
+        owner_name=None,
+        commits=[{"author": {"user": {"login": "user1"}}}],
+        total_commits=1,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data={
             "isArchived": False,
             "pushedAt": "2024-12-06T10:00:00Z",
+            "owner": {"__typename": "User", "login": "testuser"},
             "defaultBranchRef": {
                 "target": {
                     "history": {
@@ -46,8 +78,12 @@ def test_analyze_repository_structure(mock_graphql_query):
             },
             "pullRequests": {"edges": []},
             "fundingLinks": [],
-        }
-    }
+        },
+    )
+    mock_provider_instance.get_repository_data.return_value = mock_vcs_data
+    mock_provider_instance.get_repository_url.return_value = (
+        "https://github.com/test-owner/test-repo"
+    )
 
     # Act
     result = analyze_repository("test-owner", "test-repo")
@@ -66,15 +102,47 @@ def test_analyze_repository_structure(mock_graphql_query):
     assert isinstance(first_metric.risk, str)
 
 
-def test_total_score_is_sum_of_metric_scores(mock_graphql_query):
+def test_total_score_is_sum_of_metric_scores(mock_vcs_provider):
     """
     Tests that the total_score is calculated using category-weighted approach.
     """
     # Arrange
-    mock_graphql_query.return_value = {
-        "repository": {
+    from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+    mock_provider_instance = MagicMock()
+    mock_vcs_provider.return_value = mock_provider_instance
+
+    mock_vcs_data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at="2024-12-06T10:00:00Z",
+        owner_type="User",
+        owner_login="test-owner",
+        owner_name=None,
+        commits=[{"author": {"user": {"login": "user1"}}}],
+        total_commits=1,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data={
             "isArchived": False,
             "pushedAt": "2024-12-06T10:00:00Z",
+            "owner": {"__typename": "User", "login": "test-owner"},
             "defaultBranchRef": {
                 "target": {
                     "history": {
@@ -84,8 +152,12 @@ def test_total_score_is_sum_of_metric_scores(mock_graphql_query):
             },
             "pullRequests": {"edges": []},
             "fundingLinks": [],
-        }
-    }
+        },
+    )
+    mock_provider_instance.get_repository_data.return_value = mock_vcs_data
+    mock_provider_instance.get_repository_url.return_value = (
+        "https://github.com/test-owner/test-repo"
+    )
 
     # Act
     result = analyze_repository("test-owner", "test-repo")
@@ -98,59 +170,87 @@ def test_total_score_is_sum_of_metric_scores(mock_graphql_query):
 
 
 @patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)
-@patch("httpx.Client.post")
-def test_query_github_graphql_success(mock_post):
-    """
-    Tests a successful GraphQL query.
-    """
+def test_analyze_repository_with_vcs_provider(mock_vcs_provider):
+    """Test analyze_repository using VCS provider."""
     # Arrange
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"data": {"repository": {"name": "test"}}}
-    mock_post.return_value = mock_response
+    from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+    mock_provider_instance = MagicMock()
+    mock_vcs_provider.return_value = mock_provider_instance
+
+    mock_vcs_data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at="2024-12-06T10:00:00Z",
+        owner_type="User",
+        owner_login="test-owner",
+        owner_name=None,
+        commits=[],
+        total_commits=0,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data={
+            "isArchived": False,
+            "pushedAt": "2024-12-06T10:00:00Z",
+            "owner": {"__typename": "User", "login": "test-owner"},
+            "defaultBranchRef": None,
+            "pullRequests": {"edges": []},
+            "fundingLinks": [],
+        },
+    )
+    mock_provider_instance.get_repository_data.return_value = mock_vcs_data
+    mock_provider_instance.get_repository_url.return_value = (
+        "https://github.com/test-owner/test-repo"
+    )
 
     # Act
-    data = _query_github_graphql("query {}", {})
+    result = analyze_repository("test-owner", "test-repo")
 
     # Assert
-    assert data == {"repository": {"name": "test"}}
-    mock_post.assert_called_once()
+    assert isinstance(result, AnalysisResult)
+    assert result.repo_url == "https://github.com/test-owner/test-repo"
 
 
-@patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)
-@patch("httpx.Client.post")
-def test_query_github_graphql_api_error(mock_post):
-    """
-    Tests handling of a GitHub API error in the response.
-    """
-    # Arrange
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"errors": [{"message": "Bad credentials"}]}
-    mock_post.return_value = mock_response
+def test_analyze_repository_vcs_error(mock_vcs_provider):
+    """Test analyze_repository handles VCS provider errors."""
+    mock_provider_instance = MagicMock()
+    mock_vcs_provider.return_value = mock_provider_instance
+    mock_provider_instance.get_repository_data.side_effect = httpx.HTTPStatusError(
+        "API Error",
+        request=MagicMock(),
+        response=MagicMock(),
+    )
 
-    # Act & Assert
     with pytest.raises(httpx.HTTPStatusError):
-        _query_github_graphql("query {}", {})
-
-
-def test_query_github_graphql_no_token():
-    """
-    Tests that a ValueError is raised if the GITHUB_TOKEN is not set.
-    """
-    with patch.dict("os.environ", {}, clear=True):
-        with pytest.raises(
-            ValueError, match="GITHUB_TOKEN environment variable is required"
-        ):
-            _query_github_graphql("query {}", {})
+        analyze_repository("owner", "repo")
 
 
 # --- Tests for analyze_repository error handling ---
 
 
-def test_analyze_repository_not_found(mock_graphql_query):
+def test_analyze_repository_not_found(mock_vcs_provider):
     """Test analyze_repository raises error for non-existent repository."""
-    mock_graphql_query.return_value = {}
+    mock_provider_instance = MagicMock()
+    mock_vcs_provider.return_value = mock_provider_instance
+    mock_provider_instance.get_repository_data.side_effect = ValueError(
+        "Repository nonexistent/repo not found or is inaccessible."
+    )
 
     with pytest.raises(ValueError, match="not found or is inaccessible"):
         analyze_repository("nonexistent", "repo")

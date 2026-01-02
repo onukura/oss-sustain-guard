@@ -1,0 +1,725 @@
+{
+  "generated_at": "2026-01-02T14:05:42.360608+00:00",
+  "profile": "balanced",
+  "profile_metadata": {
+    "name": "balanced",
+    "metric_weights": {
+      "Contributor Redundancy": 3,
+      "Maintainer Retention": 2,
+      "Contributor Attraction": 2,
+      "Contributor Retention": 2,
+      "Organizational Diversity": 2,
+      "Maintainer Load Distribution": 2,
+      "Recent Activity": 3,
+      "Release Rhythm": 2,
+      "Build Health": 2,
+      "Change Request Resolution": 2,
+      "Community Health": 2,
+      "PR Acceptance Ratio": 2,
+      "Review Health": 2,
+      "Issue Resolution Duration": 2,
+      "Stale Issue Ratio": 2,
+      "PR Merge Speed": 2,
+      "Documentation Presence": 2,
+      "Code of Conduct": 1,
+      "License Clarity": 1,
+      "Project Popularity": 2,
+      "Fork Activity": 1,
+      "Security Signals": 2,
+      "Funding Signals": 2,
+      "PR Responsiveness": 1
+    }
+  },
+  "summary": {
+    "total_packages": 3,
+    "average_score": 81.0,
+    "healthy_count": 2,
+    "needs_attention_count": 1,
+    "needs_support_count": 0
+  },
+  "results": [
+    {
+      "repo_url": "https://github.com/onukura/oss-sustain-guard",
+      "total_score": 64,
+      "metrics": [
+        {
+          "name": "Contributor Redundancy",
+          "score": 2,
+          "max_score": 10,
+          "message": "Needs attention: 100% of recent commits by single author. 1 contributor(s), 223 total commits.",
+          "risk": "High"
+        },
+        {
+          "name": "Maintainer Retention",
+          "score": 10,
+          "max_score": 10,
+          "message": "Stable: 1 active maintainers. No significant drain detected.",
+          "risk": "None"
+        },
+        {
+          "name": "Recent Activity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Recently active (0 days ago).",
+          "risk": "None"
+        },
+        {
+          "name": "Change Request Resolution",
+          "score": 10,
+          "max_score": 10,
+          "message": "Good: Average merge time 4 hours (0.2 days). Responsive to PRs.",
+          "risk": "None"
+        },
+        {
+          "name": "Issue Resolution Duration",
+          "score": 7,
+          "max_score": 10,
+          "message": "Note: No closed issues in recent history (may be addressing issues promptly).",
+          "risk": "None"
+        },
+        {
+          "name": "Funding Signals",
+          "score": 0,
+          "max_score": 10,
+          "message": "No funding sources detected for community projects. Consider adding support links.",
+          "risk": "Low"
+        },
+        {
+          "name": "Release Rhythm",
+          "score": 10,
+          "max_score": 10,
+          "message": "Active: Last release 0 days ago (v0.14.3).",
+          "risk": "None"
+        },
+        {
+          "name": "Security Signals",
+          "score": 5,
+          "max_score": 10,
+          "message": "Moderate: No security policy detected. Consider adding SECURITY.md.",
+          "risk": "None"
+        },
+        {
+          "name": "Contributor Attraction",
+          "score": 4,
+          "max_score": 10,
+          "message": "Moderate: 1 new contributor(s) in last 6 months. Consider outreach efforts.",
+          "risk": "Medium"
+        },
+        {
+          "name": "Contributor Retention",
+          "score": 10,
+          "max_score": 10,
+          "message": "New project: Not enough history to assess retention.",
+          "risk": "None"
+        },
+        {
+          "name": "Review Health",
+          "score": 7,
+          "max_score": 10,
+          "message": "Good: Avg time to first review 4.1h (0.2d). Avg 1.5 reviews per PR.",
+          "risk": "Low"
+        },
+        {
+          "name": "Documentation Presence",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 4/5 documentation signals present.",
+          "risk": "None"
+        },
+        {
+          "name": "Code of Conduct",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Code of Conduct present (Other).",
+          "risk": "None"
+        },
+        {
+          "name": "PR Acceptance Ratio",
+          "score": 4,
+          "max_score": 10,
+          "message": "Moderate: 50% PR acceptance rate. May be selective about contributions.",
+          "risk": "Medium"
+        },
+        {
+          "name": "Organizational Diversity",
+          "score": 5,
+          "max_score": 10,
+          "message": "Note: Unable to determine organizational diversity (personal project likely).",
+          "risk": "None"
+        },
+        {
+          "name": "Fork Activity",
+          "score": 0,
+          "max_score": 10,
+          "message": "Note: No forks yet. Project may be new or niche.",
+          "risk": "Low"
+        },
+        {
+          "name": "Project Popularity",
+          "score": 0,
+          "max_score": 10,
+          "message": "Note: ⭐ 0 stars. Very new or specialized project.",
+          "risk": "Low"
+        },
+        {
+          "name": "License Clarity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: MIT License (OSI-approved). Clear licensing.",
+          "risk": "None"
+        },
+        {
+          "name": "PR Responsiveness",
+          "score": 2,
+          "max_score": 10,
+          "message": "Note: Unable to measure PR response times.",
+          "risk": "None"
+        },
+        {
+          "name": "Community Health",
+          "score": 10,
+          "max_score": 10,
+          "message": "No open issues. Well-maintained or low activity.",
+          "risk": "None"
+        },
+        {
+          "name": "Build Health",
+          "score": 10,
+          "max_score": 10,
+          "message": "CI Status: success (Latest check passed).",
+          "risk": "None"
+        },
+        {
+          "name": "Stale Issue Ratio",
+          "score": 5,
+          "max_score": 10,
+          "message": "Note: No closed issues in recent history.",
+          "risk": "None"
+        },
+        {
+          "name": "PR Merge Speed",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Median PR merge time 0.2d. Responsive review cycle.",
+          "risk": "None"
+        },
+        {
+          "name": "Maintainer Load Distribution",
+          "score": 2,
+          "max_score": 10,
+          "message": "Needs support: Very high workload concentration (Gini 1.00). Single maintainer burden evident among 1 contributor(s).",
+          "risk": "High"
+        }
+      ],
+      "funding_links": [],
+      "is_community_driven": true,
+      "models": [
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        }
+      ],
+      "signals": {
+        "avg_review_time_hours": 4.1,
+        "contributor_count": 1,
+        "funding_link_count": 0,
+        "last_activity_days": 0,
+        "new_contributors_6mo": 1
+      },
+      "dependency_scores": {},
+      "ecosystem": "python",
+      "sample_counts": {
+        "closed_issues": 0,
+        "closed_prs": 2,
+        "commits": 100,
+        "forks": 0,
+        "merged_prs": 2,
+        "open_issues": 0,
+        "releases": 10,
+        "vulnerability_alerts": 0
+      },
+      "skipped_metrics": []
+    },
+    {
+      "repo_url": "https://github.com/facebook/react",
+      "total_score": 87,
+      "metrics": [
+        {
+          "name": "Contributor Redundancy",
+          "score": 10,
+          "max_score": 10,
+          "message": "Healthy: 18 active contributors.",
+          "risk": "None"
+        },
+        {
+          "name": "Maintainer Retention",
+          "score": 10,
+          "max_score": 10,
+          "message": "Stable: 13 active maintainers. No significant drain detected.",
+          "risk": "None"
+        },
+        {
+          "name": "Recent Activity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Recently active (0 days ago).",
+          "risk": "None"
+        },
+        {
+          "name": "Change Request Resolution",
+          "score": 10,
+          "max_score": 10,
+          "message": "Good: Average merge time 377 hours (15.7 days). Responsive to PRs.",
+          "risk": "None"
+        },
+        {
+          "name": "Issue Resolution Duration",
+          "score": 5,
+          "max_score": 10,
+          "message": "Moderate: Avg issue resolution 192.9 days. Reasonable for very large project.",
+          "risk": "Medium"
+        },
+        {
+          "name": "Funding Signals",
+          "score": 10,
+          "max_score": 10,
+          "message": "Well-supported: Organization maintained by facebook.",
+          "risk": "None"
+        },
+        {
+          "name": "Release Rhythm",
+          "score": 10,
+          "max_score": 10,
+          "message": "Active: Last release 21 days ago (v19.0.3).",
+          "risk": "None"
+        },
+        {
+          "name": "Security Signals",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Security policy enabled, no unresolved alerts.",
+          "risk": "None"
+        },
+        {
+          "name": "Contributor Attraction",
+          "score": 10,
+          "max_score": 10,
+          "message": "Strong: 18 new contributors in last 6 months. Active community growth.",
+          "risk": "None"
+        },
+        {
+          "name": "Contributor Retention",
+          "score": 10,
+          "max_score": 10,
+          "message": "New project: Not enough history to assess retention.",
+          "risk": "None"
+        },
+        {
+          "name": "Review Health",
+          "score": 0,
+          "max_score": 10,
+          "message": "Observe: Slow review process (avg 17.6d to first review). Consider increasing reviewer engagement.",
+          "risk": "Medium"
+        },
+        {
+          "name": "Documentation Presence",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 4/5 documentation signals present.",
+          "risk": "None"
+        },
+        {
+          "name": "Code of Conduct",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Code of Conduct present (Contributor Covenant).",
+          "risk": "None"
+        },
+        {
+          "name": "PR Acceptance Ratio",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 100% PR acceptance rate. Very welcoming to contributions (12610 merged).",
+          "risk": "None"
+        },
+        {
+          "name": "Organizational Diversity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 7 organizations/domains detected. Highly diverse.",
+          "risk": "None"
+        },
+        {
+          "name": "Fork Activity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 50256 forks, ~1/20 active. Healthy ecosystem with low divergence.",
+          "risk": "None"
+        },
+        {
+          "name": "Project Popularity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: ⭐ 241979 stars, 6703 watchers. Very popular.",
+          "risk": "None"
+        },
+        {
+          "name": "License Clarity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: MIT License (OSI-approved). Clear licensing.",
+          "risk": "None"
+        },
+        {
+          "name": "PR Responsiveness",
+          "score": 0,
+          "max_score": 10,
+          "message": "Observe: Avg PR first response 25.7d. Contributors may wait long.",
+          "risk": "Medium"
+        },
+        {
+          "name": "Community Health",
+          "score": 6,
+          "max_score": 10,
+          "message": "Good: Average issue response time 77.2 hours (3.2 days).",
+          "risk": "None"
+        },
+        {
+          "name": "Build Health",
+          "score": 10,
+          "max_score": 10,
+          "message": "CI Status: success (Latest check passed).",
+          "risk": "None"
+        },
+        {
+          "name": "Stale Issue Ratio",
+          "score": 10,
+          "max_score": 10,
+          "message": "Healthy: 0.0% of issues are stale (90+ days inactive).",
+          "risk": "None"
+        },
+        {
+          "name": "PR Merge Speed",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Median PR merge time 0.7d. Responsive review cycle.",
+          "risk": "None"
+        },
+        {
+          "name": "Maintainer Load Distribution",
+          "score": 4,
+          "max_score": 10,
+          "message": "Observe: High workload concentration (Gini 0.57). Consider expanding maintainer team from 25 contributors.",
+          "risk": "Medium"
+        }
+      ],
+      "funding_links": [],
+      "is_community_driven": false,
+      "models": [
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        }
+      ],
+      "signals": {
+        "contributor_count": 18,
+        "funding_link_count": 0,
+        "last_activity_days": 0,
+        "new_contributors_6mo": 18
+      },
+      "dependency_scores": {},
+      "ecosystem": "javascript",
+      "sample_counts": {
+        "closed_issues": 50,
+        "closed_prs": 50,
+        "commits": 100,
+        "forks": 20,
+        "merged_prs": 50,
+        "open_issues": 20,
+        "releases": 10,
+        "vulnerability_alerts": 0
+      },
+      "skipped_metrics": []
+    },
+    {
+      "repo_url": "https://github.com/rails/rails",
+      "total_score": 92,
+      "metrics": [
+        {
+          "name": "Contributor Redundancy",
+          "score": 10,
+          "max_score": 10,
+          "message": "Healthy: 34 active contributors.",
+          "risk": "None"
+        },
+        {
+          "name": "Maintainer Retention",
+          "score": 10,
+          "max_score": 10,
+          "message": "Stable: 11 active maintainers. No significant drain detected.",
+          "risk": "None"
+        },
+        {
+          "name": "Recent Activity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Recently active (0 days ago).",
+          "risk": "None"
+        },
+        {
+          "name": "Change Request Resolution",
+          "score": 10,
+          "max_score": 10,
+          "message": "Good: Average merge time 294 hours (12.3 days). Responsive to PRs.",
+          "risk": "None"
+        },
+        {
+          "name": "Issue Resolution Duration",
+          "score": 7,
+          "max_score": 10,
+          "message": "Good: Avg issue resolution 83.0 days.",
+          "risk": "Low"
+        },
+        {
+          "name": "Funding Signals",
+          "score": 10,
+          "max_score": 10,
+          "message": "Well-supported: Organization maintained by rails.",
+          "risk": "None"
+        },
+        {
+          "name": "Release Rhythm",
+          "score": 10,
+          "max_score": 10,
+          "message": "Active: Last release 65 days ago (v8.1.1).",
+          "risk": "None"
+        },
+        {
+          "name": "Security Signals",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Security policy enabled, no unresolved alerts.",
+          "risk": "None"
+        },
+        {
+          "name": "Contributor Attraction",
+          "score": 10,
+          "max_score": 10,
+          "message": "Strong: 34 new contributors in last 6 months. Active community growth.",
+          "risk": "None"
+        },
+        {
+          "name": "Contributor Retention",
+          "score": 10,
+          "max_score": 10,
+          "message": "New project: Not enough history to assess retention.",
+          "risk": "None"
+        },
+        {
+          "name": "Review Health",
+          "score": 7,
+          "max_score": 10,
+          "message": "Good: Avg time to first review 138.4h (5.8d). Avg 1.6 reviews per PR.",
+          "risk": "Low"
+        },
+        {
+          "name": "Documentation Presence",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 4/5 documentation signals present.",
+          "risk": "None"
+        },
+        {
+          "name": "Code of Conduct",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Code of Conduct present (Other).",
+          "risk": "None"
+        },
+        {
+          "name": "PR Acceptance Ratio",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 100% PR acceptance rate. Very welcoming to contributions (25674 merged).",
+          "risk": "None"
+        },
+        {
+          "name": "Organizational Diversity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: 13 organizations/domains detected. Highly diverse.",
+          "risk": "None"
+        },
+        {
+          "name": "Fork Activity",
+          "score": 2,
+          "max_score": 10,
+          "message": "Needs attention: 22127 forks, ~18/20 active. Fork divergence appears elevated.",
+          "risk": "Medium"
+        },
+        {
+          "name": "Project Popularity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: ⭐ 58050 stars, 2310 watchers. Very popular.",
+          "risk": "None"
+        },
+        {
+          "name": "License Clarity",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: MIT License (OSI-approved). Clear licensing.",
+          "risk": "None"
+        },
+        {
+          "name": "PR Responsiveness",
+          "score": 6,
+          "max_score": 10,
+          "message": "Good: Avg PR first response 1.3d.",
+          "risk": "Low"
+        },
+        {
+          "name": "Community Health",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Average issue response time 32.6 hours.",
+          "risk": "None"
+        },
+        {
+          "name": "Build Health",
+          "score": 10,
+          "max_score": 10,
+          "message": "CI Status: success (Latest check passed).",
+          "risk": "None"
+        },
+        {
+          "name": "Stale Issue Ratio",
+          "score": 10,
+          "max_score": 10,
+          "message": "Healthy: 0.0% of issues are stale (90+ days inactive).",
+          "risk": "None"
+        },
+        {
+          "name": "PR Merge Speed",
+          "score": 10,
+          "max_score": 10,
+          "message": "Excellent: Median PR merge time 0.3d. Responsive review cycle.",
+          "risk": "None"
+        },
+        {
+          "name": "Maintainer Load Distribution",
+          "score": 4,
+          "max_score": 10,
+          "message": "Observe: High workload concentration (Gini 0.59). Consider expanding maintainer team from 20 contributors.",
+          "risk": "Medium"
+        }
+      ],
+      "funding_links": [],
+      "is_community_driven": false,
+      "models": [
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        },
+        {
+          "name": "",
+          "score": 0,
+          "max_score": 0,
+          "observation": ""
+        }
+      ],
+      "signals": {
+        "avg_review_time_hours": 138.4,
+        "contributor_count": 34,
+        "funding_link_count": 0,
+        "last_activity_days": 0,
+        "new_contributors_6mo": 34
+      },
+      "dependency_scores": {},
+      "ecosystem": "ruby",
+      "sample_counts": {
+        "closed_issues": 50,
+        "closed_prs": 50,
+        "commits": 100,
+        "forks": 20,
+        "merged_prs": 50,
+        "open_issues": 20,
+        "releases": 10,
+        "vulnerability_alerts": 0
+      },
+      "skipped_metrics": []
+    }
+  ]
+}

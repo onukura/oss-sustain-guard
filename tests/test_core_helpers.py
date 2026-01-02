@@ -315,10 +315,13 @@ def test_analyze_repositories_batch_handles_missing_and_error():
         ("owner2", "repo2", None, None),
     ]
     with (
-        patch("oss_sustain_guard.core._query_github_graphql") as mock_query,
+        patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs,
         patch("oss_sustain_guard.core._analyze_repository_data") as mock_analyze,
     ):
-        mock_query.return_value = {"repo0": None, "repo1": {"id": "1"}}
+        mock_provider = mock_vcs.return_value
+        mock_provider.get_repository_data.side_effect = ValueError(
+            "Repository not found"
+        )
         mock_analyze.side_effect = ValueError("boom")
 
         results = analyze_repositories_batch(repo_list)
@@ -338,10 +341,11 @@ def test_analyze_repositories_batch_falls_back_to_individual():
         metrics=[Metric("Metric A", 5, 10, "msg", "Low")],
     )
     with (
-        patch("oss_sustain_guard.core._query_github_graphql") as mock_query,
+        patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs,
         patch("oss_sustain_guard.core.analyze_repository") as mock_analyze,
     ):
-        mock_query.side_effect = RuntimeError("network")
+        mock_provider = mock_vcs.return_value
+        mock_provider.get_repository_data.side_effect = RuntimeError("network")
         mock_analyze.side_effect = [result, RuntimeError("boom")]
 
         results = analyze_repositories_batch(repo_list)
@@ -392,16 +396,17 @@ def test_analyze_repository_handles_http_status_error():
         request=httpx.Request("POST", "https://example.com"),
         response=httpx.Response(500),
     )
-    with patch("oss_sustain_guard.core._query_github_graphql", side_effect=error):
+    with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
+        mock_provider = mock_vcs.return_value
+        mock_provider.get_repository_data.side_effect = error
         with pytest.raises(httpx.HTTPStatusError):
             analyze_repository("owner", "repo")
 
 
 def test_analyze_repository_handles_unexpected_error():
-    with patch(
-        "oss_sustain_guard.core._query_github_graphql",
-        side_effect=RuntimeError("boom"),
-    ):
+    with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
+        mock_provider = mock_vcs.return_value
+        mock_provider.get_repository_data.side_effect = RuntimeError("boom")
         with pytest.raises(RuntimeError):
             analyze_repository("owner", "repo")
 

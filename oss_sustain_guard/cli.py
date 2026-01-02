@@ -47,6 +47,7 @@ from oss_sustain_guard.core import (
     SCORING_PROFILES,
     AnalysisResult,
     Metric,
+    MetricModel,
     analysis_result_to_dict,
     analyze_repositories_batch,
     analyze_repository,
@@ -302,6 +303,7 @@ def _write_json_results(
     profile: str,
     output_file: Path | None,
     dependency_summary: dict[str, int] | None = None,
+    demo_notice: str | None = None,
 ) -> None:
     """Write results as JSON to stdout or a file."""
     weights = get_metric_weights(profile)
@@ -317,6 +319,9 @@ def _write_json_results(
     }
     if dependency_summary:
         payload["dependency_summary"] = dependency_summary
+    if demo_notice:
+        payload["demo"] = True
+        payload["demo_notice"] = demo_notice
     json_text = json.dumps(payload, ensure_ascii=False, indent=2)
     if output_file:
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -345,14 +350,147 @@ def _load_report_template() -> str:
     return template_path.read_text(encoding="utf-8")
 
 
+def _coerce_int(value: object, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _analysis_result_from_payload(payload: dict) -> AnalysisResult:
+    repo_url = payload.get("repo_url") or payload.get("github_url") or "unknown"
+    metrics_payload = payload.get("metrics") or []
+    metrics: list[Metric] = []
+    for metric in metrics_payload:
+        if isinstance(metric, Metric):
+            metrics.append(metric)
+            continue
+        if not isinstance(metric, dict):
+            continue
+        metrics.append(
+            Metric(
+                str(metric.get("name", "")),
+                _coerce_int(metric.get("score", 0)),
+                _coerce_int(metric.get("max_score", 0)),
+                str(metric.get("message", "")),
+                str(metric.get("risk", "None")),
+            )
+        )
+
+    models_payload = payload.get("models") or []
+    models: list[MetricModel] = []
+    for model in models_payload:
+        if isinstance(model, MetricModel):
+            models.append(model)
+            continue
+        if not isinstance(model, dict):
+            continue
+        models.append(
+            MetricModel(
+                str(model.get("name", "")),
+                _coerce_int(model.get("score", 0)),
+                _coerce_int(model.get("max_score", 0)),
+                str(model.get("observation", "")),
+            )
+        )
+
+    dependency_scores = payload.get("dependency_scores") or {}
+    if isinstance(dependency_scores, dict):
+        dependency_scores = {
+            str(name): _coerce_int(score) for name, score in dependency_scores.items()
+        }
+    else:
+        dependency_scores = {}
+
+    funding_links = payload.get("funding_links")
+    if not isinstance(funding_links, list):
+        funding_links = []
+
+    signals = payload.get("signals") if isinstance(payload.get("signals"), dict) else {}
+    sample_counts = (
+        payload.get("sample_counts")
+        if isinstance(payload.get("sample_counts"), dict)
+        else {}
+    )
+    skipped_metrics = payload.get("skipped_metrics")
+    if not isinstance(skipped_metrics, list):
+        skipped_metrics = []
+
+    return AnalysisResult(
+        repo_url=str(repo_url),
+        total_score=_coerce_int(payload.get("total_score", 0)),
+        metrics=metrics,
+        funding_links=funding_links,
+        is_community_driven=bool(payload.get("is_community_driven", False)),
+        models=models,
+        signals=signals,
+        dependency_scores=dependency_scores,
+        ecosystem=str(payload.get("ecosystem") or ""),
+        sample_counts=sample_counts,
+        skipped_metrics=skipped_metrics,
+    )
+
+
+def _load_demo_payload() -> dict:
+    candidates = []
+    try:
+        candidates.append(
+            resources.files("oss_sustain_guard").joinpath(
+                "assets/demo/demo_results.json"
+            )
+        )
+    except (AttributeError, FileNotFoundError, ModuleNotFoundError):
+        pass
+    candidates.append(project_root / "examples" / "demo" / "demo_results.json")
+
+    for candidate in candidates:
+        try:
+            if candidate.is_file():
+                return json.loads(candidate.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+
+    raise FileNotFoundError(
+        "Demo data not found. Expected assets/demo/demo_results.json."
+    )
+
+
+def _load_demo_results() -> tuple[list[AnalysisResult], str]:
+    payload = _load_demo_payload()
+    if isinstance(payload, dict):
+        profile = str(payload.get("profile", "balanced"))
+        results_payload = payload.get("results", [])
+    else:
+        profile = "balanced"
+        results_payload = payload
+
+    if not isinstance(results_payload, list):
+        raise ValueError("Demo data format is invalid.")
+
+    results = [
+        _analysis_result_from_payload(item)
+        for item in results_payload
+        if isinstance(item, dict)
+    ]
+
+    if not results:
+        raise ValueError("Demo data is empty.")
+
+    return results, profile
+
+
 def _render_html_report(
     results: list[AnalysisResult],
     profile: str,
     dependency_summary: dict[str, int] | None = None,
+    demo_notice: str | None = None,
 ) -> str:
     """Render HTML report from template and results."""
 
     summary = _build_summary(results)
+    demo_notice_block = ""
+    if demo_notice:
+        demo_notice_block = f'<div class="notice">{escape(demo_notice)}</div>'
     summary_cards = [
         ("Packages analyzed", str(summary["total_packages"])),
         ("Average score", f"{summary['average_score']:.1f}"),
@@ -404,6 +542,7 @@ def _render_html_report(
         report_title="OSS Sustain Guard Report",
         generated_at=escape(datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")),
         profile=escape(profile),
+        demo_notice_block=demo_notice_block,
         summary_cards=summary_cards_html,
         results_table_rows="\n".join(rows_html),
         results_json=json_payload,
@@ -415,6 +554,7 @@ def _write_html_results(
     profile: str,
     output_file: Path | None,
     dependency_summary: dict[str, int] | None = None,
+    demo_notice: str | None = None,
 ) -> None:
     """Write results as HTML to a file."""
     output_path = output_file or Path("oss-sustain-guard-report.html")
@@ -423,7 +563,9 @@ def _write_html_results(
         raise IsADirectoryError(f"Output path is a directory: {output_path}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    html_text = _render_html_report(results, profile, dependency_summary)
+    html_text = _render_html_report(
+        results, profile, dependency_summary, demo_notice=demo_notice
+    )
     output_path.write_text(html_text, encoding="utf-8")
     console.print(f"[green]✅ HTML report saved to {output_path}[/green]")
 
@@ -642,22 +784,34 @@ def display_results(
     output_style: str = "normal",
     profile: str = "balanced",
     dependency_summary: dict[str, int] | None = None,
+    demo_notice: str | None = None,
 ) -> None:
     """Display or export analysis results by format."""
     if output_format in {"json", "html"}:
         try:
             if output_format == "json":
                 _write_json_results(
-                    results, profile, output_file, dependency_summary=dependency_summary
+                    results,
+                    profile,
+                    output_file,
+                    dependency_summary=dependency_summary,
+                    demo_notice=demo_notice,
                 )
             else:
                 _write_html_results(
-                    results, profile, output_file, dependency_summary=dependency_summary
+                    results,
+                    profile,
+                    output_file,
+                    dependency_summary=dependency_summary,
+                    demo_notice=demo_notice,
                 )
         except (FileNotFoundError, IsADirectoryError, OSError) as exc:
             console.print(f"[yellow]⚠️  Unable to write report: {exc}[/yellow]")
             raise typer.Exit(code=1) from exc
         return
+
+    if demo_notice:
+        console.print(f"[yellow]ℹ️  {demo_notice}[/yellow]")
 
     if output_style == "compact":
         display_results_compact(
@@ -1549,6 +1703,11 @@ def check(
         "-O",
         help="Write output to a file (recommended for json or html).",
     ),
+    demo: bool = typer.Option(
+        False,
+        "--demo",
+        help="Run with built-in demo data (no GitHub API calls).",
+    ),
     show_models: bool = typer.Option(
         False,
         "--show-models",
@@ -1743,6 +1902,45 @@ def check(
     if clear_cache_flag:
         cleared = clear_cache()
         console.print(f"[green]✨ Cleared {cleared} cache file(s).[/green]")
+        raise typer.Exit(code=0)
+
+    if demo:
+        if packages or manifest:
+            console.print(
+                "[dim]ℹ️  Demo mode ignores package inputs and uses built-in results.[/dim]"
+            )
+        try:
+            demo_results, demo_profile = _load_demo_results()
+        except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
+            console.print(f"[yellow]⚠️  Unable to load demo data: {exc}[/yellow]")
+            raise typer.Exit(code=1) from exc
+
+        demo_notice = (
+            "Demo data is a snapshot for illustration and may differ from "
+            "current repository status."
+        )
+        if demo_profile and demo_profile != profile:
+            console.print(
+                f"[dim]ℹ️  Demo data uses the '{demo_profile}' profile; "
+                "--profile is ignored in demo mode.[/dim]"
+            )
+
+        console.print(
+            "[green]✨ Running in demo mode with built-in sample data.[/green]"
+        )
+        display_results(
+            demo_results,
+            show_models=show_models,
+            show_dependencies=show_dependencies,
+            output_format=output_format,
+            output_file=output_file,
+            output_style=output_style,
+            profile=demo_profile or profile,
+            demo_notice=demo_notice,
+        )
+        close_http_client()
+        close_resolver_http_client()
+        clear_lockfile_cache()
         raise typer.Exit(code=0)
 
     # Apply cache configuration

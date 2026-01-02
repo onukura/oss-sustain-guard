@@ -10,9 +10,19 @@ Install easily from PyPI:
 pip install oss-sustain-guard
 ```
 
-## 🔐 GitHub Token Setup (Required)
+## Quick Demo (No Token Needed)
 
-**OSS Sustain Guard requires a GitHub Personal Access Token for all package analysis.**
+Run the built-in demo data to see output instantly without network calls:
+
+```bash
+os4g check --demo
+```
+
+Demo data is a snapshot for illustration and may differ from current repository status.
+
+## 🔐 GitHub Token Setup (Required for Real-Time Analysis)
+
+**OSS Sustain Guard requires a GitHub Personal Access Token for real-time package analysis.**
 
 This is needed because the tool fetches repository data directly from GitHub's API to analyze:
 
