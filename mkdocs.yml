@@ -23,6 +23,8 @@ exclude_docs: |
 nav:
   - Home: index.md
   - Getting Started: GETTING_STARTED.md
+  - About:
+      - How We Differ: DIFFERENCES_FROM_SIMILAR_INITIATIVES.md
   - Usage:
       - Recursive Scanning: RECURSIVE_SCANNING_GUIDE.md
       - Dependency Analysis: DEPENDENCY_ANALYSIS_GUIDE.md
