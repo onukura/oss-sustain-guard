@@ -2,6 +2,13 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.14.3 - 2026-01-02
+
+- Added: scoring profile support to batch repository analysis.
+- Improved: HTML report templating and ecosystem help text.
+- Improved: batch item normalization and formatting for clearer output.
+- Updated: demo GIF for improved visual representation.
+
 ## v0.14.2 - 2026-01-02
 
 - Fixed: clarified GitHub token requirements in documentation.
