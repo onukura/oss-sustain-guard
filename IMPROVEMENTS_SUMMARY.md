@@ -7,7 +7,7 @@
 **実装内容:**
 - ✅ GraphQLクエリのサンプル制限を定数として定義 (`GRAPHQL_SAMPLE_LIMITS`)
   - commits=100, merged_prs=50, closed_prs=50, issues=20, closed_issues=50, releases=10等
-  
+
 - ✅ `AnalysisResult`に`sample_counts`フィールドを追加
   - 分析に使用した実際のデータ数を追跡
 
@@ -33,7 +33,7 @@
   - トークンはGitHub APIにのみ送信される
   - ローカルキャッシュは外部に送信されない
   - すべての処理がクライアント側で実行される
-  
+
 - ✅ API制限とサンプリングの理由を明確に説明
   - なぜ100コミット、50PRなど制限があるのか
   - 大規模プロジェクトでも代表的なデータが取得されることを説明
@@ -68,7 +68,7 @@
 - ✅ HTML出力にもプロファイル情報を埋め込む
 
 **ファイル:**
-- `cli.py`: 
+- `cli.py`:
   - `display_results_detailed()`: プロファイル情報の表示機能追加
   - `_write_json_results()`: `profile_metadata`を追加
   - `_render_html_report()`: HTML出力に`profile_metadata`を含める
@@ -92,7 +92,7 @@
   - トークン問題、レート制限、ネットワークエラーなど、原因別の説明
 
 **ファイル:**
-- `core.py`: 
+- `core.py`:
   - `_get_user_friendly_error()`: エラーメッセージ変換関数
   - `_analyze_repository_data()`: エラーハンドリング改善
 
@@ -107,7 +107,7 @@
 - ✅ README.mdに「Repository Source Handling」セクション追加
   - GitHub-hosted: ✅ フル分析対応
   - 非GitHub (GitLab等): ℹ️ スキップ対応
-  
+
 - ✅ なぜGitHubだけ対応なのかを説明
   - GitHubのGraphQL APIの深い機能を活用
   - 他のプラットフォームは異なるAPI仕様
