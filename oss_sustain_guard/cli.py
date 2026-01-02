@@ -151,8 +151,7 @@ def load_database(
 
     Loads data with the following priority:
     1. User cache (~/.cache/oss-sustain-guard/*.json) if enabled and valid
-    2. Cloudflare KV (shared remote cache) - primary data source
-    3. Real-time analysis (if no cached data available)
+    2. Real-time analysis (if no cached data available)
 
     Args:
         use_cache: If False, skip all cached data sources and perform real-time analysis only.
@@ -1295,7 +1294,7 @@ def check(
     no_local_cache: bool = typer.Option(
         False,
         "--no-local-cache",
-        help="Disable local cache (~/.cache/oss-sustain-guard). Remote cache (Cloudflare KV) will still be used.",
+        help="Disable local cache (~/.cache/oss-sustain-guard).",
     ),
     clear_cache_flag: bool = typer.Option(
         False,

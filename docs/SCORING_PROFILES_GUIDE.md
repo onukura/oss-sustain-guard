@@ -308,7 +308,7 @@ SCORING_PROFILES["custom_enterprise"] = {
         # Lower priority for community metrics
         "Issue Responsiveness": 1,
         "PR Acceptance Ratio": 1,
-        # ... (include all 24 metrics)
+        # ... (include all 24 core metrics)
     },
 }
 ```
@@ -353,7 +353,7 @@ See [Contributing Guide](GETTING_STARTED.md) for how to provide feedback.
 
 All profiles assign **individual weights to each metric** (not categories):
 
-- **~24 metrics** evaluated per repository
+- **24 core metrics** evaluated per repository (optional dependents are informational)
 - Each metric scored **0-10** (normalized scale)
 - Weights are **integers ≥1** per metric
 - Different profiles emphasize different metrics

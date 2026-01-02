@@ -8,7 +8,7 @@
 
 ![demo](./docs/assets/os4g-demo.gif)
 
-**Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 24 metrics including Contributor Redundancy, Maintainer Retention, and Security Signals.
+**Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 24 core metrics (plus optional dependents) including Contributor Redundancy, Maintainer Retention, and Security Signals.
 
 ## Why OSS Sustain Guard?
 
@@ -32,7 +32,7 @@ Metrics are one lens among many; they work best alongside project context and re
 
 ## 🎯 Key Features
 
-- **24 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all metrics scored 0-10)
+- **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)
 - **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins.
 - **Optional Dependents Analysis** - Downstream dependency metrics (informational, not affecting total score)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
@@ -95,7 +95,7 @@ Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby, R, Haskell, Swift, Da
 
 See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/) for ecosystem-specific syntax.
 
-### 24 Sustainability Metrics
+### 24 Core Sustainability Metrics
 
 Evaluated across 5 categories:
 
@@ -104,6 +104,8 @@ Evaluated across 5 categories:
 - **Community Engagement** (20%) - Issue/PR responsiveness
 - **Project Maturity** (15%) - Documentation and governance
 - **Security & Funding** (20%) - Security posture and sustainability
+
+Optional dependents analysis is informational and does not affect the score.
 
 **Score interpretation:** 80-100 (Healthy) | 50-79 (Monitor) | 0-49 (Needs Attention)
 
