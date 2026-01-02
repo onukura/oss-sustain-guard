@@ -15,6 +15,11 @@ except ImportError:  # pragma: no cover - fallback for Python < 3.11
 from pathlib import Path
 from typing import Union
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # PROJECT_ROOT defaults to the current working directory for config discovery
 PROJECT_ROOT = Path.cwd()
 

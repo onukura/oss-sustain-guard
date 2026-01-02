@@ -7,11 +7,13 @@ This module provides a unified interface for interacting with different VCS plat
 
 from oss_sustain_guard.vcs.base import BaseVCSProvider, VCSRepositoryData
 from oss_sustain_guard.vcs.github import GitHubProvider
+from oss_sustain_guard.vcs.gitlab import GitLabProvider
 
 __all__ = [
     "BaseVCSProvider",
     "VCSRepositoryData",
     "GitHubProvider",
+    "GitLabProvider",
     "get_vcs_provider",
     "register_vcs_provider",
     "list_supported_platforms",
@@ -20,6 +22,7 @@ __all__ = [
 # Registry of supported VCS providers
 _PROVIDERS: dict[str, type[BaseVCSProvider]] = {
     "github": GitHubProvider,
+    "gitlab": GitLabProvider,
 }
 
 

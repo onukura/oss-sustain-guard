@@ -9,6 +9,7 @@ from oss_sustain_guard.vcs import (
 )
 from oss_sustain_guard.vcs.base import BaseVCSProvider, VCSRepositoryData
 from oss_sustain_guard.vcs.github import GitHubProvider
+from oss_sustain_guard.vcs.gitlab import GitLabProvider
 
 
 def test_get_vcs_provider_returns_github_by_default():
@@ -18,6 +19,13 @@ def test_get_vcs_provider_returns_github_by_default():
     assert provider.get_platform_name() == "github"
 
 
+def test_get_vcs_provider_returns_gitlab():
+    """Test that get_vcs_provider returns GitLab provider when requested."""
+    provider = get_vcs_provider("gitlab", token="test_token")
+    assert isinstance(provider, GitLabProvider)
+    assert provider.get_platform_name() == "gitlab"
+
+
 def test_get_vcs_provider_case_insensitive():
     """Test that get_vcs_provider is case-insensitive."""
     provider = get_vcs_provider("GITHUB", token="test_token")
@@ -25,6 +33,9 @@ def test_get_vcs_provider_case_insensitive():
 
     provider2 = get_vcs_provider("GitHub", token="test_token")
     assert isinstance(provider2, GitHubProvider)
+
+    provider3 = get_vcs_provider("GITLAB", token="test_token")
+    assert isinstance(provider3, GitLabProvider)
 
 
 def test_get_vcs_provider_unsupported_platform():
@@ -43,6 +54,7 @@ def test_list_supported_platforms():
     """Test list_supported_platforms returns available platforms."""
     platforms = list_supported_platforms()
     assert "github" in platforms
+    assert "gitlab" in platforms
     assert isinstance(platforms, list)
     # Should be sorted
     assert platforms == sorted(platforms)
