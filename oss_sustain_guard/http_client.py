@@ -1,11 +1,13 @@
 """Shared HTTP client handling."""
 
+from typing import Union
+
 import httpx
 
 from oss_sustain_guard.config import get_verify_ssl
 
 _http_client: httpx.Client | None = None
-_http_client_verify_ssl: bool | None = None
+_http_client_verify_ssl: Union[bool, str, None] = None
 
 
 def _get_http_client() -> httpx.Client:

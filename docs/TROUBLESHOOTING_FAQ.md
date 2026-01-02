@@ -36,15 +36,18 @@ os4g check requests  # Now works
 
 1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens/new)
 2. Click "Generate new token (classic)"
-3. Token name: `oss-sustain-guard`
+3. Token name: `oss-sustain-guard` (or any name you prefer)
 4. Select `public_repo` scope (read-only access to public repositories)
 5. Click "Generate token" and **copy it immediately** (you won't see it again)
 6. Set the environment variable:
+
    ```bash
    export GITHUB_TOKEN="your_token"  # Linux/macOS
    ```
+
    Or add to `.env` file in your project:
-   ```
+
+   ```shell
    GITHUB_TOKEN=your_token_here
    ```
 
@@ -87,20 +90,50 @@ os4g check perl:Mojolicious
 SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed
 ```
 
-**Cause:** Firewall or proxy settings prevent SSL certificate verification
+**Cause:** Firewall or proxy settings prevent SSL certificate verification, or system CA certificates are outdated
 
 **Solution:**
 
+**Recommended: Fix certificate configuration properly**
+
 ```shell
-# Disable SSL verification (development only)
+# Update system CA certificates (Ubuntu/Debian)
+sudo apt update && sudo apt install --reinstall ca-certificates
+
+# Or update certificates (Red Hat/CentOS)
+sudo yum reinstall ca-certificates
+
+# If using a corporate proxy that inspects SSL traffic (e.g., Zscaler):
+# 1. Obtain the proxy's CA certificate from your IT department
+# 2. Add it to system trust store (example for Ubuntu)
+sudo cp proxy-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+
+# Or specify custom CA certificate file directly
+os4g check requests --ca-cert /path/to/custom-ca.crt
+
+# Or set environment variable (affects all commands)
+export OSS_SUSTAIN_GUARD_CA_CERT=/path/to/custom-ca.crt
+os4g check requests
+
+# For corporate proxies with multiple certificates, use system trust store instead:
+# Add all required certificates to /usr/local/share/ca-certificates/ and run:
+sudo update-ca-certificates
+os4g check requests  # Will use system trust store
+```
+
+**Temporary workaround (development only):**
+
+```shell
+# Disable SSL verification (NOT recommended for production)
 os4g check requests --insecure
 
 # Or set environment variable
 export OSS_SUSTAIN_GUARD_INSECURE=true
 os4g check requests
-
-# Warning: Do not use in production
 ```
+
+**Warning:** Avoid `--insecure` in production as it disables all SSL verification, making connections vulnerable to man-in-the-middle attacks.
 
 ### 4. "Rate limit exceeded"
 

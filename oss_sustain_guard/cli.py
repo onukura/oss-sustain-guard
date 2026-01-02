@@ -1272,6 +1272,11 @@ def check(
         "--insecure",
         help="Disable SSL certificate verification for HTTPS requests.",
     ),
+    ca_cert: Path | None = typer.Option(
+        None,
+        "--ca-cert",
+        help="Path to custom CA certificate file for SSL verification.",
+    ),
     cache_dir: Path | None = typer.Option(
         None,
         "--cache-dir",
@@ -1378,7 +1383,17 @@ def check(
     if cache_ttl:
         set_cache_ttl(cache_ttl)
 
-    set_verify_ssl(not insecure)
+    # Configure SSL verification
+    if insecure and ca_cert:
+        console.print("[red]❌ Cannot use both --insecure and --ca-cert options.[/red]")
+        raise typer.Exit(code=1)
+    if ca_cert:
+        if not ca_cert.exists():
+            console.print(f"[red]❌ CA certificate file not found: {ca_cert}[/red]")
+            raise typer.Exit(code=1)
+        set_verify_ssl(str(ca_cert))
+    else:
+        set_verify_ssl(not insecure)
 
     # Determine cache usage flags
     use_cache = not no_cache

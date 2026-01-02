@@ -9,14 +9,15 @@ Loads excluded packages from:
 import os
 import tomllib
 from pathlib import Path
+from typing import Union
 
 # project_root is the parent directory of oss_sustain_guard/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Global configuration for SSL verification
-# Default: True (verify SSL certificates)
-# Can be set to False by CLI --insecure flag
-VERIFY_SSL = True
+# Default: None (uses environment variable or default True)
+# Can be set by CLI --ca-cert, --insecure, or environment variable
+VERIFY_SSL: Union[bool, str, None] = None
 
 # Cache configuration
 # Default cache directory: ~/.cache/oss-sustain-guard
@@ -266,25 +267,40 @@ def get_exclusion_patterns(directory: Path | None = None) -> set[str]:
     return patterns
 
 
-def set_verify_ssl(verify: bool) -> None:
+def set_verify_ssl(verify: Union[bool, str, None]) -> None:
     """
     Set the SSL verification setting globally.
 
     Args:
-        verify: Whether to verify SSL certificates.
+        verify: Whether to verify SSL certificates (bool), path to CA cert file (str), or None to use default.
     """
     global VERIFY_SSL
     VERIFY_SSL = verify
 
 
-def get_verify_ssl() -> bool:
+def get_verify_ssl() -> Union[bool, str]:
     """
     Get the current SSL verification setting.
 
+    Priority:
+    1. Explicitly set value via set_verify_ssl() (e.g., from CLI --ca-cert)
+    2. OSS_SUSTAIN_GUARD_CA_CERT environment variable
+    3. Default: True
+
     Returns:
-        Whether SSL verification is enabled.
+        SSL verification setting: True (verify), False (no verify), or str (CA cert file path).
     """
-    return VERIFY_SSL
+    # Return explicitly set value (highest priority)
+    if VERIFY_SSL is not None:
+        return VERIFY_SSL
+
+    # Check environment variable
+    env_ca_cert = os.getenv("OSS_SUSTAIN_GUARD_CA_CERT")
+    if env_ca_cert:
+        return env_ca_cert
+
+    # Default: verify SSL
+    return True
 
 
 def get_cache_dir() -> Path:
