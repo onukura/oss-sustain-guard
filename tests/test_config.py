@@ -12,12 +12,14 @@ from oss_sustain_guard.config import (
     get_cache_ttl,
     get_excluded_packages,
     get_output_style,
+    get_verify_ssl,
     is_cache_enabled,
     is_package_excluded,
     is_verbose_enabled,
     load_profile_config,
     set_cache_dir,
     set_cache_ttl,
+    set_verify_ssl,
 )
 
 
@@ -371,3 +373,67 @@ output_style = "compact"
 
     with pytest.raises(ValueError, match="No profiles found"):
         load_profile_config(profile_file)
+
+
+def test_get_verify_ssl_default(monkeypatch):
+    """Test get_verify_ssl returns True by default."""
+    monkeypatch.delenv("OSS_SUSTAIN_GUARD_CA_CERT", raising=False)
+    set_verify_ssl(None)  # Reset to default
+    assert get_verify_ssl() is True
+
+
+def test_set_verify_ssl_with_bool():
+    """Test set_verify_ssl with boolean value."""
+    set_verify_ssl(False)
+    assert get_verify_ssl() is False
+
+    set_verify_ssl(True)
+    assert get_verify_ssl() is True
+
+
+def test_set_verify_ssl_with_cert_path():
+    """Test set_verify_ssl with certificate file path."""
+    cert_path = "/path/to/custom-ca.crt"
+    set_verify_ssl(cert_path)
+    assert get_verify_ssl() == cert_path
+
+
+def test_get_verify_ssl_from_env(monkeypatch, tmp_path):
+    """Test get_verify_ssl respects OSS_SUSTAIN_GUARD_CA_CERT environment variable."""
+    set_verify_ssl(None)  # Reset to use env var
+    cert_path = str(tmp_path / "test-ca.crt")
+
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", cert_path)
+    assert get_verify_ssl() == cert_path
+
+
+def test_get_verify_ssl_explicit_overrides_env(monkeypatch, tmp_path):
+    """Test that explicit set_verify_ssl overrides environment variable."""
+    env_cert = str(tmp_path / "env-ca.crt")
+    explicit_cert = str(tmp_path / "explicit-ca.crt")
+
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", env_cert)
+    set_verify_ssl(explicit_cert)
+
+    # Explicit set should take priority
+    assert get_verify_ssl() == explicit_cert
+
+
+def test_get_verify_ssl_env_when_reset(monkeypatch, tmp_path):
+    """Test that resetting to None uses environment variable."""
+    env_cert = str(tmp_path / "env-ca.crt")
+
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", env_cert)
+    set_verify_ssl(None)
+
+    # Should use env var
+    assert get_verify_ssl() == env_cert
+
+
+def test_get_verify_ssl_default_when_no_env(monkeypatch):
+    """Test that default True is returned when no explicit set and no env var."""
+    monkeypatch.delenv("OSS_SUSTAIN_GUARD_CA_CERT", raising=False)
+    set_verify_ssl(None)
+
+    # Should return default True
+    assert get_verify_ssl() is True
