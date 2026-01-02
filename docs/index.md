@@ -4,6 +4,8 @@ OSS Sustain Guard is a multi-language package sustainability analyzer that helps
 
 ![CLI demo showing an analyzed package](assets/os4g-demo.gif)
 
+Note: Demo shows a warm cache; first run may take longer depending on API response time.
+
 ## Why OSS Sustain Guard?
 
 Every time a high-profile OSS incident makes the news, I find myself wondering about the packages I rely on right now. I could visit GitHub and skim issues, pull requests, and activity to get a rough sense, but it is not easy. When you depend on tens or hundreds of packages, plus their dependencies, it becomes nearly impossible, and you usually do not notice until something goes wrong.

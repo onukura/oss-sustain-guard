@@ -8,6 +8,8 @@
 
 ![demo](./docs/assets/os4g-demo.gif)
 
+Note: Demo shows a warm cache; first run may take longer depending on API response time.
+
 **Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 24 core metrics (plus optional dependents) including Contributor Redundancy, Maintainer Retention, and Security Signals.
 
 ## Why OSS Sustain Guard?
