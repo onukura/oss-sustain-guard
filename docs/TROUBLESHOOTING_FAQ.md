@@ -148,7 +148,7 @@ HTTPStatusError: 403 Forbidden - Rate limit exceeded
 **Solution:**
 
 ```shell
-# Set GitHub token (much higher rate limit)
+# Set GitHub token (required)
 export GITHUB_TOKEN="your_token"
 os4g check package1 package2 package3
 
@@ -355,7 +355,7 @@ os4g check requests  # Remove -v flag
 # 3. Use compact output
 os4g check requests -o compact
 
-# 4. Set GitHub token (improves rate limits)
+# 4. Set GitHub token (required)
 export GITHUB_TOKEN="your_token"
 ```
 

@@ -153,7 +153,7 @@ jobs:
 
 ## FAQ
 
-- **Do I need a GitHub token?**: For most cases, no setup is needed. For uncached packages or large scans, set `GITHUB_TOKEN` or a custom token in your workflow secrets.
+- **Do I need a GitHub token?**: Yes. Set `GITHUB_TOKEN` or a custom token in your workflow secrets.
 - **Does it support multiple languages?**: Yes! Python, JavaScript, Rust, Go, Ruby, PHP, and more are supported out of the box.
 - **How do I check only specific packages?**: Use the `packages` input: `packages: 'flask django npm:react'`
 - **How do I skip the check?**: Remove or comment out the step in your workflow.

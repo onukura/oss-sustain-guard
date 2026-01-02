@@ -34,7 +34,7 @@ Now, whenever you commit changes to dependency files, OSS Sustain Guard will aut
 
 ## FAQ
 
-- **Do I need a GitHub token?**: Yes, for real-time analysis of packages not in the cache, set `GITHUB_TOKEN`:
+- **Do I need a GitHub token?**: Yes. Set `GITHUB_TOKEN`:
 
 ```bash
 export GITHUB_TOKEN=your_github_token
