@@ -12,6 +12,8 @@ import tomllib
 from pathlib import Path
 from typing import NamedTuple
 
+from oss_sustain_guard.repository import parse_repository_url
+
 
 class DependencyInfo(NamedTuple):
     """Information about a package dependency."""
@@ -782,10 +784,45 @@ def _split_r_dependency_list(value: str) -> list[str]:
 
 
 def _get_spm_package_dependencies(
-    _lockfile_path: Path, _package_name_lower: str
+    lockfile_path: Path, package_name_lower: str
 ) -> list[str]:
-    """Swift Package.resolved does not store dependency relationships."""
-    return []
+    """Extract dependencies for a Swift package from Package.swift."""
+    manifest_path = lockfile_path.with_name("Package.swift")
+    if not manifest_path.exists():
+        return []
+
+    try:
+        content = manifest_path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+
+    package_name = _extract_swift_package_name(content)
+    if not package_name or package_name.lower() != package_name_lower:
+        return []
+
+    deps = []
+    for url in _extract_swift_package_urls(content):
+        repo = parse_repository_url(url)
+        deps.append(f"{repo.owner}/{repo.name}" if repo else url)
+    return deps
+
+
+def _extract_swift_package_name(content: str) -> str | None:
+    """Extract the top-level package name from a Package.swift manifest."""
+    match = re.search(
+        r"Package\s*\(\s*name\s*:\s*[\"']([^\"']+)[\"']",
+        content,
+        re.DOTALL,
+    )
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _extract_swift_package_urls(content: str) -> list[str]:
+    """Extract dependency URLs from a Package.swift manifest."""
+    pattern = re.compile(r"\.package\s*\(\s*url\s*:\s*[\"']([^\"']+)[\"']")
+    return pattern.findall(content)
 
 
 def _get_cpanfile_snapshot_dependencies(
@@ -796,28 +833,51 @@ def _get_cpanfile_snapshot_dependencies(
     deps_by_package: dict[str, set[str]] = {}
     current_name = None
     in_requires = False
+    requires_indent: int | None = None
+    in_distributions = False
 
     for line in content.splitlines():
         stripped = line.strip()
+        if not stripped:
+            continue
+
+        if stripped == "DISTRIBUTIONS":
+            in_distributions = True
+            current_name = None
+            in_requires = False
+            requires_indent = None
+            continue
+
+        if not in_distributions:
+            continue
+
         if stripped.startswith("distribution:"):
             current_name = _strip_distribution_version(
                 stripped.split("distribution:", 1)[1].strip()
             ).lower()
             deps_by_package.setdefault(current_name, set())
             in_requires = False
+            requires_indent = None
             continue
 
         if stripped.startswith("requires:") or stripped.startswith("requirements:"):
-            in_requires = True
+            if current_name:
+                in_requires = True
+                requires_indent = len(line) - len(line.lstrip(" "))
             continue
 
         if in_requires:
-            if not line.startswith(" "):
+            indent = len(line) - len(line.lstrip(" "))
+            if requires_indent is None or indent <= requires_indent:
                 in_requires = False
+                requires_indent = None
                 continue
-            dep_name = stripped.split(" ", 1)[0].strip(":")
-            if dep_name:
-                deps_by_package.setdefault(current_name or "", set()).add(dep_name)
+            if ": " in stripped:
+                dep_name = stripped.split(": ", 1)[0].strip()
+            else:
+                dep_name = stripped.split(None, 1)[0].strip()
+            if dep_name and current_name:
+                deps_by_package.setdefault(current_name, set()).add(dep_name)
 
     return sorted(deps_by_package.get(package_name_lower, []))
 
@@ -893,17 +953,31 @@ def _extract_stack_packages(packages: object) -> list[str]:
     if isinstance(packages, list):
         for entry in packages:
             if isinstance(entry, str):
-                deps.add(_strip_stack_package_name(entry))
+                dep_name = _strip_stack_package_name(entry)
+                if dep_name:
+                    deps.add(dep_name)
             elif isinstance(entry, dict):
-                original = entry.get("original")
-                if isinstance(original, str):
-                    deps.add(_strip_stack_package_name(original))
+                for key in ("original", "hackage", "git", "archive"):
+                    value = entry.get(key)
+                    if isinstance(value, str):
+                        dep_name = _strip_stack_package_name(value)
+                        if dep_name:
+                            deps.add(dep_name)
     return sorted(dep for dep in deps if dep)
 
 
 def _strip_stack_package_name(value: str) -> str:
     """Strip version information from stack package identifiers."""
-    return value.strip().split(" ", 1)[0].split("@", 1)[0]
+    cleaned = value.strip()
+    if ":" in cleaned:
+        prefix, rest = cleaned.split(":", 1)
+        if prefix.strip() in {"hackage", "git", "archive"}:
+            cleaned = rest.strip()
+    cleaned = cleaned.split(" ", 1)[0].split("@", 1)[0]
+    match = re.match(r"^(?P<name>.+)-\d", cleaned)
+    if match:
+        return match.group("name")
+    return cleaned
 
 
 def _get_packages_lock_dependencies(

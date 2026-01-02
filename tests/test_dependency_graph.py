@@ -881,6 +881,70 @@ dev_dependencies:
         assert set(deps) == {"http", "test"}
 
 
+def test_get_package_dependencies_package_resolved_uses_manifest():
+    """Test extracting Swift dependencies from Package.swift."""
+    package_content = """
+import PackageDescription
+
+let package = Package(
+    name: "Example",
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.56.0"),
+        .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.8.0")
+    ]
+)
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "Package.resolved"
+        lockfile_path.write_text('{"pins": []}')
+        manifest_path = Path(tmpdir) / "Package.swift"
+        manifest_path.write_text(package_content)
+
+        deps = get_package_dependencies(lockfile_path, "Example")
+        assert set(deps) == {"apple/swift-nio", "Alamofire/Alamofire"}
+
+
+def test_get_package_dependencies_stack_yaml_lock():
+    """Test extracting dependencies from stack.yaml.lock."""
+    stack_lock_content = """
+packages:
+  - hackage: text-1.2.5.0@sha256:abc,123
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "stack.yaml.lock"
+        lockfile_path.write_text(stack_lock_content)
+
+        deps = get_package_dependencies(lockfile_path, "example")
+        assert deps == ["text"]
+
+
+def test_get_package_dependencies_cpanfile_snapshot():
+    """Test extracting dependencies from cpanfile.snapshot."""
+    cpanfile_content = """
+DISTRIBUTIONS
+  distribution: My-Module-1.0
+    requirements:
+      Moo: 2.0
+      JSON::PP: 4.0
+    provides:
+      My::Module: 1.0
+    requires:
+      Try::Tiny: 0
+  distribution: Other-Module-0.1
+    requires:
+      File::Spec: 0
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "cpanfile.snapshot"
+        lockfile_path.write_text(cpanfile_content)
+
+        deps = get_package_dependencies(lockfile_path, "my-module")
+        assert set(deps) == {"Moo", "JSON::PP", "Try::Tiny"}
+
+
 def test_get_package_dependencies_nonexistent_file():
     """Test get_package_dependencies with non-existent file."""
     deps = get_package_dependencies("/nonexistent/path/uv.lock", "requests")
