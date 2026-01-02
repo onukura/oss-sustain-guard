@@ -46,13 +46,14 @@ Metrics are one lens among many; they work best alongside project context and re
 - **Recursive scanning** for monorepos and multi-service projects
 - **Exclude configuration** for internal or legacy dependencies
 - **Integration-ready** for GitHub Actions, pre-commit hooks, and CI/CD pipelines
+- **GitHub-hosted analysis** - Real-time analysis currently supports GitHub repositories
 
 ### 📝 Extensibility & Configuration
 
 - **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins
 - **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
-- **Zero Configuration** - Works out of the box
+- **Minimal Setup** - Requires a GitHub token for real-time analysis
 
 ### 🌍 Multi-Language Support
 

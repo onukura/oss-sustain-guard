@@ -42,7 +42,7 @@ Metrics are one lens among many; they work best alongside project context and re
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
-- **Zero Configuration** - Works out of the box
+- **Minimal Setup** - Requires a GitHub token for real-time analysis
 
 ## 🚀 Quick Start
 
@@ -52,6 +52,8 @@ pip install oss-sustain-guard
 
 # Set GitHub token (required for all package analysis)
 export GITHUB_TOKEN='your_token_here'  # Get from: https://github.com/settings/tokens/new
+
+# Real-time analysis currently supports GitHub-hosted repositories
 
 # Check your dependencies (auto-detect from manifest files)
 os4g check
