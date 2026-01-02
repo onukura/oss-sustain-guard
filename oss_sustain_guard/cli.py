@@ -7,6 +7,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from html import escape
+from importlib import resources
 from pathlib import Path
 
 import typer
@@ -279,13 +280,27 @@ def _write_json_results(
         sys.stdout.write(json_text + "\n")
 
 
-def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
-    """Render HTML report from template and results."""
+def _load_report_template() -> str:
+    """Load the HTML report template from package data or docs fallback."""
+    try:
+        package_template = resources.files("oss_sustain_guard").joinpath(
+            "assets/report_template.html"
+        )
+        if package_template.is_file():
+            return package_template.read_text(encoding="utf-8")
+    except (AttributeError, FileNotFoundError, ModuleNotFoundError):
+        pass
+
     template_path = project_root / "docs" / "assets" / "report_template.html"
     if not template_path.exists():
         raise FileNotFoundError(
-            f"HTML report template not found. Expected: {template_path}"
+            "HTML report template not found in package data or docs/assets."
         )
+    return template_path.read_text(encoding="utf-8")
+
+
+def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
+    """Render HTML report from template and results."""
 
     summary = _build_summary(results)
     summary_cards = [
@@ -327,7 +342,7 @@ def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
     )
     json_payload = json_payload.replace("</", "<\\/")
 
-    template = template_path.read_text(encoding="utf-8")
+    template = _load_report_template()
     return template.format(
         report_title="OSS Sustain Guard Report",
         generated_at=escape(datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")),
@@ -1220,7 +1235,11 @@ def check(
         "auto",
         "--ecosystem",
         "-e",
-        help="Default ecosystem for unqualified packages (python, javascript, go, rust, php, java, kotlin, scala, csharp, dotnet). Use 'auto' to detect.",
+        help=(
+            "Default ecosystem for unqualified packages (python, javascript, go, rust, "
+            "php, java, kotlin, scala, csharp, dotnet, dart, elixir, haskell, perl, r, "
+            "swift). Use 'auto' to detect."
+        ),
     ),
     include_lock: bool = typer.Option(
         False,
@@ -1256,7 +1275,10 @@ def check(
         False,
         "--show-models",
         "-M",
-        help="Display CHAOSS-aligned metric models (Stability Model, Sustainability Model).",
+        help=(
+            "Display CHAOSS-aligned metric models (Stability, Sustainability, "
+            "Community Engagement, Project Maturity, Contributor Experience)."
+        ),
     ),
     show_dependencies: bool = typer.Option(
         False,

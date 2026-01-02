@@ -41,7 +41,6 @@ def check_dependents_count(
         - 1+ dependents: 2/10 (Used by others)
         - 0 dependents: 0/10 (No downstream dependencies)
 
-    Note: Docstring shows old 20-point scale but function now uses 10-point scale internally.
     """
     max_score = 10
 

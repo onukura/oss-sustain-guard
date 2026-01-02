@@ -281,7 +281,7 @@ def _on_error(error: Exception) -> Metric:
         "Custom Security Focus",
         0,
         10,
-        f"Error: {error}",
+        f"Note: Analysis incomplete - {error}",
         "Medium",
     )
 
@@ -459,7 +459,7 @@ def _on_error(error: Exception) -> Metric:
         "My Metric",
         0,
         10,
-        f"Error: {error}",
+        f"Note: Analysis incomplete - {error}",
         "Medium",
     )
 
