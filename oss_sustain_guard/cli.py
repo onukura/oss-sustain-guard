@@ -134,6 +134,21 @@ def _cache_analysis_result(
     save_cache(ecosystem, cache_entry)
 
 
+def _get_librariesio_platform(ecosystem: str) -> str | None:
+    platform_map = {
+        "python": "Pypi",
+        "javascript": "NPM",
+        "rust": "Cargo",
+        "java": "Maven",
+        "php": "Packagist",
+        "ruby": "Rubygems",
+        "csharp": "Nuget",
+        "dotnet": "Nuget",
+        "go": "Go",
+    }
+    return platform_map.get(ecosystem.lower())
+
+
 def apply_scoring_profiles(profile_file: Path | None) -> None:
     """Apply scoring profile overrides from configuration."""
     try:
@@ -771,8 +786,8 @@ def analyze_packages_parallel(
 
         # Step 1: Check cache and resolve repositories
         uncached_packages: list[
-            tuple[str, str, str, str]
-        ] = []  # (ecosystem, pkg, owner, repo)
+            tuple[str, str, str, str, str | None]
+        ] = []  # (ecosystem, pkg, owner, repo, platform)
         pkg_to_index: dict[tuple[str, str], int] = {}
         results_map: dict[int, AnalysisResult | None] = {}
 
@@ -827,7 +842,10 @@ def analyze_packages_parallel(
                 progress.advance(task)
                 continue
 
-            uncached_packages.append((ecosystem, pkg, repo_info.owner, repo_info.name))
+            platform = _get_librariesio_platform(ecosystem) if enable_dependents else None
+            uncached_packages.append(
+                (ecosystem, pkg, repo_info.owner, repo_info.name, platform)
+            )
 
         # Step 2: Batch query for uncached packages
         if use_batch_queries and uncached_packages:
@@ -837,14 +855,17 @@ def analyze_packages_parallel(
                 batch_end = min(batch_idx + batch_size, len(uncached_packages))
                 current_batch = uncached_packages[batch_idx:batch_end]
                 current_repo_list = [
-                    (owner, repo) for _, _, owner, repo in current_batch
+                    (owner, repo, platform, pkg)
+                    for _, pkg, owner, repo, platform in current_batch
                 ]
 
                 # Analyze current batch
-                batch_results = analyze_repositories_batch(current_repo_list)
+                batch_results = analyze_repositories_batch(
+                    current_repo_list, profile=profile
+                )
 
                 # Process results and update progress for each package in batch
-                for ecosystem, pkg, owner, repo in current_batch:
+                for ecosystem, pkg, owner, repo, _platform in current_batch:
                     idx = pkg_to_index[(ecosystem, pkg)]
                     result = batch_results.get((owner, repo))
 
@@ -873,7 +894,7 @@ def analyze_packages_parallel(
                         False,
                         use_local_cache,
                     ): (ecosystem, pkg)
-                    for ecosystem, pkg, _, _ in uncached_packages
+                    for ecosystem, pkg, _, _, _ in uncached_packages
                 }
 
                 for future in as_completed(future_to_pkg):
@@ -1153,24 +1174,16 @@ def analyze_package(
     platform = None
     pkg_name = None
     if enable_dependents:
-        # Map ecosystem to Libraries.io platform for dependents analysis
-        platform_map = {
-            "python": "Pypi",
-            "javascript": "NPM",
-            "rust": "Cargo",
-            "java": "Maven",
-            "php": "Packagist",
-            "ruby": "Rubygems",
-            "csharp": "Nuget",
-            "dotnet": "Nuget",
-            "go": "Go",
-        }
-        platform = platform_map.get(ecosystem.lower())
+        platform = _get_librariesio_platform(ecosystem)
         pkg_name = package_name
 
     try:
         analysis_result = analyze_repository(
-            owner, repo_name, platform=platform, package_name=pkg_name
+            owner,
+            repo_name,
+            platform=platform,
+            package_name=pkg_name,
+            profile=profile,
         )
 
         # Add ecosystem to result

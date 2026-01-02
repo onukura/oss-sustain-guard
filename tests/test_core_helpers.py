@@ -310,7 +310,10 @@ def test_analyze_repositories_batch_empty_list_returns_empty_dict():
 
 
 def test_analyze_repositories_batch_handles_missing_and_error():
-    repo_list = [("owner1", "repo1"), ("owner2", "repo2")]
+    repo_list = [
+        ("owner1", "repo1", "Pypi", "package-one"),
+        ("owner2", "repo2", None, None),
+    ]
     with (
         patch("oss_sustain_guard.core._query_github_graphql") as mock_query,
         patch("oss_sustain_guard.core._analyze_repository_data") as mock_analyze,
@@ -325,7 +328,10 @@ def test_analyze_repositories_batch_handles_missing_and_error():
 
 
 def test_analyze_repositories_batch_falls_back_to_individual():
-    repo_list = [("owner1", "repo1"), ("owner2", "repo2")]
+    repo_list = [
+        ("owner1", "repo1", "Pypi", "package-one"),
+        ("owner2", "repo2", None, None),
+    ]
     result = AnalysisResult(
         repo_url="https://github.com/owner1/repo1",
         total_score=50,

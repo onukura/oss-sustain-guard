@@ -98,7 +98,6 @@ def test_total_score_is_sum_of_metric_scores(mock_graphql_query):
 
 
 @patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)
-@patch("oss_sustain_guard.core.GITHUB_TOKEN", "fake_token")
 @patch("httpx.Client.post")
 def test_query_github_graphql_success(mock_post):
     """
@@ -119,7 +118,6 @@ def test_query_github_graphql_success(mock_post):
 
 
 @patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)
-@patch("oss_sustain_guard.core.GITHUB_TOKEN", "fake_token")
 @patch("httpx.Client.post")
 def test_query_github_graphql_api_error(mock_post):
     """
@@ -136,15 +134,15 @@ def test_query_github_graphql_api_error(mock_post):
         _query_github_graphql("query {}", {})
 
 
-@patch("oss_sustain_guard.core.GITHUB_TOKEN", None)
 def test_query_github_graphql_no_token():
     """
     Tests that a ValueError is raised if the GITHUB_TOKEN is not set.
     """
-    with pytest.raises(
-        ValueError, match="GITHUB_TOKEN environment variable is required"
-    ):
-        _query_github_graphql("query {}", {})
+    with patch.dict("os.environ", {}, clear=True):
+        with pytest.raises(
+            ValueError, match="GITHUB_TOKEN environment variable is required"
+        ):
+            _query_github_graphql("query {}", {})
 
 
 # --- Tests for analyze_repository error handling ---

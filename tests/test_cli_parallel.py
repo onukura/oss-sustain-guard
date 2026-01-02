@@ -166,7 +166,9 @@ def test_analyze_packages_parallel_batch_mixed_results():
     assert results[2] is None
     assert results[3] is None
 
-    mock_batch.assert_called_once_with([("example", "live")])
+    mock_batch.assert_called_once_with(
+        [("example", "live", None, "live")], profile="balanced"
+    )
     mock_save_cache.assert_called_once()
     cache_args = mock_save_cache.call_args[0]
     assert cache_args[0] == "python"

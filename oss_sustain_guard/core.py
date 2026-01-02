@@ -80,8 +80,6 @@ console = Console()
 # --- Constants ---
 
 GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
-# Using a personal access token from environment variables
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 
 # --- Data Structures ---
@@ -171,7 +169,8 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
         ValueError: If the GITHUB_TOKEN is not set.
         httpx.HTTPStatusError: If the API returns an error.
     """
-    if not GITHUB_TOKEN:
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
         raise ValueError(
             "GITHUB_TOKEN environment variable is required.\n"
             "\n"
@@ -188,7 +187,7 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
         )
 
     headers = {
-        "Authorization": f"bearer {GITHUB_TOKEN}",
+        "Authorization": f"bearer {github_token}",
         "Content-Type": "application/json",
     }
     client = _get_http_client()
@@ -1319,14 +1318,17 @@ def _get_batch_repository_query(repo_list: list[tuple[str, str]]) -> str:
 
 
 def analyze_repositories_batch(
-    repo_list: list[tuple[str, str]],
+    repo_list: list[tuple[str, str] | tuple[str, str, str | None, str | None]],
     platform: str | None = None,
+    *,
+    profile: str = "balanced",
 ) -> dict[tuple[str, str], AnalysisResult | None]:
     """Analyze multiple repositories in a single GraphQL query.
 
     Args:
-        repo_list: List of (owner, name) tuples.
-        platform: Optional package platform for dependents analysis.
+        repo_list: List of (owner, name) or (owner, name, platform, package_name).
+        platform: Optional package platform for 2-tuple items.
+        profile: Scoring profile name.
 
     Returns:
         Dictionary mapping (owner, name) to AnalysisResult or None.
@@ -1339,15 +1341,32 @@ def analyze_repositories_batch(
     batch_size = 3
     results: dict[tuple[str, str], AnalysisResult | None] = {}
 
-    for i in range(0, len(repo_list), batch_size):
-        batch = repo_list[i : i + batch_size]
+    def _normalize_batch_item(
+        item: tuple[str, str] | tuple[str, str, str | None, str | None]
+    ) -> tuple[str, str, str | None, str | None]:
+        if len(item) == 2:
+            owner, name = item
+            return owner, name, platform, None
+        if len(item) == 4:
+            owner, name, platform, package_name = item
+            return owner, name, platform, package_name
+        raise ValueError(
+            "Batch items must be (owner, name) or (owner, name, platform, package_name)."
+        )
+
+    normalized = [_normalize_batch_item(item) for item in repo_list]
+
+    for i in range(0, len(normalized), batch_size):
+        batch = normalized[i : i + batch_size]
 
         try:
-            query = _get_batch_repository_query(batch)
+            query = _get_batch_repository_query(
+                [(owner, name) for owner, name, _, _ in batch]
+            )
             response = _query_github_graphql(query, {})
 
             # Process each repository in the batch
-            for idx, (owner, name) in enumerate(batch):
+            for idx, (owner, name, platform, package_name) in enumerate(batch):
                 alias = f"repo{idx}"
                 repo_info = response.get(alias)
 
@@ -1361,7 +1380,12 @@ def analyze_repositories_batch(
                 # Analyze the repository using the retrieved data
                 try:
                     result = _analyze_repository_data(
-                        owner, name, repo_info, platform=platform
+                        owner,
+                        name,
+                        repo_info,
+                        platform=platform,
+                        package_name=package_name,
+                        profile=profile,
                     )
                     results[(owner, name)] = result
                 except Exception as e:
@@ -1376,10 +1400,16 @@ def analyze_repositories_batch(
             console.print(
                 f"  [yellow]⚠️  Batch query unavailable ({e}), trying individual queries...[/yellow]"
             )
-            for owner, name in batch:
+            for owner, name, platform, package_name in batch:
                 try:
                     # Fall back to single repository analysis
-                    result = analyze_repository(owner, name, platform=platform)
+                    result = analyze_repository(
+                        owner,
+                        name,
+                        platform=platform,
+                        package_name=package_name,
+                        profile=profile,
+                    )
                     results[(owner, name)] = result
                 except Exception:
                     # If individual query also fails, mark as None
@@ -1394,6 +1424,7 @@ def _analyze_repository_data(
     repo_info: dict[str, Any],
     platform: str | None = None,
     package_name: str | None = None,
+    profile: str = "balanced",
 ) -> AnalysisResult:
     """Analyze repository data (extracted from GraphQL response).
 
@@ -1432,7 +1463,7 @@ def _analyze_repository_data(
                 )
 
     # Calculate total score using category-weighted scoring system
-    total_score = compute_weighted_total_score(metrics, profile="balanced")
+    total_score = compute_weighted_total_score(metrics, profile=profile)
 
     # Extract funding information directly from repo data
     funding_links = repo_info.get("fundingLinks", [])
@@ -1472,6 +1503,7 @@ def analyze_repository(
     name: str,
     platform: str | None = None,
     package_name: str | None = None,
+    profile: str = "balanced",
 ) -> AnalysisResult:
     """
     Performs a full sustainability analysis on a given repository.
@@ -1485,6 +1517,7 @@ def analyze_repository(
         platform: Optional package platform (e.g., 'Pypi', 'NPM', 'Cargo')
                   for dependents analysis via Libraries.io
         package_name: Optional package name on the registry for dependents analysis
+        profile: Scoring profile name.
 
     Returns:
         AnalysisResult containing repo_url, total_score, and list of metrics
@@ -1509,7 +1542,14 @@ def analyze_repository(
         repo_info = repo_data["repository"]
 
         # Use the shared analysis logic
-        return _analyze_repository_data(owner, name, repo_info, platform, package_name)
+        return _analyze_repository_data(
+            owner,
+            name,
+            repo_info,
+            platform=platform,
+            package_name=package_name,
+            profile=profile,
+        )
 
     except httpx.HTTPStatusError as e:
         console.print(f"[yellow]Note: Unable to reach GitHub API ({e}).[/yellow]")

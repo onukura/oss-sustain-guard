@@ -151,7 +151,7 @@ class TestAnalyzePackage:
         assert result == mock_result
         # By default, enable_dependents=False, so platform and package_name should be None
         mock_analyze_repo.assert_called_once_with(
-            "psf", "requests", platform=None, package_name=None
+            "psf", "requests", platform=None, package_name=None, profile="balanced"
         )
 
     @patch("oss_sustain_guard.cli.save_cache")
@@ -192,7 +192,11 @@ class TestAnalyzePackage:
         assert result == mock_result
         # With enable_dependents=True, platform and package_name should be passed
         mock_analyze_repo.assert_called_once_with(
-            "psf", "requests", platform="Pypi", package_name="requests"
+            "psf",
+            "requests",
+            platform="Pypi",
+            package_name="requests",
+            profile="balanced",
         )
 
     @patch("oss_sustain_guard.cli.save_cache")
