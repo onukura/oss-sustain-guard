@@ -10,7 +10,7 @@ def check_single_maintainer_load(repo_data: dict[str, Any]) -> Metric:
     Evaluates maintainer workload distribution using Gini coefficient.
 
     Measures concentration of Issue/PR closing activity among contributors.
-    High concentration (high Gini) indicates risk of single maintainer burnout.
+    High concentration (high Gini) indicates likelihood of single maintainer burnout.
 
     The Gini coefficient ranges from 0 (perfect equality) to 1 (maximum inequality).
     Lower values indicate more distributed workload across maintainers.

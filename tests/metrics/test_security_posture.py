@@ -20,7 +20,7 @@ class TestSecurityPostureMetric:
         assert result.score == 0
         assert result.max_score == 10
         assert (
-            "Attention needed: 1 unresolved CRITICAL vulnerability alert"
+            "Attention needed: 1 unresolved critical-severity vulnerability alert"
             in result.message
         )
         assert result.risk == "Critical"
@@ -41,7 +41,8 @@ class TestSecurityPostureMetric:
         assert result.score == 3
         assert result.max_score == 10
         assert (
-            "Needs attention: 3 unresolved HIGH vulnerability alert" in result.message
+            "Needs attention: 3 unresolved high-severity vulnerability alert"
+            in result.message
         )
         assert result.risk == "High"
 
@@ -58,7 +59,9 @@ class TestSecurityPostureMetric:
         assert result.name == "Security Signals"
         assert result.score == 5
         assert result.max_score == 10
-        assert "Monitor: 1 unresolved HIGH vulnerability alert" in result.message
+        assert (
+            "Monitor: 1 unresolved high-severity vulnerability alert" in result.message
+        )
         assert result.risk == "Medium"
 
     def test_security_posture_excellent(self):

@@ -46,7 +46,36 @@ Metrics are one lens among many; they work best alongside project context and re
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
 - **Minimal Setup** - Requires a GitHub token for real-time analysis
 
-## 🚀 Quick Start
+## � Privacy & Security
+
+**Your data stays local:**
+
+- ✅ **GitHub token usage** - Your `GITHUB_TOKEN` is used **only** for real-time GitHub API queries
+  - Data flows directly from GitHub API → your machine
+  - Token is **not** stored, logged, or sent anywhere except GitHub's official API
+  - Requires scopes: `public_repo` and `security_events` (read-only access)
+
+- ✅ **Local caching** - Analysis results are cached locally in `~/.cache/oss-sustain-guard/`
+  - No cloud storage or external uploads
+  - You control the cache directory and can clear it anytime with `os4g clear-cache`
+  - Cache files are standard JSON (human-readable) with TTL metadata
+
+- ✅ **Analysis is transparent** - All metrics are calculated client-side from public GitHub data
+  - No proprietary scoring sent to external services
+  - No profiling or telemetry
+  - Open-source metric implementations for full audit
+
+**API Limits & Sampling:**
+
+For performance reasons, we sample GitHub data with these limits (per analysis):
+- **Commits**: Last 100 analyzed
+- **Pull Requests**: Last 50 merged + last 50 closed sampled
+- **Issues**: Last 20 open + last 50 closed sampled
+- **Releases**: Last 10 analyzed
+
+These samples are sufficient for evaluating sustainability trends. Results include **sample counts** so you can see exactly what data was used. For large projects with high activity, these limits mean you're seeing representative data rather than exhaustive data—which is intentional for API efficiency and speed.
+
+## �🚀 Quick Start
 
 ```bash
 # Install
@@ -98,6 +127,17 @@ For detailed usage, configuration, and features, see our documentation site:
 Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby, R, Haskell, Swift, Dart, Elixir, Perl
 
 See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/) for ecosystem-specific syntax.
+
+#### Repository Source Handling
+
+- **GitHub-hosted repositories**: ✅ Full real-time analysis supported
+- **Non-GitHub repositories** (GitLab, Gitea, etc.): ℹ️ Automatically detected and skipped
+  - If a package's source is hosted on GitLab, Gitea, or other platforms, the tool will:
+    1. Display a note indicating the repository host (e.g., "hosted on GitLab")
+    2. Skip real-time analysis for that package
+    3. Mark the package as unable to analyze
+  - This is by design: OSS Sustain Guard leverages GitHub's GraphQL API for deep repository insights, which is only available for GitHub-hosted projects
+  - **Future enhancement**: Support for GitLab API is planned for a future release
 
 ### 24 Core Sustainability Metrics
 

@@ -17,7 +17,7 @@ def check_license_clarity(repo_data: dict[str, Any]) -> Metric:
     Scoring:
     - OSI-approved license (MIT, Apache, GPL, etc.): 5/5
     - Other recognized license: 3/5
-    - No license detected: 0/5 (High risk for users)
+    - No license detected: 0/5 (Unclear usage terms)
     """
     max_score = 10
 

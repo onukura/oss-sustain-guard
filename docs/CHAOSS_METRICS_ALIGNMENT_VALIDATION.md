@@ -28,7 +28,7 @@ CHAOSS organizes metrics into:
 | **Recent Activity** | [Activity Dates and Times](https://chaoss.community/kb/metric-activity-dates-and-times/) | ✅ **Perfect** - Measures project activity recency |
 | **Change Request Resolution** | [Change Request Review Duration](https://chaoss.community/kb/metric-change-request-review-duration/) / [Change Requests Duration](https://chaoss.community/kb/metric-change-requests-duration/) | ✅ **Perfect** - Measures PR/CR merge time |
 | **Release Rhythm** | [Release Frequency](https://chaoss.community/kb/metric-release-frequency/) | ✅ **Perfect** - Tracks release cadence |
-| **Issue Responsiveness** | [Issue Response Time](https://chaoss.community/kb/metric-issue-response-time/) / [Time to First Response](https://chaoss.community/kb/metric-time-to-first-response/) | ✅ **Perfect** - Measures issue response latency |
+| **Community Health** | [Issue Response Time](https://chaoss.community/kb/metric-issue-response-time/) / [Time to First Response](https://chaoss.community/kb/metric-time-to-first-response/) | ✅ **Perfect** - Measures issue response latency |
 | **Contributor Attraction** | [New Contributors](https://chaoss.community/kb/metric-new-contributors/) | ✅ **Perfect** - Tracks new contributor onboarding |
 | **Contributor Retention** | [Inactive Contributors](https://chaoss.community/kb/metric-inactive-contributors/) (inverse) | ✅ **Strong** - Measures contributor staying power |
 | **Review Health** | [Review Cycle Duration within a Change Request](https://chaoss.community/kb/metric-review-cycle-duration-within-a-change-request/) / [Change Request Reviews](https://chaoss.community/kb/metric-change-request-reviews/) | ✅ **Perfect** - Measures PR review quality |
@@ -54,7 +54,7 @@ CHAOSS organizes metrics into:
 
 - Contributor Redundancy (40%)
 - Change Request Resolution (33%)
-- Issue Responsiveness (13%)
+- Community Health (13%)
 - Security Signals (13%)
 
 **CHAOSS Alignment:** ✅ **Strong**
@@ -86,7 +86,7 @@ CHAOSS organizes metrics into:
 - Contributor Attraction (30%)
 - Contributor Retention (30%)
 - Review Health (25%)
-- Issue Responsiveness (15%)
+- Community Health (15%)
 
 **CHAOSS Alignment:** ✅ **Perfect**
 
@@ -130,7 +130,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 | Funding | **Funding Signals** | ✅ Supportive, signal-based language |
 | Release Cadence | **Release Rhythm** | ✅ Friendly alternative to "Frequency" |
 | Security Posture | **Security Signals** | ✅ Non-judgmental, observation-focused |
-| Community Health | **Issue Responsiveness** | ✅ Specific, measurable metric name |
+| Issue Responsiveness | **Community Health** | ✅ Broader framing for issue response time |
 
 **Verdict:** All renamed metrics align with CHAOSS principles of:
 

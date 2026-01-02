@@ -92,7 +92,7 @@ def check_community_health(repo_data: dict[str, Any]) -> Metric:
         score = 2  # 1/5 → 2/10
         risk = "Medium"
         message = (
-            f"Slow: Average issue response time {avg_response_time:.1f} hours "
+            f"Needs attention: Average issue response time {avg_response_time:.1f} hours "
             f"({avg_response_time / 24:.1f} days)."
         )
     else:

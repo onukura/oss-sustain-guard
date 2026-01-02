@@ -127,7 +127,7 @@ class TestCommunityHealth:
         result = check_community_health(repo_data)
         assert result.score == 2
         assert result.max_score == 10
-        assert "Slow" in result.message
+        assert "Needs attention" in result.message
         assert result.risk == "Medium"
 
     def test_poor_response_time(self):

@@ -13,13 +13,13 @@ def check_organizational_diversity(repo_data: dict[str, Any]) -> Metric:
     - Email domains (heuristic)
     - Company field from GitHub profiles
 
-    A diverse contributor base reduces single-organization dependency risk.
+    A diverse contributor base reduces single-organization dependence.
 
     Scoring:
     - 5+ organizations: 10/10 (Highly diverse)
     - 3-4 organizations: 7/10 (Good diversity)
     - 2 organizations: 4/10 (Moderate)
-    - Single organization: 0/10 (Single-org risk)
+    - Single organization: 0/10 (Single-org concentration)
     """
     max_score = 10
 
@@ -134,7 +134,7 @@ def check_organizational_diversity(repo_data: dict[str, Any]) -> Metric:
     elif diversity_score == 1:
         score = 2
         risk = "High"
-        message = "Observe: Single organization dominates. Dependency risk exists."
+        message = "Observe: Single organization dominates. Reliance is concentrated."
     else:
         score = max_score // 2
         risk = "None"

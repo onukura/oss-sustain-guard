@@ -103,7 +103,7 @@ def check_ci_status(repo_data: dict[str, Any]) -> Metric:
     elif conclusion in ("FAILURE", "TIMED_OUT"):
         score = 0
         risk = "Medium"  # Downgraded from Critical
-        message = f"CI Status: {conclusion.lower()} (Latest check failed)."
+        message = f"CI Status: {conclusion.lower()} (Latest check did not pass)."
     elif conclusion in ("SKIPPED", "STALE"):
         # SKIPPED is not a failure - give partial credit
         score = 6  # 3/5 → 6/10

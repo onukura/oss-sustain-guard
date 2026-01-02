@@ -7,22 +7,22 @@ from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 
 def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
     """
-    Evaluates active fork development as a signal of ecosystem health and fork risk.
+    Evaluates active fork development as a signal of ecosystem health and fork divergence.
 
     Considers:
     - Total fork count
     - Active forks with recent commits (last 6 months)
-    - Fork divergence risk (high active fork ratio)
+    - Fork divergence (high active fork ratio)
 
     Active forking indicates:
     - Community interest and adoption
     - Potential future contributors
-    - Fork/divergence risk if too many active forks
+    - Fork/divergence pressure if too many active forks
 
     Scoring:
     - Low active fork ratio (<20%) with high total forks: 5/5 (Healthy ecosystem)
     - Moderate active fork ratio (20-40%): 3-4/5 (Monitor divergence)
-    - High active fork ratio (>40%): 1-2/5 (Needs attention - fork risk)
+    - High active fork ratio (>40%): 1-2/5 (Needs attention - divergence signal)
     - Few forks but some active: 2-3/5 (Growing)
     - No forks: 0/5 (New/niche)
     """
@@ -100,19 +100,19 @@ def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
 
     # Scoring logic based on fork patterns (0-10 scale)
     if fork_count >= 100:
-        # Large ecosystem - assess health and divergence risk
+        # Large ecosystem - assess health and divergence
         if active_fork_ratio < 20:
             score = max_score  # 5/5 → 10/10
             risk = "None"
-            message = f"Excellent: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Healthy ecosystem with low divergence risk."
+            message = f"Excellent: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Healthy ecosystem with low divergence."
         elif active_fork_ratio < 40:
             score = 6  # 3/5 → 6/10
             risk = "Low"
             message = f"Monitor: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Consider community alignment efforts."
         else:
-            score = 2  # 1/5 → 2/10, high divergence risk
+            score = 2  # 1/5 → 2/10, high divergence signal
             risk = "Medium"
-            message = f"Needs attention: {fork_count} forks, ~{active_fork_count}/{sample_size} active. High fork divergence risk detected."
+            message = f"Needs attention: {fork_count} forks, ~{active_fork_count}/{sample_size} active. Fork divergence appears elevated."
     elif fork_count >= 50:
         # Medium ecosystem
         if active_fork_ratio < 30:

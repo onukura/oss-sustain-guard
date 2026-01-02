@@ -14,7 +14,7 @@ def check_merge_velocity(repo_data: dict[str, Any]) -> Metric:
     - OSS-realistic thresholds (accounting for volunteer teams)
     - Focuses on pathological slowness detection
 
-    Risk levels:
+    Status levels:
     - >2000 hours (83 days): Critical (severely slow)
     - 1000-2000 hours (42-83 days): High (very slow)
     - 500-1000 hours (21-42 days): Medium (slow but acceptable)

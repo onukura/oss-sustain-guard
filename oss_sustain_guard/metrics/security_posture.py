@@ -11,13 +11,13 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
 
     Considers:
     - Presence of security policy (SECURITY.md)
-    - Unresolved vulnerability alerts (Critical/High)
+    - Unresolved vulnerability alerts (critical/high severity)
     - Overall security awareness
 
     Scoring (0-10 scale):
     - Critical alerts unresolved: 0/10 (Critical)
-    - High alerts unresolved (3+): 3/10 (High risk)
-    - High alerts unresolved (1-2): 5/10 (Medium risk)
+    - High alerts unresolved (3+): 3/10 (High)
+    - High alerts unresolved (1-2): 5/10 (Medium)
     - Security policy + no alerts: 10/10 (Excellent)
     - No alerts: 8/10 (Good)
     - No security infrastructure: 5/10 (Moderate)
@@ -49,21 +49,21 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
         score = 0
         risk = "Critical"
         message = (
-            f"Attention needed: {critical_count} unresolved CRITICAL vulnerability alert(s). "
+            f"Attention needed: {critical_count} unresolved critical-severity vulnerability alert(s). "
             f"Review and action recommended."
         )
     elif high_count >= 3:
         score = 3  # 5/15 → 3/10
         risk = "High"
         message = (
-            f"Needs attention: {high_count} unresolved HIGH vulnerability alert(s). "
+            f"Needs attention: {high_count} unresolved high-severity vulnerability alert(s). "
             f"Review and patch recommended."
         )
     elif high_count > 0:
         score = 5  # 8/15 → 5/10
         risk = "Medium"
         message = (
-            f"Monitor: {high_count} unresolved HIGH vulnerability alert(s). "
+            f"Monitor: {high_count} unresolved high-severity vulnerability alert(s). "
             f"Monitor and address."
         )
     elif has_security_policy:

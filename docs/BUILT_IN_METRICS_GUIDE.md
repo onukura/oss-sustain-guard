@@ -43,7 +43,7 @@ Evaluate community health and contributor health:
 
 - [Contributor Attraction](#contributor-attraction)
 - [Contributor Retention](#contributor-retention)
-- [Issue Responsiveness](#issue-responsiveness)
+- [Community Health](#community-health)
 - [Change Request Resolution](#change-request-resolution)
 - [Review Health](#review-health)
 
@@ -69,7 +69,6 @@ Measure project impact and ecosystem integration:
 - [PR Responsiveness](#pr-responsiveness)
 - [Organizational Diversity](#organizational-diversity)
 - [Dependents Count](#dependents-count)
-- [Community Health](#community-health)
 - [Single Maintainer Load](#single-maintainer-load)
 
 ---
@@ -287,7 +286,7 @@ Measure project impact and ecosystem integration:
 
 ---
 
-### Issue Responsiveness
+### Community Health
 
 **Purpose:** Measures how quickly maintainers respond to issues.
 
@@ -295,28 +294,28 @@ Measure project impact and ecosystem integration:
 
 **Calculation:**
 
-- Analyzes time from issue creation to first response
-- Measures across recent issues
-- Distinguishes between acknowledgment and resolution
+- Measures time from issue creation to first response
+- Focuses on recent open issues with comments
+- Treats low-issue volume as a healthy or early-stage signal
 
 **Scoring:**
 
-- Response within 24 hours: 10/10 (Excellent)
-- 1-7 days: 7/10 (Good)
-- 1-4 weeks: 4/10 (Moderate)
-- >4 weeks: 0/10 (Poor)
+- Response within 48 hours: 10/10 (Excellent)
+- <7 days: 6/10 (Good)
+- 7-30 days: 2/10 (Needs attention)
+- >30 days: 0/10 (Needs attention)
 
 **Special Cases:**
 
-- No issues: 10/10 (Nothing to respond to)
-- Issues without responses: 0/10 (Unresponsive)
+- No open issues: 10/10 (Well-maintained or low activity)
+- No recent responses: 6/10 (Limited response data)
 
 **Status Levels:**
 
-- **None:** Quick response times
+- **None:** Quick response times or low issue volume
 - **Low:** Timely responses
 - **Medium:** Delayed responses
-- **High:** Non-responsive to issues
+- **High:** Responses take longer than typical
 
 **CHAOSS Alignment:** ✅ [Issue Response Time](https://chaoss.community/kb/metric-issue-response-time/), [Time to First Response](https://chaoss.community/kb/metric-time-to-first-response/)
 
@@ -781,29 +780,6 @@ Measure project impact and ecosystem integration:
 
 ---
 
-### Community Health
-
-**Purpose:** Composite metric integrating issue and PR responsiveness.
-
-**Data Source:** GitHub Issues and PRs (combined metrics)
-
-**Calculation:**
-
-- Combines issue response time
-- Combines PR review speed
-- Provides holistic health view
-
-**Scoring:**
-
-- All responsive (fast issues + PRs): 10/10
-- Mostly responsive: 7/10
-- Somewhat responsive: 4/10
-- Unresponsive: 0/10
-
-**Use Case:** Quick assessment of overall community engagement.
-
----
-
 ### Single Maintainer Load
 
 **Purpose:** Identifies projects with excessive burden on single maintainer.
@@ -868,7 +844,7 @@ Evaluates maintainability and single-point-of-failure concerns:
 
 - Contributor Redundancy (40%)
 - Change Request Resolution (33%)
-- Issue Responsiveness (13%)
+- Community Health (13%)
 - Security Signals (13%)
 
 **Use:** Assess project stability for core infrastructure
@@ -890,7 +866,7 @@ Evaluates community health and contributor experience:
 - Contributor Attraction (30%)
 - Contributor Retention (30%)
 - Review Health (25%)
-- Issue Responsiveness (15%)
+- Community Health (15%)
 
 **Use:** Assess community health and onboarding
 

@@ -13,7 +13,7 @@ def check_code_of_conduct(repo_data: dict[str, Any]) -> Metric:
 
     Scoring (0-10 scale):
     - GitHub recognized CoC: 10/10
-    - No CoC: 0/10 (but low risk - informational)
+    - No CoC: 0/10 (informational)
     """
     max_score = 10
 

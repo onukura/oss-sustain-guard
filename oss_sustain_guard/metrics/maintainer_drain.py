@@ -13,9 +13,9 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
     - Excludes bot accounts (dependabot, renovate, github-actions, etc.)
     - Compares recent (last 25) vs older (25-50) commits
     - Time-series based assessment
-    - Graduated risk levels: 50%/70%/90% reduction
+    - Graduated status levels: 50%/70%/90% reduction
 
-    Risk levels:
+    Status levels:
     - 90%+ reduction: 15pt reduction (critical)
     - 70-89% reduction: 10pt reduction (high)
     - 50-69% reduction: 5pt reduction (medium)
@@ -107,7 +107,7 @@ def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
     drain_ratio = len(recent_authors) / len(older_authors)
     reduction_percentage = (1 - drain_ratio) * 100
 
-    # Scoring logic with graduated risk levels
+    # Scoring logic with graduated status levels
     if drain_ratio <= 0.1:  # 90%+ reduction
         score = 0
         risk = "Critical"

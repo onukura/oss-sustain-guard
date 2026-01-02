@@ -14,7 +14,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
     - Project maturity (total commits)
     - Contributor diversity trend
 
-    Risk levels:
+    Status levels:
     - 90%+ single author: 20pt reduction (but not critical for new projects)
     - 70-89%: 10pt reduction
     - 50-69%: 5pt reduction

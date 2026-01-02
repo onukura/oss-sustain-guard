@@ -8,6 +8,7 @@ Rust (Cargo), Go modules, Ruby Gems, PHP Composer, etc.
 
 import json
 import re
+
 try:
     import tomllib
 except ImportError:  # pragma: no cover - fallback for Python < 3.11

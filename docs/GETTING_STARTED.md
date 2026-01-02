@@ -216,7 +216,7 @@ GitHub's API requires authentication for repository analysis. The token allows O
 | **Recent Activity** | Project's current activity level |
 | **Release Rhythm** | Release frequency and consistency |
 | **Maintainer Retention** | Stability of maintainers |
-| **Issue Responsiveness** | Speed of issue response |
+| **Community Health** | Issue response time and responsiveness |
 
 ## 🔧 Useful Options
 

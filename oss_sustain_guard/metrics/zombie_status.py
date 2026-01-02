@@ -12,9 +12,9 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
     Improvements:
     - Distinguishes between archived (intentional) and abandoned
     - Considers release/tag updates separately from commit activity
-    - More nuanced risk assessment for mature projects
+    - More nuanced status assessment for mature projects
 
-    Risk levels:
+    Status levels:
     - Archived with plan: Low (not zombie)
     - 1+ year, mature, regularly tagged: Medium (stable maintenance)
     - 1+ year, no tags, no activity: High (potentially abandoned)
@@ -28,7 +28,7 @@ def check_zombie_status(repo_data: dict[str, Any]) -> Metric:
 
     is_archived = repo_data.get("isArchived", False)
     if is_archived:
-        # Archived repos are intentional, not risky if properly maintained during lifecycle
+        # Archived repos are intentional; maintenance may still be needed depending on lifecycle
         return Metric(
             "Recent Activity",
             5,  # 10/20 → 5/10 - archived is intentional, but needs monitoring

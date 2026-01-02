@@ -185,7 +185,7 @@ def test_compute_metric_models_with_observations():
         Metric("Contributor Redundancy", 3, 10, "msg", "Low"),
         Metric("Security Signals", 2, 10, "msg", "Low"),
         Metric("Change Request Resolution", 1, 10, "msg", "Low"),
-        Metric("Issue Responsiveness", 1, 10, "msg", "Low"),
+        Metric("Community Health", 1, 10, "msg", "Low"),
         Metric("Funding Signals", 10, 10, "msg", "Low"),
         Metric("Maintainer Retention", 9, 10, "msg", "Low"),
         Metric("Release Rhythm", 8, 10, "msg", "Low"),

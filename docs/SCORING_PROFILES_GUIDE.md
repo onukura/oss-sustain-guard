@@ -31,7 +31,7 @@ A balanced view across all sustainability dimensions.
 - Contributor Redundancy: 3 (High priority - bus factor)
 - Recent Activity: 3 (Key for active development)
 - Security Signals: 2 (Balanced security focus)
-- Issue Responsiveness: 2 (Community health)
+- Community Health: 2 (Issue responsiveness)
 - Other metrics: 1-2 (Proportional importance)
 
 **Best for:** General-purpose evaluation, understanding overall project health.
@@ -67,7 +67,7 @@ Focuses on community engagement and contributor-friendliness.
 
 **Metric Emphasis (Key Weights):**
 
-- **Issue Responsiveness: 4** ⬆️ (Community engagement)
+- **Community Health: 4** ⬆️ (Community engagement)
 - **PR Acceptance Ratio: 4** (Welcoming to contributors)
 - **Review Health: 3** (Code review quality)
 - **PR Responsiveness: 3** (Fast feedback)
@@ -247,7 +247,7 @@ description = "Custom scoring focused on specific needs"
 "Maintainer Retention" = 3
 "Funding Signals" = 2
 "Build Health" = 2
-"Issue Responsiveness" = 2
+"Community Health" = 2
 "PR Acceptance Ratio" = 2
 "Review Health" = 2
 "PR Responsiveness" = 2
@@ -309,7 +309,7 @@ SCORING_PROFILES["custom_enterprise"] = {
         "License Clarity": 2,
 
         # Lower priority for community metrics
-        "Issue Responsiveness": 1,
+        "Community Health": 1,
         "PR Acceptance Ratio": 1,
         # ... (include all 24 core metrics)
     },
@@ -365,7 +365,7 @@ All profiles assign **individual weights to each metric** (not categories):
 
 - Contributor Redundancy, Maintainer Retention, Recent Activity
 - Security Signals, Funding Signals, Build Health
-- Issue Responsiveness, PR Acceptance Ratio, Review Health
+- Community Health, PR Acceptance Ratio, Review Health
 - Documentation Presence, License Clarity, Code of Conduct
 - And more...
 

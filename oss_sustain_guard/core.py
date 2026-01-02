@@ -81,6 +81,19 @@ console = Console()
 
 GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
 
+# Sample size constants from GraphQL queries
+# These are the limits used in _get_repository_query()
+GRAPHQL_SAMPLE_LIMITS = {
+    "commits": 100,  # history(first: 100)
+    "merged_prs": 50,  # pullRequests(first: 50, states: MERGED)
+    "closed_prs": 50,  # pullRequests(first: 50, states: CLOSED)
+    "issues": 20,  # issues(first: 20, states: OPEN)
+    "closed_issues": 50,  # issues(first: 50, states: CLOSED)
+    "releases": 10,  # releases(first: 10)
+    "vulnerability_alerts": 10,  # vulnerabilityAlerts(first: 10)
+    "forks": 20,  # forks(first: 20)
+}
+
 
 # --- Data Structures ---
 
@@ -106,6 +119,7 @@ class AnalysisResult(NamedTuple):
     signals: dict[str, Any] | None = None  # Optional raw signals for transparency
     dependency_scores: dict[str, int] | None = None
     ecosystem: str = ""  # Ecosystem name (python, javascript, rust, etc.)
+    sample_counts: dict[str, int] | None = None  # Sample counts from GraphQL query
 
 
 # --- Helper Functions ---
@@ -156,6 +170,7 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
         "signals": result.signals or {},
         "dependency_scores": result.dependency_scores or {},
         "ecosystem": result.ecosystem,
+        "sample_counts": result.sample_counts or {},
     }
 
 
@@ -466,7 +481,7 @@ DEFAULT_SCORING_PROFILES = {
             "Build Health": 2,
             "Change Request Resolution": 2,
             # Community Engagement (25% emphasis)
-            "Issue Responsiveness": 2,
+            "Community Health": 2,
             "PR Acceptance Ratio": 2,
             "Review Health": 2,
             "Issue Resolution Duration": 2,
@@ -502,7 +517,7 @@ DEFAULT_SCORING_PROFILES = {
             "Build Health": 3,
             "Change Request Resolution": 1,
             # Community Engagement (20% emphasis)
-            "Issue Responsiveness": 2,
+            "Community Health": 2,
             "PR Acceptance Ratio": 1,
             "Review Health": 2,
             "Issue Resolution Duration": 1,
@@ -538,7 +553,7 @@ DEFAULT_SCORING_PROFILES = {
             "Build Health": 1,
             "Change Request Resolution": 2,
             # Community Engagement (45% emphasis) - DOUBLED
-            "Issue Responsiveness": 4,
+            "Community Health": 4,
             "PR Acceptance Ratio": 4,
             "Review Health": 3,
             "Issue Resolution Duration": 3,
@@ -574,7 +589,7 @@ DEFAULT_SCORING_PROFILES = {
             "Build Health": 2,
             "Change Request Resolution": 2,
             # Community Engagement (15% emphasis)
-            "Issue Responsiveness": 1,
+            "Community Health": 1,
             "PR Acceptance Ratio": 1,
             "Review Health": 2,
             "Issue Resolution Duration": 1,
@@ -815,12 +830,12 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
     models = []
 
     # Stability Model: weights Contributor Redundancy, Security Signals,
-    # Change Request Resolution, Issue Responsiveness
+    # Change Request Resolution, Community Health
     risk_metrics = [
         ("Contributor Redundancy", 0.4),
         ("Security Signals", 0.3),
         ("Change Request Resolution", 0.2),
-        ("Issue Responsiveness", 0.1),
+        ("Community Health", 0.1),
     ]
     risk_score = 0
     risk_max = 0
@@ -883,12 +898,12 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
     )
 
     # Community Engagement Model: weights Contributor Attraction,
-    # Contributor Retention, Review Health, Issue Responsiveness
+    # Contributor Retention, Review Health, Community Health
     engagement_metrics = [
         ("Contributor Attraction", 0.3),
         ("Contributor Retention", 0.3),
         ("Review Health", 0.25),
-        ("Issue Responsiveness", 0.15),
+        ("Community Health", 0.15),
     ]
     eng_score = 0
     eng_max = 0
@@ -1416,6 +1431,112 @@ def analyze_repositories_batch(
     return results
 
 
+def _extract_sample_counts(repo_info: dict[str, Any]) -> dict[str, int]:
+    """Extract actual sample counts from GraphQL response."""
+    samples = {}
+
+    # Commits
+    try:
+        commits_history = (
+            repo_info.get("defaultBranchRef", {})
+            .get("target", {})
+            .get("history", {})
+            .get("edges", [])
+        )
+        samples["commits"] = min(len(commits_history), GRAPHQL_SAMPLE_LIMITS["commits"])
+    except (TypeError, KeyError):
+        samples["commits"] = 0
+
+    # Merged PRs
+    try:
+        merged_prs = repo_info.get("pullRequests", {}).get("edges", [])
+        samples["merged_prs"] = min(
+            len(merged_prs), GRAPHQL_SAMPLE_LIMITS["merged_prs"]
+        )
+    except (TypeError, KeyError):
+        samples["merged_prs"] = 0
+
+    # Closed PRs
+    try:
+        closed_prs = repo_info.get("closedPullRequests", {}).get("edges", [])
+        samples["closed_prs"] = min(
+            len(closed_prs), GRAPHQL_SAMPLE_LIMITS["closed_prs"]
+        )
+    except (TypeError, KeyError):
+        samples["closed_prs"] = 0
+
+    # Open Issues
+    try:
+        open_issues = repo_info.get("issues", {}).get("edges", [])
+        samples["open_issues"] = min(len(open_issues), GRAPHQL_SAMPLE_LIMITS["issues"])
+    except (TypeError, KeyError):
+        samples["open_issues"] = 0
+
+    # Closed Issues
+    try:
+        closed_issues = repo_info.get("closedIssues", {}).get("edges", [])
+        samples["closed_issues"] = min(
+            len(closed_issues), GRAPHQL_SAMPLE_LIMITS["closed_issues"]
+        )
+    except (TypeError, KeyError):
+        samples["closed_issues"] = 0
+
+    # Releases
+    try:
+        releases = repo_info.get("releases", {}).get("edges", [])
+        samples["releases"] = min(len(releases), GRAPHQL_SAMPLE_LIMITS["releases"])
+    except (TypeError, KeyError):
+        samples["releases"] = 0
+
+    # Vulnerability alerts
+    try:
+        vuln_alerts = repo_info.get("vulnerabilityAlerts", {}).get("edges", [])
+        samples["vulnerability_alerts"] = min(
+            len(vuln_alerts), GRAPHQL_SAMPLE_LIMITS["vulnerability_alerts"]
+        )
+    except (TypeError, KeyError):
+        samples["vulnerability_alerts"] = 0
+
+    # Forks
+    try:
+        forks = repo_info.get("forks", {}).get("edges", [])
+        samples["forks"] = min(len(forks), GRAPHQL_SAMPLE_LIMITS["forks"])
+    except (TypeError, KeyError):
+        samples["forks"] = 0
+
+    return samples
+
+
+def _get_user_friendly_error(exc: Exception) -> str:
+    """Convert technical exceptions to user-friendly messages."""
+    exc_str = str(exc).lower()
+
+    # Permission/authorization errors
+    if "permission" in exc_str or "unauthorized" in exc_str:
+        return (
+            "Note: Unable to access this data (may require elevated token permissions)"
+        )
+
+    # Rate limit errors
+    if "rate" in exc_str or "too many" in exc_str or "429" in exc_str:
+        return "Note: GitHub API rate limit reached (will use cached data if available)"
+
+    # Network/timeout errors
+    if "timeout" in exc_str or "connection" in exc_str or "network" in exc_str:
+        return "Note: Network timeout (check your internet connection)"
+
+    # Data format/parsing errors
+    if "json" in exc_str or "decode" in exc_str or "parse" in exc_str:
+        return "Note: Unable to parse response from GitHub API"
+
+    # Field not found errors
+    if "keyerror" in exc_str or "not found" in exc_str:
+        return "Note: Required data field unavailable from GitHub API"
+
+    # Generic fallback
+    return f"Note: Analysis incomplete ({exc.__class__.__name__})"
+
+
 def _analyze_repository_data(
     owner: str,
     name: str,
@@ -1450,12 +1571,13 @@ def _analyze_repository_data(
             if spec.on_error:
                 metrics.append(spec.on_error(exc))
             else:
+                user_friendly_msg = _get_user_friendly_error(exc)
                 metrics.append(
                     Metric(
                         spec.name,
                         0,
                         10,
-                        f"Note: Analysis incomplete - {exc}",
+                        user_friendly_msg,
                         "Medium",
                     )
                 )
@@ -1479,6 +1601,9 @@ def _analyze_repository_data(
     # Extract raw signals for transparency
     signals = extract_signals(metrics, repo_info)
 
+    # Extract sample counts for transparency
+    sample_counts = _extract_sample_counts(repo_info)
+
     # Note: Progress display is handled by CLI layer, not here
     # Individual completion messages would interfere with progress bar
 
@@ -1490,6 +1615,7 @@ def _analyze_repository_data(
         is_community_driven=is_community,
         models=models,
         signals=signals,
+        sample_counts=sample_counts,
     )
 
 

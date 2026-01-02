@@ -40,7 +40,7 @@ example_metrics = [
         "Change Request Resolution", 8, 10, "Good: 82% PRs merged within 7 days", "Low"
     ),
     # Community Engagement (20% in balanced)
-    Metric("Issue Responsiveness", 4, 5, "Excellent: Avg response 18h", "None"),
+    Metric("Community Health", 4, 5, "Excellent: Avg response 18h", "None"),
     Metric("PR Acceptance Ratio", 8, 10, "Excellent: 85% PR acceptance rate", "None"),
     Metric("PR Responsiveness", 4, 5, "Excellent: Avg PR first response 20h", "None"),
     Metric("Review Health", 9, 10, "Excellent: Avg time to first review 22h", "None"),
@@ -128,7 +128,7 @@ def main():
     print(f"  Range:         {max_profile[1] - min_profile[1]} points")
 
     print("\n  Key Observations:")
-    print("    • Strong community engagement (Issue Responsiveness: 4/5)")
+    print("    • Strong community engagement (Community Health: 4/5)")
     print("    • Excellent documentation (all signals present)")
     print("    • Active development (recent commits and releases)")
     print("    • Limited funding signals (3/10) - affects security_first score")

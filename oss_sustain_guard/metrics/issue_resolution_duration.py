@@ -145,7 +145,7 @@ def check_issue_resolution_duration(repo_data: dict[str, Any]) -> Metric:
         elif avg_resolution < 180:
             score = 2
             risk = "High"
-            message = f"Slow: Avg issue resolution {avg_resolution:.1f} days. Issues backlogging."
+            message = f"Needs attention: Avg issue resolution {avg_resolution:.1f} days. Backlog appears to be growing."
         else:
             score = 0
             risk = "High"
@@ -160,7 +160,7 @@ def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
 
 def _on_error(error: Exception) -> Metric:
     return Metric(
-        "Issue Resolution Time",
+        "Issue Resolution Duration",
         0,
         10,
         f"Note: Analysis incomplete - {error}",

@@ -260,7 +260,7 @@ class TestIssueResolutionDuration:
         repo_data = _repo_with_resolution(5000, 120)
         result = check_issue_resolution_duration(repo_data)
         assert result.score == 2
-        assert "Slow" in result.message
+        assert "Needs attention" in result.message
         assert result.risk == "High"
 
     def test_small_project_backlog_resolution(self):

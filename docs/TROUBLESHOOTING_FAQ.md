@@ -276,7 +276,7 @@ See [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) for details.
 | **Recent Activity** | Is the project actively developed? |
 | **Release Rhythm** | Release frequency and consistency |
 | **Maintainer Retention** | Are maintainers staying with the project? |
-| **Issue Responsiveness** | How fast are issues addressed? |
+| **Community Health** | How fast are issues addressed? |
 | **Funding Signals** | Does the project have funding options? |
 
 See [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) for details.
@@ -370,6 +370,54 @@ export GITHUB_TOKEN="your_token"
 
 - name: Check
   run: os4g check --recursive --compact
+```
+
+## ❓ Frequently Asked Questions
+
+### "Package X is on GitLab/Gitea but wasn't analyzed—why?"
+
+**Answer:** OSS Sustain Guard currently supports **GitHub-hosted repositories only** for real-time analysis.
+
+When a package's source is detected on another platform (GitLab, Gitea, SourceForge, etc.), the tool will:
+
+1. **Detect the non-GitHub host** during package resolution
+2. **Display a note** like: "Repository is hosted on GitLab. Real-time analysis currently supports GitHub only."
+3. **Skip analysis** for that package (no data is sent to external services)
+
+**Why only GitHub?**
+- GitHub's GraphQL API provides deep repository metrics (contributors, activity timeline, PR review patterns, etc.)
+- Other platforms have different APIs with varying data availability and rate limits
+- We want to maintain consistent metric quality across all analyzed packages
+
+**When will GitLab/other platforms be supported?**
+- Support for GitLab, Gitea, and other platforms is under consideration for future releases
+- The team is exploring API integration possibilities with other major platforms
+- Check [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues) for progress and feature requests
+
+**Workaround:** If you need to analyze GitLab projects, consider opening an issue or contributing: [Contributing Guide](../CONTRIBUTING.md)
+
+### "Why is my analysis incomplete with 'Note: Unable to access this data'?"
+
+**Common causes:**
+
+| Message | Cause | Solution |
+|---------|-------|----------|
+| "may require elevated token permissions" | Token lacks required scopes | Recreate token with `public_repo` + `security_events` |
+| "GitHub API rate limit reached" | Too many requests in short time | Wait 1 hour or use `--use-cache` for repeated runs |
+| "Network timeout" | Connectivity issue | Check your internet connection and try again |
+| "Unable to parse response" | API returned unexpected format | Usually temporary; try again in a few minutes |
+
+**Debugging:**
+
+```bash
+# Check your token validity
+curl -H "Authorization: token YOUR_TOKEN" https://api.github.com/user
+
+# Verbose output for detailed error info
+os4g check requests -v
+
+# Force fresh analysis (skip cache)
+os4g check requests --no-cache
 ```
 
 ## 📚 Learn More

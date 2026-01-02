@@ -63,7 +63,9 @@ from oss_sustain_guard.resolvers import (
 from oss_sustain_guard.resolvers.base import close_resolver_http_client
 
 # Schema version for cached data compatibility
-ANALYSIS_VERSION = "1.2"  # Updated: Fixed community-driven detection to include projects with funding links
+ANALYSIS_VERSION = (
+    "1.3"  # Updated: Align scoring weights with Community Health metric naming
+)
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -125,6 +127,7 @@ def _cache_analysis_result(
             "is_community_driven": result.is_community_driven,
             "models": result.models or [],
             "signals": result.signals or {},
+            "sample_counts": result.sample_counts or {},
             "analysis_version": ANALYSIS_VERSION,
             "cache_metadata": {
                 "fetched_at": datetime.now(timezone.utc).isoformat(),
@@ -300,9 +303,14 @@ def _write_json_results(
     dependency_summary: dict[str, int] | None = None,
 ) -> None:
     """Write results as JSON to stdout or a file."""
+    weights = get_metric_weights(profile)
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "profile": profile,
+        "profile_metadata": {
+            "name": profile,
+            "metric_weights": weights,
+        },
         "summary": _build_summary(results),
         "results": [analysis_result_to_dict(result) for result in results],
     }
@@ -374,6 +382,10 @@ def _render_html_report(
     json_payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "profile": profile,
+        "profile_metadata": {
+            "name": profile,
+            "metric_weights": get_metric_weights(profile),
+        },
         "summary": summary,
         "results": [analysis_result_to_dict(result) for result in results],
     }
@@ -669,6 +681,22 @@ def display_results_detailed(
     # Get weights for current profile
     weights = get_metric_weights(profile)
 
+    # Display profile information at the beginning
+    console.print(
+        f"\n[bold magenta]📊 Scoring Profile: {profile.title()}[/bold magenta]"
+    )
+
+    # Display metric weights
+    weights_parts = []
+    for metric_name, weight in sorted(weights.items(), key=lambda x: -x[1]):
+        weights_parts.append(f"{metric_name}={weight}")
+    console.print(f"[dim]Metric Weights: {', '.join(weights_parts[:5])}")
+    if len(weights) > 5:
+        console.print(
+            f"[dim]                ... and {len(weights) - 5} more metrics[/dim]"
+        )
+    console.print()
+
     for result in results:
         # Determine overall color
         risk_color = "green"
@@ -695,6 +723,35 @@ def display_results_detailed(
                 platform = link.get("platform", "Unknown")
                 url = link.get("url", "")
                 console.print(f"      • {platform}: [link={url}]{url}[/link]")
+
+        # Display sample counts for transparency
+        if result.sample_counts:
+            sample_info_parts = []
+            if result.sample_counts.get("commits", 0) > 0:
+                sample_info_parts.append(f"commits={result.sample_counts['commits']}")
+            if result.sample_counts.get("merged_prs", 0) > 0:
+                sample_info_parts.append(
+                    f"merged_prs={result.sample_counts['merged_prs']}"
+                )
+            if result.sample_counts.get("closed_prs", 0) > 0:
+                sample_info_parts.append(
+                    f"closed_prs={result.sample_counts['closed_prs']}"
+                )
+            if result.sample_counts.get("open_issues", 0) > 0:
+                sample_info_parts.append(
+                    f"open_issues={result.sample_counts['open_issues']}"
+                )
+            if result.sample_counts.get("closed_issues", 0) > 0:
+                sample_info_parts.append(
+                    f"closed_issues={result.sample_counts['closed_issues']}"
+                )
+            if result.sample_counts.get("releases", 0) > 0:
+                sample_info_parts.append(f"releases={result.sample_counts['releases']}")
+
+            if sample_info_parts:
+                console.print(
+                    f"   [dim]💾 Analysis based on: {', '.join(sample_info_parts)}[/dim]"
+                )
 
         # Metrics table
         metrics_table = Table(show_header=True, header_style="bold magenta")
@@ -971,6 +1028,7 @@ def analyze_packages_parallel(
                         signals=cached_data.get("signals", {}),
                         dependency_scores={},
                         ecosystem=ecosystem,
+                        sample_counts=cached_data.get("sample_counts", {}),
                     )
                     resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
                     if show_dependencies and resolved_lockfile:
@@ -1313,6 +1371,7 @@ def analyze_package(
                 signals=cached_data.get("signals", {}),
                 dependency_scores={},  # Empty for cached results
                 ecosystem=ecosystem,
+                sample_counts=cached_data.get("sample_counts", {}),
             )
 
             # If show_dependencies is requested, analyze dependencies
@@ -1386,10 +1445,38 @@ def analyze_package(
             analysis_result = analysis_result._replace(dependency_scores=dep_scores)
 
         return analysis_result
+    except ValueError as e:
+        # Handle user-friendly error messages
+        error_msg = str(e).lower()
+        if "token" in error_msg:
+            console.print(
+                f"    [yellow]⚠️  {owner}/{repo_name}: GitHub token required or invalid. "
+                "Check GITHUB_TOKEN environment variable.[/yellow]"
+            )
+        elif "not found" in error_msg:
+            console.print(
+                f"    [yellow]⚠️  {owner}/{repo_name}: Repository not found or inaccessible.[/yellow]"
+            )
+        else:
+            console.print(f"    [yellow]⚠️  {owner}/{repo_name}: {e}[/yellow]")
+        return None
     except Exception as e:
-        console.print(
-            f"    [yellow]⚠️  Unable to complete analysis for {owner}/{repo_name}: {e}[/yellow]"
-        )
+        # Generic exception handler with user-friendly messaging
+        error_msg = str(e).lower()
+        if "rate" in error_msg or "429" in error_msg:
+            console.print(
+                f"    [yellow]⚠️  {owner}/{repo_name}: GitHub API rate limit reached. "
+                "Please try again later or check your token scopes.[/yellow]"
+            )
+        elif "timeout" in error_msg or "connection" in error_msg:
+            console.print(
+                f"    [yellow]⚠️  {owner}/{repo_name}: Network timeout. "
+                "Check your internet connection and try again.[/yellow]"
+            )
+        else:
+            console.print(
+                f"    [yellow]⚠️  {owner}/{repo_name}: Unable to complete analysis.[/yellow]"
+            )
         return None
 
 
@@ -1406,7 +1493,7 @@ def check(
         help=(
             "Default ecosystem for unqualified packages (python, javascript, go, rust, "
             "php, java, kotlin, scala, csharp, dotnet, dart, elixir, haskell, perl, r, "
-            "swift). Use 'auto' to detect."
+            "ruby, swift). Use 'auto' to detect."
         ),
     ),
     include_lock: bool = typer.Option(
@@ -1536,7 +1623,7 @@ def check(
         help="Maximum directory depth for recursive scanning (default: unlimited).",
     ),
 ):
-    """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, C#)."""
+    """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, Kotlin, Scala, C#, Ruby, R, Dart, Elixir, Haskell, Perl, Swift)."""
     # Apply config defaults if not specified via CLI
     if verbose is None:
         verbose = is_verbose_enabled()
@@ -1658,7 +1745,7 @@ def check(
                 f"[yellow]⚠️  Could not detect ecosystem from manifest file: {manifest_name}[/yellow]"
             )
             console.print(
-                "[dim]Supported manifest files:[/dim] package.json, requirements.txt, pyproject.toml, Cargo.toml, go.mod, composer.json, pom.xml, Gemfile, packages.config, DESCRIPTION, Package.swift, cabal.project, stack.yaml, package.yaml, pubspec.yaml, mix.exs, cpanfile"
+                "[dim]Supported manifest files:[/dim] package.json, requirements.txt, pyproject.toml, Cargo.toml, go.mod, composer.json, pom.xml, build.gradle, build.gradle.kts, build.sbt, Gemfile, packages.config, DESCRIPTION, Package.swift, cabal.project, stack.yaml, package.yaml, pubspec.yaml, mix.exs, cpanfile"
             )
             raise typer.Exit(code=1)
 
