@@ -100,13 +100,11 @@ class AnalysisResult(NamedTuple):
     repo_url: str
     total_score: int
     metrics: list[Metric]
-    funding_links: list[dict[str, str]] = []  # List of {"platform": str, "url": str}
+    funding_links: list[dict[str, str]] | None = None  # {"platform": str, "url": str}
     is_community_driven: bool = False  # True if project is community-driven
-    models: list[MetricModel] = []  # Optional metric models (CHAOSS-aligned)
-    signals: dict[str, Any] = {}  # Optional raw signals for transparency
-    dependency_scores: dict[
-        str, int
-    ] = {}  # Package name -> score mapping for dependencies
+    models: list[MetricModel] | None = None  # Optional metric models (CHAOSS-aligned)
+    signals: dict[str, Any] | None = None  # Optional raw signals for transparency
+    dependency_scores: dict[str, int] | None = None
     ecosystem: str = ""  # Ecosystem name (python, javascript, rust, etc.)
 
 
@@ -133,7 +131,7 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
             )
 
     models: list[dict[str, Any]] = []
-    for model in result.models:
+    for model in result.models or []:
         if isinstance(model, dict):
             models.append(model)
         elif hasattr(model, "_asdict"):
@@ -152,11 +150,11 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
         "repo_url": result.repo_url,
         "total_score": result.total_score,
         "metrics": metrics,
-        "funding_links": result.funding_links,
+        "funding_links": list(result.funding_links or []),
         "is_community_driven": result.is_community_driven,
         "models": models,
-        "signals": result.signals,
-        "dependency_scores": result.dependency_scores,
+        "signals": result.signals or {},
+        "dependency_scores": result.dependency_scores or {},
         "ecosystem": result.ecosystem,
     }
 
@@ -1478,8 +1476,8 @@ def _analyze_repository_data(
     # Generate CHAOSS metric models
     models: list[MetricModel] = compute_metric_models(metrics)
 
-    # Extract raw signals for transparency (placeholder for now)
-    signals: dict[str, Any] = {}
+    # Extract raw signals for transparency
+    signals = extract_signals(metrics, repo_info)
 
     # Note: Progress display is handled by CLI layer, not here
     # Individual completion messages would interfere with progress bar

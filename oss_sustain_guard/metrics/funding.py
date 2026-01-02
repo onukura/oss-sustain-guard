@@ -75,7 +75,10 @@ def check_funding(repo_data: dict[str, Any]) -> Metric:
         else:
             score = 0
             risk = "Low"
-            message = "No funding sources detected (risk for community projects)."
+            message = (
+                "No funding sources detected for community projects. "
+                "Consider adding support links."
+            )
 
     return Metric("Funding Signals", score, max_score, message, risk)
 

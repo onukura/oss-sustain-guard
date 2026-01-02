@@ -121,10 +121,10 @@ def _cache_analysis_result(
             "package_name": package_name,
             "github_url": result.repo_url,
             "metrics": payload.get("metrics", []),
-            "funding_links": result.funding_links,
+            "funding_links": list(result.funding_links or []),
             "is_community_driven": result.is_community_driven,
-            "models": result.models,
-            "signals": result.signals,
+            "models": result.models or [],
+            "signals": result.signals or {},
             "analysis_version": ANALYSIS_VERSION,
             "cache_metadata": {
                 "fetched_at": datetime.now(timezone.utc).isoformat(),

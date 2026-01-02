@@ -7,7 +7,10 @@ Loads excluded packages from:
 """
 
 import os
-import tomllib
+try:
+    import tomllib
+except ImportError:  # pragma: no cover - fallback for Python < 3.11
+    import tomli as tomllib  # type: ignore
 from pathlib import Path
 from typing import Union
 

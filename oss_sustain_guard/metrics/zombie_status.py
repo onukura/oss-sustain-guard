@@ -112,7 +112,7 @@ def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
 
 def _on_error(error: Exception) -> Metric:
     return Metric(
-        "Recent Activity", 0, 20, f"Note: Analysis incomplete - {error}", "High"
+        "Recent Activity", 0, 10, f"Note: Analysis incomplete - {error}", "High"
     )
 
 
