@@ -1342,14 +1342,14 @@ def analyze_repositories_batch(
     results: dict[tuple[str, str], AnalysisResult | None] = {}
 
     def _normalize_batch_item(
-        item: tuple[str, str] | tuple[str, str, str | None, str | None]
+        item: tuple[str, str] | tuple[str, str, str | None, str | None],
     ) -> tuple[str, str, str | None, str | None]:
         if len(item) == 2:
             owner, name = item
-            return owner, name, platform, None
+            return owner, name, platform or None, None
         if len(item) == 4:
-            owner, name, platform, package_name = item
-            return owner, name, platform, package_name
+            owner, name, item_platform, package_name = item
+            return owner, name, item_platform, package_name
         raise ValueError(
             "Batch items must be (owner, name) or (owner, name, platform, package_name)."
         )

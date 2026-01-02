@@ -842,7 +842,9 @@ def analyze_packages_parallel(
                 progress.advance(task)
                 continue
 
-            platform = _get_librariesio_platform(ecosystem) if enable_dependents else None
+            platform = (
+                _get_librariesio_platform(ecosystem) if enable_dependents else None
+            )
             uncached_packages.append(
                 (ecosystem, pkg, repo_info.owner, repo_info.name, platform)
             )
