@@ -2,6 +2,10 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.14.1 - 2026-01-02
+
+- Bug fixes and improvements to enhance stability.
+
 ## v0.14.0 - 2026-01-02
 
 - Added a pluggable metrics registry with modular built-in metrics and entry-point discovery.
