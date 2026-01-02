@@ -1452,7 +1452,12 @@ def check(
         False,
         "--show-dependencies",
         "-D",
-        help="Analyze and display dependency package scores (reference scores based on lockfile dependencies). Only works when lockfiles are present in the project directory (uv.lock, poetry.lock, package-lock.json, etc.).",
+        help=(
+            "Experimental: analyze and display dependency package scores (reference "
+            "scores based on lockfile dependencies). Only works when lockfiles are "
+            "present in the project directory (uv.lock, poetry.lock, "
+            "package-lock.json, etc.)."
+        ),
     ),
     profile: str = typer.Option(
         "balanced",

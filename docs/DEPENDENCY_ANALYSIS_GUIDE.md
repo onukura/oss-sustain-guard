@@ -4,6 +4,8 @@
 
 The `--show-dependencies` (`-D`) flag enables OSS Sustain Guard to analyze and display the health scores of your project's dependencies. This provides a **holistic sustainability assessment** by evaluating not just the primary package, but also the health of its entire dependency tree.
 
+> ℹ️ **Experimental feature**: Dependency analysis is still undergoing validation. The results are provided as a helpful reference and may evolve as we improve accuracy and coverage.
+
 ## Why Dependency Analysis Matters
 
 When assessing package sustainability, evaluating only the primary package is incomplete. Dependencies form the foundation of your project:

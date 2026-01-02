@@ -94,7 +94,7 @@ os4g check --recursive
 
 Recursively finds and analyzes all dependencies in subdirectories.
 
-See [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) for details.
+See [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) for details (experimental).
 
 ## 📊 Understanding Scores
 
