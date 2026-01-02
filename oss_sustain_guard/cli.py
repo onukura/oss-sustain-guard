@@ -3,6 +3,7 @@ Command-line interface for OSS Sustain Guard.
 """
 
 import json
+import os
 import sys
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -531,6 +532,17 @@ def display_results_table(
 
     console.print(table)
 
+    # Display skipped metrics if any
+    for result in results:
+        if result.skipped_metrics:
+            console.print(
+                f"\n⚠️  [yellow]{result.repo_url.replace('https://github.com/', '')}:[/yellow] "
+                f"[yellow]{len(result.skipped_metrics)} metric(s) not measured:[/yellow] {', '.join(result.skipped_metrics)}"
+            )
+            for skipped in result.skipped_metrics:
+                if skipped == "Downstream Dependents":
+                    console.print("[dim]   Set LIBRARIESIO_API_KEY to enable[/dim]")
+
     # Display funding links if available
     for result in results:
         if result.funding_links:
@@ -805,6 +817,17 @@ def display_results_detailed(
             )
 
         console.print(metrics_table)
+
+        # Display skipped metrics if any
+        if result.skipped_metrics:
+            console.print(
+                f"   [yellow]⚠️  {len(result.skipped_metrics)} metric(s) not measured:[/yellow] {', '.join(result.skipped_metrics)}"
+            )
+            for skipped in result.skipped_metrics:
+                if skipped == "Downstream Dependents":
+                    console.print(
+                        "[dim]      Set LIBRARIESIO_API_KEY to enable dependents analysis[/dim]"
+                    )
 
         # Display CHAOSS metric models if available and requested
         if show_models and result.models:
@@ -1632,6 +1655,55 @@ def check(
 
     apply_scoring_profiles(profile_file)
 
+    # Validate and warn about plugin metric weights
+    from oss_sustain_guard.metrics import load_metric_specs
+
+    builtin_metrics = {
+        "Contributor Redundancy",
+        "Maintainer Retention",
+        "Recent Activity",
+        "Change Request Resolution",
+        "Issue Resolution Duration",
+        "Funding Signals",
+        "Release Rhythm",
+        "Security Signals",
+        "Contributor Attraction",
+        "Contributor Retention",
+        "Review Health",
+        "Documentation Presence",
+        "Code of Conduct",
+        "PR Acceptance Ratio",
+        "Organizational Diversity",
+        "Fork Activity",
+        "Project Popularity",
+        "License Clarity",
+        "PR Responsiveness",
+        "Community Health",
+        "Build Health",
+        "Stale Issue Ratio",
+        "PR Merge Speed",
+        "Maintainer Load Distribution",
+        "Downstream Dependents",
+    }
+
+    weights = get_metric_weights(profile)
+    metric_specs = load_metric_specs()
+    plugin_metrics = [spec for spec in metric_specs if spec.name not in builtin_metrics]
+
+    if plugin_metrics:
+        console.print("[yellow]⚠️  Plugin metrics detected:[/yellow]")
+        for metric in plugin_metrics:
+            weight = weights.get(metric.name, 1)
+            if weight == 1:
+                console.print(
+                    f"   [dim]{metric.name}: using default weight=1 (not explicitly configured)[/dim]"
+                )
+            else:
+                console.print(
+                    f"   [cyan]{metric.name}: weight={weight} (configured)[/cyan]"
+                )
+        console.print()
+
     # Validate profile
     if profile not in SCORING_PROFILES:
         console.print(
@@ -1690,6 +1762,18 @@ def check(
         set_verify_ssl(str(ca_cert))
     else:
         set_verify_ssl(not insecure)
+
+    # Validate --enable-dependents flag
+    if enable_dependents and not os.getenv("LIBRARIESIO_API_KEY"):
+        console.print(
+            "[yellow]ℹ️  --enable-dependents requires LIBRARIESIO_API_KEY environment variable.[/yellow]"
+        )
+        console.print(
+            "[yellow]   The dependents metric will be skipped during analysis.[/yellow]"
+        )
+        console.print(
+            "[dim]   Set LIBRARIESIO_API_KEY to enable downstream dependents analysis.[/dim]"
+        )
 
     # Determine cache usage flags
     use_cache = not no_cache

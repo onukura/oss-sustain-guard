@@ -120,6 +120,9 @@ class AnalysisResult(NamedTuple):
     dependency_scores: dict[str, int] | None = None
     ecosystem: str = ""  # Ecosystem name (python, javascript, rust, etc.)
     sample_counts: dict[str, int] | None = None  # Sample counts from GraphQL query
+    skipped_metrics: list[str] | None = (
+        None  # Metrics that were skipped (e.g., no API key)
+    )
 
 
 # --- Helper Functions ---
@@ -171,6 +174,7 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
         "dependency_scores": result.dependency_scores or {},
         "ecosystem": result.ecosystem,
         "sample_counts": result.sample_counts or {},
+        "skipped_metrics": list(result.skipped_metrics or []),
     }
 
 
@@ -1550,6 +1554,7 @@ def _analyze_repository_data(
     This is the core analysis logic separated from the GraphQL query.
     """
     metrics: list[Metric] = []
+    skipped_metrics: list[str] = []
     repo_url = f"https://github.com/{owner}/{name}"
     context = MetricContext(
         owner=owner,
@@ -1563,6 +1568,8 @@ def _analyze_repository_data(
         try:
             metric = spec.checker(repo_info, context)
             if metric is None:
+                # Track skipped metrics (e.g., optional metrics without required API keys)
+                skipped_metrics.append(spec.name)
                 continue
             metrics.append(metric)
         except Exception as exc:
@@ -1616,6 +1623,7 @@ def _analyze_repository_data(
         models=models,
         signals=signals,
         sample_counts=sample_counts,
+        skipped_metrics=skipped_metrics if skipped_metrics else None,
     )
 
 
