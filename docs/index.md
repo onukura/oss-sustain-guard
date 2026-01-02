@@ -4,9 +4,15 @@ OSS Sustain Guard is a multi-language package sustainability analyzer that helps
 
 ![CLI demo showing an analyzed package](assets/demo01.png)
 
+## Why OSS Sustain Guard?
+
+Every time a high-profile OSS incident makes the news, I find myself wondering about the packages I rely on right now. I could visit GitHub and skim issues, pull requests, and activity to get a rough sense, but it is not easy. When you depend on tens or hundreds of packages, plus their dependencies, it becomes nearly impossible, and you usually do not notice until something goes wrong.
+
+The libraries that support my work might be under heavy strain, and their own dependencies might be too. OSS Sustain Guard was built to answer those questions and to create moments where users can see the state of maintainers and communities. The first step is simple awareness.
+
 ## 💡 Project Philosophy
 
-OSS Sustain Guard is designed to spark thoughtful conversations about open-source sustainability, not to pass judgment on projects. Our mission is to **raise awareness** about the challenges maintainers face and encourage the community to think together about how we can better support the open-source ecosystem.
+OSS Sustain Guard uses empathetic language and contextual metrics to help teams support the projects they rely on. We avoid judgment and recognize that sustainability looks different across communities and organizations.
 
 We believe that:
 
@@ -16,9 +22,7 @@ We believe that:
 - 🎯 **Respectful evaluation** - We distinguish between corporate-backed and community-driven projects, recognizing their different sustainability models
 - 💝 **Supporting maintainers** - When available, we display funding links for community projects to encourage direct support
 
-This tool is meant to be a conversation starter about OSS sustainability, not a judgment. Every project has unique circumstances, and metrics are just one part of the story.
-
-## Why OSS Sustain Guard?
+Metrics are one lens among many; they work best alongside project context and real-world knowledge.
 
 - **Local caching:** Analysis results are cached locally to minimize API calls. GitHub token required for real-time analysis of uncached packages.
 - **Multi-ecosystem support:** Analyze packages from Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby in one command.
