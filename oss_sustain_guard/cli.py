@@ -4,6 +4,7 @@ Command-line interface for OSS Sustain Guard.
 
 import json
 import sys
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from html import escape
@@ -259,10 +260,44 @@ def _build_summary(results: list[AnalysisResult]) -> dict[str, int | float]:
     }
 
 
+def _dedupe_packages(
+    packages: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """Remove duplicate (ecosystem, package) tuples while preserving order."""
+    seen = set()
+    unique_packages = []
+    for eco, pkg in packages:
+        key = f"{eco}:{pkg}"
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_packages.append((eco, pkg))
+    return unique_packages
+
+
+def _build_dependency_summary(
+    direct_packages: list[tuple[str, str]],
+    results_map: dict[tuple[str, str], AnalysisResult],
+) -> dict[str, int]:
+    """Build a dependency score summary for direct dependencies."""
+    name_counts = Counter(pkg for _eco, pkg in direct_packages)
+    summary: dict[str, int] = {}
+
+    for eco, pkg in direct_packages:
+        result = results_map.get((eco, pkg))
+        if not result:
+            continue
+        display_name = f"{eco}:{pkg}" if name_counts[pkg] > 1 else pkg
+        summary[display_name] = result.total_score
+
+    return summary
+
+
 def _write_json_results(
     results: list[AnalysisResult],
     profile: str,
     output_file: Path | None,
+    dependency_summary: dict[str, int] | None = None,
 ) -> None:
     """Write results as JSON to stdout or a file."""
     payload = {
@@ -271,6 +306,8 @@ def _write_json_results(
         "summary": _build_summary(results),
         "results": [analysis_result_to_dict(result) for result in results],
     }
+    if dependency_summary:
+        payload["dependency_summary"] = dependency_summary
     json_text = json.dumps(payload, ensure_ascii=False, indent=2)
     if output_file:
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -299,7 +336,11 @@ def _load_report_template() -> str:
     return template_path.read_text(encoding="utf-8")
 
 
-def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
+def _render_html_report(
+    results: list[AnalysisResult],
+    profile: str,
+    dependency_summary: dict[str, int] | None = None,
+) -> str:
     """Render HTML report from template and results."""
 
     summary = _build_summary(results)
@@ -330,13 +371,16 @@ def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
             "</tr>"
         )
 
+    json_payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "profile": profile,
+        "summary": summary,
+        "results": [analysis_result_to_dict(result) for result in results],
+    }
+    if dependency_summary:
+        json_payload["dependency_summary"] = dependency_summary
     json_payload = json.dumps(
-        {
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "profile": profile,
-            "summary": summary,
-            "results": [analysis_result_to_dict(result) for result in results],
-        },
+        json_payload,
         ensure_ascii=False,
         indent=2,
     )
@@ -357,6 +401,7 @@ def _write_html_results(
     results: list[AnalysisResult],
     profile: str,
     output_file: Path | None,
+    dependency_summary: dict[str, int] | None = None,
 ) -> None:
     """Write results as HTML to a file."""
     output_path = output_file or Path("oss-sustain-guard-report.html")
@@ -365,13 +410,15 @@ def _write_html_results(
         raise IsADirectoryError(f"Output path is a directory: {output_path}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    html_text = _render_html_report(results, profile)
+    html_text = _render_html_report(results, profile, dependency_summary)
     output_path.write_text(html_text, encoding="utf-8")
     console.print(f"[green]✅ HTML report saved to {output_path}[/green]")
 
 
 def display_results_compact(
-    results: list[AnalysisResult], show_dependencies: bool = False
+    results: list[AnalysisResult],
+    show_dependencies: bool = False,
+    dependency_summary: dict[str, int] | None = None,
 ):
     """Display analysis results in compact format (CI/CD-friendly)."""
     for result in results:
@@ -420,11 +467,22 @@ def display_results_compact(
                     f"  🔗 Dependencies: avg={avg_score:.0f}, min={min_score}, max={max_score}, count={len(scores)}"
                 )
 
+    if dependency_summary:
+        scores = list(dependency_summary.values())
+        if scores:
+            avg_score = sum(scores) / len(scores)
+            min_score = min(scores)
+            max_score = max(scores)
+            console.print(
+                f"🔗 Dependencies: avg={avg_score:.0f}, min={min_score}, max={max_score}, count={len(scores)}"
+            )
+
 
 def display_results_table(
     results: list[AnalysisResult],
     show_models: bool = False,
     show_dependencies: bool = False,
+    dependency_summary: dict[str, int] | None = None,
 ):
     """Display the analysis results in a rich table."""
     table = Table(title="OSS Sustain Guard Report")
@@ -506,6 +564,30 @@ def display_results_table(
                         f"   [dim]... and {len(result.dependency_scores) - 10} more dependencies[/dim]"
                     )
 
+    if dependency_summary:
+        console.print("\n🔗 Dependency Reference Scores (Top 10):")
+        sorted_deps = sorted(
+            dependency_summary.items(), key=lambda x: x[1], reverse=True
+        )
+        for dep_name, dep_score in sorted_deps[:10]:
+            if dep_score >= 80:
+                health = "[green]✓ Healthy[/green]"
+            elif dep_score >= 50:
+                health = "[yellow]⚠ Monitor[/yellow]"
+            else:
+                health = "[red]✗ Needs support[/red]"
+            score_color = (
+                "green" if dep_score >= 80 else ("yellow" if dep_score >= 50 else "red")
+            )
+            console.print(
+                f"   • [{score_color}]{dep_name}[/{score_color}] "
+                f"[{score_color}]{dep_score}/100[/{score_color}] {health}"
+            )
+        if len(dependency_summary) > 10:
+            console.print(
+                f"   [dim]... and {len(dependency_summary) - 10} more dependencies[/dim]"
+            )
+
     # Display CHAOSS metric models if available and requested
     if show_models:
         for result in results:
@@ -535,33 +617,44 @@ def display_results(
     output_file: Path | None = None,
     output_style: str = "normal",
     profile: str = "balanced",
+    dependency_summary: dict[str, int] | None = None,
 ) -> None:
     """Display or export analysis results by format."""
     if output_format in {"json", "html"}:
         try:
             if output_format == "json":
-                _write_json_results(results, profile, output_file)
+                _write_json_results(
+                    results, profile, output_file, dependency_summary=dependency_summary
+                )
             else:
-                _write_html_results(results, profile, output_file)
+                _write_html_results(
+                    results, profile, output_file, dependency_summary=dependency_summary
+                )
         except (FileNotFoundError, IsADirectoryError, OSError) as exc:
             console.print(f"[yellow]⚠️  Unable to write report: {exc}[/yellow]")
             raise typer.Exit(code=1) from exc
         return
 
     if output_style == "compact":
-        display_results_compact(results, show_dependencies=show_dependencies)
+        display_results_compact(
+            results,
+            show_dependencies=show_dependencies,
+            dependency_summary=dependency_summary,
+        )
     elif output_style == "detail":
         display_results_detailed(
             results,
             show_signals=True,
             show_models=show_models,
             profile=profile,
+            dependency_summary=dependency_summary,
         )
     else:
         display_results_table(
             results,
             show_models=show_models,
             show_dependencies=show_dependencies,
+            dependency_summary=dependency_summary,
         )
 
 
@@ -570,6 +663,7 @@ def display_results_detailed(
     show_signals: bool = False,
     show_models: bool = False,
     profile: str = "balanced",
+    dependency_summary: dict[str, int] | None = None,
 ):
     """Display detailed analysis results with all metrics for each package."""
     # Get weights for current profile
@@ -735,6 +829,44 @@ def display_results_detailed(
 
             console.print(deps_table)
 
+    if dependency_summary:
+        console.print(
+            "\n🔗 [bold magenta]Dependency Reference Scores (Top 15):[/bold magenta]"
+        )
+        deps_table = Table(show_header=True, header_style="bold cyan")
+        deps_table.add_column("Package", style="cyan", no_wrap=True)
+        deps_table.add_column("Score", justify="center", style="magenta")
+        deps_table.add_column("Health", justify="left")
+
+        sorted_deps = sorted(
+            dependency_summary.items(), key=lambda x: x[1], reverse=True
+        )
+        for dep_name, dep_score in sorted_deps[:15]:
+            if dep_score >= 80:
+                health = "[green]Healthy[/green]"
+            elif dep_score >= 50:
+                health = "[yellow]Monitor[/yellow]"
+            else:
+                health = "[red]Needs support[/red]"
+
+            score_color = (
+                "green" if dep_score >= 80 else ("yellow" if dep_score >= 50 else "red")
+            )
+            deps_table.add_row(
+                dep_name,
+                f"[{score_color}]{dep_score}/100[/{score_color}]",
+                health,
+            )
+
+        if len(dependency_summary) > 15:
+            deps_table.add_row(
+                f"[dim]... and {len(dependency_summary) - 15} more[/dim]",
+                "",
+                "",
+            )
+
+        console.print(deps_table)
+
 
 def analyze_packages_parallel(
     packages_data: list[tuple[str, str]],
@@ -742,7 +874,7 @@ def analyze_packages_parallel(
     profile: str = "balanced",
     enable_dependents: bool = False,
     show_dependencies: bool = False,
-    lockfile_path: str | Path | None = None,
+    lockfile_path: str | Path | dict[str, Path] | None = None,
     verbose: bool = False,
     use_local_cache: bool = True,
     max_workers: int = 5,
@@ -757,7 +889,7 @@ def analyze_packages_parallel(
         profile: Scoring profile name.
         enable_dependents: Enable dependents analysis.
         show_dependencies: Analyze and include dependency scores.
-        lockfile_path: Path to lockfile for dependency analysis.
+        lockfile_path: Path to lockfile for dependency analysis (or mapping by ecosystem).
         verbose: If True, display cache source information.
         use_local_cache: If False, skip local cache lookup.
         max_workers: Maximum number of parallel workers (default: 5).
@@ -840,6 +972,16 @@ def analyze_packages_parallel(
                         dependency_scores={},
                         ecosystem=ecosystem,
                     )
+                    resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
+                    if show_dependencies and resolved_lockfile:
+                        dep_scores = _analyze_dependencies_for_package(
+                            ecosystem,
+                            resolved_lockfile,
+                            db,
+                            pkg,
+                            profile,
+                        )
+                        result = result._replace(dependency_scores=dep_scores)
                     results_map[idx] = result
                     progress.advance(task)
                     continue
@@ -889,6 +1031,18 @@ def analyze_packages_parallel(
                     if result:
                         # Add ecosystem to result
                         result = result._replace(ecosystem=ecosystem)
+                        resolved_lockfile = _resolve_lockfile_path(
+                            ecosystem, lockfile_path
+                        )
+                        if show_dependencies and resolved_lockfile:
+                            dep_scores = _analyze_dependencies_for_package(
+                                ecosystem,
+                                resolved_lockfile,
+                                db,
+                                pkg,
+                                profile,
+                            )
+                            result = result._replace(dependency_scores=dep_scores)
 
                         _cache_analysis_result(ecosystem, pkg, result)
 
@@ -1057,6 +1211,18 @@ def parse_package_spec(spec: str) -> tuple[str, str]:
         return "python", spec  # Default to Python for backward compatibility
 
 
+def _resolve_lockfile_path(
+    ecosystem: str,
+    lockfile_path: str | Path | dict[str, Path] | None,
+) -> Path | None:
+    """Resolve the lockfile path for a given ecosystem."""
+    if lockfile_path is None:
+        return None
+    if isinstance(lockfile_path, dict):
+        return lockfile_path.get(ecosystem)
+    return Path(lockfile_path)
+
+
 def analyze_package(
     package_name: str,
     ecosystem: str,
@@ -1064,7 +1230,7 @@ def analyze_package(
     profile: str = "balanced",
     enable_dependents: bool = False,
     show_dependencies: bool = False,
-    lockfile_path: str | Path | None = None,
+    lockfile_path: str | Path | dict[str, Path] | None = None,
     verbose: bool = False,
     use_local_cache: bool = True,
 ) -> AnalysisResult | None:
@@ -1078,7 +1244,7 @@ def analyze_package(
         profile: Scoring profile name.
         enable_dependents: Enable dependents analysis.
         show_dependencies: Analyze and include dependency scores.
-        lockfile_path: Path to lockfile for dependency analysis.
+        lockfile_path: Path to lockfile for dependency analysis (or mapping by ecosystem).
         verbose: If True, display cache source information.
         use_local_cache: If False, skip local cache lookup.
 
@@ -1150,9 +1316,10 @@ def analyze_package(
             )
 
             # If show_dependencies is requested, analyze dependencies
-            if show_dependencies and lockfile_path:
+            resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
+            if show_dependencies and resolved_lockfile:
                 dep_scores = _analyze_dependencies_for_package(
-                    ecosystem, lockfile_path, db, package_name, profile
+                    ecosystem, resolved_lockfile, db, package_name, profile
                 )
                 result = result._replace(dependency_scores=dep_scores)
 
@@ -1211,9 +1378,10 @@ def analyze_package(
         console.print("    [dim]💾 Cached for future use[/dim]")
 
         # If show_dependencies is requested, analyze dependencies
-        if show_dependencies and lockfile_path:
+        resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
+        if show_dependencies and resolved_lockfile:
             dep_scores = _analyze_dependencies_for_package(
-                ecosystem, lockfile_path, db, package_name, profile
+                ecosystem, resolved_lockfile, db, package_name, profile
             )
             analysis_result = analysis_result._replace(dependency_scores=dep_scores)
 
@@ -1438,6 +1606,7 @@ def check(
     db = load_database(use_cache=use_cache, use_local_cache=use_local, verbose=verbose)
     results_to_display = []
     packages_to_analyze: list[tuple[str, str]] = []  # (ecosystem, package_name)
+    direct_packages: list[tuple[str, str]] = []
 
     # Handle --manifest option (direct manifest file specification)
     if manifest:
@@ -1505,6 +1674,7 @@ def check(
             )
             for pkg_info in manifest_packages:
                 packages_to_analyze.append((detected_eco, pkg_info.name))
+                direct_packages.append((detected_eco, pkg_info.name))
         except Exception as e:
             console.print(f"[yellow]⚠️  Unable to parse {manifest_name}: {e}[/yellow]")
             console.print(
@@ -1570,6 +1740,7 @@ def check(
                         )
                         for pkg_info in manifest_packages:
                             packages_to_analyze.append((detected_eco, pkg_info.name))
+                            direct_packages.append((detected_eco, pkg_info.name))
                     except Exception as e:
                         console.print(
                             f"   [dim]Note: Unable to parse {manifest_path.name} - {e}[/dim]"
@@ -1642,6 +1813,7 @@ def check(
                     if ecosystem != "auto":
                         eco = ecosystem
                     packages_to_analyze.append((eco, pkg_name))
+                    direct_packages.append((eco, pkg_name))
         else:
             # Parse command-line package specifications
             for pkg_spec in packages:
@@ -1650,16 +1822,11 @@ def check(
                 if ecosystem != "auto" and ":" not in pkg_spec:
                     eco = ecosystem
                 packages_to_analyze.append((eco, pkg_name))
+                direct_packages.append((eco, pkg_name))
 
     # Remove duplicates while preserving order
-    seen = set()
-    unique_packages = []
-    for eco, pkg in packages_to_analyze:
-        key = f"{eco}:{pkg}"
-        if key not in seen:
-            seen.add(key)
-            unique_packages.append((eco, pkg))
-    packages_to_analyze = unique_packages
+    packages_to_analyze = _dedupe_packages(packages_to_analyze)
+    direct_packages = _dedupe_packages(direct_packages)
 
     console.print(f"🔍 Analyzing {len(packages_to_analyze)} package(s)...")
 
@@ -1693,14 +1860,11 @@ def check(
         else:
             packages_to_process.append((eco, pkg_name))
 
+    result_map: dict[tuple[str, str], AnalysisResult] = {}
+
     # Parallel analysis for multiple packages
     if packages_to_process:
-        # Get lockfile for first ecosystem (assuming uniform ecosystem in batch)
-        # For mixed ecosystems, this needs to be passed per-package
-        lockfile = None
-        if show_dependencies and packages_to_process:
-            first_eco = packages_to_process[0][0]
-            lockfile = lockfiles_map.get(first_eco)
+        lockfile = lockfiles_map if show_dependencies else None
 
         # Use parallel processing for better performance
         results = analyze_packages_parallel(
@@ -1715,8 +1879,19 @@ def check(
             max_workers=5,  # Adjust based on GitHub API rate limits
         )
 
+        result_map = {
+            packages_to_process[idx]: result
+            for idx, result in enumerate(results)
+            if result is not None
+        }
+
         # Filter out None results
         results_to_display = [r for r in results if r is not None]
+
+    dependency_summary = None
+    summary_packages = direct_packages or packages_to_process
+    if show_dependencies and lockfiles_map and summary_packages:
+        dependency_summary = _build_dependency_summary(summary_packages, result_map)
 
     if results_to_display:
         display_results(
@@ -1727,6 +1902,7 @@ def check(
             output_file=output_file,
             output_style=output_style,
             profile=profile,
+            dependency_summary=dependency_summary,
         )
         if excluded_count > 0:
             console.print(

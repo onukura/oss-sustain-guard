@@ -177,7 +177,7 @@ def _query_github_graphql(query: str, variables: dict[str, Any]) -> dict[str, An
             "To get started:\n"
             "1. Create a GitHub Personal Access Token (classic):\n"
             "   → https://github.com/settings/tokens/new\n"
-            "2. Select scopes: 'public_repo' (for public repositories)\n"
+            "2. Select scopes: 'public_repo' and 'security_events'\n"
             "3. Set the token:\n"
             "   export GITHUB_TOKEN='your_token_here'  # Linux/macOS\n"
             "   or add to your .env file: GITHUB_TOKEN=your_token_here\n"

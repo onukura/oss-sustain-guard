@@ -11,8 +11,8 @@ import tomllib
 from pathlib import Path
 from typing import Union
 
-# project_root is the parent directory of oss_sustain_guard/
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# PROJECT_ROOT defaults to the current working directory for config discovery
+PROJECT_ROOT = Path.cwd()
 
 # Global configuration for SSL verification
 # Default: None (uses environment variable or default True)

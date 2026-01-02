@@ -14,7 +14,7 @@ ValueError: GITHUB_TOKEN environment variable is required.
 To get started:
 1. Create a GitHub Personal Access Token (classic):
    → https://github.com/settings/tokens/new
-2. Select scopes: 'public_repo' (for public repositories)
+2. Select scopes: 'public_repo' and 'security_events'
 3. Set the token:
    export GITHUB_TOKEN='your_token_here'  # Linux/macOS
    or add to your .env file: GITHUB_TOKEN=your_token_here
@@ -37,7 +37,7 @@ os4g check requests  # Now works
 1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens/new)
 2. Click "Generate new token (classic)"
 3. Token name: `oss-sustain-guard` (or any name you prefer)
-4. Select `public_repo` scope (read-only access to public repositories)
+4. Select `public_repo` and `security_events` scopes (read-only access to public repositories)
 5. Click "Generate token" and **copy it immediately** (you won't see it again)
 6. Set the environment variable:
 

@@ -768,6 +768,41 @@ def test_get_package_dependencies_package_lock_json():
         assert deps == []
 
 
+def test_get_package_dependencies_yarn_lock():
+    """Test extracting dependencies for a package from yarn.lock."""
+    yarn_lock_content = """
+lodash@^4.17.21:
+  version "4.17.21"
+  dependencies:
+    foo "^1.0.0"
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "yarn.lock"
+        lockfile_path.write_text(yarn_lock_content)
+
+        deps = get_package_dependencies(lockfile_path, "lodash")
+        assert deps == ["foo"]
+
+
+def test_get_package_dependencies_pnpm_lock():
+    """Test extracting dependencies for a package from pnpm-lock.yaml."""
+    pnpm_lock_content = """
+lockfileVersion: '6.0'
+packages:
+  /lodash/4.17.21:
+    dependencies:
+      foo: 1.0.0
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "pnpm-lock.yaml"
+        lockfile_path.write_text(pnpm_lock_content)
+
+        deps = get_package_dependencies(lockfile_path, "lodash")
+        assert deps == ["foo"]
+
+
 def test_get_package_dependencies_nonexistent_file():
     """Test get_package_dependencies with non-existent file."""
     deps = get_package_dependencies("/nonexistent/path/uv.lock", "requests")

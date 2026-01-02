@@ -293,9 +293,9 @@ def _parse_npm_lock(
             # Root package
             continue
 
-        # Count "/" to determine depth
-        depth = pkg_spec.count("/") - 1
-        name = pkg_spec.split("/")[-1]
+        name, depth = _extract_npm_path_info(pkg_spec)
+        if not name:
+            continue
         version = pkg_data.get("version", "")
 
         dep_info = DependencyInfo(
@@ -424,6 +424,18 @@ def get_package_dependencies(lockfile_path: str | Path, package_name: str) -> li
             return _get_pipfile_package_dependencies(lockfile_path, package_name_lower)
         elif filename == "package-lock.json":
             return _get_npm_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "yarn.lock":
+            return _get_yarn_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "pnpm-lock.yaml":
+            return _get_pnpm_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "Cargo.lock":
+            return _get_cargo_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "Gemfile.lock":
+            return _get_gemfile_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "composer.lock":
+            return _get_composer_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "go.sum":
+            return _get_go_package_dependencies(lockfile_path, package_name_lower)
         else:
             return []
     except Exception:
@@ -500,14 +512,272 @@ def _get_npm_package_dependencies(
     for path, pkg_data in packages.items():
         name = pkg_data.get("name", "")
         if not name and path:
-            # Extract name from path (e.g., "node_modules/package-name")
-            parts = path.split("/")
-            if len(parts) >= 2 and parts[0] == "node_modules":
-                name = "/".join(parts[1:])  # Handle scoped packages
+            name, _depth = _extract_npm_path_info(path)
 
-        if name.lower() == package_name_lower:
+        if name and name.lower() == package_name_lower:
             dependencies = pkg_data.get("dependencies", {})
             if isinstance(dependencies, dict):
                 return list(dependencies.keys())
             return []
     return []
+
+
+def _get_yarn_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from yarn.lock."""
+    content = lockfile_path.read_text(encoding="utf-8")
+    deps_by_package: dict[str, set[str]] = {}
+    current_packages: list[str] = []
+    in_dependencies = False
+
+    for line in content.splitlines():
+        if not line.strip():
+            current_packages = []
+            in_dependencies = False
+            continue
+
+        if not line.startswith(" ") and line.endswith(":"):
+            header = line.rstrip(":")
+            descriptors = [part.strip() for part in header.split(",")]
+            current_packages = []
+            for descriptor in descriptors:
+                name = _extract_yarn_package_name(descriptor)
+                if not name:
+                    continue
+                name_key = name.lower()
+                current_packages.append(name_key)
+                deps_by_package.setdefault(name_key, set())
+            in_dependencies = False
+            continue
+
+        stripped = line.strip()
+        if stripped == "dependencies:":
+            in_dependencies = True
+            continue
+
+        if in_dependencies:
+            if line.startswith("    "):
+                dep_name = stripped.split(" ", 1)[0].strip('"')
+                for pkg_name in current_packages:
+                    deps_by_package[pkg_name].add(dep_name)
+            else:
+                in_dependencies = False
+
+    return sorted(deps_by_package.get(package_name_lower, []))
+
+
+def _extract_yarn_package_name(descriptor: str) -> str | None:
+    """Extract package name from a yarn.lock descriptor."""
+    cleaned = descriptor.strip().strip('"').strip("'")
+    if not cleaned:
+        return None
+
+    if cleaned.startswith("@"):
+        at_index = cleaned.find("@", 1)
+        if at_index == -1:
+            return cleaned
+        return cleaned[:at_index]
+
+    return cleaned.split("@", 1)[0]
+
+
+def _get_pnpm_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from pnpm-lock.yaml."""
+    try:
+        import yaml
+    except ImportError:
+        return []
+
+    with open(lockfile_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+
+    packages = data.get("packages", {})
+    deps: set[str] = set()
+
+    for key, pkg_data in packages.items():
+        name = _extract_pnpm_package_name(str(key))
+        if not name or name.lower() != package_name_lower:
+            continue
+
+        for section in ("dependencies", "optionalDependencies", "peerDependencies"):
+            section_data = pkg_data.get(section, {})
+            if isinstance(section_data, dict):
+                deps.update(section_data.keys())
+
+    return sorted(deps)
+
+
+def _extract_pnpm_package_name(package_key: str) -> str | None:
+    """Extract package name from pnpm-lock package key."""
+    if not package_key:
+        return None
+
+    trimmed = package_key.lstrip("/")
+    if not trimmed:
+        return None
+
+    parts = trimmed.split("/")
+    if not parts:
+        return None
+
+    if parts[0].startswith("@") and len(parts) >= 2:
+        return "/".join(parts[:2])
+    return parts[0]
+
+
+def _get_cargo_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from Cargo.lock."""
+    with open(lockfile_path, "rb") as f:
+        data = tomllib.load(f)
+
+    for package in data.get("package", []):
+        name = package.get("name", "")
+        if name.lower() != package_name_lower:
+            continue
+        dependencies = package.get("dependencies", [])
+        dep_names = []
+        for dep in dependencies:
+            if isinstance(dep, str):
+                dep_name = dep.split(" ", 1)[0]
+                if dep_name:
+                    dep_names.append(dep_name)
+        return dep_names
+    return []
+
+
+def _get_gemfile_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from Gemfile.lock."""
+    content = lockfile_path.read_text(encoding="utf-8")
+    deps_by_package: dict[str, set[str]] = {}
+    current_pkg: str | None = None
+    in_specs = False
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped == "specs:":
+            in_specs = True
+            continue
+
+        if in_specs and line and not line.startswith(" "):
+            in_specs = False
+            current_pkg = None
+
+        if not in_specs:
+            continue
+
+        if line.startswith("    ") and not line.startswith("      ") and "(" in line:
+            name = line.strip().split(" (", 1)[0]
+            current_pkg = name.lower()
+            deps_by_package.setdefault(current_pkg, set())
+            continue
+
+        if current_pkg and line.startswith("      "):
+            dep_name = stripped.split(" ", 1)[0]
+            deps_by_package[current_pkg].add(dep_name)
+
+    return sorted(deps_by_package.get(package_name_lower, []))
+
+
+def _get_composer_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from composer.lock."""
+    with open(lockfile_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    for pkg in data.get("packages", []):
+        name = pkg.get("name", "")
+        if name.lower() != package_name_lower:
+            continue
+
+        deps: dict[str, object] = {}
+        for section in ("require", "require-dev"):
+            section_data = pkg.get(section, {})
+            if isinstance(section_data, dict):
+                deps.update(section_data)
+
+        dep_names = [
+            dep
+            for dep in deps.keys()
+            if dep != "php"
+            and not dep.startswith("ext-")
+            and not dep.startswith("lib-")
+        ]
+        return dep_names
+    return []
+
+
+def _get_go_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a module from go.mod when go.sum is present."""
+    go_mod_path = lockfile_path.with_name("go.mod")
+    if not go_mod_path.exists():
+        return []
+
+    module_name = None
+    dependencies: list[str] = []
+    in_require = False
+
+    for line in go_mod_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("module "):
+            module_name = stripped.split(" ", 1)[1].strip()
+            continue
+
+        if stripped == "require (":
+            in_require = True
+            continue
+
+        if in_require and stripped == ")":
+            in_require = False
+            continue
+
+        if in_require:
+            if stripped and not stripped.startswith("//"):
+                parts = stripped.split()
+                if parts:
+                    dependencies.append(parts[0])
+            continue
+
+        if stripped.startswith("require ") and "(" not in stripped:
+            parts = stripped.replace("require ", "").split()
+            if parts:
+                dependencies.append(parts[0])
+
+    if module_name and module_name.lower() == package_name_lower:
+        return dependencies
+    return []
+
+
+def _extract_npm_path_info(path: str) -> tuple[str | None, int]:
+    """Extract npm package name and depth from a package-lock path."""
+    if not path:
+        return None, 0
+
+    parts = path.split("/")
+    node_modules_indices = [
+        idx for idx, part in enumerate(parts) if part == "node_modules"
+    ]
+    if not node_modules_indices:
+        return None, 0
+
+    last_index = node_modules_indices[-1]
+    name_parts = parts[last_index + 1 :]
+    if not name_parts:
+        return None, 0
+
+    if name_parts[0].startswith("@") and len(name_parts) >= 2:
+        name = "/".join(name_parts[:2])
+    else:
+        name = name_parts[0]
+
+    depth = len(node_modules_indices) - 1
+    return name, depth

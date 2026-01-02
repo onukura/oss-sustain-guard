@@ -211,19 +211,17 @@ class JavaScriptResolver(LanguageResolver):
             packages_obj = data.get("packages", {})
             for package_path in packages_obj.keys():
                 if package_path and package_path != ".":
-                    # Extract package name from path (e.g., "node_modules/lodash" -> "lodash")
-                    parts = package_path.split("/")
-                    if len(parts) >= 2:
-                        package_name = parts[-1]
-                        # Avoid duplicates
-                        if not any(p.name == package_name for p in packages):
-                            packages.append(
-                                PackageInfo(
-                                    name=package_name,
-                                    ecosystem="javascript",
-                                    version=packages_obj[package_path].get("version"),
-                                )
+                    package_name = _extract_npm_package_name(package_path)
+                    if package_name and not any(
+                        p.name == package_name for p in packages
+                    ):
+                        packages.append(
+                            PackageInfo(
+                                name=package_name,
+                                ecosystem="javascript",
+                                version=packages_obj[package_path].get("version"),
                             )
+                        )
 
             return packages
         except Exception:
@@ -319,3 +317,22 @@ class JavaScriptResolver(LanguageResolver):
             ]
         except Exception:
             return []
+
+
+def _extract_npm_package_name(package_path: str) -> str | None:
+    """Extract an npm package name from a package-lock path."""
+    parts = package_path.split("/")
+    node_modules_indices = [
+        idx for idx, part in enumerate(parts) if part == "node_modules"
+    ]
+    if not node_modules_indices:
+        return None
+
+    last_index = node_modules_indices[-1]
+    name_parts = parts[last_index + 1 :]
+    if not name_parts:
+        return None
+
+    if name_parts[0].startswith("@") and len(name_parts) >= 2:
+        return "/".join(name_parts[:2])
+    return name_parts[0]

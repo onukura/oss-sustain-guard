@@ -25,7 +25,7 @@ This is needed because the tool fetches repository data directly from GitHub's A
 ### Quick Setup (3 steps)
 
 **1. Create a token:**
-Visit [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a classic token with `public_repo` scope.
+Visit [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a classic token with `public_repo` and `security_events` scopes.
 
 **2. Set the environment variable:**
 
@@ -52,7 +52,7 @@ os4g check requests
 > - Authenticated requests get 5,000 requests/hour
 > - Package analysis requires multiple API calls per repository
 >
-> **Security:** The token only needs `public_repo` scope (read access to public repositories). Never commit tokens to version control.
+> **Security:** The token only needs `public_repo` and `security_events` scopes for public repositories. Never commit tokens to version control.
 
 ## 🚀 First Steps
 
@@ -158,7 +158,7 @@ os4g check requests --no-cache
 
    - Visit: <https://github.com/settings/tokens/new>
    - Token name: `oss-sustain-guard`
-   - Select scopes: ✓ `public_repo` (for public repositories)
+   - Select scopes: ✓ `public_repo`, ✓ `security_events`
    - Click "Generate token" and **copy it immediately**
 
 2. **Set the token:**

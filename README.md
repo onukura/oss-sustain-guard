@@ -52,7 +52,7 @@ Metrics are one lens among many; they work best alongside project context and re
 # Install
 pip install oss-sustain-guard
 
-# Set GitHub token (required for all package analysis)
+# Set GitHub token (classic) with public_repo and security_events scopes
 export GITHUB_TOKEN='your_token_here'  # Get from: https://github.com/settings/tokens/new
 
 # Real-time analysis currently supports GitHub-hosted repositories
