@@ -13,10 +13,11 @@ description: Interactive release workflow for OSS Sustain Guard with version upd
 # 1. Verify local setup
 make test && make lint && make doc-build
 
-# 2. Update version
+# 2. Analyze changes & update version
+# - Run: git log --oneline to see actual changes
 # - Edit pyproject.toml: change version
 # - Run: uv sync
-# - Edit CHANGELOG.md: add new section with changes
+# - Edit CHANGELOG.md: add new section based on actual changes
 
 # 3. Commit and tag
 git add pyproject.toml uv.lock CHANGELOG.md
@@ -28,8 +29,9 @@ git push origin vX.Y.Z
 # → Go to: https://github.com/onukura/oss-sustain-guard/actions
 # → Wait for all jobs to succeed
 
-# 5. Get release notes template
-# → See output after push
+# 5. Prepare English release notes
+# → Claude will generate English release notes based on CHANGELOG
+# → Copy to GitHub Releases description
 ```
 
 ## The 5 Steps
@@ -54,6 +56,16 @@ Use [Semantic Versioning](https://semver.org/):
 
 ### 3️⃣ Update Files
 
+**Step 1: Analyze actual changes**
+
+View what changed since last version:
+
+```bash
+git log --oneline --since="2 weeks ago"
+# Or compare with last tag:
+git log --oneline v0.14.0..HEAD
+```
+
 **pyproject.toml** - Change version:
 
 ```toml
@@ -66,15 +78,25 @@ version = "0.15.0"
 uv sync
 ```
 
-**CHANGELOG.md** - Add at top:
+**CHANGELOG.md** - Add at top based on actual changes:
 
 ```markdown
 ## v0.15.0 - 2026-01-20
 
-- Added: new feature
-- Fixed: bug description
-- Improved: enhancement
+### Added
+- New metric for repository visibility
+- Support for Dart package resolver
+
+### Fixed
+- Bug in cache invalidation logic
+- Memory leak in GraphQL client
+
+### Improved
+- Performance optimization in dependency analysis
+- Better error messages for network timeouts
 ```
+
+> **Important:** Write CHANGELOG entries based on the actual `git log` output from your recent commits, not generic templates.
 
 ### 4️⃣ Commit & Tag
 
@@ -100,19 +122,42 @@ GitHub Actions → build → publish-to-pypi → github-release
 - [ ] Release appears on GitHub Releases
 - [ ] Can install: `pip install oss-sustain-guard==0.15.0`
 
+### 6️⃣ Generate & Publish English Release Notes ⭐ **REQUIRED**
+
+After verifying the release on PyPI and GitHub, Claude will:
+
+1. **Read your CHANGELOG.md** to understand actual changes
+2. **Generate professional English release notes** with:
+   - Executive summary of the release
+   - Feature highlights with descriptions
+   - Bug fixes and improvements
+   - Migration notes (if breaking changes)
+   - Contributor appreciation
+3. **Provide formatted text** ready to copy/paste to GitHub Releases
+
+**You will:**
+- Copy the generated English release notes to GitHub Releases description
+- Update any version-specific links or instructions if needed
+
+This ensures your release has comprehensive documentation for all users.
+
 ## What Happens Automatically
 
 ✅ Build Python package
 ✅ Upload to PyPI (Trusted Publishing)
 ✅ Sign artifacts with Sigstore
 ✅ Create GitHub Release
-✅ Generate release notes template (see output)
+✅ **Claude generates English release notes** (based on CHANGELOG.md)
 
 ## GitHub Release Notes Template
 
-After release completes, you'll see a template ready to copy/paste to your GitHub Release description.
+🎯 **After PyPI release completes**, you'll receive:
 
-> The script will provide this automatically when you run `release.sh`
+1. **English release notes** based on your CHANGELOG.md
+2. **Ready-to-copy formatting** for GitHub Releases
+3. **Professional structure** with sections for features, fixes, improvements
+
+> Claude will automatically generate and present these - no need to ask!
 
 ## Need More Details?
 
@@ -123,6 +168,9 @@ See bundled references:
 
 ## Common Questions
 
+**Q: How do I write good CHANGELOG entries?**
+A: Review your actual commits with `git log --oneline` and group them by type (Added, Fixed, Improved). Use clear, user-focused language.
+
 **Q: What if tests fail?**
 A: Fix the issue and commit before running the release commands.
 
@@ -132,5 +180,5 @@ A: Delete the tag (`git tag -d vX.Y.Z && git push origin :vX.Y.Z`) before PyPI p
 **Q: Tag created but pipeline didn't start?**
 A: Verify tag format is `vX.Y.Z` (must start with 'v'). See troubleshooting docs.
 
-**Q: Want to see release notes first?**
-A: Use `release.sh` script - it shows release notes before pushing to remote.
+**Q: Do I need to ask Claude for release notes?**
+A: No! Claude will automatically generate English release notes after you verify the PyPI release. Just ask "Create release notes" when ready.
