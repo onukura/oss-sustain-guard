@@ -2,7 +2,7 @@
 
 OSS Sustain Guard is a multi-language package sustainability analyzer that helps you understand the health of your dependencies across ecosystems. The tool provides constructive insights about maintainer activity, community engagement, security posture, and funding signals so teams can make informed decisions about the projects they rely on.
 
-![CLI demo showing an analyzed package](assets/demo01.png)
+![CLI demo showing an analyzed package](assets/os4g-demo.gif)
 
 ## Why OSS Sustain Guard?
 

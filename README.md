@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/Documentation-Online-blue)](https://onukura.github.io/oss-sustain-guard/)
 
-![demo](./docs/assets/demo01.png)
+![demo](./docs/assets/os4g-demo.gif)
 
 **Multi-language package sustainability analyzer** - Evaluate your dependencies' health with 24 metrics including Contributor Redundancy, Maintainer Retention, and Security Signals.
 
