@@ -4,6 +4,7 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/oss-sustain-guard)](https://pypi.org/project/oss-sustain-guard/)
 [![PyPI - Version](https://img.shields.io/pypi/v/oss-sustain-guard)](https://pypi.org/project/oss-sustain-guard/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/Documentation-Online-blue)](https://onukura.github.io/oss-sustain-guard/)
 
 ![demo](./docs/assets/demo01.png)
 
@@ -14,13 +15,6 @@
 Every time a high-profile OSS incident makes the news, I find myself wondering about the packages I rely on right now. I could visit GitHub and skim issues, pull requests, and activity to get a rough sense, but it is not easy. When you depend on tens or hundreds of packages, plus their dependencies, it becomes nearly impossible, and you usually do not notice until something goes wrong.
 
 The libraries that support my work might be under heavy strain, and their own dependencies might be too. OSS Sustain Guard was built to answer those questions and to create moments where users can see the state of maintainers and communities. The first step is simple awareness.
-
-> 📌 **Quick Notes:**
->
-> - **Local caching** - Popular packages served from efficient local cache for faster results
-> - **SSL verification** - Use `--insecure` flag to disable SSL verification for development/testing only
-> - **Package resolution** - If a package cannot be resolved to a GitHub repository, it will be skipped with a notification
-> - **Full documentation** - <https://onukura.github.io/oss-sustain-guard/>
 
 ## 💡 Project Philosophy
 
