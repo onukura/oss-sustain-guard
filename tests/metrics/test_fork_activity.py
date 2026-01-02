@@ -336,7 +336,7 @@ class TestForkActivity:
         repo_data = {"forkCount": 0, "forks": {"edges": []}}
         context = MetricContext(owner="owner", name="repo", repo_url="url")
         result = METRIC.checker(repo_data, context)
-        assert result.name == "Active Fork Analysis"
+        assert result.name == "Fork Activity"
 
     def test_fork_activity_metric_spec_on_error(self):
         """Test MetricSpec error handler formatting."""

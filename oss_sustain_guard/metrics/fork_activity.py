@@ -36,7 +36,7 @@ def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
     # No forks - new or niche project
     if fork_count == 0:
         return Metric(
-            "Active Fork Analysis",
+            "Fork Activity",
             0,
             max_score,
             "Note: No forks yet. Project may be new or niche.",
@@ -144,7 +144,7 @@ def check_fork_activity(repo_data: dict[str, Any]) -> Metric:
             risk = "Low"
             message = f"Limited: {fork_count} fork(s), no recent activity detected."
 
-    return Metric("Active Fork Analysis", score, max_score, message, risk)
+    return Metric("Fork Activity", score, max_score, message, risk)
 
 
 def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
@@ -162,7 +162,7 @@ def _on_error(error: Exception) -> Metric:
 
 
 METRIC = MetricSpec(
-    name="Active Fork Analysis",
+    name="Fork Activity",
     checker=_check,
     on_error=_on_error,
 )
