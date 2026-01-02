@@ -214,19 +214,6 @@ class GitLabProvider(BaseVCSProvider):
             }
             issuesEnabled
             wikiEnabled
-            securityPolicyProjectId
-            forks(first: 20) {
-              edges {
-                node {
-                  createdAt
-                  lastActivityAt
-                  namespace {
-                    fullPath
-                  }
-                }
-              }
-              count
-            }
             starCount
             forksCount
             description
@@ -305,8 +292,8 @@ class GitLabProvider(BaseVCSProvider):
         # GitLab doesn't expose vulnerability alerts via GraphQL (requires REST API)
         vulnerability_alerts = None
 
-        # Extract security policy
-        has_security_policy = project_info.get("securityPolicyProjectId") is not None
+        # GitLab doesn't have built-in security policy detection via GraphQL
+        has_security_policy = False
 
         # GitLab doesn't have built-in code of conduct detection
         code_of_conduct = None
@@ -317,12 +304,16 @@ class GitLabProvider(BaseVCSProvider):
         # Extract funding links (GitLab doesn't have built-in funding links)
         funding_links: list[dict[str, str]] = []
 
-        # Extract forks
-        forks_data = project_info.get("forks", {})
-        forks = [
-            self._normalize_fork(edge["node"]) for edge in forks_data.get("edges", [])
-        ]
-        total_forks = project_info.get("forksCount", len(forks))
+        # Fetch forks data
+        forks: list[dict[str, Any]] = []
+        total_forks = project_info.get("forksCount", 0)
+        try:
+            if total_forks > 0:
+                forks_data = self._fetch_forks(f"{owner}/{repo}")
+                forks = forks_data.get("forks", [])
+        except Exception:
+            # If forks fetch fails, continue with just the count
+            pass
 
         # GitLab CI/CD status (would require separate query)
         ci_status = None
@@ -366,12 +357,12 @@ class GitLabProvider(BaseVCSProvider):
             total_forks=total_forks,
             ci_status=ci_status,
             sample_counts=sample_counts,
-            raw_data=project_info,  # Keep original data for debugging
+            raw_data=None,  # Don't use raw_data to force proper reconstruction
         )
 
     def _fetch_commits(self, full_path: str) -> dict[str, Any]:
         """
-        Fetch commit data using a separate query.
+        Fetch commit data using GitLab REST API.
 
         Args:
             full_path: Full project path (owner/repo)
@@ -379,10 +370,102 @@ class GitLabProvider(BaseVCSProvider):
         Returns:
             Dictionary with commits list and total count
         """
-        # For now, return empty commits data
-        # Full commit history would require pagination through REST API
-        # GitLab GraphQL API has limited commit history support
-        return {"commits": [], "total_commits": 0}
+        try:
+            # URL encode the project path
+            import urllib.parse
+
+            encoded_path = urllib.parse.quote(full_path, safe="")
+
+            # Fetch commits via REST API (first 100 commits)
+            url = (
+                f"https://gitlab.com/api/v4/projects/{encoded_path}/repository/commits"
+            )
+            headers = {"Authorization": f"Bearer {self.token}"}
+            client = _get_http_client()
+
+            response = client.get(
+                url,
+                headers=headers,
+                params={"per_page": 100, "page": 1},
+                timeout=30,
+            )
+            response.raise_for_status()
+            commits_data = response.json()
+
+            # Normalize commits to GitHub format
+            commits = [
+                {
+                    "committedDate": commit.get("committed_date"),
+                    "author": {
+                        "name": commit.get("author_name"),
+                        "email": commit.get("author_email"),
+                        "user": {"login": commit.get("author_email", "").split("@")[0]}
+                        if commit.get("author_email")
+                        else None,
+                    },
+                }
+                for commit in commits_data
+            ]
+
+            # Get total commit count from project stats
+            stats_url = f"https://gitlab.com/api/v4/projects/{encoded_path}"
+            stats_response = client.get(
+                stats_url,
+                headers=headers,
+                timeout=30,
+            )
+            stats_response.raise_for_status()
+            project_data = stats_response.json()
+
+            # Get statistics if available
+            statistics = project_data.get("statistics", {})
+            total_commits = statistics.get("commit_count", len(commits))
+
+            return {"commits": commits, "total_commits": total_commits}
+
+        except Exception as e:
+            # If commit fetch fails, return empty data
+            # Log the error but don't fail the entire analysis
+            print(f"Warning: Failed to fetch commits for {full_path}: {e}")
+            return {"commits": [], "total_commits": 0}
+
+    def _fetch_forks(self, full_path: str) -> dict[str, Any]:
+        """
+        Fetch fork data using GitLab REST API.
+
+        Args:
+            full_path: Full project path (owner/repo)
+
+        Returns:
+            Dictionary with forks list
+        """
+        try:
+            import urllib.parse
+
+            encoded_path = urllib.parse.quote(full_path, safe="")
+
+            # Fetch forks via REST API (first 20 forks)
+            url = f"https://gitlab.com/api/v4/projects/{encoded_path}/forks"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            client = _get_http_client()
+
+            response = client.get(
+                url,
+                headers=headers,
+                params={"per_page": 20, "page": 1},
+                timeout=30,
+            )
+            response.raise_for_status()
+            forks_data = response.json()
+
+            # Normalize forks to GitHub format
+            forks = [self._normalize_fork(fork) for fork in forks_data]
+
+            return {"forks": forks}
+
+        except Exception as e:
+            print(f"Warning: Failed to fetch forks for {full_path}: {e}")
+            return {"forks": []}
 
     def _normalize_merge_request(self, mr_node: dict[str, Any]) -> dict[str, Any]:
         """Normalize GitLab merge request to GitHub PR format."""
@@ -425,13 +508,12 @@ class GitLabProvider(BaseVCSProvider):
         }
 
     def _normalize_fork(self, fork_node: dict[str, Any]) -> dict[str, Any]:
-        """Normalize GitLab fork to GitHub fork format."""
+        """Normalize GitLab fork (from REST API) to GitHub fork format."""
         return {
-            "createdAt": fork_node.get("createdAt"),
-            "pushedAt": fork_node.get("lastActivityAt"),
+            "createdAt": fork_node.get("created_at"),
+            "pushedAt": fork_node.get("last_activity_at"),
             "owner": {
-                "login": fork_node.get("namespace", {})
-                .get("fullPath", "")
-                .split("/")[0]
+                "login": fork_node.get("namespace", {}).get("path", "")
+                or fork_node.get("owner", {}).get("username", "")
             },
         }

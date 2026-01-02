@@ -758,20 +758,29 @@ def display_results_table(
     if show_models:
         for result in results:
             if result.models:
+                # Replace github.com or gitlab.com appropriately
+                repo_display = result.repo_url.replace(
+                    "https://github.com/", ""
+                ).replace("https://gitlab.com/", "gitlab:")
                 console.print(
-                    f"\n📊 [bold cyan]{result.repo_url.replace('https://github.com/', '')}[/bold cyan] "
-                    f"- CHAOSS Metric Models:"
+                    f"\n📊 [bold cyan]{repo_display}[/bold cyan] - CHAOSS Metric Models:"
                 )
                 for model in result.models:
+                    # Model is a list: [name, score, max_score, observation]
+                    model_name = model[0]
+                    model_score = model[1]
+                    model_max_score = model[2]
+                    model_observation = model[3]
+
                     # Color code based on model score
                     model_color = "green"
-                    if model.score < 50:
+                    if model_score < 50:
                         model_color = "red"
-                    elif model.score < 80:
+                    elif model_score < 80:
                         model_color = "yellow"
 
                     console.print(
-                        f"   • {model.name}: [{model_color}]{model.score}/{model.max_score}[/{model_color}] - {model.observation}"
+                        f"   • {model_name}: [{model_color}]{model_score}/{model_max_score}[/{model_color}] - {model_observation}"
                     )
 
 
@@ -1576,15 +1585,24 @@ def analyze_package(
         )
         return None
 
-    if repo_info.provider != "github":
-        console.print(
-            "  -> [yellow]ℹ️  Repository is hosted on "
-            f"{repo_info.provider.title()} ({repo_info.url}). "
-            "Real-time analysis currently supports GitHub only.[/yellow]"
-        )
-        return None
+    # Get provider and repository info
+    provider = repo_info.provider
 
-    owner, repo_name = repo_info.owner, repo_info.name
+    # For GitLab, use the full path; for GitHub, use owner/name
+    if provider == "gitlab":
+        # GitLab supports nested groups, so we need to split path into parent/repo
+        path_segments = repo_info.path.split("/")
+        if len(path_segments) < 2:
+            console.print(
+                f"  -> [yellow]ℹ️  Invalid repository path for {db_key}[/yellow]"
+            )
+            return None
+        # Owner is everything except the last segment (project name)
+        owner = "/".join(path_segments[:-1])
+        repo_name = path_segments[-1]
+    else:
+        owner, repo_name = repo_info.owner, repo_info.name
+
     if verbose:
         console.print(
             f"  -> 🔍 [bold yellow]{db_key}[/bold yellow] analyzing real-time (no cache)..."
@@ -1604,6 +1622,7 @@ def analyze_package(
             platform=platform,
             package_name=pkg_name,
             profile=profile,
+            vcs_platform=provider,
         )
 
         # Add ecosystem to result

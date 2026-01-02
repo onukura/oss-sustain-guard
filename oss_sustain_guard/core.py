@@ -197,7 +197,15 @@ def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
     """
     # Use raw_data if available (for GitHub), otherwise reconstruct from normalized data
     if vcs_data.raw_data:
-        return vcs_data.raw_data
+        repo_info = (
+            vcs_data.raw_data.copy()
+            if isinstance(vcs_data.raw_data, dict)
+            else vcs_data.raw_data
+        )
+        # Ensure sample_counts is included
+        if isinstance(repo_info, dict) and vcs_data.sample_counts:
+            repo_info["sample_counts"] = vcs_data.sample_counts
+        return repo_info
 
     # Reconstruct the structure that metrics expect
     # Handle case where commits or ci_status may be empty
@@ -262,6 +270,8 @@ def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
             "edges": [{"node": fork} for fork in vcs_data.forks],
         },
         "forkCount": vcs_data.total_forks,
+        # Include sample_counts from VCS data
+        "sample_counts": vcs_data.sample_counts,
     }
 
 
@@ -1203,6 +1213,11 @@ def analyze_repositories_batch(
 
 def _extract_sample_counts(repo_info: dict[str, Any]) -> dict[str, int]:
     """Extract actual sample counts from repository data."""
+    # If sample_counts already provided by VCS provider, use that
+    if "sample_counts" in repo_info and repo_info["sample_counts"]:
+        return repo_info["sample_counts"]
+
+    # Otherwise, extract from GraphQL structure (for GitHub or legacy data)
     samples = {}
 
     # Commits

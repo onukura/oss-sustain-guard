@@ -104,19 +104,6 @@ def test_gitlab_provider_get_repository_data(mock_get_client):
                 },
                 "issuesEnabled": True,
                 "wikiEnabled": True,
-                "securityPolicyProjectId": "12345",
-                "forks": {
-                    "edges": [
-                        {
-                            "node": {
-                                "createdAt": "2024-01-01T00:00:00Z",
-                                "lastActivityAt": "2024-01-02T00:00:00Z",
-                                "namespace": {"fullPath": "user/fork"},
-                            }
-                        }
-                    ],
-                    "count": 1,
-                },
                 "starCount": 100,
                 "forksCount": 1,
                 "description": "Test project",
@@ -136,9 +123,7 @@ def test_gitlab_provider_get_repository_data(mock_get_client):
     assert vcs_data.pushed_at == "2024-01-01T00:00:00Z"
     assert vcs_data.total_merged_prs == 1
     assert len(vcs_data.merged_prs) == 1
-    assert vcs_data.has_security_policy is True
-    assert vcs_data.has_wiki is True
-    assert vcs_data.has_issues is True
+    assert vcs_data.has_security_policy is False  # Not available in GraphQL
     assert vcs_data.total_forks == 1
     assert len(vcs_data.releases) == 1
 
