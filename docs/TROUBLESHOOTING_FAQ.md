@@ -394,7 +394,7 @@ When a package's source is detected on another platform (GitLab, Gitea, SourceFo
 - The team is exploring API integration possibilities with other major platforms
 - Check [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues) for progress and feature requests
 
-**Workaround:** If you need to analyze GitLab projects, consider opening an issue or contributing: [Contributing Guide](../CONTRIBUTING.md)
+**Workaround:** If you need to analyze GitLab projects, consider opening an issue or contributing to the project on GitHub.
 
 ### "Why is my analysis incomplete with 'Note: Unable to access this data'?"
 

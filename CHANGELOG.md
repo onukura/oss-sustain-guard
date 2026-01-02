@@ -2,6 +2,28 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.15.0 - 2026-01-02
+
+### Added
+- VCS abstraction layer for flexible version control system support.
+- Demo mode support for testing without actual API calls.
+- Skipped metric reporting in analysis results.
+- Plugin metric weight warnings for better transparency.
+- Code of Conduct detection as a community health signal.
+- Support for Swift Package.resolved, Haskell stack.yaml.lock, and Perl cpanfile.snapshot lockfile formats.
+- Multi-ecosystem dependency summary with enhanced lockfile support.
+
+### Improved
+- Unified metric naming to 'Community Health' for consistency.
+- Optional field handling across multiple resolvers for better Python compatibility.
+- Dependency extraction capabilities for Swift, Stack (Haskell), and CPAN (Perl) ecosystems.
+- Ecosystem descriptions to accurately reflect supported languages.
+
+### Documentation
+- Clarified dependency analysis as an experimental feature.
+- Enhanced release process documentation with detailed CHANGELOG guidelines.
+- Renamed 'Maintainer Responsiveness' metric to 'Community Health' for better alignment.
+
 ## v0.14.3 - 2026-01-02
 
 - Added: scoring profile support to batch repository analysis.
