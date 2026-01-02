@@ -27,7 +27,6 @@ Metrics are one lens among many; they work best alongside project context and re
 - **Local caching:** Analysis results are cached locally to minimize API calls. GitHub token required for real-time analysis of uncached packages.
 - **Multi-ecosystem support:** Analyze packages from Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby in one command.
 - **Actionable insights:** Metrics use empathetic language that encourages collaboration with maintainers rather than blame.
-- **Time-travel friendly:** Historical snapshots enable trend analysis and comparisons between releases.
 - **Sustainable by design:** Respects open-source sustainability models with funding awareness for community-driven projects.
 
 ## Key Features
@@ -35,7 +34,7 @@ Metrics are one lens among many; they work best alongside project context and re
 ### 🔍 Comprehensive Analysis
 
 - **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)
-- **Optional Dependents Analysis** - Downstream dependency signals (informational, not affecting scores)
+- **Optional Dependents Analysis** - Adds a downstream dependents metric when enabled (requires `LIBRARIESIO_API_KEY`)
 - **CHAOSS-aligned metrics** measuring contributor health, development activity, community engagement, and project maturity
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Scoring profiles** optimized for different priorities (balanced, security-first, contributor-experience, long-term-stability)

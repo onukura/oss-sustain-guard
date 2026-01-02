@@ -46,7 +46,7 @@ class RustResolver(LanguageResolver):
                     return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            print(f"Error fetching Rust data for {package_name}: {e}")
+            print(f"Note: Unable to fetch Rust data for {package_name}: {e}")
             return None
 
         return None

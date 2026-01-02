@@ -38,11 +38,11 @@ def query_librariesio_api(platform: str, package_name: str) -> dict[str, Any] | 
         client = _get_http_client()
         response = client.get(url, params=params, timeout=10)
         if response.status_code == 404:
-            console.print(f"Warning: Package {package_name} not found on Libraries.io.")
+            console.print(f"Note: Package {package_name} not found on Libraries.io.")
             return None
         response.raise_for_status()
         console.print(f"Info: Queried Libraries.io for {package_name} on {platform}.")
         return response.json()
     except httpx.RequestError:
-        console.print("Warning: Libraries.io API request failed.")
+        console.print("Note: Libraries.io API request unavailable.")
         return None

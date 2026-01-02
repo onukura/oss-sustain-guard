@@ -106,7 +106,7 @@ class JavaResolver(LanguageResolver):
 
                 return None
         except (httpx.RequestError, httpx.HTTPStatusError, ValueError, KeyError) as e:
-            print(f"Error fetching Java data for {package_name}: {e}")
+            print(f"Note: Unable to fetch Java data for {package_name}: {e}")
             return None
 
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:

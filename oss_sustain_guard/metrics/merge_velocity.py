@@ -81,7 +81,7 @@ def check_merge_velocity(repo_data: dict[str, Any]) -> Metric:
         score = 6
         risk = "Medium"
         message = (
-            f"Medium: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
+            f"Monitor: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
             f"Slow but acceptable for volunteer-driven OSS."
         )
     else:  # <21 days

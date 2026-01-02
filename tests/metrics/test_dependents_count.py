@@ -88,7 +88,7 @@ class TestDependentsCountMetric:
         assert result.score == 10  # 20/20 → 10/10
         assert result.max_score == 10
         assert result.risk == "None"
-        assert "Critical infrastructure" in result.message
+        assert "Core infrastructure" in result.message
         assert "15,000" in result.message
 
     @patch.dict(os.environ, {"LIBRARIESIO_API_KEY": "test_key"})

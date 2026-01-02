@@ -42,7 +42,7 @@ class ElixirResolver(LanguageResolver):
                 response.raise_for_status()
                 data = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
-            print(f"Error fetching Hex.pm data for {package_name}: {e}")
+            print(f"Note: Unable to fetch Hex.pm data for {package_name}: {e}")
             return None
 
         meta = data.get("meta", {})

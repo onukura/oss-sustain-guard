@@ -998,7 +998,7 @@ def _analyze_dependencies_for_package(
 
         return dep_scores
     except Exception as e:
-        console.print(f"    [dim]Warning: Could not analyze dependencies: {e}[/dim]")
+        console.print(f"    [dim]Note: Unable to analyze dependencies: {e}[/dim]")
         return {}
 
 
@@ -1535,7 +1535,7 @@ def check(
                             packages_to_analyze.append((detected_eco, pkg_info.name))
                     except Exception as e:
                         console.print(
-                            f"   [dim]Warning: Unable to parse {manifest_path.name} - {e}[/dim]"
+                            f"   [dim]Note: Unable to parse {manifest_path.name} - {e}[/dim]"
                         )
 
             # If --include-lock is specified, also detect and parse lockfiles
@@ -1582,7 +1582,7 @@ def check(
                                     )
                             except Exception as e:
                                 console.print(
-                                    f"   [yellow]Warning: Failed to parse {lockfile.name}: {e}[/yellow]"
+                                    f"   [yellow]Note: Unable to parse {lockfile.name}: {e}[/yellow]"
                                 )
         else:
             # No manifest files found - silently exit (useful for pre-commit hooks)

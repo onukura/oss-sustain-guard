@@ -136,7 +136,7 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
             score = 2  # 5/20 → 2/10
             risk = "High"
             message = (
-                f"High: {percentage:.0f}% of recent commits by single author. "
+                f"Needs attention: {percentage:.0f}% of recent commits by single author. "
                 f"{num_contributors} contributor(s), {total_repo_commits} total commits."
             )
         else:
@@ -151,14 +151,14 @@ def check_bus_factor(repo_data: dict[str, Any]) -> Metric:
         score = 5  # 10/20 → 5/10
         risk = "High"
         message = (
-            f"High: {percentage:.0f}% of commits by single author. "
+            f"Needs attention: {percentage:.0f}% of commits by single author. "
             f"{num_contributors} contributor(s) total."
         )
     elif percentage >= 50:
         score = 8  # 15/20 → 8/10
         risk = "Medium"
         message = (
-            f"Medium: {percentage:.0f}% by top contributor. "
+            f"Monitor: {percentage:.0f}% by top contributor. "
             f"{num_contributors} contributor(s) total."
         )
     else:

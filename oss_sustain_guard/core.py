@@ -1367,14 +1367,14 @@ def analyze_repositories_batch(
                 except Exception as e:
                     # Show error for debugging
                     console.print(
-                        f"  [yellow]⚠️  Analysis error for {owner}/{name}: {e}[/yellow]"
+                        f"  [yellow]⚠️  Analysis issue for {owner}/{name}: {e}[/yellow]"
                     )
                     results[(owner, name)] = None
 
         except Exception as e:
             # Batch query failed - fall back to individual queries
             console.print(
-                f"  [yellow]⚠️  Batch query failed ({e}), trying individual queries...[/yellow]"
+                f"  [yellow]⚠️  Batch query unavailable ({e}), trying individual queries...[/yellow]"
             )
             for owner, name in batch:
                 try:
@@ -1512,13 +1512,13 @@ def analyze_repository(
         return _analyze_repository_data(owner, name, repo_info, platform, package_name)
 
     except httpx.HTTPStatusError as e:
-        console.print(f"[red]HTTP Error: {e}[/red]")
+        console.print(f"[yellow]Note: Unable to reach GitHub API ({e}).[/yellow]")
         raise
     except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[yellow]Note: Unable to complete analysis: {e}[/yellow]")
         raise
     except Exception as e:
-        console.print(f"[red]Unexpected error during analysis: {e}[/red]")
+        console.print(f"[yellow]Note: Unexpected issue during analysis: {e}[/yellow]")
         raise
 
 
@@ -1565,4 +1565,4 @@ if __name__ == "__main__":
         console.print(result)
     except (ValueError, httpx.HTTPStatusError) as e:
         console = Console()
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(f"[yellow]Note:[/yellow] Unable to complete analysis: {e}")

@@ -75,7 +75,7 @@ class CSharpResolver(LanguageResolver):
 
             return None
         except (httpx.RequestError, ValueError, KeyError) as e:
-            print(f"Error fetching NuGet data for {package_name}: {e}")
+            print(f"Note: Unable to fetch NuGet data for {package_name}: {e}")
             return None
 
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:

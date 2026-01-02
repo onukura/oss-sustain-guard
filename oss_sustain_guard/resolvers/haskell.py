@@ -75,7 +75,7 @@ class HaskellResolver(LanguageResolver):
                 cabal_content = cabal_response.text
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            print(f"Error fetching Hackage data for {package_name}: {e}")
+            print(f"Note: Unable to fetch Hackage data for {package_name}: {e}")
             return None
 
         # Parse source-repository from cabal file

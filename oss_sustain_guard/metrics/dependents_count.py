@@ -16,7 +16,7 @@ def check_dependents_count(
     Uses Libraries.io API to determine how many other packages
     depend on this package. High dependents count indicates:
     - Wide adoption and trust
-    - Critical infrastructure importance
+    - Core infrastructure importance
     - Strong motivation for maintenance
 
     Note:
@@ -32,7 +32,7 @@ def check_dependents_count(
         Metric with dependents count analysis, or None if API not configured
 
     Scoring (out of 10):
-        - 10000+ dependents: 10/10 (Critical infrastructure)
+        - 10000+ dependents: 10/10 (Core infrastructure)
         - 1000+ dependents: 9/10 (Widely adopted)
         - 500+ dependents: 8/10 (Popular)
         - 100+ dependents: 6/10 (Established)
@@ -74,7 +74,7 @@ def check_dependents_count(
     if dependents_count >= 10000:
         score = max_score  # 20/20 → 10/10
         risk = "None"
-        message = f"Critical infrastructure: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos). Essential to ecosystem."
+        message = f"Core infrastructure: 📦 {dependents_count:,} packages depend on this ({dependent_repos_count:,} repos). Essential to ecosystem."
     elif dependents_count >= 1000:
         score = 9  # 18/20 → 9/10
         risk = "None"

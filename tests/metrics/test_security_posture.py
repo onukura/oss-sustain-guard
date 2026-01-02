@@ -40,7 +40,9 @@ class TestSecurityPostureMetric:
         assert result.name == "Security Signals"
         assert result.score == 3
         assert result.max_score == 10
-        assert "High: 3 unresolved HIGH vulnerability alert" in result.message
+        assert (
+            "Needs attention: 3 unresolved HIGH vulnerability alert" in result.message
+        )
         assert result.risk == "High"
 
     def test_security_posture_high_alerts_few(self):
@@ -56,7 +58,7 @@ class TestSecurityPostureMetric:
         assert result.name == "Security Signals"
         assert result.score == 5
         assert result.max_score == 10
-        assert "Medium: 1 unresolved HIGH vulnerability alert" in result.message
+        assert "Monitor: 1 unresolved HIGH vulnerability alert" in result.message
         assert result.risk == "Medium"
 
     def test_security_posture_excellent(self):

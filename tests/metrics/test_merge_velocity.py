@@ -75,7 +75,7 @@ class TestMergeVelocityMetric:
         assert result.name == "Change Request Resolution"
         assert result.score == 6
         assert result.max_score == 10
-        assert "Medium: Average merge time 720 hours" in result.message
+        assert "Monitor: Average merge time 720 hours" in result.message
         assert result.risk == "Medium"
 
     def test_merge_velocity_high(self):

@@ -98,7 +98,7 @@ class GoResolver(LanguageResolver):
                             return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            print(f"Error fetching Go data for {package_name}: {e}")
+            print(f"Note: Unable to fetch Go data for {package_name}: {e}")
             pass
 
         return None

@@ -72,7 +72,7 @@ class TestMaintainerDrainMetric:
         assert result.name == "Maintainer Retention"
         assert result.score == 0
         assert result.max_score == 10
-        assert "Critical: 90% reduction in maintainers" in result.message
+        assert "Needs support: 90% reduction in maintainers" in result.message
         assert result.risk == "Critical"
 
     def test_maintainer_drain_high_drain(self):
@@ -140,7 +140,7 @@ class TestMaintainerDrainMetric:
         assert result.name == "Maintainer Retention"
         assert result.score == 3
         assert result.max_score == 10
-        assert "High: 70% reduction in maintainers" in result.message
+        assert "Needs attention: 70% reduction in maintainers" in result.message
         assert result.risk == "High"
 
     def test_maintainer_drain_medium_drain(self):
@@ -197,7 +197,7 @@ class TestMaintainerDrainMetric:
         assert result.name == "Maintainer Retention"
         assert result.score == 5
         assert result.max_score == 10
-        assert "Medium: 50% reduction in maintainers" in result.message
+        assert "Monitor: 50% reduction in maintainers" in result.message
         assert result.risk == "Medium"
 
     def test_maintainer_drain_stable(self):

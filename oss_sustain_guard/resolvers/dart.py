@@ -41,7 +41,7 @@ class DartResolver(LanguageResolver):
                 response.raise_for_status()
                 data = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
-            print(f"Error fetching pub.dev data for {package_name}: {e}")
+            print(f"Note: Unable to fetch pub.dev data for {package_name}: {e}")
             return None
 
         latest = data.get("latest", {}) if isinstance(data, dict) else {}

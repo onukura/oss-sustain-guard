@@ -34,7 +34,7 @@ Metrics are one lens among many; they work best alongside project context and re
 
 - **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)
 - **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins.
-- **Optional Dependents Analysis** - Downstream dependency metrics (informational, not affecting total score)
+- **Optional Dependents Analysis** - Adds a downstream dependents metric when enabled with `--enable-dependents` (requires `LIBRARIESIO_API_KEY`)
 - **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
 - **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case.
@@ -105,7 +105,7 @@ Evaluated across 5 categories:
 - **Project Maturity** (15%) - Documentation and governance
 - **Security & Funding** (20%) - Security posture and sustainability
 
-Optional dependents analysis is informational and does not affect the score.
+Optional dependents analysis adds a separate metric when enabled with `--enable-dependents` (requires `LIBRARIESIO_API_KEY`).
 
 **Score interpretation:** 80-100 (Healthy) | 50-79 (Monitor) | 0-49 (Needs Attention)
 

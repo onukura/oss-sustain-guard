@@ -753,27 +753,29 @@ Measure project impact and ecosystem integration:
 
 **Purpose:** Measures downstream projects that depend on this package.
 
-**Data Source:** Libraries.io or GitHub Dependents API
+**Data Source:** Libraries.io (requires `LIBRARIESIO_API_KEY`)
+
+**Availability:** Enabled only with `--enable-dependents`; skipped if the API key is not set.
 
 **Calculation:**
 
-- Counts projects depending on this package
-- Analyzes ecosystem impact
-- Normalizes by project age
+- Counts downstream packages and dependent repositories from Libraries.io
 
 **Scoring:**
 
-- High dependents (>1000): 10/10 (Critical infrastructure)
-- Many (100-1000): 8/10 (Important)
-- Moderate (10-100): 6/10 (Used)
-- Few (<10): 2/10 (Limited impact)
+- 10000+ dependents: 10/10 (Core infrastructure)
+- 1000+ dependents: 9/10 (Widely adopted)
+- 500+ dependents: 8/10 (Popular)
+- 100+ dependents: 6/10 (Established)
+- 50+ dependents: 5/10 (Growing adoption)
+- 10+ dependents: 3/10 (Early adoption)
+- 1+ dependents: 2/10 (Used by others)
+- 0 dependents: 0/10 (No downstream dependencies)
 
 **Risk Levels:**
 
-- **None:** High ecosystem value
-- **Low:** Good ecosystem position
-- **Medium:** Niche usage
-- **High:** Limited dependencies
+- **None:** Very high adoption
+- **Low:** Low-to-moderate adoption
 
 **Use Case:** Assess strategic importance in package ecosystem.
 

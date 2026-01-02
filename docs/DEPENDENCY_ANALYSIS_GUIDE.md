@@ -174,8 +174,6 @@ This reveals that while your project is healthy, some dependencies need monitori
    - Sponsoring the maintainer
    - Volunteering as a maintainer
 
-5. **Track trends**: Monitor how your dependency scores change over time to identify emerging risks.
-
 ## Limitations
 
 - Dependency analysis requires lockfiles (manifest files alone are insufficient)

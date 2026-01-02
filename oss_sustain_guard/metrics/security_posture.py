@@ -56,14 +56,14 @@ def check_security_posture(repo_data: dict[str, Any]) -> Metric:
         score = 3  # 5/15 → 3/10
         risk = "High"
         message = (
-            f"High: {high_count} unresolved HIGH vulnerability alert(s). "
+            f"Needs attention: {high_count} unresolved HIGH vulnerability alert(s). "
             f"Review and patch recommended."
         )
     elif high_count > 0:
         score = 5  # 8/15 → 5/10
         risk = "Medium"
         message = (
-            f"Medium: {high_count} unresolved HIGH vulnerability alert(s). "
+            f"Monitor: {high_count} unresolved HIGH vulnerability alert(s). "
             f"Monitor and address."
         )
     elif has_security_policy:

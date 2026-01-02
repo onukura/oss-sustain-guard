@@ -42,7 +42,7 @@ class RResolver(LanguageResolver):
                 response.raise_for_status()
                 data = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
-            print(f"Error fetching CRAN data for {package_name}: {e}")
+            print(f"Note: Unable to fetch CRAN data for {package_name}: {e}")
             return None
 
         url_fields = [

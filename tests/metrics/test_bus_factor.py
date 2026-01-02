@@ -117,7 +117,7 @@ class TestBusFactorMetric:
         repo_data = _repo_with_commits(["user1"] * 9 + ["user2"], total_count=200)
         result = check_bus_factor(repo_data)
         assert result.score == 2
-        assert "High: 90% of recent commits" in result.message
+        assert "Needs attention: 90% of recent commits" in result.message
         assert result.risk == "High"
 
     def test_bus_factor_high_concentration(self):
@@ -127,7 +127,7 @@ class TestBusFactorMetric:
         )
         result = check_bus_factor(repo_data)
         assert result.score == 5
-        assert "High: 70% of commits" in result.message
+        assert "Needs attention: 70% of commits" in result.message
         assert result.risk == "High"
 
     def test_bus_factor_medium_concentration(self):
@@ -135,7 +135,7 @@ class TestBusFactorMetric:
         repo_data = _repo_with_commits(["user1"] * 6 + ["user2"] * 4, total_count=80)
         result = check_bus_factor(repo_data)
         assert result.score == 8
-        assert "Medium: 60% by top contributor" in result.message
+        assert "Monitor: 60% by top contributor" in result.message
         assert result.risk == "Medium"
 
     def test_bus_factor_total_commits_zero(self, monkeypatch):

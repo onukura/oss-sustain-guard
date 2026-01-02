@@ -266,22 +266,7 @@ os4g check --recursive --depth 2
 
 See [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) for details.
 
-### Q7: How do I track changes in package health over time?
-
-**A:** Use the trend analysis feature
-
-```bash
-# View historical data
-os4g trend requests
-
-# Compare specific dates
-os4g compare requests 2025-12-11 2025-12-12
-
-# List available snapshots
-os4g list-snapshots
-```
-
-### Q8: What do the metrics mean?
+### Q7: What do the metrics mean?
 
 **A:** Each metric is CHAOSS-based
 
@@ -296,7 +281,7 @@ os4g list-snapshots
 
 See [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) for details.
 
-### Q9: What does "Needs attention" mean?
+### Q8: What does "Needs attention" mean?
 
 **A:** The project shows signals that it needs support
 
@@ -308,7 +293,7 @@ See [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) for detai
 
 This is an **observation**, not a judgment. Every project has unique circumstances.
 
-### Q10: What is the Gratitude Vending Machine?
+### Q9: What is the Gratitude Vending Machine?
 
 **A:** Discovers projects that need support and helps you contribute
 

@@ -68,7 +68,7 @@ class PythonResolver(LanguageResolver):
                     return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            print(f"Error fetching PyPI data for {package_name}: {e}")
+            print(f"Note: Unable to fetch PyPI data for {package_name}: {e}")
             return None
 
         return None

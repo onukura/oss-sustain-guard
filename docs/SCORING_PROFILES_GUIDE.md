@@ -10,6 +10,7 @@ OSS Sustain Guard provides multiple **scoring profiles** to evaluate projects ba
 - **Result**: Normalized 0-100 score for easy comparison
 
 **Example Calculation:**
+
 ```
 Metric A: score=8, weight=3  →  8×3 = 24
 Metric B: score=6, weight=2  →  6×2 = 12
@@ -267,6 +268,7 @@ description = "Custom scoring focused on specific needs"
 ```
 
 **Usage:**
+
 ```bash
 # Automatically uses profile from .oss-sustain-guard.toml
 os4g check --profile my_custom requests
@@ -276,6 +278,7 @@ os4g check --profile-file my_profiles.toml --profile my_custom requests
 ```
 
 **Priority Order:**
+
 1. `--profile-file` (if specified)
 2. `.oss-sustain-guard.toml` (local config)
 3. `pyproject.toml` (project-level config)
@@ -353,12 +356,13 @@ See [Contributing Guide](GETTING_STARTED.md) for how to provide feedback.
 
 All profiles assign **individual weights to each metric** (not categories):
 
-- **24 core metrics** evaluated per repository (optional dependents are informational)
+- **24 core metrics** evaluated per repository (optional dependents add a metric when enabled)
 - Each metric scored **0-10** (normalized scale)
 - Weights are **integers ≥1** per metric
 - Different profiles emphasize different metrics
 
 **Example Metrics:**
+
 - Contributor Redundancy, Maintainer Retention, Recent Activity
 - Security Signals, Funding Signals, Build Health
 - Issue Responsiveness, PR Acceptance Ratio, Review Health
@@ -378,6 +382,7 @@ Total Score = Sum(metric_score × metric_weight) / Sum(10 × metric_weight) × 1
 ```
 
 **Worked Example:**
+
 ```
 # Balanced profile with 3 metrics:
 Contributor Redundancy: 8/10, weight=3  →  8×3 = 24
@@ -391,6 +396,7 @@ Total: (24+20+12) / (10×3 + 10×2 + 10×2) × 100
 ### Validation
 
 All profile weights are positive integers (validated in tests):
+
 ```python
 for metric_name, weight in profile["weights"].items():
     assert isinstance(weight, int)

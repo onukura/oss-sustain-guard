@@ -43,7 +43,7 @@ class PerlResolver(LanguageResolver):
                 response.raise_for_status()
                 data = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
-            print(f"Error fetching MetaCPAN data for {package_name}: {e}")
+            print(f"Note: Unable to fetch MetaCPAN data for {package_name}: {e}")
             return None
 
         resources = data.get("resources", {}) if isinstance(data, dict) else {}
