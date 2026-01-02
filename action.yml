@@ -8,7 +8,7 @@ inputs:
     required: false
     default: ''
   ecosystem:
-    description: 'Default ecosystem for unqualified packages (python, javascript, go, rust, php, java, kotlin, scala, csharp, dotnet). Use "auto" to detect.'
+    description: 'Default ecosystem for unqualified packages (python, javascript, go, rust, php, java, kotlin, scala, csharp, dotnet, dart, elixir, haskell, perl, r, ruby, swift). Use "auto" to detect.'
     required: false
     default: 'auto'
   include-lock:
