@@ -59,7 +59,7 @@ def check_my_metric(repo_data: dict[str, Any]) -> Metric:
     - Good: 7-9/10
     - Moderate: 4-6/10
     - Needs attention: 1-3/10
-    - Critical: 0/10
+    - Needs support: 0/10
 
     CHAOSS Aligned: [CHAOSS metric name] (if applicable)
     """
@@ -254,7 +254,7 @@ def check_custom_metric(repo_data: dict[str, Any], context: MetricContext) -> Me
         context: Metric context with owner, name, repo_url, etc.
 
     Returns:
-        Metric with score, message, and risk level
+        Metric with score, message, and status level
     """
     # Your custom logic here
     owner = context.owner
@@ -391,7 +391,7 @@ class Metric(NamedTuple):
     """Human-readable result message."""
 
     risk: str
-    """Risk level: "None", "Low", "Medium", "High", "Critical"."""
+    """Status label (internal values: "None", "Low", "Medium", "High", "Critical")."""
 ```
 
 ### Accessing GitHub Data
@@ -497,19 +497,19 @@ METRIC = MetricSpec(
 
 ❌ **DON'T:**
 
-- Use negative language: "Failed", "Error", "Critical failure"
+- Use negative language: "Failed", "Error", "Alarmist failure language"
 - Provide vague messages: "Bad", "Poor"
 - Use all caps or excessive punctuation
 
-### Risk Levels
+### Status Levels (internal values)
 
-| Risk | Score Range | Usage |
+| Internal value | Score Range | Usage |
 |------|-------------|-------|
 | `"None"` | 9-10 | Excellent health |
 | `"Low"` | 7-8 | Good, minor improvements |
 | `"Medium"` | 4-6 | Moderate, needs attention |
 | `"High"` | 1-3 | Significant concerns |
-| `"Critical"` | 0 | Immediate attention required |
+| `"Critical"` | 0 | Needs support; immediate attention recommended |
 
 ### Performance Considerations
 

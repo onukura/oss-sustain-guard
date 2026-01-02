@@ -206,7 +206,7 @@ def test_compute_metric_models_with_observations():
     models = compute_metric_models(metrics)
     model_names = {model.name for model in models}
 
-    assert "Risk Model" in model_names
+    assert "Stability Model" in model_names
     assert "Sustainability Model" in model_names
     assert "Community Engagement Model" in model_names
     assert "Project Maturity Model" in model_names
@@ -240,7 +240,9 @@ def test_compute_metric_models_with_monitoring_messages():
 
     models = {model.name: model for model in compute_metric_models(metrics)}
 
-    assert models["Risk Model"].observation == "All risk indicators are healthy."
+    assert (
+        models["Stability Model"].observation == "All stability indicators are healthy."
+    )
     assert models["Sustainability Model"].observation == (
         "Sustainability signals need monitoring."
     )

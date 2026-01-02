@@ -60,7 +60,7 @@ def test_summarize_observations_no_concerns():
 def test_format_health_status_thresholds():
     """Health status thresholds map to the expected labels and colors."""
     assert _format_health_status(90) == ("Healthy", "green")
-    assert _format_health_status(60) == ("Needs attention", "yellow")
+    assert _format_health_status(60) == ("Monitor", "yellow")
     assert _format_health_status(40) == ("Needs support", "red")
 
 

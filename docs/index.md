@@ -38,7 +38,7 @@ Metrics are one lens among many; they work best alongside project context and re
 - **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)
 - **Optional Dependents Analysis** - Adds a downstream dependents metric when enabled (requires `LIBRARIESIO_API_KEY`)
 - **CHAOSS-aligned metrics** measuring contributor health, development activity, community engagement, and project maturity
-- **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
+- **5 CHAOSS-Aligned Models** - Stability, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Scoring profiles** optimized for different priorities (balanced, security-first, contributor-experience, long-term-stability)
 - **Transparent scoring** with detailed breakdowns of each metric
 

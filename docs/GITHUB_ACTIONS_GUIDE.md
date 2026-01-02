@@ -59,12 +59,12 @@ jobs:
 - `go.sum` (Go)
 - And more...
 
-### 2. Check Specific Critical Packages
+### 2. Check Specific Priority Packages
 
-For security audits or critical dependency reviews:
+For security audits or high-priority dependency reviews:
 
 ```yaml
-name: Critical Packages Check
+name: Priority Packages Check
 
 on: [pull_request]
 
@@ -74,17 +74,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check critical dependencies
+      - name: Check priority dependencies
         uses: onukura/oss-sustain-guard@main
         with:
           packages: 'flask django requests'
           output-style: 'compact'
 ```
 
-### 3. Fail on Critical Findings
+### 3. Fail on Needs Support Findings
 
 ```yaml
-name: Critical Dependencies Check
+name: Needs Support Dependencies Check
 
 on: [pull_request]
 
@@ -94,15 +94,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check high-risk dependencies
+      - name: Check low-scoring dependencies
         uses: onukura/oss-sustain-guard@main
         with:
-          packages: 'critical-payment-lib authentication-provider'
+          packages: 'core-payment-lib authentication-provider'
           verbose: 'true'
 
-      - name: Review critical packages
+      - name: Review priority packages
         if: failure()
-        run: echo "⚠️  Critical packages need review!"
+        run: echo "⚠️  Priority packages need review!"
 ```
 
 ### 4. Recursive Monorepo Scanning

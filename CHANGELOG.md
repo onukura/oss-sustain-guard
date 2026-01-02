@@ -2,6 +2,13 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.14.2 - 2026-01-02
+
+- Fixed: clarified GitHub token requirements in documentation.
+- Fixed: improved documentation for minimal setup and GitHub-hosted analysis.
+- Improved: standardized user-facing messages and clarified dependents metric.
+- Improved: updated demo assets and timing documentation.
+
 ## v0.14.1 - 2026-01-02
 
 - Bug fixes and improvements to enhance stability.

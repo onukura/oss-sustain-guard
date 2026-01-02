@@ -490,7 +490,7 @@ DEFAULT_SCORING_PROFILES = {
     },
     "security_first": {
         "name": "Security First",
-        "description": "Prioritizes security and risk mitigation",
+        "description": "Prioritizes security and resilience",
         "weights": {
             # Maintainer Health (20% emphasis)
             "Contributor Redundancy": 2,
@@ -802,7 +802,7 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
     Computes CHAOSS-aligned metric models from individual metrics.
 
     Models provide aggregated views for specific use cases:
-    - Risk Model: focuses on project stability and security
+    - Stability Model: focuses on project stability and security
     - Sustainability Model: focuses on long-term viability
     - Community Engagement Model: focuses on responsiveness and activity
 
@@ -817,7 +817,7 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
 
     models = []
 
-    # Risk Model: weights Contributor Redundancy, Security Signals,
+    # Stability Model: weights Contributor Redundancy, Security Signals,
     # Change Request Resolution, Issue Responsiveness
     risk_metrics = [
         ("Contributor Redundancy", 0.4),
@@ -838,13 +838,13 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
                 risk_observations.append(f"{metric_name} needs attention")
 
     if not risk_observations:
-        risk_obs = "All risk indicators are healthy."
+        risk_obs = "All stability indicators are healthy."
     else:
         risk_obs = "; ".join(risk_observations[:2]) + "."  # Limit to 2
 
     models.append(
         MetricModel(
-            name="Risk Model",
+            name="Stability Model",
             score=int(risk_score),
             max_score=int(risk_max),
             observation=risk_obs,

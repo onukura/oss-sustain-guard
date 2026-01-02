@@ -272,7 +272,7 @@ See [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) for details.
 
 | Metric | Meaning |
 |--------|---------|
-| **Contributor Redundancy** | Risk of depending on a single maintainer |
+| **Contributor Redundancy** | Concentration of contributions (single-maintainer signal) |
 | **Recent Activity** | Is the project actively developed? |
 | **Release Rhythm** | Release frequency and consistency |
 | **Maintainer Retention** | Are maintainers staying with the project? |
@@ -281,14 +281,14 @@ See [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) for details.
 
 See [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) for details.
 
-### Q8: What does "Needs attention" mean?
+### Q8: What does "Needs support" mean?
 
 **A:** The project shows signals that it needs support
 
 ```shell
 🟢 Healthy (80+)     : Good state - continue monitoring
 🟡 Monitor (50-79)   : Requires attention - regular checks recommended
-🔴 Needs attention   : Support or migration recommended
+🔴 Needs support     : Support or migration recommended
 ```
 
 This is an **observation**, not a judgment. Every project has unique circumstances.

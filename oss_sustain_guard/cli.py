@@ -222,7 +222,7 @@ def _format_health_status(score: int) -> tuple[str, str]:
     if score >= 80:
         return "Healthy", "green"
     if score >= 50:
-        return "Needs attention", "yellow"
+        return "Monitor", "yellow"
     return "Needs support", "red"
 
 
@@ -277,7 +277,7 @@ def _render_html_report(results: list[AnalysisResult], profile: str) -> str:
         ("Packages analyzed", str(summary["total_packages"])),
         ("Average score", f"{summary['average_score']:.1f}"),
         ("Healthy", str(summary["healthy_count"])),
-        ("Needs attention", str(summary["needs_attention_count"])),
+        ("Monitor", str(summary["needs_attention_count"])),
         ("Needs support", str(summary["needs_support_count"])),
     ]
     summary_cards_html = "\n".join(
@@ -353,7 +353,7 @@ def display_results_compact(
         elif result.total_score >= 50:
             icon = "⚠"
             score_color = "yellow"
-            status = "Needs attention"
+            status = "Monitor"
         else:
             icon = "✗"
             score_color = "red"
@@ -415,7 +415,7 @@ def display_results_table(
         if result.total_score >= 80:
             health_status = "[green]Healthy ✓[/green]"
         elif result.total_score >= 50:
-            health_status = "[yellow]Needs attention[/yellow]"
+            health_status = "[yellow]Monitor[/yellow]"
         else:
             health_status = "[red]Needs support[/red]"
 
@@ -459,7 +459,7 @@ def display_results_table(
                     if dep_score >= 80:
                         health = "[green]✓ Healthy[/green]"
                     elif dep_score >= 50:
-                        health = "[yellow]⚠ Needs attention[/yellow]"
+                        health = "[yellow]⚠ Monitor[/yellow]"
                     else:
                         health = "[red]✗ Needs support[/red]"
                     score_color = (
@@ -681,7 +681,7 @@ def display_results_detailed(
                 if dep_score >= 80:
                     health = "[green]Healthy[/green]"
                 elif dep_score >= 50:
-                    health = "[yellow]Needs attention[/yellow]"
+                    health = "[yellow]Monitor[/yellow]"
                 else:
                     health = "[red]Needs support[/red]"
 
@@ -1241,7 +1241,7 @@ def check(
         False,
         "--show-models",
         "-M",
-        help="Display CHAOSS-aligned metric models (Risk Model, Sustainability Model).",
+        help="Display CHAOSS-aligned metric models (Stability Model, Sustainability Model).",
     ),
     show_dependencies: bool = typer.Option(
         False,
@@ -2007,7 +2007,7 @@ def list_cache_command(
             status_text = "Monitor"
         else:
             status_color = "red"
-            status_text = "Needs attention"
+            status_text = "Needs support"
 
         # Format cached date
         try:
@@ -2132,22 +2132,25 @@ def gratitude(
         total_score = compute_weighted_total_score(metric_objects, profile="balanced")
 
         # Find specific metrics that indicate need for support
-        bus_factor_score = 20  # Default max
-        maintainer_drain_score = 15  # Default max
+        bus_factor_score = 10  # Default max (0-10 scale)
+        maintainer_retention_score = 10  # Default max (0-10 scale)
 
         for metric in metrics_data:
             metric_name = metric.get("name", "")
             if "Bus Factor" in metric_name or "Contributor Redundancy" in metric_name:
-                bus_factor_score = metric.get("score", 20)
-            elif "Maintainer" in metric_name and "Drain" in metric_name:
-                maintainer_drain_score = metric.get("score", 15)
+                bus_factor_score = metric.get("score", 10)
+            elif (
+                "Maintainer Retention" in metric_name
+                or "Maintainer Drain" in metric_name
+            ):
+                maintainer_retention_score = metric.get("score", 10)
 
-        # Priority = (100 - total_score) + (20 - bus_factor) + (15 - maintainer_drain)
+        # Priority = (100 - total_score) + (10 - bus_factor) + (10 - maintainer_retention)
         # Higher priority = needs more support
         priority = (
             (100 - total_score)
-            + (20 - bus_factor_score)
-            + (15 - maintainer_drain_score)
+            + (10 - bus_factor_score)
+            + (10 - maintainer_retention_score)
         )
 
         support_candidates.append(
@@ -2158,7 +2161,7 @@ def gratitude(
                 "priority": priority,
                 "funding_links": funding_links,
                 "bus_factor_score": bus_factor_score,
-                "maintainer_drain_score": maintainer_drain_score,
+                "maintainer_retention_score": maintainer_retention_score,
             }
         )
 
@@ -2202,15 +2205,17 @@ def gratitude(
             status_text = "Monitor"
         else:
             status_color = "red"
-            status_text = "Needs attention"
+            status_text = "Needs support"
 
         console.print(f"[bold cyan]{i}. {package_name}[/bold cyan] ({ecosystem})")
         console.print(f"   Repository: {repo_url}")
         console.print(
             f"   Health Score: [{status_color}]{total_score}/100[/{status_color}] ({status_text})"
         )
-        console.print(f"   Contributor Redundancy: {project['bus_factor_score']}/20")
-        console.print(f"   Maintainer Drain: {project['maintainer_drain_score']}/15")
+        console.print(f"   Contributor Redundancy: {project['bus_factor_score']}/10")
+        console.print(
+            f"   Maintainer Retention: {project['maintainer_retention_score']}/10"
+        )
 
         # Display funding links
         funding_links = project["funding_links"]

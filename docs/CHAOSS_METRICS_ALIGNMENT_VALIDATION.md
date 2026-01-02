@@ -48,7 +48,7 @@ CHAOSS organizes metrics into:
 
 ## Metrics Models Alignment
 
-### Risk Model
+### Stability Model
 
 **OSS Sustain Guard Components:**
 
@@ -59,10 +59,10 @@ CHAOSS organizes metrics into:
 
 **CHAOSS Alignment:** ✅ **Strong**
 
-- Maps to CHAOSS "Risk" focus area
-- Uses "Elephant Factor" (contributor concentration risk)
+- Maps to CHAOSS stability focus area
+- Uses "Elephant Factor" (contributor concentration signal)
 - Incorporates "Contributor Absence Factor" concepts
-- **Recommendation:** Consider renaming to "Project Risk Model" to match CHAOSS terminology
+- **Recommendation:** Consider renaming to "Project Stability Model" to match CHAOSS terminology
 
 ### Sustainability Model
 
@@ -143,8 +143,8 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 ### OSS Sustain Guard Approach
 
 - Weighted scoring (0-100 scale)
-- Risk levels: None, Low, Medium, High, Critical
-- Supportive messaging ("Needs attention" vs. "Critical failure")
+- Status levels: None, Low, Medium, High, Needs support
+- Supportive messaging ("Needs attention" vs. "Needs support outcome")
 
 ### CHAOSS Approach
 
@@ -155,13 +155,13 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 **Alignment Analysis:** ⚠️ **Philosophical Difference**
 
 - CHAOSS: "Here's the data, you decide what it means"
-- OSS Sustain Guard: "Here's the data + our interpretation for sustainability risk"
+- OSS Sustain Guard: "Here's the data + our interpretation for sustainability concerns"
 
 **Recommendation:**
 
 - ✅ Keep our scoring - it provides actionable insights
 - ✅ Add `--raw` flag to show CHAOSS-style uninterpreted metrics
-- ✅ Document our scoring methodology as "OSS Sustain Guard Risk Framework"
+- ✅ Document our scoring methodology as "OSS Sustain Guard Scoring Framework"
 
 ## Display Format Alignment
 
@@ -225,7 +225,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 - 💡 **Funding Signals** - Project financial sustainability focus
 - 💡 **Pre-computed database** - Makes CHAOSS metrics accessible instantly for popular packages
 - 💡 **Multi-language support** - Applies CHAOSS metrics across 8+ ecosystems
-- 💡 **Sustainability-focused scoring** - Actionable risk assessment
+- 💡 **Sustainability-focused scoring** - Actionable sustainability assessment
 
 ### Areas for Enhancement
 

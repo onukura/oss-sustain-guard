@@ -46,8 +46,8 @@ class TestDisplayResultsCompact:
         assert "(85/100)" in clean_output
         assert "Healthy" in clean_output
 
-    def test_display_results_compact_needs_attention(self, capsys):
-        """Test compact display for package needing attention."""
+    def test_display_results_compact_monitor(self, capsys):
+        """Test compact display for package needing monitoring."""
         results = [
             AnalysisResult(
                 repo_url="https://github.com/test/package",
@@ -68,7 +68,7 @@ class TestDisplayResultsCompact:
         captured = capsys.readouterr()
         assert "test/package" in captured.out
         assert "(65/100)" in captured.out
-        assert "Needs attention" in captured.out
+        assert "Monitor" in captured.out
 
     def test_display_results_compact_needs_support(self, capsys):
         """Test compact display for package needing support."""
@@ -212,10 +212,10 @@ class TestDisplayResults:
                 is_community_driven=False,
                 models=[
                     MetricModel(
-                        name="Risk Model",
+                        name="Stability Model",
                         score=85,
                         max_score=100,
-                        observation="Low risk",
+                        observation="Stable indicators",
                     )
                 ],
                 signals={},
@@ -301,10 +301,10 @@ class TestDisplayResultsDetailed:
                 is_community_driven=False,
                 models=[
                     MetricModel(
-                        name="Risk Model",
+                        name="Stability Model",
                         score=85,
                         max_score=100,
-                        observation="Low risk indicators",
+                        observation="Stable indicators",
                     ),
                     MetricModel(
                         name="Sustainability Model",
@@ -322,7 +322,7 @@ class TestDisplayResultsDetailed:
 
         captured = capsys.readouterr()
         assert "CHAOSS Metric Models" in captured.out
-        assert "Risk Model" in captured.out
+        assert "Stability Model" in captured.out
         assert "Sustainability Model" in captured.out
 
     def test_display_results_detailed_with_signals(self, capsys):

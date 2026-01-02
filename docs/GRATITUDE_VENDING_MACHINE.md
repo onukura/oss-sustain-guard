@@ -17,13 +17,13 @@ The command analyzes your cached dependencies and calculates a **support priorit
 ### Priority Calculation
 
 ```
-Priority = (100 - Health Score) + (20 - Contributor Redundancy) + (10 - Maintainer Retention)
+Priority = (100 - Health Score) + (10 - Contributor Redundancy) + (10 - Maintainer Retention)
 ```
 
 **Higher priority = More support needed**
 
 - **Health Score** (0-100): Overall project sustainability
-- **Contributor Redundancy** (0-20): Distribution of contributions (lower = single maintainer risk)
+- **Contributor Redundancy** (0-10): Distribution of contributions (lower = single-maintainer concentration)
 - **Maintainer Retention** (0-10): Maintainer retention and activity
 
 ### Filtering Criteria
@@ -57,7 +57,7 @@ Top 3 projects that would appreciate your support:
 1. rich (python)
    Repository: https://github.com/Textualize/rich
    Health Score: 77/100 (Monitor)
-   Contributor Redundancy: 10/20
+   Contributor Redundancy: 10/10
    Maintainer Retention: 10/10
    💝 Support options:
       • GITHUB: https://github.com/willmcgugan
@@ -65,7 +65,7 @@ Top 3 projects that would appreciate your support:
 2. pytest (python)
    Repository: https://github.com/pytest-dev/pytest
    Health Score: 78/100 (Monitor)
-   Contributor Redundancy: 15/20
+   Contributor Redundancy: 8/10
    Maintainer Retention: 10/10
    💝 Support options:
       • GITHUB: https://github.com/pytest-dev
@@ -75,7 +75,7 @@ Top 3 projects that would appreciate your support:
 3. typer (python)
    Repository: https://github.com/fastapi/typer
    Health Score: 76/100 (Monitor)
-   Contributor Redundancy: 15/20
+   Contributor Redundancy: 8/10
    Maintainer Retention: 10/10
    💝 Support options:
       • GITHUB: https://github.com/tiangolo
@@ -127,7 +127,7 @@ No need to manually search for funding links:
 Each project shows:
 
 - **Health Score**: Overall sustainability (0-100)
-- **Contributor Redundancy**: Single maintainer risk indicator
+- **Contributor Redundancy**: Single-maintainer concentration signal
 - **Maintainer Retention**: Maintainer retention status
 - **Repository URL**: Link to the project
 
@@ -157,7 +157,7 @@ Corporate-backed projects (e.g., maintained by large organizations like Google, 
 
 Even projects with high health scores (80+) may appear if they:
 
-- Have low contributor redundancy (single maintainer risk)
+- Have low contributor redundancy (single-maintainer concentration)
 - Have declining maintainer retention (recent contributor loss)
 - Have significant dependency impact
 

@@ -29,7 +29,7 @@ A balanced view across all sustainability dimensions.
 **Metric Emphasis (Key Weights):**
 
 - Contributor Redundancy: 3 (High priority - bus factor)
-- Recent Activity: 3 (Critical for active development)
+- Recent Activity: 3 (Key for active development)
 - Security Signals: 2 (Balanced security focus)
 - Issue Responsiveness: 2 (Community health)
 - Other metrics: 1-2 (Proportional importance)
@@ -40,7 +40,7 @@ A balanced view across all sustainability dimensions.
 
 ### 2. **Security First**
 
-Prioritizes security and risk mitigation.
+Prioritizes security and resilience.
 
 **Metric Emphasis (Key Weights):**
 
@@ -53,9 +53,9 @@ Prioritizes security and risk mitigation.
 **Best for:**
 
 - Enterprise deployments
-- Security-critical applications
+- Security-sensitive applications
 - Compliance requirements
-- Risk assessment for production systems
+- Stability assessment for production systems
 
 **Example:** If you're evaluating a cryptography library or authentication service, this profile emphasizes security posture and funding stability.
 
@@ -91,19 +91,19 @@ Emphasizes maintainer health and sustainable development.
 
 **Metric Emphasis (Key Weights):**
 
-- **Contributor Redundancy: 5** ⬆️ (Bus factor - critical)
+- **Contributor Redundancy: 5** ⬆️ (Bus factor - key signal)
 - **Maintainer Retention: 4** (Team stability)
 - **Contributor Attraction: 3** (Pipeline health)
-- **Organizational Diversity: 3** (Risk distribution)
+- **Organizational Diversity: 3** (Ownership distribution)
 - Recent Activity: 3 (Consistent development)
 - Other metrics: 1-2 (Holistic view)
 
 **Best for:**
 
-- Long-term dependencies in critical infrastructure
+- Long-term dependencies in core infrastructure
 - Evaluating contributor redundancy and maintainer retention
 - Projects with multi-year roadmaps
-- Avoiding maintainer burnout risks
+- Avoiding maintainer burnout concerns
 
 **Example:** If you're choosing a core framework for a 5-year project, this profile emphasizes contributor diversity and maintainer retention.
 
@@ -154,7 +154,7 @@ Balanced (balanced)
 
 Security First (security_first)
   Score: 88/100
-  Prioritizes security and risk mitigation
+  Prioritizes security and resilience
 
 Contributor Experience (contributor_experience)
   Score: 90/100
@@ -172,7 +172,7 @@ Long-term Stability (long_term_stability)
 | Use Case | Recommended Profile | Why |
 |----------|---------------------|-----|
 | **General evaluation** | `balanced` | Provides holistic view |
-| **Security audit** | `security_first` | Highlights vulnerabilities and funding risks |
+| **Security audit** | `security_first` | Highlights vulnerabilities and funding gaps |
 | **Finding projects to contribute to** | `contributor_experience` | Shows responsive, welcoming communities |
 | **Choosing core dependencies** | `long_term_stability` | Emphasizes maintainer diversity and retention |
 | **Open-source program office** | Compare all | See different perspectives |

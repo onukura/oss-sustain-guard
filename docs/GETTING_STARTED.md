@@ -67,7 +67,7 @@ Automatically scans `requirements.txt`, `package.json`, `Cargo.toml`, and other 
 Displays health scores of all packages with:
 
 - **Health Score** (0-100): Overall sustainability rating
-- **Health Status**: Healthy ✓, Monitor, or Needs attention
+- **Health Status**: Healthy ✓, Monitor, or Needs support
 - **Key Observations**: Important signals about each project
 
 ### 2. Check a Single Package
@@ -102,7 +102,7 @@ Your results show:
 
 - **🟢 80+**: Healthy - Good state, continue monitoring
 - **🟡 50-79**: Monitor - Review regularly for changes
-- **🔴 ~50**: Needs attention - Consider support or migration
+- **🔴 <50**: Needs support - Consider support or migration
 
 ## 🎯 Common Scenarios
 
@@ -212,7 +212,7 @@ GitHub's API requires authentication for repository analysis. The token allows O
 
 | Metric | Description |
 | -------- | -------- |
-| **Contributor Redundancy** | Distribution of contributions (lower = single-maintainer risk) |
+| **Contributor Redundancy** | Distribution of contributions (lower = single-maintainer concentration) |
 | **Recent Activity** | Project's current activity level |
 | **Release Rhythm** | Release frequency and consistency |
 | **Maintainer Retention** | Stability of maintainers |

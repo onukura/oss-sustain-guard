@@ -11,7 +11,7 @@ This guide provides a comprehensive reference for all built-in metrics included 
 - [Quality & Maintenance Metrics](#quality--maintenance-metrics)
 - [Visibility & Adoption Metrics](#visibility--adoption-metrics)
 - [Scoring System](#scoring-system)
-- [Risk Levels](#risk-levels)
+- [Status Levels](#status-levels)
 
 ## Overview
 
@@ -94,19 +94,19 @@ Measure project impact and ecosystem integration:
 
 - <50% by single contributor: 10/10 (Excellent - healthy diversity)
 - 50-69% concentration: 5/10 (Moderate - acceptable)
-- 70-89% concentration: 3/10 (High - concentrated risk)
-- 90%+ concentration: 1/10 (Critical - single point of failure)
+- 70-89% concentration: 3/10 (Needs attention - concentrated contributions)
+- 90%+ concentration: 1/10 (Needs support - single point of failure)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** <50% - Well-distributed contributions
 - **Low:** 50-69% - Acceptable concentration
-- **Medium:** 70-89% - Elevated risk
-- **High:** 90%+ - Significant dependency risk
+- **Medium:** 70-89% - Elevated concentration
+- **High:** 90%+ - Significant dependency concentration
 
 **CHAOSS Alignment:** ✅ [Elephant Factor](https://chaoss.community/kb/metric-elephant-factor/), [Contributor Absence Factor](https://chaoss.community/kb/metric-contributor-absence-factor/)
 
-**Use Case:** Organizations should prioritize projects with high redundancy to avoid "bus factor" risk.
+**Use Case:** Organizations should prioritize projects with high redundancy to avoid single-maintainer concentration.
 
 ---
 
@@ -131,7 +131,7 @@ Measure project impact and ecosystem integration:
 - Declining activity: 3/10
 - Abandoned project: 0/10
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Active, engaged maintainers
 - **Low:** Stable maintainer activity
@@ -140,7 +140,7 @@ Measure project impact and ecosystem integration:
 
 **CHAOSS Alignment:** ✅ [Inactive Contributors](https://chaoss.community/kb/metric-inactive-contributors/)
 
-**Use Case:** Indicates project sustainability and the risk of maintenance burden shifts.
+**Use Case:** Indicates project sustainability and the likelihood of maintenance burden shifts.
 
 ---
 
@@ -170,7 +170,7 @@ Measure project impact and ecosystem integration:
 - Archived repositories: 10/10 (No releases expected)
 - No releases: 0/10 (Project may not be user-ready)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Regular release cycles
 - **Low:** Periodic releases
@@ -206,12 +206,12 @@ Measure project impact and ecosystem integration:
 - Owned by organization: 10/10 (Corporate sustainability model)
 - Funding links (optional): 10/10 (Regardless of explicit funding)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Clear sustainability model
 - **Low:** Corporate backing present
 - **Medium:** Some community funding
-- **High/Critical:** No sustainability signals
+- **High/Needs support:** No sustainability signals
 
 **CHAOSS Alignment:** ⚠️ Partial alignment with [Sponsorship](https://chaoss.community/kb/metric-sponsorship/) (focus on project sustainability vs. event sponsorship)
 
@@ -242,7 +242,7 @@ Measure project impact and ecosystem integration:
 - Declining new contributors: 3/10 (Concerning trend)
 - No new contributors: 0/10 (Not attracting talent)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Strong attraction of new contributors
 - **Low:** Steady contributor growth
@@ -274,7 +274,7 @@ Measure project impact and ecosystem integration:
 - Low retention (20-40%): 3/10 (High churn)
 - Minimal retention (<20%): 0/10 (One-time contributors only)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Strong contributor retention
 - **Low:** Moderate churn
@@ -311,7 +311,7 @@ Measure project impact and ecosystem integration:
 - No issues: 10/10 (Nothing to respond to)
 - Issues without responses: 0/10 (Unresponsive)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Quick response times
 - **Low:** Timely responses
@@ -348,7 +348,7 @@ Measure project impact and ecosystem integration:
 - Closed without merge (rejected PRs): Scored separately
 - Stale PRs without activity: 0/10 (Abandoned)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Fast merging
 - **Low:** Reasonable turnaround
@@ -380,7 +380,7 @@ Measure project impact and ecosystem integration:
 - Minimal reviews (<1 comment avg): 3/10 (Light review)
 - Auto-merge or no reviews: 0/10 (No quality gate)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Thorough review process
 - **Low:** Adequate review
@@ -414,7 +414,7 @@ Measure project impact and ecosystem integration:
 - Some failures (50-80%): 3/10 (Concerning)
 - Most fail (<50%): 0/10 (Broken)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** CI/CD working well
 - **Low:** Mostly passing builds
@@ -446,7 +446,7 @@ Measure project impact and ecosystem integration:
 - Few alerts, no policy: 4/10 (Moderate)
 - Multiple unresolved alerts: 0/10 (Poor)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Proactive security
 - **Low:** Managed vulnerabilities
@@ -455,7 +455,7 @@ Measure project impact and ecosystem integration:
 
 **CHAOSS Alignment:** ⚠️ Partial - Related to [OpenSSF Best Practices Badge](https://chaoss.community/kb/metric-open-source-security-foundation-openssf-best-practices-badge/)
 
-**Use Case:** Evaluate supply chain security risk.
+**Use Case:** Evaluate supply chain security concerns.
 
 ---
 
@@ -475,12 +475,12 @@ Measure project impact and ecosystem integration:
 - Has code of conduct: 10/10 (Excellent)
 - No code of conduct: 2/10 (Needs attention)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Code of conduct present
 - **Low:** Basic guidelines
 - **Medium:** No formal policy
-- **High/Critical:** No conduct standards
+- **High/Needs support:** No conduct standards
 
 **Use Case:** Evaluate community inclusivity and conflict resolution.
 
@@ -504,12 +504,12 @@ Measure project impact and ecosystem integration:
 - Non-standard but present: 5/10 (Requires review)
 - No license detected: 0/10 (Ambiguous legal status)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Clear licensing
 - **Low:** Non-standard license
 - **Medium:** Unclear licensing
-- **High/Critical:** No license
+- **High/Needs support:** No license
 
 **Use Case:** Assess legal compliance and reuse rights.
 
@@ -534,7 +534,7 @@ Measure project impact and ecosystem integration:
 - Basic README: 5/10
 - No documentation: 0/10
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Well-documented
 - **Low:** Adequate documentation
@@ -564,7 +564,7 @@ Measure project impact and ecosystem integration:
 - 25-50% stale: 3/10 (Moderate)
 - >50% stale: 0/10 (Poor triage)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Healthy issue management
 - **Low:** Minor staleness
@@ -596,7 +596,7 @@ Measure project impact and ecosystem integration:
 - Low visibility: 3/10
 - No adoption: 0/10
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Highly visible project
 - **Low:** Good visibility
@@ -651,7 +651,7 @@ Measure project impact and ecosystem integration:
 - Selective (30-50%): 4/10 (Strict)
 - Low (<30%): 1/10 (Unwelcoming)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Highly collaborative
 - **Low:** Welcoming to PRs
@@ -683,7 +683,7 @@ Measure project impact and ecosystem integration:
 - Moderate (15-30 days): 4/10
 - Slow (>30 days): 1/10
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Fast-moving merges
 - **Low:** Reasonable timeline
@@ -713,7 +713,7 @@ Measure project impact and ecosystem integration:
 - Minimal feedback: 3/10
 - No feedback/auto-merge: 0/10
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Highly engaged reviewers
 - **Low:** Good feedback
@@ -772,7 +772,7 @@ Measure project impact and ecosystem integration:
 - 1+ dependents: 2/10 (Used by others)
 - 0 dependents: 0/10 (No downstream dependencies)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Very high adoption
 - **Low:** Low-to-moderate adoption
@@ -814,23 +814,23 @@ Measure project impact and ecosystem integration:
 
 - Calculates percentage of work by top maintainer
 - Analyzes load distribution
-- Identifies burnout risk
+- Identifies burnout concerns
 
 **Scoring:**
 
 - Well-distributed (<40% top): 10/10 (Healthy)
 - Moderate load (40-60%): 7/10 (Acceptable)
-- High load (60-80%): 3/10 (Risk)
-- Concentrated (>80%): 0/10 (Burnout risk)
+- High load (60-80%): 3/10 (Needs attention)
+- Concentrated (>80%): 0/10 (Burnout concern)
 
-**Risk Levels:**
+**Status Levels:**
 
 - **None:** Well-distributed load
 - **Low:** Reasonable distribution
 - **Medium:** Elevated concentration
-- **High:** Burnout risk
+- **High:** Burnout concern
 
-**Use Case:** Identify projects at risk of maintainer burnout.
+**Use Case:** Identify projects showing maintainer burnout signals.
 
 ---
 
@@ -846,7 +846,7 @@ All metrics use a **0-10 point scale** for consistency:
 | **7-8** | Good | 🟢 Green |
 | **4-6** | Moderate | 🟡 Yellow |
 | **1-3** | Needs attention | 🟡 Yellow |
-| **0** | Critical | 🔴 Red |
+| **0** | Needs support | 🔴 Red |
 
 ### Total Score Calculation
 
@@ -862,16 +862,16 @@ Example:
 
 Metrics are grouped into focused assessments:
 
-#### 🎯 Risk Model (Stability Focus)
+#### 🎯 Stability Model (Stability Focus)
 
-Evaluates maintainability and risk of single-point-of-failure:
+Evaluates maintainability and single-point-of-failure concerns:
 
 - Contributor Redundancy (40%)
 - Change Request Resolution (33%)
 - Issue Responsiveness (13%)
 - Security Signals (13%)
 
-**Use:** Assess project stability for critical infrastructure
+**Use:** Assess project stability for core infrastructure
 
 #### 💰 Sustainability Model (Viability Focus)
 
@@ -881,7 +881,7 @@ Evaluates long-term project viability:
 - Maintainer Retention (33%)
 - Release Rhythm (33%)
 
-**Use:** Assess long-term sustainability risks
+**Use:** Assess long-term sustainability concerns
 
 #### 👥 Community Engagement Model (Growth Focus)
 
@@ -896,31 +896,31 @@ Evaluates community health and contributor experience:
 
 ---
 
-## Risk Levels
+## Status Levels
 
-### Risk Level Definitions
+### Status Level Definitions
 
-Each metric assigns a **risk level** reflecting areas of concern:
+Each metric assigns a **status level** reflecting areas of concern:
 
-| Risk Level | Meaning | Score Range | Action |
+| Status Level | Meaning | Score Range | Action |
 | -------- | -------- | -------- | -------- |
 | **None** | Excellent health | 9-10 | ✅ No action needed |
 | **Low** | Good status | 7-8 | ✅ Monitor occasionally |
-| **Medium** | Needs attention | 4-6 | 📋 Monitor and plan improvements |
-| **High** | Concerning | 1-3 | 🔴 Address in next quarter |
-| **Critical** | Critical concern | 0 | 🚨 Immediate action required |
+| **Medium** | Monitor | 4-6 | 📋 Monitor and plan improvements |
+| **High** | Needs attention | 1-3 | 🔴 Address in next quarter |
+| **Needs support** | Support needed | 0 | 🚨 Immediate support recommended |
 
-### Interpreting Risk Levels
+### Interpreting Status Levels
 
 **For Individual Contributors:**
 
-- **High/Critical:** Consider if project is suitable for production use
+- **High/Needs support:** Consider if project is suitable for production use
 - **Medium:** Monitor before major dependency
 - **Low/None:** Generally safe to depend on
 
 **For Maintainers:**
 
-- **High/Critical:** Target for improvement efforts
+- **High/Needs support:** Target for improvement efforts
 - **Medium:** Include in roadmap improvements
 - **Low/None:** Maintain current practices
 
@@ -942,14 +942,14 @@ Each metric assigns a **risk level** reflecting areas of concern:
 oss-guard check numpy --show-models
 
 # Result: Score 82/100
-# - Risk Model: 85/100 (Stable, diverse contributors)
+# - Stability Model: 85/100 (Stable, diverse contributors)
 # - Sustainability: 75/100 (Active releases, corporate backing)
 # - Community: 88/100 (Quick responses, active PRs)
 ```
 
 **Interpretation:**
 
-- ✅ Good choice for critical dependency
+- ✅ Good choice for core dependency
 - 📋 Note: Sustainability score indicates maintain awareness of releases
 - 👥 Strong community support
 
