@@ -7,6 +7,7 @@ Rust (Cargo), Go modules, Ruby Gems, PHP Composer, etc.
 """
 
 import json
+import re
 import tomllib
 from pathlib import Path
 from typing import NamedTuple
@@ -428,8 +429,30 @@ def get_package_dependencies(lockfile_path: str | Path, package_name: str) -> li
             return _get_yarn_package_dependencies(lockfile_path, package_name_lower)
         elif filename == "pnpm-lock.yaml":
             return _get_pnpm_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "mix.lock":
+            return _get_mix_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "pubspec.lock":
+            return _get_pubspec_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "renv.lock":
+            return _get_renv_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "Package.resolved":
+            return _get_spm_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "cpanfile.snapshot":
+            return _get_cpanfile_snapshot_dependencies(
+                lockfile_path, package_name_lower
+            )
+        elif filename == "cabal.project.freeze":
+            return _get_cabal_project_freeze_dependencies(
+                lockfile_path, package_name_lower
+            )
+        elif filename == "stack.yaml.lock":
+            return _get_stack_lock_dependencies(lockfile_path, package_name_lower)
         elif filename == "Cargo.lock":
             return _get_cargo_package_dependencies(lockfile_path, package_name_lower)
+        elif filename == "packages.lock.json":
+            return _get_packages_lock_dependencies(lockfile_path, package_name_lower)
+        elif filename == "go.mod":
+            return _get_go_mod_dependencies(lockfile_path, package_name_lower)
         elif filename == "Gemfile.lock":
             return _get_gemfile_package_dependencies(lockfile_path, package_name_lower)
         elif filename == "composer.lock":
@@ -628,6 +651,360 @@ def _extract_pnpm_package_name(package_key: str) -> str | None:
     return parts[0]
 
 
+def _get_mix_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from mix.lock."""
+    content = lockfile_path.read_text(encoding="utf-8")
+    entry = _find_mix_lock_entry(content, package_name_lower)
+    if not entry:
+        return []
+
+    lists = _extract_bracketed_lists(entry)
+    if len(lists) < 2:
+        return []
+
+    deps_list = lists[1]
+    dep_names = set(re.findall(r'\{:"([^"]+)"', deps_list))
+    dep_names.update(re.findall(r"\{:(\w+)", deps_list))
+    return sorted(dep_names)
+
+
+def _find_mix_lock_entry(content: str, package_name_lower: str) -> str | None:
+    """Locate a mix.lock entry for a given package name."""
+    match = re.search(
+        rf'"{re.escape(package_name_lower)}"\s*:',
+        content,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+
+    start = content.find("{:hex", match.end())
+    if start == -1:
+        return None
+
+    depth = 0
+    for idx in range(start, len(content)):
+        if content[idx] == "{":
+            depth += 1
+        elif content[idx] == "}":
+            depth -= 1
+            if depth == 0:
+                return content[start : idx + 1]
+
+    return None
+
+
+def _extract_bracketed_lists(text: str) -> list[str]:
+    """Extract top-level bracketed list blocks from text."""
+    lists = []
+    depth = 0
+    start = None
+
+    for idx, ch in enumerate(text):
+        if ch == "[":
+            if depth == 0:
+                start = idx
+            depth += 1
+        elif ch == "]" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                lists.append(text[start : idx + 1])
+                start = None
+
+    return lists
+
+
+def _get_pubspec_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies from pubspec.yaml when pubspec.lock is present."""
+    pubspec_path = lockfile_path.with_name("pubspec.yaml")
+    if not pubspec_path.exists():
+        return []
+
+    try:
+        import yaml
+    except ImportError:
+        return []
+
+    data = yaml.safe_load(pubspec_path.read_text(encoding="utf-8")) or {}
+    project_name = data.get("name")
+    if not isinstance(project_name, str):
+        return []
+    if project_name.lower() != package_name_lower:
+        return []
+
+    deps: set[str] = set()
+    for section in ("dependencies", "dev_dependencies", "dependency_overrides"):
+        section_data = data.get(section, {})
+        if isinstance(section_data, dict):
+            for name in section_data.keys():
+                if name != "flutter":
+                    deps.add(name)
+
+    return sorted(deps)
+
+
+def _get_renv_package_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from renv.lock."""
+    with open(lockfile_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    for name, info in (data.get("Packages") or {}).items():
+        if not isinstance(info, dict) or name.lower() != package_name_lower:
+            continue
+
+        deps: set[str] = set()
+        for key in ("Requirements", "Dependencies", "Depends", "Imports", "LinkingTo"):
+            value = info.get(key)
+            if isinstance(value, list):
+                deps.update(value)
+            elif isinstance(value, str):
+                deps.update(_split_r_dependency_list(value))
+        deps.discard("R")
+        return sorted(dep for dep in deps if dep)
+
+    return []
+
+
+def _split_r_dependency_list(value: str) -> list[str]:
+    """Split an R dependency string into package names."""
+    deps = []
+    for entry in value.split(","):
+        name = entry.strip().split("(")[0].strip()
+        if name:
+            deps.append(name)
+    return deps
+
+
+def _get_spm_package_dependencies(
+    _lockfile_path: Path, _package_name_lower: str
+) -> list[str]:
+    """Swift Package.resolved does not store dependency relationships."""
+    return []
+
+
+def _get_cpanfile_snapshot_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from cpanfile.snapshot."""
+    content = lockfile_path.read_text(encoding="utf-8")
+    deps_by_package: dict[str, set[str]] = {}
+    current_name = None
+    in_requires = False
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("distribution:"):
+            current_name = _strip_distribution_version(
+                stripped.split("distribution:", 1)[1].strip()
+            ).lower()
+            deps_by_package.setdefault(current_name, set())
+            in_requires = False
+            continue
+
+        if stripped.startswith("requires:") or stripped.startswith("requirements:"):
+            in_requires = True
+            continue
+
+        if in_requires:
+            if not line.startswith(" "):
+                in_requires = False
+                continue
+            dep_name = stripped.split(" ", 1)[0].strip(":")
+            if dep_name:
+                deps_by_package.setdefault(current_name or "", set()).add(dep_name)
+
+    return sorted(deps_by_package.get(package_name_lower, []))
+
+
+def _get_cabal_project_freeze_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from cabal.project.freeze."""
+    content = lockfile_path.read_text(encoding="utf-8")
+    constraints_text = _extract_cabal_constraints(content)
+    deps = _parse_cabal_constraint_packages(constraints_text)
+    project_name = _get_haskell_project_name(lockfile_path.parent)
+    if project_name and project_name.lower() != package_name_lower:
+        return []
+    return deps
+
+
+def _extract_cabal_constraints(content: str) -> str:
+    """Extract the constraints block from a cabal.project.freeze file."""
+    lines = content.splitlines()
+    buffer = []
+    in_constraints = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("constraints:"):
+            in_constraints = True
+            buffer.append(stripped.split("constraints:", 1)[1])
+            continue
+        if in_constraints:
+            if line.startswith(" ") or line.startswith("\t"):
+                buffer.append(stripped)
+            else:
+                break
+    return " ".join(buffer)
+
+
+def _parse_cabal_constraint_packages(text: str) -> list[str]:
+    """Parse cabal constraint packages from a constraints string."""
+    deps: set[str] = set()
+    for part in text.split(","):
+        chunk = part.strip()
+        if not chunk:
+            continue
+        if chunk.startswith("any."):
+            chunk = chunk[4:]
+        name = re.split(r"[<>=\s]", chunk, maxsplit=1)[0]
+        if name:
+            deps.add(name)
+    return sorted(deps)
+
+
+def _get_stack_lock_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies from stack.yaml.lock."""
+    try:
+        import yaml
+    except ImportError:
+        return []
+
+    data = yaml.safe_load(lockfile_path.read_text(encoding="utf-8")) or {}
+    packages = data.get("packages", [])
+    deps = _extract_stack_packages(packages)
+    project_name = _get_haskell_project_name(lockfile_path.parent)
+    if project_name and project_name.lower() != package_name_lower:
+        return []
+    return deps
+
+
+def _extract_stack_packages(packages: object) -> list[str]:
+    """Extract package names from stack.yaml.lock packages entries."""
+    deps: set[str] = set()
+    if isinstance(packages, list):
+        for entry in packages:
+            if isinstance(entry, str):
+                deps.add(_strip_stack_package_name(entry))
+            elif isinstance(entry, dict):
+                original = entry.get("original")
+                if isinstance(original, str):
+                    deps.add(_strip_stack_package_name(original))
+    return sorted(dep for dep in deps if dep)
+
+
+def _strip_stack_package_name(value: str) -> str:
+    """Strip version information from stack package identifiers."""
+    return value.strip().split(" ", 1)[0].split("@", 1)[0]
+
+
+def _get_packages_lock_dependencies(
+    lockfile_path: Path, package_name_lower: str
+) -> list[str]:
+    """Extract dependencies for a package from packages.lock.json."""
+    with open(lockfile_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    deps: set[str] = set()
+    dependencies = data.get("dependencies", {})
+    for _framework, packages_dict in dependencies.items():
+        if not isinstance(packages_dict, dict):
+            continue
+        for name, pkg_data in packages_dict.items():
+            if name.lower() != package_name_lower:
+                continue
+            if isinstance(pkg_data, dict):
+                package_deps = pkg_data.get("dependencies", {})
+                if isinstance(package_deps, dict):
+                    deps.update(package_deps.keys())
+    return sorted(deps)
+
+
+def _get_go_mod_dependencies(lockfile_path: Path, package_name_lower: str) -> list[str]:
+    """Extract dependencies for a module from go.mod."""
+    module_name, dependencies = _parse_go_mod_dependencies(lockfile_path)
+    if module_name and module_name.lower() == package_name_lower:
+        return dependencies
+    return []
+
+
+def _parse_go_mod_dependencies(lockfile_path: Path) -> tuple[str | None, list[str]]:
+    """Parse go.mod for module name and dependencies."""
+    module_name = None
+    dependencies: list[str] = []
+    in_require = False
+
+    for line in lockfile_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("module "):
+            module_name = stripped.split(" ", 1)[1].strip()
+            continue
+
+        if stripped == "require (":
+            in_require = True
+            continue
+
+        if in_require and stripped == ")":
+            in_require = False
+            continue
+
+        if in_require:
+            if stripped and not stripped.startswith("//"):
+                parts = stripped.split()
+                if parts:
+                    dependencies.append(parts[0])
+            continue
+
+        if stripped.startswith("require ") and "(" not in stripped:
+            parts = stripped.replace("require ", "").split()
+            if parts:
+                dependencies.append(parts[0])
+
+    return module_name, dependencies
+
+
+def _get_haskell_project_name(directory: Path) -> str | None:
+    """Extract a Haskell project name from package.yaml or .cabal file."""
+    package_yaml = directory / "package.yaml"
+    if package_yaml.exists():
+        try:
+            import yaml
+        except ImportError:
+            yaml = None
+        if yaml:
+            data = yaml.safe_load(package_yaml.read_text(encoding="utf-8")) or {}
+            name = data.get("name")
+            if isinstance(name, str):
+                return name
+
+    cabal_files = list(directory.glob("*.cabal"))
+    if cabal_files:
+        try:
+            content = cabal_files[0].read_text(encoding="utf-8")
+        except OSError:
+            return None
+        for line in content.splitlines():
+            if line.lower().startswith("name:"):
+                return line.split(":", 1)[1].strip()
+    return None
+
+
+def _strip_distribution_version(name: str) -> str:
+    """Strip version suffix from CPAN distribution names."""
+    match = re.match(r"^(?P<base>.+)-\d", name)
+    if match:
+        return match.group("base")
+    return name
+
+
 def _get_cargo_package_dependencies(
     lockfile_path: Path, package_name_lower: str
 ) -> list[str]:
@@ -722,36 +1099,7 @@ def _get_go_package_dependencies(
     if not go_mod_path.exists():
         return []
 
-    module_name = None
-    dependencies: list[str] = []
-    in_require = False
-
-    for line in go_mod_path.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if stripped.startswith("module "):
-            module_name = stripped.split(" ", 1)[1].strip()
-            continue
-
-        if stripped == "require (":
-            in_require = True
-            continue
-
-        if in_require and stripped == ")":
-            in_require = False
-            continue
-
-        if in_require:
-            if stripped and not stripped.startswith("//"):
-                parts = stripped.split()
-                if parts:
-                    dependencies.append(parts[0])
-            continue
-
-        if stripped.startswith("require ") and "(" not in stripped:
-            parts = stripped.replace("require ", "").split()
-            if parts:
-                dependencies.append(parts[0])
-
+    module_name, dependencies = _parse_go_mod_dependencies(go_mod_path)
     if module_name and module_name.lower() == package_name_lower:
         return dependencies
     return []

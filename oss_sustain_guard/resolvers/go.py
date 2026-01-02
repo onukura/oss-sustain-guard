@@ -142,6 +142,9 @@ class GoResolver(LanguageResolver):
         go_sum = directory / "go.sum"
         if go_sum.exists():
             detected.append(go_sum)
+        go_mod = directory / "go.mod"
+        if go_mod.exists():
+            detected.append(go_mod)
         return detected
 
     def get_manifest_files(self) -> list[str]:

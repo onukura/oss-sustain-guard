@@ -803,6 +803,84 @@ packages:
         assert deps == ["foo"]
 
 
+def test_get_package_dependencies_mix_lock():
+    """Test extracting dependencies for a package from mix.lock."""
+    mix_lock_content = """
+%{
+  "plug": {:hex, :plug, "1.11.0", "checksum", [:mix],
+    [{:cowboy, "~> 2.7", [hex: :cowboy]},
+     {:"phoenix_pubsub", "~> 2.0", [hex: :"phoenix_pubsub"]}],
+    "hexpm", "checksum"}
+}
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "mix.lock"
+        lockfile_path.write_text(mix_lock_content)
+
+        deps = get_package_dependencies(lockfile_path, "plug")
+        assert set(deps) == {"cowboy", "phoenix_pubsub"}
+
+
+def test_get_package_dependencies_packages_lock_json():
+    """Test extracting dependencies for a package from packages.lock.json."""
+    packages_lock_content = {
+        "dependencies": {
+            ".NETCoreApp,Version=v8.0": {
+                "Newtonsoft.Json": {
+                    "type": "Direct",
+                    "resolved": "13.0.3",
+                    "dependencies": {"System.Runtime": "4.3.0"},
+                }
+            }
+        }
+    }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "packages.lock.json"
+        lockfile_path.write_text(json.dumps(packages_lock_content))
+
+        deps = get_package_dependencies(lockfile_path, "Newtonsoft.Json")
+        assert deps == ["System.Runtime"]
+
+
+def test_get_package_dependencies_renv_lock():
+    """Test extracting dependencies for a package from renv.lock."""
+    renv_lock_content = {
+        "Packages": {
+            "dplyr": {"Version": "1.0.0", "Requirements": ["cli", "vctrs"]},
+            "cli": {"Version": "3.6.0"},
+        }
+    }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "renv.lock"
+        lockfile_path.write_text(json.dumps(renv_lock_content))
+
+        deps = get_package_dependencies(lockfile_path, "dplyr")
+        assert set(deps) == {"cli", "vctrs"}
+
+
+def test_get_package_dependencies_pubspec_lock():
+    """Test extracting dependencies from pubspec.yaml when pubspec.lock is present."""
+    pubspec_content = """
+name: my_app
+dependencies:
+  http: ^0.13.0
+dev_dependencies:
+  test: ^1.0.0
+"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        lockfile_path = Path(tmpdir) / "pubspec.lock"
+        lockfile_path.write_text("packages:\n")
+        pubspec_path = Path(tmpdir) / "pubspec.yaml"
+        pubspec_path.write_text(pubspec_content)
+
+        deps = get_package_dependencies(lockfile_path, "my_app")
+        assert set(deps) == {"http", "test"}
+
+
 def test_get_package_dependencies_nonexistent_file():
     """Test get_package_dependencies with non-existent file."""
     deps = get_package_dependencies("/nonexistent/path/uv.lock", "requests")

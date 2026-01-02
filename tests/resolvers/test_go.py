@@ -163,8 +163,8 @@ class TestGoResolver:
         resolver = GoResolver()
         lockfiles = resolver.detect_lockfiles(str(tmp_path))
 
-        assert len(lockfiles) == 1
-        assert lockfiles[0].name == "go.sum"
+        lockfile_names = {lockfile.name for lockfile in lockfiles}
+        assert lockfile_names == {"go.mod", "go.sum"}
 
     def test_parse_go_sum(self, tmp_path):
         """Test parsing go.sum."""
