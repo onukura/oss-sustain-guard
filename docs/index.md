@@ -30,28 +30,36 @@ This tool is meant to be a conversation starter about OSS sustainability, not a 
 
 ### 🔍 Comprehensive Analysis
 
+- **24 Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all metrics scored 0-10)
 - **CHAOSS-aligned metrics** measuring contributor health, development activity, community engagement, and project maturity
+- **5 CHAOSS-Aligned Models** - Risk, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Scoring profiles** optimized for different priorities (balanced, security-first, contributor-experience, long-term-stability)
 - **Transparent scoring** with detailed breakdowns of each metric
 
-### 📊 Time-Series & Trend Analysis
-
-- **Track changes** in package health over time
-- **Compare snapshots** between dates to identify improvement or degradation patterns
-- **Historical data** from pre-computed archives for popular packages
-
-### 🚀 Developer-Friendly Workflow
+### 🔧 Developer-Friendly Workflow
 
 - **Manifest auto-detection** from `requirements.txt`, `package.json`, `Cargo.toml`, and other formats
 - **Recursive scanning** for monorepos and multi-service projects
 - **Exclude configuration** for internal or legacy dependencies
 - **Integration-ready** for GitHub Actions, pre-commit hooks, and CI/CD pipelines
 
-### 💝 Gratitude Vending Machine
+### 📝 Extensibility & Configuration
 
-- **Discover projects** that need your support most
-- **See funding links** for community-driven projects
-- **Make informed decisions** about where to contribute back
+- **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins
+- **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case
+- **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
+- **Zero Configuration** - Works out of the box
+
+### 🌍 Multi-Language Support
+
+- **Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby** and more
+- **Multi-ecosystem support** - Analyze packages from all supported languages in one command
+
+### 💝 Sustainability Focus
+
+- **Community Support Awareness** - Displays funding links for community-driven projects
+- **Local Caching** - Efficient local cache for faster repeated checks
+- **Gratitude Vending Machine** - Discover projects that need your support most
 
 ## Quick Navigation
 
