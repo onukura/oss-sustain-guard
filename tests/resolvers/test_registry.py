@@ -102,32 +102,32 @@ class TestResolverRegistry:
             _RESOLVERS.pop("alias1", None)
             _RESOLVERS.pop("alias2", None)
 
-    def test_detect_ecosystems_python(self, tmp_path):
+    async def test_detect_ecosystems_python(self, tmp_path):
         """Test detecting Python ecosystem."""
         (tmp_path / "poetry.lock").touch()
 
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert "python" in ecosystems
 
-    def test_detect_ecosystems_none(self, tmp_path):
+    async def test_detect_ecosystems_none(self, tmp_path):
         """Test detecting no ecosystems."""
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert isinstance(ecosystems, list)
 
-    def test_detect_ecosystems_multiple(self, tmp_path):
+    async def test_detect_ecosystems_multiple(self, tmp_path):
         """Test detecting multiple ecosystems."""
         (tmp_path / "poetry.lock").touch()
 
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert isinstance(ecosystems, list)
         # Should be sorted
         assert ecosystems == sorted(ecosystems)
 
-    def test_detect_ecosystems_manifest_files(self, tmp_path):
+    async def test_detect_ecosystems_manifest_files(self, tmp_path):
         """Test detecting ecosystems by manifest files."""
         (tmp_path / "pyproject.toml").write_text("[project]")
 
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert "python" in ecosystems
 
     def test_get_php_resolver(self):

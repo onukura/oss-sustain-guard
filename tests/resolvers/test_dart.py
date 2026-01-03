@@ -2,7 +2,7 @@
 Tests for Dart resolver.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -17,8 +17,8 @@ class TestDartResolver:
         resolver = DartResolver()
         assert resolver.ecosystem_name == "dart"
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository(self, mock_get):
         """Test resolving repository from pub.dev response."""
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -28,33 +28,33 @@ class TestDartResolver:
         mock_get.return_value = mock_response
 
         resolver = DartResolver()
-        result = resolver.resolve_repository("http")
+        result = await resolver.resolve_repository("http")
         assert result is not None
         assert result.owner == "dart-lang"
         assert result.name == "http"
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_not_found(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_not_found(self, mock_get):
         """Test handling missing pub.dev package."""
         mock_response = MagicMock()
         mock_response.status_code = 404
         mock_get.return_value = mock_response
 
         resolver = DartResolver()
-        assert resolver.resolve_repository("missing") is None
+        assert await resolver.resolve_repository("missing") is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_request_error(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_request_error(self, mock_get):
         """Test handling pub.dev request errors."""
         import httpx
 
         mock_get.side_effect = httpx.RequestError("Network error")
 
         resolver = DartResolver()
-        assert resolver.resolve_repository("http") is None
+        assert await resolver.resolve_repository("http") is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_no_supported_url(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_no_supported_url(self, mock_get):
         """Test resolving package with no supported repository URLs."""
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -64,9 +64,9 @@ class TestDartResolver:
         mock_get.return_value = mock_response
 
         resolver = DartResolver()
-        assert resolver.resolve_repository("http") is None
+        assert await resolver.resolve_repository("http") is None
 
-    def test_parse_lockfile(self, tmp_path):
+    async def test_parse_lockfile(self, tmp_path):
         """Test parsing pubspec.lock."""
         lockfile = tmp_path / "pubspec.lock"
         lockfile.write_text(
@@ -82,40 +82,45 @@ class TestDartResolver:
         )
 
         resolver = DartResolver()
-        packages = resolver.parse_lockfile(lockfile)
+        packages = await resolver.parse_lockfile(lockfile)
         names = {pkg.name for pkg in packages}
         assert names == {"http", "path"}
 
-    def test_parse_lockfile_not_found(self):
+    async def test_parse_lockfile_not_found(self):
         """Test missing lockfile."""
         resolver = DartResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_lockfile("/missing/pubspec.lock")
+            await resolver.parse_lockfile("/missing/pubspec.lock")
 
-    def test_parse_lockfile_unknown(self, tmp_path):
+    async def test_parse_lockfile_unknown(self, tmp_path):
         """Test unknown lockfile type."""
         unknown = tmp_path / "unknown.lock"
         unknown.touch()
 
         resolver = DartResolver()
         with pytest.raises(ValueError, match="Unknown Dart lockfile type"):
-            resolver.parse_lockfile(unknown)
+            await resolver.parse_lockfile(unknown)
 
-    def test_parse_lockfile_read_error(self, tmp_path, monkeypatch):
+    @patch("aiofiles.open")
+    async def test_parse_lockfile_read_error(self, mock_aiofiles_open, tmp_path):
         """Test error reading pubspec.lock."""
+        # Create a temporary file that exists
         lockfile = tmp_path / "pubspec.lock"
         lockfile.write_text("packages:\n  http:\n")
 
-        def _raise(*_args, **_kwargs):
-            raise OSError("read error")
+        # Create a mock file object that raises OSError when read
+        mock_file = AsyncMock()
+        mock_file.__aenter__.return_value = mock_file
+        mock_file.__aexit__.return_value = None
+        mock_file.read.side_effect = OSError("read error")
 
-        monkeypatch.setattr(lockfile.__class__, "read_text", _raise)
+        mock_aiofiles_open.return_value = mock_file
 
         resolver = DartResolver()
         with pytest.raises(ValueError, match="Failed to read pubspec.lock"):
-            resolver.parse_lockfile(lockfile)
+            await resolver.parse_lockfile(lockfile)
 
-    def test_parse_manifest(self, tmp_path):
+    async def test_parse_manifest(self, tmp_path):
         """Test parsing pubspec.yaml."""
         manifest = tmp_path / "pubspec.yaml"
         manifest.write_text(
@@ -128,35 +133,40 @@ class TestDartResolver:
         )
 
         resolver = DartResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
         names = {pkg.name for pkg in packages}
         assert names == {"http", "path", "lints"}
 
-    def test_parse_manifest_not_found(self):
+    async def test_parse_manifest_not_found(self):
         """Test missing manifest."""
         resolver = DartResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_manifest("/missing/pubspec.yaml")
+            await resolver.parse_manifest("/missing/pubspec.yaml")
 
-    def test_parse_manifest_unknown(self, tmp_path):
+    async def test_parse_manifest_unknown(self, tmp_path):
         """Test unknown manifest type."""
         unknown = tmp_path / "unknown.yaml"
         unknown.touch()
 
         resolver = DartResolver()
         with pytest.raises(ValueError, match="Unknown Dart manifest file type"):
-            resolver.parse_manifest(unknown)
+            await resolver.parse_manifest(unknown)
 
-    def test_parse_manifest_read_error(self, tmp_path, monkeypatch):
+    @patch("aiofiles.open")
+    async def test_parse_manifest_read_error(self, mock_aiofiles_open, tmp_path):
         """Test error reading pubspec.yaml."""
+        # Create a temporary file that exists
         manifest = tmp_path / "pubspec.yaml"
         manifest.write_text("dependencies:\n  http: ^0.13.0\n")
 
-        def _raise(*_args, **_kwargs):
-            raise OSError("read error")
+        # Create a mock file object that raises OSError when read
+        mock_file = AsyncMock()
+        mock_file.__aenter__.return_value = mock_file
+        mock_file.__aexit__.return_value = None
+        mock_file.read.side_effect = OSError("read error")
 
-        monkeypatch.setattr(manifest.__class__, "read_text", _raise)
+        mock_aiofiles_open.return_value = mock_file
 
         resolver = DartResolver()
         with pytest.raises(ValueError, match="Failed to read pubspec.yaml"):
-            resolver.parse_manifest(manifest)
+            await resolver.parse_manifest(manifest)

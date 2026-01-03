@@ -4,11 +4,11 @@ Haskell package resolver (Hackage).
 
 from __future__ import annotations
 
+import asyncio
 import re
 import sys
 from pathlib import Path
 
-import aiofiles
 import httpx
 
 from oss_sustain_guard.http_client import _get_async_http_client
@@ -214,8 +214,7 @@ def _extract_cabal_repo_urls(cabal_content: str) -> list[str]:
 async def _parse_cabal_freeze(lockfile_path: Path) -> list[PackageInfo]:
     """Parse cabal.project.freeze file."""
     try:
-        async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
-            content = await f.read()
+        content = await asyncio.to_thread(lockfile_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read cabal.project.freeze: {e}") from e
 
@@ -243,8 +242,7 @@ async def _parse_cabal_freeze(lockfile_path: Path) -> list[PackageInfo]:
 async def _parse_stack_lock(lockfile_path: Path) -> list[PackageInfo]:
     """Parse stack.yaml.lock file."""
     try:
-        async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
-            content = await f.read()
+        content = await asyncio.to_thread(lockfile_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read stack.yaml.lock: {e}") from e
 
@@ -272,8 +270,7 @@ async def _parse_stack_lock(lockfile_path: Path) -> list[PackageInfo]:
 async def _parse_cabal_project(manifest_path: Path) -> list[PackageInfo]:
     """Parse cabal.project for dependency constraints."""
     try:
-        async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
-            content = await f.read()
+        content = await asyncio.to_thread(manifest_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read cabal.project: {e}") from e
 
@@ -294,8 +291,7 @@ async def _parse_cabal_project(manifest_path: Path) -> list[PackageInfo]:
 async def _parse_stack_manifest(manifest_path: Path) -> list[PackageInfo]:
     """Parse stack.yaml or package.yaml for extra dependency entries."""
     try:
-        async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
-            content = await f.read()
+        content = await asyncio.to_thread(manifest_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read {manifest_path.name}: {e}") from e
 

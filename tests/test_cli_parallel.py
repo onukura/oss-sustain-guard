@@ -36,17 +36,17 @@ class FakeResolver:
     def __init__(self, mapping):
         self._mapping = mapping
 
-    def resolve_repository(self, package_name):
+    async def resolve_repository(self, package_name):
         return self._mapping.get(package_name)
 
 
-def test_analyze_packages_parallel_empty():
+async def test_analyze_packages_parallel_empty():
     """Empty inputs return an empty result list."""
-    results = analyze_packages_parallel([], {})
+    results, _ = await analyze_packages_parallel([], {})
     assert results == []
 
 
-def test_analyze_packages_parallel_single_uses_analyze_package():
+async def test_analyze_packages_parallel_single_uses_analyze_package():
     """Single package analysis avoids parallel execution."""
     result = AnalysisResult(
         repo_url="https://github.com/example/project",
@@ -57,7 +57,7 @@ def test_analyze_packages_parallel_single_uses_analyze_package():
     with patch(
         "oss_sustain_guard.cli.analyze_package", return_value=result
     ) as mock_analyze:
-        results = analyze_packages_parallel(
+        results, _ = await analyze_packages_parallel(
             [("python", "project")],
             {},
             profile="balanced",
@@ -80,7 +80,7 @@ def test_analyze_packages_parallel_single_uses_analyze_package():
     )
 
 
-def test_analyze_packages_parallel_mixed_results():
+async def test_analyze_packages_parallel_mixed_results():
     """Parallel analysis respects cache, unsupported resolvers, and missing results."""
     cached_db = {
         "python:cached": {
@@ -141,7 +141,7 @@ def test_analyze_packages_parallel_mixed_results():
             else None,
         ) as mock_analyze,
     ):
-        results = analyze_packages_parallel(
+        results, _ = await analyze_packages_parallel(
             [
                 ("python", "cached"),
                 ("python", "live"),
@@ -174,10 +174,11 @@ def test_analyze_packages_parallel_mixed_results():
         None,
         False,
         True,
+        {},
     )
 
 
-def test_analyze_packages_parallel_non_batch_handles_exceptions():
+async def test_analyze_packages_parallel_non_batch_handles_exceptions():
     """Non-batch mode handles per-package errors."""
     resolver = FakeResolver(
         {
@@ -220,7 +221,7 @@ def test_analyze_packages_parallel_non_batch_handles_exceptions():
             side_effect=analyze_side_effect,
         ),
     ):
-        results = analyze_packages_parallel(
+        results, _ = await analyze_packages_parallel(
             [("python", "pkg1"), ("python", "pkg2")],
             {},
         )

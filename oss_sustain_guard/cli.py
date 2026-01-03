@@ -1105,7 +1105,7 @@ async def analyze_packages_parallel(
     verbose_logs: dict[str, list[str]] = {}  # Collect logs instead of printing directly
 
     if total == 0:
-        return results
+        return results, verbose_logs
 
     # For single package, don't use parallel processing
     if total == 1:
@@ -1120,11 +1120,12 @@ async def analyze_packages_parallel(
             verbose,
             use_local_cache,
         )
-        return [result]
+        return [result], verbose_logs
 
     # Use progress bar for multiple packages
     # Suppress stderr from resolvers during analysis to keep progress bar clean
     from io import StringIO
+
     old_stderr = sys.stderr
     sys.stderr = StringIO()
 

@@ -5,7 +5,7 @@ Additional tests for core helpers and error handling.
 from __future__ import annotations
 
 import copy
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -290,12 +290,14 @@ def test_extract_signals_parses_repo_and_metric_messages():
 
 
 def test_analyze_repository_data_handles_metric_errors():
-    def failing_checker(_repo_info, _context):
-        raise ValueError("broken")
+    class FailingChecker:
+        def check_legacy(self, _repo_info, _context):
+            raise ValueError("broken")
 
     def on_error_metric(exc: Exception) -> Metric:
         return Metric("Recover", 1, 10, f"Recovered: {exc}", "Low")
 
+    failing_checker = FailingChecker()
     specs = [
         MetricSpec(
             name="First",
@@ -325,7 +327,7 @@ def test_analyze_repository_data_handles_metric_errors():
     assert any("Note: " in call.args[0] for call in mock_print.call_args_list)
 
 
-def test_analyze_repository_handles_http_status_error():
+async def test_analyze_repository_handles_http_status_error():
     error = httpx.HTTPStatusError(
         "boom",
         request=httpx.Request("POST", "https://example.com"),
@@ -333,17 +335,17 @@ def test_analyze_repository_handles_http_status_error():
     )
     with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
         mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = error
+        mock_provider.get_repository_data = AsyncMock(side_effect=error)
         with pytest.raises(httpx.HTTPStatusError):
-            analyze_repository("owner", "repo")
+            await analyze_repository("owner", "repo")
 
 
-def test_analyze_repository_handles_unexpected_error():
+async def test_analyze_repository_handles_unexpected_error():
     with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
         mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = RuntimeError("boom")
+        mock_provider.get_repository_data = AsyncMock(side_effect=RuntimeError("boom"))
         with pytest.raises(RuntimeError):
-            analyze_repository("owner", "repo")
+            await analyze_repository("owner", "repo")
 
 
 def test_analyze_dependencies_handles_bad_data():
