@@ -75,28 +75,27 @@ class GoResolver(LanguageResolver):
                 response.raise_for_status()
 
                 # Look for repository link in the UnitMeta-repo section
-                if "github.com" in response.text or "gitlab.com" in response.text:
-                    import re
+                import re
 
-                    # First try to find the repository link in UnitMeta-repo section
-                    # This is more reliable than searching the entire page
-                    pattern = r'class="UnitMeta-repo"[^>]*>.*?href="(https://[^"]+)"'
-                    matches = re.findall(pattern, response.text, re.DOTALL)
-                    for match in matches:
-                        repo = parse_repository_url(match)
-                        if repo:
-                            return repo
+                # First try to find the repository link in UnitMeta-repo section
+                # This is more reliable than searching the entire page
+                pattern = r'class="UnitMeta-repo"[^>]*>.*?href="(https://[^"]+)"'
+                matches = re.findall(pattern, response.text, re.DOTALL)
+                for match in matches:
+                    repo = parse_repository_url(match)
+                    if repo:
+                        return repo
 
-                    # Fallback: search for any repository URL
-                    pattern = r'https://(?:github|gitlab)\.com/[^/\s"<>]+/[^/\s"<>]+'
-                    matches = re.findall(pattern, response.text)
-                    for match in matches:
-                        # Filter out common false positives (golang/go is the Go logo link)
-                        if "github.com/golang/go" in match:
-                            continue
-                        repo = parse_repository_url(match)
-                        if repo:
-                            return repo
+                # Fallback: search for any repository URL
+                pattern = r'https://(?:github|gitlab)\.com/[^/\s"<>]+/[^/\s"<>]+'
+                matches = re.findall(pattern, response.text)
+                for match in matches:
+                    # Filter out common false positives (golang/go is the Go logo link)
+                    if "github.com/golang/go" in match:
+                        continue
+                    repo = parse_repository_url(match)
+                    if repo:
+                        return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             print(
