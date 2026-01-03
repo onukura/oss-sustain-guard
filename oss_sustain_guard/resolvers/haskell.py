@@ -5,6 +5,7 @@ Haskell package resolver (Hackage).
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import httpx
@@ -75,7 +76,10 @@ class HaskellResolver(LanguageResolver):
                 cabal_content = cabal_response.text
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            print(f"Note: Unable to fetch Hackage data for {package_name}: {e}")
+            print(
+                f"Note: Unable to fetch Hackage data for {package_name}: {e}",
+                file=sys.stderr,
+            )
             return None
 
         # Parse source-repository from cabal file

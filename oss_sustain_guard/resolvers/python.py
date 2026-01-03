@@ -3,6 +3,7 @@ Python/PyPI package resolver.
 """
 
 import json
+import sys
 from pathlib import Path
 
 import httpx
@@ -68,7 +69,10 @@ class PythonResolver(LanguageResolver):
                     return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            print(f"Note: Unable to fetch PyPI data for {package_name}: {e}")
+            print(
+                f"Note: Unable to fetch PyPI data for {package_name}: {e}",
+                file=sys.stderr,
+            )
             return None
 
         return None

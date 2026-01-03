@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 import httpx
@@ -43,7 +44,10 @@ class PerlResolver(LanguageResolver):
                 response.raise_for_status()
                 data = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
-            print(f"Note: Unable to fetch MetaCPAN data for {package_name}: {e}")
+            print(
+                f"Note: Unable to fetch MetaCPAN data for {package_name}: {e}",
+                file=sys.stderr,
+            )
             return None
 
         resources = data.get("resources", {}) if isinstance(data, dict) else {}

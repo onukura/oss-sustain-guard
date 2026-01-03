@@ -3,6 +3,7 @@ PHP package resolver for Composer/Packagist.
 """
 
 import json
+import sys
 from pathlib import Path
 
 import httpx
@@ -77,12 +78,18 @@ class PhpResolver(LanguageResolver):
             return None
         except httpx.HTTPStatusError as e:
             # Return None for 404 errors (package not found)
-            print(f"Note: Unable to fetch PHP data for {package_name}: {e}")
+            print(
+                f"Note: Unable to fetch PHP data for {package_name}: {e}",
+                file=sys.stderr,
+            )
             if e.response.status_code == 404:
                 return None
             raise
         except (httpx.RequestError, ValueError, KeyError) as e:
-            print(f"Note: Unable to fetch PHP data for {package_name}: {e}")
+            print(
+                f"Note: Unable to fetch PHP data for {package_name}: {e}",
+                file=sys.stderr,
+            )
             return None
 
     def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:

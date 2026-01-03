@@ -1155,8 +1155,13 @@ def _get_batch_repository_query(repo_list: list[tuple[str, str]]) -> str:
 
 
 def analyze_repositories_batch(
-    repo_list: list[tuple[str, str] | tuple[str, str, str | None, str | None]],
+    repo_list: list[
+        tuple[str, str]
+        | tuple[str, str, str | None, str | None]
+        | tuple[str, str, str | None, str | None, str | None]
+    ],
     platform: str | None = None,
+    vcs_platform: str | None = None,
     *,
     profile: str = "balanced",
 ) -> dict[tuple[str, str], AnalysisResult | None]:
@@ -1166,8 +1171,10 @@ def analyze_repositories_batch(
     individual providers. This function now calls analyze_repository for each item.
 
     Args:
-        repo_list: List of (owner, name) or (owner, name, platform, package_name).
+        repo_list: List of (owner, name), (owner, name, platform, package_name), or
+            (owner, name, platform, package_name, vcs_platform).
         platform: Optional package platform for 2-tuple items.
+        vcs_platform: Optional VCS platform override for 2-tuple or 4-tuple items.
         profile: Scoring profile name.
 
     Returns:
@@ -1179,22 +1186,28 @@ def analyze_repositories_batch(
     results: dict[tuple[str, str], AnalysisResult | None] = {}
 
     def _normalize_batch_item(
-        item: tuple[str, str] | tuple[str, str, str | None, str | None],
-    ) -> tuple[str, str, str | None, str | None]:
+        item: tuple[str, str]
+        | tuple[str, str, str | None, str | None]
+        | tuple[str, str, str | None, str | None, str | None],
+    ) -> tuple[str, str, str | None, str | None, str | None]:
         if len(item) == 2:
             owner, name = item
-            return owner, name, platform or None, None
+            return owner, name, platform or None, None, vcs_platform or None
         if len(item) == 4:
             owner, name, item_platform, package_name = item
-            return owner, name, item_platform, package_name
+            return owner, name, item_platform, package_name, vcs_platform or None
+        if len(item) == 5:
+            owner, name, item_platform, package_name, item_vcs_platform = item
+            return owner, name, item_platform, package_name, item_vcs_platform
         raise ValueError(
-            "Batch items must be (owner, name) or (owner, name, platform, package_name)."
+            "Batch items must be (owner, name), (owner, name, platform, package_name), "
+            "or (owner, name, platform, package_name, vcs_platform)."
         )
 
     normalized = [_normalize_batch_item(item) for item in repo_list]
 
     # Analyze each repository individually using VCS provider
-    for owner, name, item_platform, package_name in normalized:
+    for owner, name, item_platform, package_name, item_vcs_platform in normalized:
         try:
             result = analyze_repository(
                 owner,
@@ -1202,6 +1215,7 @@ def analyze_repositories_batch(
                 platform=item_platform,
                 package_name=package_name,
                 profile=profile,
+                vcs_platform=item_vcs_platform or vcs_platform or "github",
             )
             results[(owner, name)] = result
         except Exception as e:
