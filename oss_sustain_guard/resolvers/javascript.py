@@ -412,7 +412,7 @@ class JavaScriptResolver(LanguageResolver):
             # deno.json can have imports section with npm dependencies
             imports = data.get("imports", {})
             if isinstance(imports, dict):
-                for import_key, import_value in imports.items():
+                for _import_key, import_value in imports.items():
                     # Extract package name from npm: specifiers
                     if isinstance(import_value, str) and import_value.startswith(
                         "npm:"
@@ -470,7 +470,7 @@ class JavaScriptResolver(LanguageResolver):
                 # Extract from workspaces section (direct dependencies)
                 workspaces = data.get("workspaces", {})
                 if isinstance(workspaces, dict):
-                    for workspace_name, workspace_data in workspaces.items():
+                    for _workspace_name, workspace_data in workspaces.items():
                         if isinstance(workspace_data, dict):
                             # Get dependencies and devDependencies from workspaces
                             for section in ("dependencies", "devDependencies"):

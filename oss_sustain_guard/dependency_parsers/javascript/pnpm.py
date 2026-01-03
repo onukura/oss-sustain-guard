@@ -77,7 +77,9 @@ def parse_pnpm_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
                 if isinstance(section_data, dict):
                     collect_pnpm_dependency_versions(section_data, versions_by_name)
                     target_set = (
-                        importer_dev if section == "devDependencies" else importer_direct
+                        importer_dev
+                        if section == "devDependencies"
+                        else importer_direct
                     )
                     target_set.update(section_data.keys())
 

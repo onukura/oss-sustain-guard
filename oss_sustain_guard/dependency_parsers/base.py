@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, NamedTuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, NamedTuple
 
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
     from oss_sustain_guard.dependency_graph import DependencyGraph
