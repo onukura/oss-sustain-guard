@@ -1,0 +1,21 @@
+{
+  "name": "react-sample-project",
+  "version": "1.0.0",
+  "imports": {
+    "@gitlab/ui": "npm:@gitlab/ui@^126.3.4",
+    "react": "npm:react@^18.2.0",
+    "react-dom": "npm:react-dom@^18.2.0",
+    "axios": "npm:axios@^1.6.0",
+    "lodash": "npm:lodash@^4.17.21",
+    "express": "npm:express@^4.18.2",
+    "typescript": "npm:typescript@^5.3.0",
+    "webpack": "npm:webpack@^5.89.0",
+    "jest": "npm:jest@^29.7.0",
+    "@types/react": "npm:@types/react@^18.2.0",
+    "eslint": "npm:eslint@^8.54.0"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  }
+}

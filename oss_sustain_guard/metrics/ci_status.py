@@ -43,7 +43,13 @@ class CiStatusChecker(MetricChecker):
         status = ""
         ci_status = vcs_data.ci_status
         if ci_status is None and vcs_data.raw_data is None:
-            return None
+            return Metric(
+                "Build Health",
+                0,
+                max_score,
+                "Note: CI status data not available.",
+                "High",
+            )
 
         if ci_status is None:
             raw_data = vcs_data.raw_data or {}
@@ -156,7 +162,12 @@ _CHECKER = CiStatusChecker()
 def check_ci_status(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
     if isinstance(repo_data, VCSRepositoryData):
         return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
-    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
+    result = _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
+    return (
+        result
+        if result is not None
+        else _on_error(ValueError("Legacy check returned None"))
+    )
 
 
 def _on_error(error: Exception) -> Metric:

@@ -2,7 +2,7 @@
 Tests for Go resolver.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -17,35 +17,35 @@ class TestGoResolver:
         resolver = GoResolver()
         assert resolver.ecosystem_name == "go"
 
-    def test_get_manifest_files(self):
+    async def test_get_manifest_files(self):
         """Test manifest files for Go."""
         resolver = GoResolver()
-        manifests = resolver.get_manifest_files()
+        manifests = await resolver.get_manifest_files()
         assert "go.mod" in manifests
 
-    def test_resolve_github_url_direct_path(self):
+    async def test_resolve_github_url_direct_path(self):
         """Test resolving GitHub path directly."""
         resolver = GoResolver()
-        result = resolver.resolve_github_url("github.com/golang/go")
+        result = await resolver.resolve_github_url("github.com/golang/go")
         assert result == ("golang", "go")
 
-    def test_resolve_github_url_with_subdomain(self):
+    async def test_resolve_github_url_with_subdomain(self):
         """Test resolving GitHub path with subdomain."""
         resolver = GoResolver()
-        result = resolver.resolve_github_url("github.com/sirupsen/logrus")
+        result = await resolver.resolve_github_url("github.com/sirupsen/logrus")
         assert result == ("sirupsen", "logrus")
 
-    def test_resolve_github_url_with_version_suffix(self):
+    async def test_resolve_github_url_with_version_suffix(self):
         """Test resolving GitHub path with Go module version suffix."""
         resolver = GoResolver()
         # go-redis/redis uses /v8 version suffix for v8.x releases
-        result = resolver.resolve_github_url("github.com/go-redis/redis/v8")
+        result = await resolver.resolve_github_url("github.com/go-redis/redis/v8")
         assert result == ("go-redis", "redis")
 
-    def test_resolve_github_url_with_v2_suffix(self):
+    async def test_resolve_github_url_with_v2_suffix(self):
         """Test resolving GitHub path with /v2 version suffix."""
         resolver = GoResolver()
-        result = resolver.resolve_github_url("github.com/user/repo/v2")
+        result = await resolver.resolve_github_url("github.com/user/repo/v2")
         assert result == ("user", "repo")
 
     def test_strip_go_version_suffix(self):
@@ -74,19 +74,19 @@ class TestGoResolver:
             == "github.com/v2ray/v2ray-core"
         )
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_golang_org(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_golang_org(self, mock_get):
         """Test resolving golang.org package via pkg.go.dev."""
         mock_response = MagicMock()
         mock_response.text = '<a href="https://github.com/golang/text">Repository</a>'
         mock_get.return_value = mock_response
 
         resolver = GoResolver()
-        result = resolver.resolve_github_url("golang.org/x/text")
+        result = await resolver.resolve_github_url("golang.org/x/text")
         assert result == ("golang", "text")
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_short_name(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_short_name(self, mock_get):
         """Test resolving short package name via pkg.go.dev search."""
         # Mock search response
         search_response = MagicMock()
@@ -108,11 +108,11 @@ class TestGoResolver:
         mock_get.side_effect = [search_response, package_response]
 
         resolver = GoResolver()
-        result = resolver.resolve_github_url("gorm")
+        result = await resolver.resolve_github_url("gorm")
         assert result == ("go-gorm", "gorm")
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_with_unitmeta_repo(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_with_unitmeta_repo(self, mock_get):
         """Test resolving with UnitMeta-repo section."""
         mock_response = MagicMock()
         mock_response.text = """
@@ -127,11 +127,11 @@ class TestGoResolver:
         mock_get.return_value = mock_response
 
         resolver = GoResolver()
-        result = resolver.resolve_github_url("github.com/sirupsen/logrus")
+        result = await resolver.resolve_github_url("github.com/sirupsen/logrus")
         assert result == ("sirupsen", "logrus")
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_fallback_filtering(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_fallback_filtering(self, mock_get):
         """Test fallback pattern with golang/go filtering."""
         mock_response = MagicMock()
         mock_response.text = """
@@ -141,32 +141,32 @@ class TestGoResolver:
         mock_get.return_value = mock_response
 
         resolver = GoResolver()
-        result = resolver.resolve_github_url("example.com/user/repo")
+        result = await resolver.resolve_github_url("example.com/user/repo")
         assert result == ("user", "repo")
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_network_error(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_network_error(self, mock_get):
         """Test resolving with network error."""
         import httpx
 
         mock_get.side_effect = httpx.RequestError("Network error")
 
         resolver = GoResolver()
-        result = resolver.resolve_github_url("golang.org/x/net")
+        result = await resolver.resolve_github_url("golang.org/x/net")
         assert result is None
 
-    def test_detect_lockfiles(self, tmp_path):
+    async def test_detect_lockfiles(self, tmp_path):
         """Test detecting Go lockfiles."""
         (tmp_path / "go.sum").touch()
         (tmp_path / "go.mod").touch()
 
         resolver = GoResolver()
-        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
 
         lockfile_names = {lockfile.name for lockfile in lockfiles}
         assert lockfile_names == {"go.mod", "go.sum"}
 
-    def test_parse_go_sum(self, tmp_path):
+    async def test_parse_go_sum(self, tmp_path):
         """Test parsing go.sum."""
         go_sum_content = """github.com/golang/go v1.21.0 h1:someHash
 github.com/sirupsen/logrus v1.9.0 h1:anotherHash
@@ -176,7 +176,7 @@ golang.org/x/sys v0.10.0 h1:yetAnotherHash
         sum_file.write_text(go_sum_content)
 
         resolver = GoResolver()
-        packages = resolver.parse_lockfile(str(sum_file))
+        packages = await resolver.parse_lockfile(str(sum_file))
 
         assert len(packages) == 3
         names = {p.name for p in packages}
@@ -185,51 +185,56 @@ golang.org/x/sys v0.10.0 h1:yetAnotherHash
         assert "golang.org/x/sys" in names
         assert all(p.ecosystem == "go" for p in packages)
 
-    def test_parse_lockfile_not_found(self):
+    async def test_parse_lockfile_not_found(self):
         """Test parsing non-existent lockfile."""
         resolver = GoResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_lockfile("/nonexistent/go.sum")
+            await resolver.parse_lockfile("/nonexistent/go.sum")
 
-    def test_parse_lockfile_unknown_type(self, tmp_path):
+    async def test_parse_lockfile_unknown_type(self, tmp_path):
         """Test parsing unknown lockfile type."""
         unknown_file = tmp_path / "unknown.lock"
         unknown_file.touch()
 
         resolver = GoResolver()
         with pytest.raises(ValueError, match="Unknown Go lockfile type"):
-            resolver.parse_lockfile(str(unknown_file))
+            await resolver.parse_lockfile(str(unknown_file))
 
-    def test_parse_lockfile_read_error(self, tmp_path, monkeypatch):
+    @patch("aiofiles.open")
+    async def test_parse_lockfile_read_error(self, mock_aiofiles_open, tmp_path):
         """Test parsing go.sum with read error."""
+        # Create a temporary file that exists
         sum_file = tmp_path / "go.sum"
         sum_file.write_text("github.com/golang/go v1.21.0 h1:hash")
 
-        def _raise(*_args, **_kwargs):
-            raise OSError("read error")
+        # Create a mock file object that raises OSError when read
+        mock_file = AsyncMock()
+        mock_file.__aenter__.return_value = mock_file
+        mock_file.__aexit__.return_value = None
+        mock_file.read.side_effect = OSError("read error")
 
-        monkeypatch.setattr("builtins.open", _raise)
+        mock_aiofiles_open.return_value = mock_file
 
         resolver = GoResolver()
-        packages = resolver.parse_lockfile(str(sum_file))
+        packages = await resolver.parse_lockfile(str(sum_file))
         assert packages == []
 
-    def test_parse_manifest_not_found(self):
+    async def test_parse_manifest_not_found(self):
         """Test parsing missing go.mod."""
         resolver = GoResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_manifest("/missing/go.mod")
+            await resolver.parse_manifest("/missing/go.mod")
 
-    def test_parse_manifest_unknown_type(self, tmp_path):
+    async def test_parse_manifest_unknown_type(self, tmp_path):
         """Test parsing unknown manifest type."""
         manifest = tmp_path / "go.txt"
         manifest.touch()
 
         resolver = GoResolver()
         with pytest.raises(ValueError, match="Unknown Go manifest file type"):
-            resolver.parse_manifest(manifest)
+            await resolver.parse_manifest(manifest)
 
-    def test_parse_manifest_go_mod(self, tmp_path):
+    async def test_parse_manifest_go_mod(self, tmp_path):
         """Test parsing go.mod with block and single-line requires."""
         manifest = tmp_path / "go.mod"
         manifest.write_text(
@@ -244,7 +249,7 @@ golang.org/x/sys v0.10.0 h1:yetAnotherHash
         )
 
         resolver = GoResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
 
         names = {pkg.name for pkg in packages}
         assert names == {
@@ -253,16 +258,21 @@ golang.org/x/sys v0.10.0 h1:yetAnotherHash
             "github.com/single/repo",
         }
 
-    def test_parse_manifest_read_error(self, tmp_path, monkeypatch):
+    @patch("aiofiles.open")
+    async def test_parse_manifest_read_error(self, mock_aiofiles_open, tmp_path):
         """Test parsing go.mod with read error."""
+        # Create a temporary file that exists
         manifest = tmp_path / "go.mod"
         manifest.write_text("module example\n")
 
-        def _raise(*_args, **_kwargs):
-            raise OSError("read error")
+        # Create a mock file object that raises OSError when read
+        mock_file = AsyncMock()
+        mock_file.__aenter__.return_value = mock_file
+        mock_file.__aexit__.return_value = None
+        mock_file.read.side_effect = OSError("read error")
 
-        monkeypatch.setattr("builtins.open", _raise)
+        mock_aiofiles_open.return_value = mock_file
 
         resolver = GoResolver()
         with pytest.raises(ValueError, match="Failed to parse go.mod"):
-            resolver.parse_manifest(manifest)
+            await resolver.parse_manifest(manifest)

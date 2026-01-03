@@ -18,14 +18,14 @@ class TestJavaScriptResolver:
         resolver = JavaScriptResolver()
         assert resolver.ecosystem_name == "javascript"
 
-    def test_get_manifest_files(self):
+    async def test_get_manifest_files(self):
         """Test manifest files for JavaScript."""
         resolver = JavaScriptResolver()
-        manifests = resolver.get_manifest_files()
+        manifests = await resolver.get_manifest_files()
         assert "package.json" in manifests
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_success(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_success(self, mock_get):
         """Test resolving GitHub URL from npm registry."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -37,11 +37,11 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("react")
+        result = await resolver.resolve_repository("react")
         assert result and result.owner == "facebook" and result.name == "react"
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_string_repo(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_string_repo(self, mock_get):
         """Test resolving when repository is a string."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -50,11 +50,11 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("lodash")
+        result = await resolver.resolve_repository("lodash")
         assert result and result.owner == "lodash" and result.name == "lodash"
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_homepage_fallback(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_homepage_fallback(self, mock_get):
         """Test fallback to homepage field."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -64,11 +64,11 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("vue")
+        result = await resolver.resolve_repository("vue")
         assert result and result.owner == "vuejs" and result.name == "vue"
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_not_found(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_not_found(self, mock_get):
         """Test resolving package with no GitHub URL."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -78,42 +78,42 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("some-package")
+        result = await resolver.resolve_repository("some-package")
         assert result is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_network_error(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_url_network_error(self, mock_get):
         """Test resolving with network error."""
         import httpx
 
         mock_get.side_effect = httpx.RequestError("Network error")
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("react")
+        result = await resolver.resolve_repository("react")
         assert result is None
 
-    def test_detect_lockfiles(self, tmp_path):
+    async def test_detect_lockfiles(self, tmp_path):
         """Test detecting JavaScript lockfiles."""
         (tmp_path / "package-lock.json").touch()
         (tmp_path / "package.json").touch()
 
         resolver = JavaScriptResolver()
-        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
 
         assert len(lockfiles) == 1
         assert lockfiles[0].name == "package-lock.json"
 
-    def test_detect_lockfiles_yarn(self, tmp_path):
+    async def test_detect_lockfiles_yarn(self, tmp_path):
         """Test detecting yarn.lock."""
         (tmp_path / "yarn.lock").touch()
 
         resolver = JavaScriptResolver()
-        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
 
         assert len(lockfiles) == 1
         assert lockfiles[0].name == "yarn.lock"
 
-    def test_parse_package_lock(self, tmp_path):
+    async def test_parse_package_lock(self, tmp_path):
         """Test parsing package-lock.json."""
         package_lock = {
             "dependencies": {
@@ -125,7 +125,7 @@ class TestJavaScriptResolver:
         lock_file.write_text(json.dumps(package_lock))
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
 
         assert len(packages) >= 2
         names = {p.name for p in packages}
@@ -133,7 +133,7 @@ class TestJavaScriptResolver:
         assert "lodash" in names
         assert all(p.ecosystem == "javascript" for p in packages)
 
-    def test_parse_yarn_lock(self, tmp_path):
+    async def test_parse_yarn_lock(self, tmp_path):
         """Test parsing yarn.lock."""
         yarn_content = """# THIS IS A GENERATED FILE
 "react@^18.0.0":
@@ -148,30 +148,30 @@ class TestJavaScriptResolver:
         lock_file.write_text(yarn_content)
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
 
         assert len(packages) >= 1
         names = {p.name for p in packages}
         assert "react" in names
         assert all(p.ecosystem == "javascript" for p in packages)
 
-    def test_parse_lockfile_not_found(self):
+    async def test_parse_lockfile_not_found(self):
         """Test parsing non-existent lockfile."""
         resolver = JavaScriptResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_lockfile("/nonexistent/package-lock.json")
+            await resolver.parse_lockfile("/nonexistent/package-lock.json")
 
-    def test_parse_lockfile_unknown_type(self, tmp_path):
+    async def test_parse_lockfile_unknown_type(self, tmp_path):
         """Test parsing unknown lockfile type."""
         unknown_lock = tmp_path / "unknown.lock"
         unknown_lock.touch()
 
         resolver = JavaScriptResolver()
         with pytest.raises(ValueError, match="Unknown JavaScript lockfile type"):
-            resolver.parse_lockfile(str(unknown_lock))
+            await resolver.parse_lockfile(str(unknown_lock))
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_prefix(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_github_prefix(self, mock_get):
         """Test resolving repository with github: prefix."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -180,11 +180,11 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("react")
+        result = await resolver.resolve_repository("react")
         assert result and result.owner == "facebook" and result.name == "react"
 
-    @patch("httpx.Client.get")
-    def test_resolve_gitlab_prefix(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_gitlab_prefix(self, mock_get):
         """Test resolving repository with gitlab: prefix."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -193,13 +193,13 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("gitlab")
+        result = await resolver.resolve_repository("gitlab")
         # GitLab is supported, check correct parsing
         assert result and result.provider == "gitlab"
         assert result.owner == "gitlab-org" and result.name == "gitlab"
 
-    @patch("httpx.Client.get")
-    def test_resolve_git_protocol(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_git_protocol(self, mock_get):
         """Test resolving repository with git:// protocol."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -208,11 +208,11 @@ class TestJavaScriptResolver:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("jquery")
+        result = await resolver.resolve_repository("jquery")
         assert result and result.owner == "jquery" and result.name == "jquery"
 
-    @patch("httpx.Client.get")
-    def test_resolve_http_status_error(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_http_status_error(self, mock_get):
         """Test resolving with HTTP status error."""
         import httpx
 
@@ -221,10 +221,10 @@ class TestJavaScriptResolver:
         )
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("nonexistent-package")
+        result = await resolver.resolve_repository("nonexistent-package")
         assert result is None
 
-    def test_parse_pnpm_lock(self, tmp_path):
+    async def test_parse_pnpm_lock(self, tmp_path):
         """Test parsing pnpm-lock.yaml."""
         pnpm_content = """lockfileVersion: '6.0'
 dependencies:
@@ -244,31 +244,31 @@ packages:
         lock_file.write_text(pnpm_content)
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
 
         assert len(packages) >= 1
         names = {p.name for p in packages}
         assert "react" in names or "lodash" in names
         assert all(p.ecosystem == "javascript" for p in packages)
 
-    def test_detect_lockfiles_pnpm(self, tmp_path):
+    async def test_detect_lockfiles_pnpm(self, tmp_path):
         """Test detecting pnpm-lock.yaml."""
         (tmp_path / "pnpm-lock.yaml").touch()
 
         resolver = JavaScriptResolver()
-        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
 
         assert len(lockfiles) == 1
         assert lockfiles[0].name == "pnpm-lock.yaml"
 
-    def test_detect_lockfiles_multiple(self, tmp_path):
+    async def test_detect_lockfiles_multiple(self, tmp_path):
         """Test detecting multiple lockfiles."""
         (tmp_path / "package-lock.json").touch()
         (tmp_path / "yarn.lock").touch()
         (tmp_path / "pnpm-lock.yaml").touch()
 
         resolver = JavaScriptResolver()
-        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
 
         assert len(lockfiles) == 3
         names = {lf.name for lf in lockfiles}
@@ -276,7 +276,7 @@ packages:
         assert "yarn.lock" in names
         assert "pnpm-lock.yaml" in names
 
-    def test_parse_manifest_package_json(self, tmp_path):
+    async def test_parse_manifest_package_json(self, tmp_path):
         """Test parsing package.json manifest."""
         package_json = {
             "name": "my-project",
@@ -289,7 +289,7 @@ packages:
         manifest_file.write_text(json.dumps(package_json))
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_manifest(str(manifest_file))
+        packages = await resolver.parse_manifest(str(manifest_file))
 
         assert len(packages) == 5
         names = {p.name for p in packages}
@@ -300,31 +300,31 @@ packages:
         assert "react-dom" in names
         assert all(p.ecosystem == "javascript" for p in packages)
 
-    def test_parse_manifest_not_found(self):
+    async def test_parse_manifest_not_found(self):
         """Test parsing non-existent manifest."""
         resolver = JavaScriptResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_manifest("/nonexistent/package.json")
+            await resolver.parse_manifest("/nonexistent/package.json")
 
-    def test_parse_manifest_unknown_type(self, tmp_path):
+    async def test_parse_manifest_unknown_type(self, tmp_path):
         """Test parsing unknown manifest type."""
         unknown_manifest = tmp_path / "unknown.json"
         unknown_manifest.touch()
 
         resolver = JavaScriptResolver()
         with pytest.raises(ValueError, match="Unknown JavaScript manifest file type"):
-            resolver.parse_manifest(str(unknown_manifest))
+            await resolver.parse_manifest(str(unknown_manifest))
 
-    def test_parse_manifest_invalid_json(self, tmp_path):
+    async def test_parse_manifest_invalid_json(self, tmp_path):
         """Test parsing invalid JSON manifest."""
         manifest_file = tmp_path / "package.json"
         manifest_file.write_text("{ invalid json }")
 
         resolver = JavaScriptResolver()
         with pytest.raises(ValueError, match="Failed to parse package.json"):
-            resolver.parse_manifest(str(manifest_file))
+            await resolver.parse_manifest(str(manifest_file))
 
-    def test_parse_package_lock_with_packages_field(self, tmp_path):
+    async def test_parse_package_lock_with_packages_field(self, tmp_path):
         """Test parsing package-lock.json with packages field (v3 format)."""
         package_lock = {
             "lockfileVersion": 3,
@@ -339,13 +339,13 @@ packages:
         lock_file.write_text(json.dumps(package_lock))
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
 
         names = {p.name for p in packages}
         assert "react" in names
         assert "lodash" in names
 
-    def test_parse_yarn_lock_scoped_package(self, tmp_path):
+    async def test_parse_yarn_lock_scoped_package(self, tmp_path):
         """Test parsing yarn.lock with scoped packages."""
         yarn_content = """# THIS IS A GENERATED FILE
 "@babel/core@^7.0.0":
@@ -358,13 +358,13 @@ packages:
         lock_file.write_text(yarn_content)
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
 
         names = {p.name for p in packages}
         # Parser returns full scoped package names
         assert "@babel/core" in names or "@types/node" in names
 
-    def test_parse_yarn_lock_with_comments(self, tmp_path):
+    async def test_parse_yarn_lock_with_comments(self, tmp_path):
         """Test parsing yarn.lock with comments."""
         yarn_content = """# THIS IS A GENERATED FILE
 # yarn lockfile v1
@@ -379,40 +379,40 @@ packages:
         lock_file.write_text(yarn_content)
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
 
         names = {p.name for p in packages}
         assert "react" in names
 
-    def test_parse_package_lock_malformed(self, tmp_path):
+    async def test_parse_package_lock_malformed(self, tmp_path):
         """Test parsing malformed package-lock.json returns empty list."""
         lock_file = tmp_path / "package-lock.json"
         lock_file.write_text("{ invalid json }")
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
         assert packages == []
 
-    def test_parse_yarn_lock_malformed(self, tmp_path):
+    async def test_parse_yarn_lock_malformed(self, tmp_path):
         """Test parsing malformed yarn.lock returns empty list."""
         lock_file = tmp_path / "yarn.lock"
         # Create a file that will cause an exception during parsing
         lock_file.write_bytes(b"\xff\xfe")
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
         assert packages == []
 
-    def test_parse_pnpm_lock_malformed(self, tmp_path):
+    async def test_parse_pnpm_lock_malformed(self, tmp_path):
         """Test parsing malformed pnpm-lock.yaml returns empty list."""
         lock_file = tmp_path / "pnpm-lock.yaml"
         lock_file.write_text("invalid: yaml: content: [")
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
         assert packages == []
 
-    def test_parse_package_json_non_dict_dependencies(self, tmp_path):
+    async def test_parse_package_json_non_dict_dependencies(self, tmp_path):
         """Test parsing package.json with non-dict dependencies."""
         package_json = {
             "name": "my-project",
@@ -423,13 +423,13 @@ packages:
         manifest_file.write_text(json.dumps(package_json))
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_manifest(str(manifest_file))
+        packages = await resolver.parse_manifest(str(manifest_file))
 
         # Should only include devDependencies
         assert len(packages) == 1
         assert packages[0].name == "typescript"
 
-    def test_parse_package_json_non_string_version(self, tmp_path):
+    async def test_parse_package_json_non_string_version(self, tmp_path):
         """Test parsing package.json with non-string version."""
         package_json = {
             "name": "my-project",
@@ -439,14 +439,14 @@ packages:
         manifest_file.write_text(json.dumps(package_json))
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_manifest(str(manifest_file))
+        packages = await resolver.parse_manifest(str(manifest_file))
 
         assert len(packages) == 1
         assert packages[0].name == "react"
         assert packages[0].version is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_homepage_non_string(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_homepage_non_string(self, mock_get):
         """Test resolving when homepage is not a string."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -456,10 +456,10 @@ packages:
         mock_get.return_value = mock_response
 
         resolver = JavaScriptResolver()
-        result = resolver.resolve_repository("vue")
+        result = await resolver.resolve_repository("vue")
         assert result is None
 
-    def test_parse_pnpm_lock_with_packages_section(self, tmp_path):
+    async def test_parse_pnpm_lock_with_packages_section(self, tmp_path):
         """Test parsing pnpm-lock.yaml with packages section."""
         pnpm_content = """lockfileVersion: '6.0'
 dependencies:
@@ -476,12 +476,12 @@ packages:
         lock_file.write_text(pnpm_content)
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
 
         names = {p.name for p in packages}
         assert "react" in names or "lodash" in names
 
-    def test_parse_pnpm_lock_non_dict_packages(self, tmp_path):
+    async def test_parse_pnpm_lock_non_dict_packages(self, tmp_path):
         """Test parsing pnpm-lock.yaml with non-dict packages."""
         pnpm_content = """lockfileVersion: '6.0'
 dependencies: invalid
@@ -491,6 +491,6 @@ packages: []
         lock_file.write_text(pnpm_content)
 
         resolver = JavaScriptResolver()
-        packages = resolver.parse_lockfile(str(lock_file))
+        packages = await resolver.parse_lockfile(str(lock_file))
         # Should return empty list or handle gracefully
         assert isinstance(packages, list)

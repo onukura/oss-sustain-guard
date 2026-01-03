@@ -5,9 +5,10 @@ Rust package resolver (crates.io).
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -19,7 +20,7 @@ class RustResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "rust"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Fetches package information from crates.io and extracts repository URL.
 
@@ -30,14 +31,14 @@ class RustResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                # Query crates.io API
-                response = client.get(
-                    f"https://crates.io/api/v1/crates/{package_name}",
-                    timeout=10,
-                )
-                response.raise_for_status()
-                data = response.json()
+            client = await _get_async_http_client()
+            # Query crates.io API
+            response = await client.get(
+                f"https://crates.io/api/v1/crates/{package_name}",
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
 
             crate_info = data.get("crate", {})
             repo_url = crate_info.get("repository")
@@ -55,7 +56,7 @@ class RustResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse Cargo.lock file and extract package information.
 
@@ -77,9 +78,9 @@ class RustResolver(LanguageResolver):
         if lockfile_path.name != "Cargo.lock":
             raise ValueError(f"Unknown Rust lockfile type: {lockfile_path.name}")
 
-        return self._parse_cargo_lock(lockfile_path)
+        return await self._parse_cargo_lock(lockfile_path)
 
-    def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
+    async def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
         """
         Detect Rust lockfiles in a directory.
 
@@ -96,11 +97,11 @@ class RustResolver(LanguageResolver):
             detected.append(cargo_lock)
         return detected
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Return list of Rust manifest file names."""
         return ["Cargo.toml"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a Rust manifest file (Cargo.toml).
 
@@ -121,10 +122,10 @@ class RustResolver(LanguageResolver):
         if manifest_path.name != "Cargo.toml":
             raise ValueError(f"Unknown Rust manifest file type: {manifest_path.name}")
 
-        return self._parse_cargo_toml(manifest_path)
+        return await self._parse_cargo_toml(manifest_path)
 
     @staticmethod
-    def _parse_cargo_toml(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_cargo_toml(manifest_path: Path) -> list[PackageInfo]:
         """Parse Cargo.toml file."""
         try:
             import tomllib
@@ -138,8 +139,9 @@ class RustResolver(LanguageResolver):
                 ) from e
 
         try:
-            with open(manifest_path, "rb") as f:
-                data = tomllib.load(f)
+            async with aiofiles.open(manifest_path, "rb") as f:
+                content = await f.read()
+                data = tomllib.loads(content.decode("utf-8"))
 
             packages = []
 
@@ -167,7 +169,7 @@ class RustResolver(LanguageResolver):
             raise ValueError(f"Failed to parse Cargo.toml: {e}") from e
 
     @staticmethod
-    def _parse_cargo_lock(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_cargo_lock(lockfile_path: Path) -> list[PackageInfo]:
         """Parse Cargo.lock file."""
         try:
             import tomllib
@@ -179,8 +181,9 @@ class RustResolver(LanguageResolver):
                 return []
 
         try:
-            with open(lockfile_path, "rb") as f:
-                data = tomllib.load(f)
+            async with aiofiles.open(lockfile_path, "rb") as f:
+                content = await f.read()
+                data = tomllib.loads(content.decode("utf-8"))
 
             packages = []
             for package in data.get("package", []):
@@ -196,3 +199,6 @@ class RustResolver(LanguageResolver):
             return packages
         except Exception:
             return []
+
+
+RESOLVER = RustResolver()

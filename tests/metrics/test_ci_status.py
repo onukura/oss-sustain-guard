@@ -67,7 +67,10 @@ class TestCiStatusMetric:
         """Test that CI status is skipped when no CI data is available."""
         vcs_data = _vcs_data()
         result = check_ci_status(vcs_data)
-        assert result is None
+        assert result is not None
+        assert result.name == "Build Health"
+        assert result.score == 0
+        assert "CI status data not available" in result.message
 
     def test_ci_status_no_default_branch(self):
         """Test when default branch is not available."""

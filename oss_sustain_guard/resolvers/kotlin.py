@@ -16,7 +16,7 @@ class KotlinResolver(JavaResolver):
     def ecosystem_name(self) -> str:
         return "kotlin"
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """
         Return list of Kotlin manifest files.
 
@@ -25,3 +25,6 @@ class KotlinResolver(JavaResolver):
         """
         # Prioritize Kotlin DSL build files
         return ["build.gradle.kts", "build.gradle", "pom.xml"]
+
+
+RESOLVER = KotlinResolver()

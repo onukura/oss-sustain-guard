@@ -35,11 +35,11 @@ Metrics are one lens among many; they work best alongside project context and re
 ## 🎯 Key Features
 
 - **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)
-- **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins.
+- **Pluggable Architecture** - Easily extend analysis by adding your own sustainability metrics, language resolvers, and VCS providers as plugins.
 - **5 CHAOSS-Aligned Models** - Stability, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
 - **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case.
-- **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby
+- **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby (extensible via plugins)
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
@@ -68,6 +68,7 @@ Metrics are one lens among many; they work best alongside project context and re
 **API Limits & Sampling:**
 
 For performance reasons, we sample GitHub data with these limits (per analysis):
+
 - **Commits**: Last 100 analyzed
 - **Pull Requests**: Last 50 merged + last 50 closed sampled
 - **Issues**: Last 20 open + last 50 closed sampled
@@ -133,6 +134,8 @@ For detailed usage, configuration, and features, see our documentation site:
 
 Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby, R, Haskell, Swift, Dart, Elixir, Perl
 
+**Extensible:** Add support for additional ecosystems by creating custom resolver plugins.
+
 See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/) for ecosystem-specific syntax.
 
 #### Repository Source Handling
@@ -142,6 +145,7 @@ See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTE
   - If CI data is not available, Build Health is listed under skipped metrics.
 - **Other hosts** (Gitea, SourceForge, etc.): ℹ️ Detected and skipped
   - The tool will display a note indicating the repository host and skip real-time analysis.
+- **Extensible VCS support:** Add support for additional version control systems via plugins.
 
 ### 24 Core Sustainability Metrics
 
@@ -173,6 +177,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code st
 
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
 - [Custom Metrics Guide](./docs/CUSTOM_METRICS_GUIDE.md) - Create your own sustainability metrics
+- [Custom Resolvers Guide](./docs/CUSTOM_RESOLVERS_GUIDE.md) - Add support for new package ecosystems
+- [Custom VCS Providers Guide](./docs/CUSTOM_VCS_GUIDE.md) - Add support for new version control systems
 - [Pre-Commit Integration](./docs/PRE_COMMIT_INTEGRATION.md) - Hook configuration
 - [GitHub Actions Guide](./docs/GITHUB_ACTIONS_GUIDE.md) - CI/CD setup
 - [Exclude Packages Guide](./docs/EXCLUDE_PACKAGES_GUIDE.md) - Package filtering

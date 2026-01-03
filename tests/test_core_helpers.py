@@ -5,7 +5,7 @@ Additional tests for core helpers and error handling.
 from __future__ import annotations
 
 import copy
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -15,10 +15,8 @@ from oss_sustain_guard.core import (
     AnalysisResult,
     Metric,
     MetricModel,
-    _get_batch_repository_query,
     analysis_result_to_dict,
     analyze_dependencies,
-    analyze_repositories_batch,
     analyze_repository,
     apply_profile_overrides,
     compare_scoring_profiles,
@@ -291,68 +289,15 @@ def test_extract_signals_parses_repo_and_metric_messages():
     assert signals["avg_review_time_hours"] == 3.5
 
 
-def test_get_batch_repository_query_contains_aliases():
-    query = _get_batch_repository_query([("org", "repo"), ("user", "repo2")])
-    assert 'repo0: repository(owner: "org", name: "repo")' in query
-    assert 'repo1: repository(owner: "user", name: "repo2")' in query
-
-
-def test_analyze_repositories_batch_empty_list_returns_empty_dict():
-    assert analyze_repositories_batch([]) == {}
-
-
-def test_analyze_repositories_batch_handles_missing_and_error():
-    repo_list = [
-        ("owner1", "repo1", "Pypi", "package-one"),
-        ("owner2", "repo2", None, None),
-    ]
-    with (
-        patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs,
-        patch("oss_sustain_guard.core._analyze_repository_data") as mock_analyze,
-    ):
-        mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = ValueError(
-            "Repository not found"
-        )
-        mock_analyze.side_effect = ValueError("boom")
-
-        results = analyze_repositories_batch(repo_list)
-
-    assert results[("owner1", "repo1")] is None
-    assert results[("owner2", "repo2")] is None
-
-
-def test_analyze_repositories_batch_falls_back_to_individual():
-    repo_list = [
-        ("owner1", "repo1", "Pypi", "package-one"),
-        ("owner2", "repo2", None, None),
-    ]
-    result = AnalysisResult(
-        repo_url="https://github.com/owner1/repo1",
-        total_score=50,
-        metrics=[Metric("Metric A", 5, 10, "msg", "Low")],
-    )
-    with (
-        patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs,
-        patch("oss_sustain_guard.core.analyze_repository") as mock_analyze,
-    ):
-        mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = RuntimeError("network")
-        mock_analyze.side_effect = [result, RuntimeError("boom")]
-
-        results = analyze_repositories_batch(repo_list)
-
-    assert results[("owner1", "repo1")] == result
-    assert results[("owner2", "repo2")] is None
-
-
 def test_analyze_repository_data_handles_metric_errors():
-    def failing_checker(_repo_info, _context):
-        raise ValueError("broken")
+    class FailingChecker:
+        def check_legacy(self, _repo_info, _context):
+            raise ValueError("broken")
 
     def on_error_metric(exc: Exception) -> Metric:
         return Metric("Recover", 1, 10, f"Recovered: {exc}", "Low")
 
+    failing_checker = FailingChecker()
     specs = [
         MetricSpec(
             name="First",
@@ -382,7 +327,7 @@ def test_analyze_repository_data_handles_metric_errors():
     assert any("Note: " in call.args[0] for call in mock_print.call_args_list)
 
 
-def test_analyze_repository_handles_http_status_error():
+async def test_analyze_repository_handles_http_status_error():
     error = httpx.HTTPStatusError(
         "boom",
         request=httpx.Request("POST", "https://example.com"),
@@ -390,17 +335,17 @@ def test_analyze_repository_handles_http_status_error():
     )
     with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
         mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = error
+        mock_provider.get_repository_data = AsyncMock(side_effect=error)
         with pytest.raises(httpx.HTTPStatusError):
-            analyze_repository("owner", "repo")
+            await analyze_repository("owner", "repo")
 
 
-def test_analyze_repository_handles_unexpected_error():
+async def test_analyze_repository_handles_unexpected_error():
     with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
         mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = RuntimeError("boom")
+        mock_provider.get_repository_data = AsyncMock(side_effect=RuntimeError("boom"))
         with pytest.raises(RuntimeError):
-            analyze_repository("owner", "repo")
+            await analyze_repository("owner", "repo")
 
 
 def test_analyze_dependencies_handles_bad_data():

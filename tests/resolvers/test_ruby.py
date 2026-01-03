@@ -2,7 +2,7 @@
 Tests for Ruby resolver.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -20,8 +20,8 @@ def test_ecosystem_name(ruby_resolver):
     assert ruby_resolver.ecosystem_name == "ruby"
 
 
-@patch("httpx.Client.get")
-def test_resolve_github_url_success(mock_get, ruby_resolver):
+@patch("httpx.AsyncClient.get")
+async def test_resolve_github_url_success(mock_get, ruby_resolver):
     """Test resolving a Ruby gem to GitHub URL."""
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -32,14 +32,14 @@ def test_resolve_github_url_success(mock_get, ruby_resolver):
     }
     mock_get.return_value = mock_response
 
-    result = ruby_resolver.resolve_github_url("rails")
+    result = await ruby_resolver.resolve_github_url("rails")
 
     assert result == ("rails", "rails")
     mock_get.assert_called_once()
 
 
-@patch("httpx.Client.get")
-def test_resolve_github_url_with_git_suffix(mock_get, ruby_resolver):
+@patch("httpx.AsyncClient.get")
+async def test_resolve_github_url_with_git_suffix(mock_get, ruby_resolver):
     """Test resolving gem with .git suffix in URL."""
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -47,13 +47,13 @@ def test_resolve_github_url_with_git_suffix(mock_get, ruby_resolver):
     }
     mock_get.return_value = mock_response
 
-    result = ruby_resolver.resolve_github_url("devise")
+    result = await ruby_resolver.resolve_github_url("devise")
 
     assert result == ("heartcombo", "devise")
 
 
-@patch("httpx.Client.get")
-def test_resolve_github_url_from_homepage(mock_get, ruby_resolver):
+@patch("httpx.AsyncClient.get")
+async def test_resolve_github_url_from_homepage(mock_get, ruby_resolver):
     """Test resolving from homepage_uri when source_code_uri is missing."""
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -61,13 +61,13 @@ def test_resolve_github_url_from_homepage(mock_get, ruby_resolver):
     }
     mock_get.return_value = mock_response
 
-    result = ruby_resolver.resolve_github_url("rspec")
+    result = await ruby_resolver.resolve_github_url("rspec")
 
     assert result == ("rspec", "rspec")
 
 
-@patch("httpx.Client.get")
-def test_resolve_github_url_no_github(mock_get, ruby_resolver):
+@patch("httpx.AsyncClient.get")
+async def test_resolve_github_url_no_github(mock_get, ruby_resolver):
     """Test when gem has no GitHub URL."""
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -75,22 +75,22 @@ def test_resolve_github_url_no_github(mock_get, ruby_resolver):
     }
     mock_get.return_value = mock_response
 
-    result = ruby_resolver.resolve_github_url("some-gem")
+    result = await ruby_resolver.resolve_github_url("some-gem")
 
     assert result is None
 
 
-@patch("httpx.Client.get")
-def test_resolve_github_url_request_error(mock_get, ruby_resolver):
+@patch("httpx.AsyncClient.get")
+async def test_resolve_github_url_request_error(mock_get, ruby_resolver):
     """Test handling of request errors."""
     mock_get.side_effect = Exception("Network error")
 
-    result = ruby_resolver.resolve_github_url("nonexistent")
+    result = await ruby_resolver.resolve_github_url("nonexistent")
 
     assert result is None
 
 
-def test_parse_lockfile_gemfile_lock(tmp_path, ruby_resolver):
+async def test_parse_lockfile_gemfile_lock(tmp_path, ruby_resolver):
     """Test parsing Gemfile.lock."""
     lockfile = tmp_path / "Gemfile.lock"
     lockfile.write_text(
@@ -117,7 +117,7 @@ DEPENDENCIES
 """
     )
 
-    packages = ruby_resolver.parse_lockfile(lockfile)
+    packages = await ruby_resolver.parse_lockfile(lockfile)
 
     assert len(packages) == 3
     assert packages[0].name == "rails"
@@ -129,63 +129,65 @@ DEPENDENCIES
     assert packages[2].version == "3.12.0"
 
 
-def test_parse_lockfile_not_found(ruby_resolver):
+async def test_parse_lockfile_not_found(ruby_resolver):
     """Test error when lockfile doesn't exist."""
     with pytest.raises(FileNotFoundError):
-        ruby_resolver.parse_lockfile("/nonexistent/Gemfile.lock")
+        await ruby_resolver.parse_lockfile("/nonexistent/Gemfile.lock")
 
 
-def test_parse_lockfile_invalid_format(tmp_path, ruby_resolver):
+async def test_parse_lockfile_invalid_format(tmp_path, ruby_resolver):
     """Test error with invalid lockfile format."""
     lockfile = tmp_path / "Gemfile.lock"
     lockfile.write_text("invalid content")
 
-    # Should return empty list instead of raising error
-    packages = ruby_resolver.parse_lockfile(lockfile)
+    packages = await ruby_resolver.parse_lockfile(lockfile)
     assert len(packages) == 0
 
 
-def test_parse_lockfile_read_error(tmp_path, ruby_resolver, monkeypatch):
+@patch("aiofiles.open")
+async def test_parse_lockfile_read_error(mock_aiofiles_open, tmp_path, ruby_resolver):
     """Test error reading Gemfile.lock."""
     lockfile = tmp_path / "Gemfile.lock"
     lockfile.write_text("GEM\n  specs:\n")
 
-    def _raise(*_args, **_kwargs):
-        raise OSError("read error")
+    mock_file = AsyncMock()
+    mock_file.__aenter__.return_value = mock_file
+    mock_file.__aexit__.return_value = None
+    mock_file.read.side_effect = OSError("read error")
 
-    monkeypatch.setattr("builtins.open", _raise)
+    mock_aiofiles_open.return_value = mock_file
 
     with pytest.raises(ValueError, match="Failed to parse Gemfile.lock"):
-        ruby_resolver.parse_lockfile(lockfile)
+        await ruby_resolver.parse_lockfile(lockfile)
 
 
-def test_detect_lockfiles(tmp_path, ruby_resolver):
+async def test_detect_lockfiles(tmp_path, ruby_resolver):
     """Test detecting Gemfile.lock."""
     gemfile_lock = tmp_path / "Gemfile.lock"
     gemfile_lock.touch()
 
-    lockfiles = ruby_resolver.detect_lockfiles(str(tmp_path))
+    lockfiles = await ruby_resolver.detect_lockfiles(str(tmp_path))
 
     assert len(lockfiles) == 1
     assert lockfiles[0].name == "Gemfile.lock"
 
 
-def test_detect_lockfiles_none(tmp_path, ruby_resolver):
+async def test_detect_lockfiles_none(tmp_path, ruby_resolver):
     """Test when no lockfiles exist."""
-    lockfiles = ruby_resolver.detect_lockfiles(str(tmp_path))
+    lockfiles = await ruby_resolver.detect_lockfiles(str(tmp_path))
 
     assert len(lockfiles) == 0
 
 
-def test_get_manifest_files(ruby_resolver):
+async def test_get_manifest_files(ruby_resolver):
     """Test getting manifest file names."""
-    manifests = ruby_resolver.get_manifest_files()
+    manifests = await ruby_resolver.get_manifest_files()
 
     assert "Gemfile" in manifests
     assert "Gemfile.lock" in manifests
 
 
-def test_parse_manifest_gemfile(tmp_path, ruby_resolver):
+async def test_parse_manifest_gemfile(tmp_path, ruby_resolver):
     """Test parsing Gemfile."""
     manifest = tmp_path / "Gemfile"
     manifest.write_text(
@@ -199,36 +201,39 @@ def test_parse_manifest_gemfile(tmp_path, ruby_resolver):
         "end\n"
     )
 
-    packages = ruby_resolver.parse_manifest(manifest)
+    packages = await ruby_resolver.parse_manifest(manifest)
 
     names = {pkg.name for pkg in packages}
     assert names == {"rails", "devise", "byebug"}
 
 
-def test_parse_manifest_not_found(ruby_resolver):
+async def test_parse_manifest_not_found(ruby_resolver):
     """Test missing Gemfile."""
     with pytest.raises(FileNotFoundError):
-        ruby_resolver.parse_manifest("/missing/Gemfile")
+        await ruby_resolver.parse_manifest("/missing/Gemfile")
 
 
-def test_parse_manifest_unknown(tmp_path, ruby_resolver):
+async def test_parse_manifest_unknown(tmp_path, ruby_resolver):
     """Test unknown manifest type."""
     manifest = tmp_path / "Gemfile.lock"
     manifest.touch()
 
     with pytest.raises(ValueError, match="Unknown Ruby manifest file type"):
-        ruby_resolver.parse_manifest(manifest)
+        await ruby_resolver.parse_manifest(manifest)
 
 
-def test_parse_manifest_read_error(tmp_path, ruby_resolver, monkeypatch):
+@patch("aiofiles.open")
+async def test_parse_manifest_read_error(mock_aiofiles_open, tmp_path, ruby_resolver):
     """Test error reading Gemfile."""
     manifest = tmp_path / "Gemfile"
     manifest.write_text("gem 'rails'\n")
 
-    def _raise(*_args, **_kwargs):
-        raise OSError("read error")
+    mock_file = AsyncMock()
+    mock_file.__aenter__.return_value = mock_file
+    mock_file.__aexit__.return_value = None
+    mock_file.read.side_effect = OSError("read error")
 
-    monkeypatch.setattr("builtins.open", _raise)
+    mock_aiofiles_open.return_value = mock_file
 
     with pytest.raises(ValueError, match="Failed to parse Gemfile"):
-        ruby_resolver.parse_manifest(manifest)
+        await ruby_resolver.parse_manifest(manifest)

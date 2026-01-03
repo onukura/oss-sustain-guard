@@ -1,6 +1,6 @@
 """Tests for GitLab VCS provider."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -47,11 +47,13 @@ def test_gitlab_provider_get_repository_url():
     assert url == "https://gitlab.com/owner/repo"
 
 
-@patch("oss_sustain_guard.vcs.gitlab._get_http_client")
-def test_gitlab_provider_get_repository_data(mock_get_client):
+@patch("oss_sustain_guard.vcs.gitlab._get_async_http_client")
+async def test_gitlab_provider_get_repository_data(mock_get_client):
     """Test GitLabProvider fetches and normalizes repository data."""
     # Mock HTTP client response
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = mock_get_client.return_value
+    mock_response = MagicMock()
+    mock_client.post.return_value = mock_response
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {
         "data": {
@@ -113,7 +115,7 @@ def test_gitlab_provider_get_repository_data(mock_get_client):
     }
 
     provider = GitLabProvider(token="test_token")
-    vcs_data = provider.get_repository_data("testgroup", "testrepo")
+    vcs_data = await provider.get_repository_data("testgroup", "testrepo")
 
     # Verify normalized data structure
     assert vcs_data.owner_login == "testgroup"
@@ -128,37 +130,45 @@ def test_gitlab_provider_get_repository_data(mock_get_client):
     assert len(vcs_data.releases) == 1
 
 
-@patch("oss_sustain_guard.vcs.gitlab._get_http_client")
-def test_gitlab_provider_handles_missing_repository(mock_get_client):
+@patch("oss_sustain_guard.vcs.gitlab._get_async_http_client")
+async def test_gitlab_provider_handles_missing_repository(mock_get_client):
     """Test GitLabProvider handles missing repository."""
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = MagicMock()
+    mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"data": {"project": None}}
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_get_client.return_value = mock_client
 
     provider = GitLabProvider(token="test_token")
 
     with pytest.raises(ValueError, match="not found or is inaccessible"):
-        provider.get_repository_data("nonexistent", "repo")
+        await provider.get_repository_data("nonexistent", "repo")
 
 
-@patch("oss_sustain_guard.vcs.gitlab._get_http_client")
-def test_gitlab_provider_handles_api_error(mock_get_client):
+@patch("oss_sustain_guard.vcs.gitlab._get_async_http_client")
+async def test_gitlab_provider_handles_api_error(mock_get_client):
     """Test GitLabProvider handles API errors."""
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = MagicMock()
+    mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
         "API Error", request=None, response=None
     )
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_get_client.return_value = mock_client
 
     provider = GitLabProvider(token="test_token")
 
     with pytest.raises(httpx.HTTPStatusError):
-        provider.get_repository_data("owner", "repo")
+        await provider.get_repository_data("owner", "repo")
 
 
-@patch("oss_sustain_guard.vcs.gitlab._get_http_client")
-def test_gitlab_provider_handles_graphql_errors(mock_get_client):
+@patch("oss_sustain_guard.vcs.gitlab._get_async_http_client")
+async def test_gitlab_provider_handles_graphql_errors(mock_get_client):
     """Test GitLabProvider handles GraphQL errors in response."""
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = mock_get_client.return_value
+    mock_response = MagicMock()
+    mock_client.post.return_value = mock_response
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"errors": [{"message": "Some GraphQL error"}]}
     mock_response.request = None
@@ -166,7 +176,7 @@ def test_gitlab_provider_handles_graphql_errors(mock_get_client):
     provider = GitLabProvider(token="test_token")
 
     with pytest.raises(httpx.HTTPStatusError, match="GitLab API Errors"):
-        provider.get_repository_data("owner", "repo")
+        await provider.get_repository_data("owner", "repo")
 
 
 def test_gitlab_provider_normalize_merge_request():

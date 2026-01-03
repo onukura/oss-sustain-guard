@@ -1,6 +1,6 @@
 """Tests for GitHub VCS provider."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
@@ -47,11 +47,13 @@ def test_github_provider_get_repository_url():
     assert url == "https://github.com/owner/repo"
 
 
-@patch("oss_sustain_guard.vcs.github._get_http_client")
-def test_github_provider_get_repository_data(mock_get_client):
+@patch("oss_sustain_guard.vcs.github._get_async_http_client")
+async def test_github_provider_get_repository_data(mock_get_client):
     """Test GitHubProvider fetches and normalizes repository data."""
     # Mock HTTP client response
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = mock_get_client.return_value
+    mock_response = MagicMock()
+    mock_client.post.return_value = mock_response
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {
         "data": {
@@ -120,7 +122,7 @@ def test_github_provider_get_repository_data(mock_get_client):
     }
 
     provider = GitHubProvider(token="test_token")
-    vcs_data = provider.get_repository_data("testorg", "testrepo")
+    vcs_data = await provider.get_repository_data("testorg", "testrepo")
 
     # Verify normalized data structure
     assert vcs_data.owner_login == "testorg"
@@ -135,23 +137,27 @@ def test_github_provider_get_repository_data(mock_get_client):
     assert vcs_data.funding_links[0]["platform"] == "github"
 
 
-@patch("oss_sustain_guard.vcs.github._get_http_client")
-def test_github_provider_handles_missing_repository(mock_get_client):
+@patch("oss_sustain_guard.vcs.github._get_async_http_client")
+async def test_github_provider_handles_missing_repository(mock_get_client):
     """Test GitHubProvider handles missing repository."""
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = mock_get_client.return_value
+    mock_response = MagicMock()
+    mock_client.post.return_value = mock_response
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"data": {"repository": None}}
 
     provider = GitHubProvider(token="test_token")
 
     with pytest.raises(ValueError, match="not found or is inaccessible"):
-        provider.get_repository_data("nonexistent", "repo")
+        await provider.get_repository_data("nonexistent", "repo")
 
 
-@patch("oss_sustain_guard.vcs.github._get_http_client")
-def test_github_provider_handles_api_error(mock_get_client):
+@patch("oss_sustain_guard.vcs.github._get_async_http_client")
+async def test_github_provider_handles_api_error(mock_get_client):
     """Test GitHubProvider handles API errors."""
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = mock_get_client.return_value
+    mock_response = MagicMock()
+    mock_client.post.return_value = mock_response
     mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
         "API Error", request=None, response=None
     )
@@ -159,13 +165,15 @@ def test_github_provider_handles_api_error(mock_get_client):
     provider = GitHubProvider(token="test_token")
 
     with pytest.raises(httpx.HTTPStatusError):
-        provider.get_repository_data("owner", "repo")
+        await provider.get_repository_data("owner", "repo")
 
 
-@patch("oss_sustain_guard.vcs.github._get_http_client")
-def test_github_provider_handles_graphql_errors(mock_get_client):
+@patch("oss_sustain_guard.vcs.github._get_async_http_client")
+async def test_github_provider_handles_graphql_errors(mock_get_client):
     """Test GitHubProvider handles GraphQL errors in response."""
-    mock_response = mock_get_client.return_value.post.return_value
+    mock_client = mock_get_client.return_value
+    mock_response = MagicMock()
+    mock_client.post.return_value = mock_response
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"errors": [{"message": "Some GraphQL error"}]}
     mock_response.request = None
@@ -173,4 +181,4 @@ def test_github_provider_handles_graphql_errors(mock_get_client):
     provider = GitHubProvider(token="test_token")
 
     with pytest.raises(httpx.HTTPStatusError, match="GitHub API Errors"):
-        provider.get_repository_data("owner", "repo")
+        await provider.get_repository_data("owner", "repo")

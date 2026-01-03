@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 from dotenv import load_dotenv
 
-from oss_sustain_guard.http_client import _get_http_client
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.vcs.base import BaseVCSProvider, VCSRepositoryData
 
 # Load environment variables
@@ -72,7 +72,7 @@ class GitLabProvider(BaseVCSProvider):
         """Construct GitLab repository URL."""
         return f"https://gitlab.com/{owner}/{repo}"
 
-    def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
+    async def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
         """
         Fetch repository data from GitLab GraphQL API.
 
@@ -91,15 +91,17 @@ class GitLabProvider(BaseVCSProvider):
         full_path = f"{owner}/{repo}"
         query = self._get_graphql_query()
         variables = {"fullPath": full_path}
-        raw_data = self._query_graphql(query, variables)
+        raw_data = await self._query_graphql(query, variables)
 
         if "project" not in raw_data or raw_data["project"] is None:
             raise ValueError(f"Repository {owner}/{repo} not found or is inaccessible.")
 
         project_info = raw_data["project"]
-        return self._normalize_gitlab_data(project_info, owner, repo)
+        return await self._normalize_gitlab_data(project_info, owner, repo)
 
-    def _query_graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+    async def _query_graphql(
+        self, query: str, variables: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Execute GraphQL query against GitLab API.
 
@@ -117,8 +119,8 @@ class GitLabProvider(BaseVCSProvider):
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-        client = _get_http_client()
-        response = client.post(
+        client = await _get_async_http_client()
+        response = await client.post(
             GITLAB_GRAPHQL_API,
             json={"query": query, "variables": variables},
             headers=headers,
@@ -222,7 +224,7 @@ class GitLabProvider(BaseVCSProvider):
         }
         """
 
-    def _normalize_gitlab_data(
+    async def _normalize_gitlab_data(
         self, project_info: dict[str, Any], owner: str, repo: str
     ) -> VCSRepositoryData:
         """
@@ -263,13 +265,13 @@ class GitLabProvider(BaseVCSProvider):
 
         for ref in refs_to_try:
             if readme_size is None:
-                readme_size = self._fetch_first_matching_file_size(
+                readme_size = await self._fetch_first_matching_file_size(
                     full_path,
                     ref,
                     ["README.md", "readme.md", "README"],
                 )
             if contributing_file_size is None:
-                contributing_file_size = self._fetch_first_matching_file_size(
+                contributing_file_size = await self._fetch_first_matching_file_size(
                     full_path,
                     ref,
                     ["CONTRIBUTING.md", "CONTRIBUTING.MD", "CONTRIBUTING"],
@@ -281,7 +283,7 @@ class GitLabProvider(BaseVCSProvider):
         commits = []
         total_commits = 0
         try:
-            commits_data = self._fetch_commits(f"{owner}/{repo}")
+            commits_data = await self._fetch_commits(f"{owner}/{repo}")
             commits = commits_data.get("commits", [])
             total_commits = commits_data.get("total_commits", len(commits))
         except Exception:
@@ -323,7 +325,7 @@ class GitLabProvider(BaseVCSProvider):
             self._normalize_issue(edge["node"])
             for edge in closed_issues_data.get("edges", [])
         ]
-        rest_closed_issues = self._fetch_closed_issues(full_path)
+        rest_closed_issues = await self._fetch_closed_issues(full_path)
         if rest_closed_issues is not None:
             closed_issues = rest_closed_issues
         total_closed_issues = closed_issues_data.get("count", len(closed_issues))
@@ -348,7 +350,7 @@ class GitLabProvider(BaseVCSProvider):
         total_forks = project_info.get("forksCount", 0)
         try:
             if total_forks > 0:
-                forks_data = self._fetch_forks(f"{owner}/{repo}")
+                forks_data = await self._fetch_forks(f"{owner}/{repo}")
                 forks = forks_data.get("forks", [])
         except Exception:
             # If forks fetch fails, continue with just the count
@@ -409,16 +411,16 @@ class GitLabProvider(BaseVCSProvider):
             raw_data=None,  # Don't use raw_data to force proper reconstruction
         )
 
-    def _fetch_first_matching_file_size(
+    async def _fetch_first_matching_file_size(
         self, full_path: str, ref: str, candidates: list[str]
     ) -> int | None:
         for file_path in candidates:
-            size = self._fetch_repository_file_size(full_path, ref, file_path)
+            size = await self._fetch_repository_file_size(full_path, ref, file_path)
             if size is not None:
                 return size
         return None
 
-    def _fetch_repository_file_size(
+    async def _fetch_repository_file_size(
         self, full_path: str, ref: str, file_path: str
     ) -> int | None:
         """
@@ -442,9 +444,9 @@ class GitLabProvider(BaseVCSProvider):
                 f"/repository/files/{encoded_file}"
             )
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            response = await client.get(
                 url,
                 headers=headers,
                 params={"ref": ref},
@@ -470,7 +472,7 @@ class GitLabProvider(BaseVCSProvider):
             )
             return None
 
-    def _fetch_closed_issues(self, full_path: str) -> list[dict[str, Any]] | None:
+    async def _fetch_closed_issues(self, full_path: str) -> list[dict[str, Any]] | None:
         """
         Fetch closed issues using GitLab REST API to capture close actors.
 
@@ -486,9 +488,9 @@ class GitLabProvider(BaseVCSProvider):
             encoded_path = urllib.parse.quote(full_path, safe="")
             url = f"https://gitlab.com/api/v4/projects/{encoded_path}/issues"
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            response = await client.get(
                 url,
                 headers=headers,
                 params={
@@ -510,7 +512,7 @@ class GitLabProvider(BaseVCSProvider):
             print(f"Warning: Failed to fetch closed issues for {full_path}: {exc}")
             return None
 
-    def _fetch_commits(self, full_path: str) -> dict[str, Any]:
+    async def _fetch_commits(self, full_path: str) -> dict[str, Any]:
         """
         Fetch commit data using GitLab REST API.
 
@@ -531,9 +533,9 @@ class GitLabProvider(BaseVCSProvider):
                 f"https://gitlab.com/api/v4/projects/{encoded_path}/repository/commits"
             )
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            response = await client.get(
                 url,
                 headers=headers,
                 params={"per_page": 100, "page": 1},
@@ -559,7 +561,7 @@ class GitLabProvider(BaseVCSProvider):
 
             # Get total commit count from project stats
             stats_url = f"https://gitlab.com/api/v4/projects/{encoded_path}"
-            stats_response = client.get(
+            stats_response = await client.get(
                 stats_url,
                 headers=headers,
                 timeout=30,
@@ -579,7 +581,7 @@ class GitLabProvider(BaseVCSProvider):
             print(f"Warning: Failed to fetch commits for {full_path}: {e}")
             return {"commits": [], "total_commits": 0}
 
-    def _fetch_forks(self, full_path: str) -> dict[str, Any]:
+    async def _fetch_forks(self, full_path: str) -> dict[str, Any]:
         """
         Fetch fork data using GitLab REST API.
 
@@ -597,9 +599,9 @@ class GitLabProvider(BaseVCSProvider):
             # Fetch forks via REST API (first 20 forks)
             url = f"https://gitlab.com/api/v4/projects/{encoded_path}/forks"
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            response = await client.get(
                 url,
                 headers=headers,
                 params={"per_page": 20, "page": 1},
@@ -689,3 +691,6 @@ class GitLabProvider(BaseVCSProvider):
             or fork_node.get("last_activity_at"),
             "owner": {"login": owner_login},
         }
+
+
+PROVIDER = GitLabProvider

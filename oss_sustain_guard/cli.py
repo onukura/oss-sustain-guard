@@ -2,14 +2,16 @@
 Command-line interface for OSS Sustain Guard.
 """
 
+import asyncio
 import json
 import sys
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from functools import wraps
 from html import escape
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -48,13 +50,12 @@ from oss_sustain_guard.core import (
     Metric,
     MetricModel,
     analysis_result_to_dict,
-    analyze_repositories_batch,
     analyze_repository,
     apply_profile_overrides,
     compute_weighted_total_score,
     get_metric_weights,
 )
-from oss_sustain_guard.http_client import close_http_client
+from oss_sustain_guard.http_client import close_async_http_client
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     find_lockfiles,
@@ -62,7 +63,6 @@ from oss_sustain_guard.resolvers import (
     get_all_resolvers,
     get_resolver,
 )
-from oss_sustain_guard.resolvers.base import close_resolver_http_client
 
 # Schema version for cached data compatibility
 ANALYSIS_VERSION = "1.5"
@@ -80,6 +80,10 @@ console = Console()
 # --- Lockfile Cache ---
 # Cache parsed lockfiles to avoid re-parsing during dependency analysis
 _lockfile_cache: dict[str, dict[str, list[str]]] = {}
+
+
+def syncify(f):
+    return wraps(f)(lambda *args, **kwargs: asyncio.run(f(*args, **kwargs)))
 
 
 def get_cached_lockfile_dependencies(
@@ -1070,7 +1074,7 @@ def display_results_detailed(
         console.print(deps_table)
 
 
-def analyze_packages_parallel(
+async def analyze_packages_parallel(
     packages_data: list[tuple[str, str]],
     db: dict,
     profile: str = "balanced",
@@ -1079,8 +1083,7 @@ def analyze_packages_parallel(
     verbose: bool = False,
     use_local_cache: bool = True,
     max_workers: int = 5,
-    use_batch_queries: bool = True,
-) -> list[AnalysisResult | None]:
+) -> tuple[list[AnalysisResult | None], dict[str, list[str]]]:
     """
     Analyze multiple packages in parallel using ThreadPoolExecutor.
 
@@ -1093,21 +1096,21 @@ def analyze_packages_parallel(
         verbose: If True, display cache source information.
         use_local_cache: If False, skip local cache lookup.
         max_workers: Maximum number of parallel workers (default: 5).
-        use_batch_queries: If True, use batch GraphQL queries for uncached packages.
 
     Returns:
-        List of AnalysisResult or None for each package.
+        Tuple of (List of AnalysisResult or None for each package, verbose logs dict)
     """
     results = []
     total = len(packages_data)
+    verbose_logs: dict[str, list[str]] = {}  # Collect logs instead of printing directly
 
     if total == 0:
-        return results
+        return results, verbose_logs
 
     # For single package, don't use parallel processing
     if total == 1:
         ecosystem, pkg = packages_data[0]
-        result = analyze_package(
+        result = await analyze_package(
             pkg,
             ecosystem,
             db,
@@ -1117,24 +1120,30 @@ def analyze_packages_parallel(
             verbose,
             use_local_cache,
         )
-        return [result]
+        return [result], verbose_logs
 
     # Use progress bar for multiple packages
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("[cyan]Analyzing packages...", total=total)
+    # Suppress stderr from resolvers during analysis to keep progress bar clean
+    from io import StringIO
 
-        # Step 1: Check cache and resolve repositories
-        uncached_packages: list[
-            tuple[str, str, str, str]
-        ] = []  # (ecosystem, pkg, owner, repo)
-        pkg_to_index: dict[tuple[str, str], int] = {}
+    old_stderr = sys.stderr
+    sys.stderr = StringIO()
+
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeElapsedColumn(),
+            console=console,
+            transient=True,  # Auto-hide progress bar after completion
+        ) as progress:
+            task = progress.add_task("[cyan]Analyzing packages...", total=total)
+
+            # Step 1: Check cache and resolve repositories
+            uncached_packages: list[tuple[str, str]] = []  # (ecosystem, pkg)
+            pkg_to_index: dict[tuple[str, str], int] = {}
         results_map: dict[int, AnalysisResult | None] = {}
 
         for idx, (ecosystem, pkg) in enumerate(packages_data):
@@ -1174,7 +1183,7 @@ def analyze_packages_parallel(
                     )
                     resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
                     if show_dependencies and resolved_lockfile:
-                        dep_scores = _analyze_dependencies_for_package(
+                        dep_scores = await _analyze_dependencies_for_package(
                             ecosystem,
                             resolved_lockfile,
                             db,
@@ -1193,92 +1202,69 @@ def analyze_packages_parallel(
                 progress.advance(task)
                 continue
 
-            repo_info = resolver.resolve_repository(pkg)
-            if not repo_info or repo_info.provider != "github":
+            repo_info = await resolver.resolve_repository(pkg)
+            if not repo_info:
                 results_map[idx] = None
                 progress.advance(task)
                 continue
 
-            uncached_packages.append((ecosystem, pkg, repo_info.owner, repo_info.name))
+            uncached_packages.append((ecosystem, pkg))
 
-        # Step 2: Batch query for uncached packages
-        if use_batch_queries and uncached_packages:
-            # Process in batches to update progress incrementally
-            batch_size = 3  # Match the batch size in analyze_repositories_batch
-            for batch_idx in range(0, len(uncached_packages), batch_size):
-                batch_end = min(batch_idx + batch_size, len(uncached_packages))
-                current_batch = uncached_packages[batch_idx:batch_end]
-                current_repo_list = [
-                    (owner, repo) for _, _pkg, owner, repo in current_batch
-                ]
+        # Step 2: Analyze uncached packages in parallel using asyncio with rate limiting
+        if uncached_packages:
+            # Create a semaphore to limit concurrent API calls (avoid hitting GitHub rate limits)
+            # GitHub allows 5000 API calls/hour for authenticated requests
+            # Using max_workers to control concurrency
+            semaphore = asyncio.Semaphore(max_workers)
 
-                # Analyze current batch
-                batch_results = analyze_repositories_batch(
-                    current_repo_list, profile=profile
-                )
-
-                # Process results and update progress for each package in batch
-                for ecosystem, pkg, owner, repo in current_batch:
-                    idx = pkg_to_index[(ecosystem, pkg)]
-                    result = batch_results.get((owner, repo))
-
-                    if result:
-                        # Add ecosystem to result
-                        result = result._replace(ecosystem=ecosystem)
-                        resolved_lockfile = _resolve_lockfile_path(
-                            ecosystem, lockfile_path
-                        )
-                        if show_dependencies and resolved_lockfile:
-                            dep_scores = _analyze_dependencies_for_package(
-                                ecosystem,
-                                resolved_lockfile,
-                                db,
-                                pkg,
-                                profile,
-                            )
-                            result = result._replace(dependency_scores=dep_scores)
-
-                        _cache_analysis_result(ecosystem, pkg, result)
-
-                    results_map[idx] = result
-                    progress.advance(task)
-
-        elif not use_batch_queries and uncached_packages:
-            # Fall back to parallel processing without batch queries
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_pkg = {
-                    executor.submit(
-                        analyze_package,
+            async def analyze_with_semaphore(
+                ecosystem: str, pkg: str
+            ) -> AnalysisResult | None:
+                async with semaphore:
+                    return await analyze_package(
                         pkg,
                         ecosystem,
                         db,
                         profile,
                         show_dependencies,
                         lockfile_path,
-                        False,
+                        verbose,
                         use_local_cache,
-                    ): (ecosystem, pkg)
-                    for ecosystem, pkg, _, _ in uncached_packages
-                }
+                        verbose_logs,
+                    )
 
-                for future in as_completed(future_to_pkg):
-                    ecosystem, pkg = future_to_pkg[future]
-                    idx = pkg_to_index[(ecosystem, pkg)]
-                    try:
-                        result = future.result()
-                        results_map[idx] = result
-                    except Exception:
-                        # Silently fail - errors are handled by None result
+            async def analyze_all() -> list[Any]:
+                tasks = [
+                    analyze_with_semaphore(ecosystem, pkg)
+                    for ecosystem, pkg in uncached_packages
+                ]
+                return await asyncio.gather(*tasks, return_exceptions=True)
+
+            results_list = await analyze_all()
+
+            for idx_offset, result in enumerate(results_list):
+                ecosystem, pkg = uncached_packages[idx_offset]
+                idx = pkg_to_index[(ecosystem, pkg)]
+                try:
+                    if isinstance(result, Exception):
                         results_map[idx] = None
-                    progress.advance(task)
+                    else:
+                        results_map[idx] = result
+                except Exception:
+                    results_map[idx] = None
+                progress.advance(task)
 
         # Return results in original order
         results = [results_map.get(i) for i in range(total)]
 
-    return results
+    finally:
+        # Restore stderr
+        sys.stderr = old_stderr
+
+    return results, verbose_logs
 
 
-def _analyze_dependencies_for_package(
+async def _analyze_dependencies_for_package(
     ecosystem: str,
     lockfile_path: str | Path,
     db: dict,
@@ -1362,7 +1348,7 @@ def _analyze_dependencies_for_package(
             packages_to_analyze = [(ecosystem, dep) for dep in missing_deps]
 
             # Analyze in parallel (using the existing parallel analysis function)
-            results = analyze_packages_parallel(
+            results, _ = await analyze_packages_parallel(
                 packages_to_analyze,
                 db,
                 profile,
@@ -1371,7 +1357,6 @@ def _analyze_dependencies_for_package(
                 verbose=False,
                 use_local_cache=True,
                 max_workers=5,
-                use_batch_queries=True,
             )
 
             # Add scores from newly analyzed packages
@@ -1415,7 +1400,7 @@ def _resolve_lockfile_path(
     return Path(lockfile_path)
 
 
-def analyze_package(
+async def analyze_package(
     package_name: str,
     ecosystem: str,
     db: dict,
@@ -1424,6 +1409,7 @@ def analyze_package(
     lockfile_path: str | Path | dict[str, Path] | None = None,
     verbose: bool = False,
     use_local_cache: bool = True,
+    log_buffer: dict[str, list[str]] | None = None,
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -1435,12 +1421,16 @@ def analyze_package(
         profile: Scoring profile name.
         show_dependencies: Analyze and include dependency scores.
         lockfile_path: Path to lockfile for dependency analysis (or mapping by ecosystem).
-        verbose: If True, display cache source information.
+        verbose: If True, collect verbose information.
         use_local_cache: If False, skip local cache lookup.
+        log_buffer: Dictionary to collect verbose logs (for parallel execution).
 
     Returns:
         AnalysisResult or None if analysis fails.
     """
+    if log_buffer is None:
+        log_buffer = {}
+
     # Check if package is excluded
     if is_package_excluded(package_name):
         return None
@@ -1451,21 +1441,27 @@ def analyze_package(
     # Check local cache first
     if db_key in db:
         if verbose:
-            console.print(
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append(
                 f"  -> 💾 Found [bold green]{db_key}[/bold green] in local cache"
             )
         cached_data = db[db_key]
         payload_version = cached_data.get("analysis_version")
         if payload_version != ANALYSIS_VERSION:
             if verbose:
-                console.print(
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
                     f"[dim]ℹ️  Cache version mismatch for {db_key} "
                     f"({payload_version or 'unknown'} != {ANALYSIS_VERSION}). "
                     f"Fetching fresh data...[/dim]"
                 )
         else:
             if verbose:
-                console.print(
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
                     f"  -> 🔄 Reconstructing metrics from cached data (analysis_version: {payload_version})"
                 )
 
@@ -1482,13 +1478,19 @@ def analyze_package(
             ]
 
             if verbose:
-                console.print(f"     ✓ Reconstructed {len(metrics)} metrics")
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
+                    f"     ✓ Reconstructed {len(metrics)} metrics"
+                )
 
             # Recalculate total score with selected profile
             recalculated_score = compute_weighted_total_score(metrics, profile)
 
             if verbose:
-                console.print(
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
                     f"     ✓ Recalculated total score using profile '{profile}': {recalculated_score}/100"
                 )
 
@@ -1509,7 +1511,7 @@ def analyze_package(
             # If show_dependencies is requested, analyze dependencies
             resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
             if show_dependencies and resolved_lockfile:
-                dep_scores = _analyze_dependencies_for_package(
+                dep_scores = await _analyze_dependencies_for_package(
                     ecosystem, resolved_lockfile, db, package_name, profile
                 )
                 result = result._replace(dependency_scores=dep_scores)
@@ -1519,16 +1521,22 @@ def analyze_package(
     # Resolve GitHub URL using appropriate resolver
     resolver = get_resolver(ecosystem)
     if not resolver:
-        console.print(
-            f"  -> [yellow]ℹ️  Ecosystem '{ecosystem}' is not yet supported[/yellow]"
-        )
+        if verbose:
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append(
+                f"  -> [yellow]ℹ️  Ecosystem '{ecosystem}' is not yet supported[/yellow]"
+            )
         return None
 
-    repo_info = resolver.resolve_repository(package_name)
+    repo_info = await resolver.resolve_repository(package_name)
     if not repo_info:
-        console.print(
-            f"  -> [yellow]ℹ️  Repository not found for {db_key}. Package may not have public source code.[/yellow]"
-        )
+        if verbose:
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append(
+                f"  -> [yellow]ℹ️  Repository not found for {db_key}. Package may not have public source code.[/yellow]"
+            )
         return None
 
     # Get provider and repository info
@@ -1539,9 +1547,12 @@ def analyze_package(
         # GitLab supports nested groups, so we need to split path into parent/repo
         path_segments = repo_info.path.split("/")
         if len(path_segments) < 2:
-            console.print(
-                f"  -> [yellow]ℹ️  Invalid repository path for {db_key}[/yellow]"
-            )
+            if verbose:
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
+                    f"  -> [yellow]ℹ️  Invalid repository path for {db_key}[/yellow]"
+                )
             return None
         # Owner is everything except the last segment (project name)
         owner = "/".join(path_segments[:-1])
@@ -1550,12 +1561,14 @@ def analyze_package(
         owner, repo_name = repo_info.owner, repo_info.name
 
     if verbose:
-        console.print(
+        if db_key not in log_buffer:
+            log_buffer[db_key] = []
+        log_buffer[db_key].append(
             f"  -> 🔍 [bold yellow]{db_key}[/bold yellow] analyzing real-time (no cache)..."
         )
 
     try:
-        analysis_result = analyze_repository(
+        analysis_result = await analyze_repository(
             owner,
             repo_name,
             profile=profile,
@@ -1567,12 +1580,15 @@ def analyze_package(
 
         # Save to cache for future use (without total_score - it will be recalculated based on profile)
         _cache_analysis_result(ecosystem, package_name, analysis_result)
-        console.print("    [dim]💾 Cached for future use[/dim]")
+        if verbose:
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append("    [dim]💾 Cached for future use[/dim]")
 
         # If show_dependencies is requested, analyze dependencies
         resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
         if show_dependencies and resolved_lockfile:
-            dep_scores = _analyze_dependencies_for_package(
+            dep_scores = await _analyze_dependencies_for_package(
                 ecosystem, resolved_lockfile, db, package_name, profile
             )
             analysis_result = analysis_result._replace(dependency_scores=dep_scores)
@@ -1614,7 +1630,8 @@ def analyze_package(
 
 
 @app.command()
-def check(
+@syncify
+async def check(
     packages: list[str] = typer.Argument(
         None,
         help="Packages to analyze (format: 'package', 'ecosystem:package', or file path). Examples: 'requests', 'npm:react', 'go:gin', 'php:symfony/console', 'java:com.google.guava:guava', 'csharp:Newtonsoft.Json'. If omitted, auto-detects from manifest files.",
@@ -1887,8 +1904,7 @@ def check(
             profile=demo_profile or profile,
             demo_notice=demo_notice,
         )
-        close_http_client()
-        close_resolver_http_client()
+        await close_async_http_client()
         clear_lockfile_cache()
         raise typer.Exit(code=0)
 
@@ -1955,7 +1971,8 @@ def check(
             "swift",
         ]:
             resolver = get_resolver(eco)
-            if resolver and manifest_name in resolver.get_manifest_files():
+            manifest_files = await resolver.get_manifest_files() if resolver else []
+            if manifest_name in manifest_files:
                 detected_eco = eco
                 break
 
@@ -1979,7 +1996,7 @@ def check(
             raise typer.Exit(code=1)
 
         try:
-            manifest_packages = resolver.parse_manifest(str(manifest))
+            manifest_packages = await resolver.parse_manifest(str(manifest))
             console.print(
                 f"   Found {len(manifest_packages)} package(s) in {manifest_name}"
             )
@@ -2020,14 +2037,14 @@ def check(
                 f"🔍 No packages specified. Auto-detecting from manifest files in {root_dir}..."
             )
 
-        detected_ecosystems = detect_ecosystems(
+        detected_ecosystems = await detect_ecosystems(
             str(root_dir), recursive=recursive, max_depth=depth
         )
         if detected_ecosystems:
             console.print(f"✅ Detected ecosystems: {', '.join(detected_ecosystems)}")
 
             # Find all manifest files (recursively if requested)
-            manifest_files_dict = find_manifest_files(
+            manifest_files_dict = await find_manifest_files(
                 str(root_dir), recursive=recursive, max_depth=depth
             )
 
@@ -2045,7 +2062,9 @@ def check(
                     console.print(f"📋 Found manifest file: {relative_path}")
                     # Parse manifest to extract dependencies
                     try:
-                        manifest_packages = resolver.parse_manifest(str(manifest_path))
+                        manifest_packages = await resolver.parse_manifest(
+                            str(manifest_path)
+                        )
                         console.print(
                             f"   Found {len(manifest_packages)} package(s) in {manifest_path.name}"
                         )
@@ -2070,7 +2089,7 @@ def check(
                     )
 
                 # Find all lockfiles (recursively if requested)
-                lockfiles_dict = find_lockfiles(
+                lockfiles_dict = await find_lockfiles(
                     str(root_dir), recursive=recursive, max_depth=depth
                 )
 
@@ -2091,7 +2110,9 @@ def check(
                         )
                         for lockfile in lockfile_paths:
                             try:
-                                lock_packages = resolver.parse_lockfile(str(lockfile))
+                                lock_packages = await resolver.parse_lockfile(
+                                    str(lockfile)
+                                )
                                 console.print(
                                     f"   Found {len(lock_packages)} package(s) in {lockfile.name}"
                                 )
@@ -2135,16 +2156,57 @@ def check(
                 packages_to_analyze.append((eco, pkg_name))
                 direct_packages.append((eco, pkg_name))
 
-    # Remove duplicates while preserving order
+    # Remove duplicates while preserving order (package name level only)
     packages_to_analyze = _dedupe_packages(packages_to_analyze)
     direct_packages = _dedupe_packages(direct_packages)
+
+    # Dedupe by resolved repository to avoid analyzing the same repo multiple times
+    # But only do this for the analysis phase, not for dependency tracking
+    repo_seen = set()
+    repo_to_pkg: dict[str, tuple[str, str]] = {}  # repo_key -> (ecosystem, package)
+    unique_packages = []
+    duplicate_count = 0
+
+    for eco, pkg in packages_to_analyze:
+        resolver = get_resolver(eco)
+        if not resolver:
+            unique_packages.append((eco, pkg))
+            continue
+        try:
+            repo_info = await resolver.resolve_repository(pkg)
+            if repo_info:
+                key = f"{repo_info.owner}/{repo_info.name}"
+                if key not in repo_seen:
+                    repo_seen.add(key)
+                    repo_to_pkg[key] = (eco, pkg)
+                    unique_packages.append((eco, pkg))
+                else:
+                    # If duplicate repo, skip adding to unique_packages for analysis
+                    duplicate_count += 1
+                    console.print(
+                        f"  -> [dim]Skipping [bold yellow]{eco}:{pkg}[/bold yellow] "
+                        f"(maps to same repository as {repo_to_pkg[key][0]}:{repo_to_pkg[key][1]})[/dim]"
+                    )
+            else:
+                unique_packages.append((eco, pkg))
+        except Exception:
+            unique_packages.append((eco, pkg))
+
+    packages_to_analyze = unique_packages
+
+    if duplicate_count > 0:
+        console.print(
+            f"[dim]ℹ️  Skipped {duplicate_count} package(s) mapping to duplicate repositories[/dim]\n"
+        )
 
     console.print(f"🔍 Analyzing {len(packages_to_analyze)} package(s)...")
 
     # Find lockfiles for dependency analysis (if requested)
     lockfiles_map: dict[str, Path] = {}  # ecosystem -> lockfile path
     if show_dependencies:
-        lockfiles_dict = find_lockfiles(str(root_dir), recursive=False, max_depth=0)
+        lockfiles_dict = await find_lockfiles(
+            str(root_dir), recursive=recursive, max_depth=depth
+        )
         for detected_eco, lockfile_paths in lockfiles_dict.items():
             if lockfile_paths:
                 lockfiles_map[detected_eco] = lockfile_paths[0]  # Use first found
@@ -2178,7 +2240,7 @@ def check(
         lockfile = lockfiles_map if show_dependencies else None
 
         # Use parallel processing for better performance
-        results = analyze_packages_parallel(
+        results, verbose_logs = await analyze_packages_parallel(
             packages_to_process,
             db,
             profile,
@@ -2188,6 +2250,12 @@ def check(
             use_local,
             max_workers=5,  # Adjust based on GitHub API rate limits
         )
+
+        # Display verbose logs after progress bar is done
+        if verbose and verbose_logs:
+            for _db_key, logs in verbose_logs.items():
+                for log in logs:
+                    console.print(log)
 
         result_map = {
             packages_to_process[idx]: result
@@ -2224,8 +2292,6 @@ def check(
         console.print("No results to display.")
 
     # Clean up HTTP clients and lockfile cache
-    close_http_client()
-    close_resolver_http_client()
     clear_lockfile_cache()
 
 

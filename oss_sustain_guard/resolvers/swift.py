@@ -8,6 +8,8 @@ import json
 import re
 from pathlib import Path
 
+import aiofiles
+
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -19,7 +21,7 @@ class SwiftResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "swift"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Resolve a Swift package name to a repository reference.
 
@@ -44,7 +46,7 @@ class SwiftResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse Package.resolved and extract package information.
 
@@ -66,8 +68,8 @@ class SwiftResolver(LanguageResolver):
             raise ValueError(f"Unknown Swift lockfile type: {lockfile_path.name}")
 
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                data = json.loads(await f.read())
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse Package.resolved: {e}") from e
 
@@ -99,7 +101,7 @@ class SwiftResolver(LanguageResolver):
 
         return packages
 
-    def detect_lockfiles(self, directory: str) -> list[Path]:
+    async def detect_lockfiles(self, directory: str) -> list[Path]:
         """
         Detect Swift lockfiles in the directory.
 
@@ -113,11 +115,11 @@ class SwiftResolver(LanguageResolver):
         lockfile = dir_path / "Package.resolved"
         return [lockfile] if lockfile.exists() else []
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Get Swift manifest file names."""
         return ["Package.swift"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse Package.swift and extract package information.
 
@@ -139,8 +141,8 @@ class SwiftResolver(LanguageResolver):
             raise ValueError(f"Unknown Swift manifest file type: {manifest_path.name}")
 
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
         except OSError as e:
             raise ValueError(f"Failed to read Package.swift: {e}") from e
 
@@ -167,3 +169,6 @@ def _extract_package_urls(content: str) -> list[str]:
     """Extract package URLs from a Package.swift manifest."""
     pattern = re.compile(r"package\s*\(\s*url:\s*[\"']([^\"']+)[\"']")
     return pattern.findall(content)
+
+
+RESOLVER = SwiftResolver()

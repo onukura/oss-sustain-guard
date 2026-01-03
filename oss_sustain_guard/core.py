@@ -932,301 +932,6 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
     return signals
 
 
-# --- Batch Analysis Functions ---
-
-
-def _get_batch_repository_query(repo_list: list[tuple[str, str]]) -> str:
-    """Generate a GraphQL query for multiple repositories using aliases.
-
-    Args:
-        repo_list: List of (owner, name) tuples.
-
-    Returns:
-        GraphQL query string with aliases for each repository.
-    """
-    query_parts = ["query GetMultipleRepositories {"]
-
-    for idx, (owner, name) in enumerate(repo_list):
-        alias = f"repo{idx}"
-        # Use the same comprehensive query as single repository analysis
-        query_parts.append(f"""
-  {alias}: repository(owner: "{owner}", name: "{name}") {{
-    isArchived
-    pushedAt
-    owner {{
-      __typename
-      login
-      ... on Organization {{
-        name
-        login
-      }}
-    }}
-    defaultBranchRef {{
-      target {{
-        ... on Commit {{
-          history(first: 100) {{
-            edges {{
-              node {{
-                authoredDate
-                author {{
-                  user {{
-                    login
-                    company
-                  }}
-                  email
-                }}
-              }}
-            }}
-            totalCount
-          }}
-          checkSuites(last: 1) {{
-            nodes {{
-              conclusion
-              status
-            }}
-          }}
-        }}
-      }}
-    }}
-    pullRequests(first: 50, states: MERGED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
-      edges {{
-        node {{
-          mergedAt
-          createdAt
-          mergedBy {{
-            login
-          }}
-          reviews(first: 10) {{
-            totalCount
-            edges {{
-              node {{
-                createdAt
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
-    closedPullRequests: pullRequests(first: 50, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
-      totalCount
-      edges {{
-        node {{
-          closedAt
-          createdAt
-          merged
-          reviews(first: 1) {{
-            edges {{
-              node {{
-                createdAt
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
-    mergedPullRequestsCount: pullRequests(states: MERGED) {{
-      totalCount
-    }}
-    releases(first: 10, orderBy: {{field: CREATED_AT, direction: DESC}}) {{
-      edges {{
-        node {{
-          publishedAt
-          tagName
-        }}
-      }}
-    }}
-    issues(first: 20, states: OPEN, orderBy: {{field: CREATED_AT, direction: DESC}}) {{
-      edges {{
-        node {{
-          createdAt
-          comments(first: 1) {{
-            edges {{
-              node {{
-                createdAt
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
-    closedIssues: issues(first: 50, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
-      totalCount
-      edges {{
-        node {{
-          createdAt
-          closedAt
-          updatedAt
-          timelineItems(first: 1, itemTypes: CLOSED_EVENT) {{
-            edges {{
-              node {{
-                ... on ClosedEvent {{
-                  actor {{
-                    login
-                  }}
-                }}
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
-    vulnerabilityAlerts(first: 10) {{
-      edges {{
-        node {{
-          securityVulnerability {{
-            severity
-          }}
-          dismissedAt
-        }}
-      }}
-    }}
-    isSecurityPolicyEnabled
-    fundingLinks {{
-      platform
-      url
-    }}
-    hasWikiEnabled
-    hasIssuesEnabled
-    hasDiscussionsEnabled
-    codeOfConduct {{
-      name
-      url
-    }}
-    licenseInfo {{
-      name
-      spdxId
-      url
-    }}
-    stargazerCount
-    forkCount
-    watchers {{
-      totalCount
-    }}
-    forks(first: 20, orderBy: {{field: PUSHED_AT, direction: DESC}}) {{
-      edges {{
-        node {{
-          createdAt
-          pushedAt
-          defaultBranchRef {{
-            target {{
-              ... on Commit {{
-                history(first: 1) {{
-                  edges {{
-                    node {{
-                      committedDate
-                    }}
-                  }}
-                }}
-              }}
-            }}
-          }}
-          owner {{
-            login
-          }}
-        }}
-      }}
-    }}
-    readmeUpperCase: object(expression: "HEAD:README.md") {{
-      ... on Blob {{
-        byteSize
-      }}
-    }}
-    readmeLowerCase: object(expression: "HEAD:readme.md") {{
-      ... on Blob {{
-        byteSize
-      }}
-    }}
-    readmeAllCaps: object(expression: "HEAD:README") {{
-      ... on Blob {{
-        byteSize
-      }}
-    }}
-    contributingFile: object(expression: "HEAD:CONTRIBUTING.md") {{
-      ... on Blob {{
-        byteSize
-      }}
-    }}
-    description
-    homepageUrl
-  }}""")
-
-    query_parts.append("}")
-    return "\n".join(query_parts)
-
-
-def analyze_repositories_batch(
-    repo_list: list[
-        tuple[str, str]
-        | tuple[str, str, str | None, str | None]
-        | tuple[str, str, str | None, str | None, str | None]
-    ],
-    platform: str | None = None,
-    vcs_platform: str | None = None,
-    *,
-    profile: str = "balanced",
-) -> dict[tuple[str, str], AnalysisResult | None]:
-    """Analyze multiple repositories (now using individual VCS provider calls).
-
-    Note: With VCS abstraction layer, batch optimization is handled by
-    individual providers. This function now calls analyze_repository for each item.
-
-    Args:
-        repo_list: List of (owner, name), (owner, name, platform, package_name), or
-            (owner, name, platform, package_name, vcs_platform).
-        platform: Optional package platform for 2-tuple items.
-        vcs_platform: Optional VCS platform override for 2-tuple or 4-tuple items.
-        profile: Scoring profile name.
-
-    Returns:
-        Dictionary mapping (owner, name) to AnalysisResult or None.
-    """
-    if not repo_list:
-        return {}
-
-    results: dict[tuple[str, str], AnalysisResult | None] = {}
-
-    def _normalize_batch_item(
-        item: tuple[str, str]
-        | tuple[str, str, str | None, str | None]
-        | tuple[str, str, str | None, str | None, str | None],
-    ) -> tuple[str, str, str | None, str | None, str | None]:
-        if len(item) == 2:
-            owner, name = item
-            return owner, name, platform or None, None, vcs_platform or None
-        if len(item) == 4:
-            owner, name, item_platform, package_name = item
-            return owner, name, item_platform, package_name, vcs_platform or None
-        if len(item) == 5:
-            owner, name, item_platform, package_name, item_vcs_platform = item
-            return owner, name, item_platform, package_name, item_vcs_platform
-        raise ValueError(
-            "Batch items must be (owner, name), (owner, name, platform, package_name), "
-            "or (owner, name, platform, package_name, vcs_platform)."
-        )
-
-    normalized = [_normalize_batch_item(item) for item in repo_list]
-
-    # Analyze each repository individually using VCS provider
-    for owner, name, item_platform, package_name, item_vcs_platform in normalized:
-        try:
-            result = analyze_repository(
-                owner,
-                name,
-                platform=item_platform,
-                package_name=package_name,
-                profile=profile,
-                vcs_platform=item_vcs_platform or vcs_platform or "github",
-            )
-            results[(owner, name)] = result
-        except Exception as e:
-            console.print(
-                f"  [yellow]⚠️  Analysis issue for {owner}/{name}: {e}[/yellow]"
-            )
-            results[(owner, name)] = None
-
-    return results
-
-
 def _extract_sample_counts(repo_info: dict[str, Any]) -> dict[str, int]:
     """Extract actual sample counts from repository data."""
     # If sample_counts already provided by VCS provider, use that
@@ -1360,10 +1065,10 @@ def _analyze_repository_data(
             checker = spec.checker
             if vcs_data is not None and hasattr(checker, "check"):
                 metric = checker.check(vcs_data, context)
-            elif vcs_data is None and hasattr(checker, "check_legacy"):
+            elif hasattr(checker, "check_legacy"):
                 metric = checker.check_legacy(repo_info, context)
             else:
-                metric = checker(repo_info, context)
+                metric = None
             if metric is None:
                 # Track skipped metrics (e.g., optional metrics without required API keys)
                 skipped_metrics.append(spec.name)
@@ -1427,7 +1132,7 @@ def _analyze_repository_data(
 # --- Main Analysis Function ---
 
 
-def analyze_repository(
+async def analyze_repository(
     owner: str,
     name: str,
     platform: str | None = None,
@@ -1464,7 +1169,7 @@ def analyze_repository(
         vcs = get_vcs_provider(vcs_platform)
 
         # Fetch normalized repository data from VCS
-        vcs_data = vcs.get_repository_data(owner, name)
+        vcs_data = await vcs.get_repository_data(owner, name)
 
         # Convert VCS data to legacy format for metrics compatibility
         repo_info = _vcs_data_to_repo_info(vcs_data)

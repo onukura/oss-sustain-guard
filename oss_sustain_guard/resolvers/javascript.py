@@ -6,9 +6,10 @@ import json
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -20,7 +21,7 @@ class JavaScriptResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "javascript"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Fetches package information from the npm registry and extracts repository URL.
 
@@ -31,13 +32,13 @@ class JavaScriptResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                response = client.get(
-                    f"https://registry.npmjs.org/{package_name}",
-                    timeout=10,
-                )
-                response.raise_for_status()
-                data = response.json()
+            client = await _get_async_http_client()
+            response = await client.get(
+                f"https://registry.npmjs.org/{package_name}",
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
 
             # npm registry stores repository info in different formats
             repo_info = data.get("repository", {})
@@ -82,7 +83,7 @@ class JavaScriptResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Auto-detects JavaScript lockfile type and extracts package information.
 
@@ -104,15 +105,15 @@ class JavaScriptResolver(LanguageResolver):
         filename = lockfile_path.name
 
         if filename == "package-lock.json":
-            return self._parse_package_lock(lockfile_path)
+            return await self._parse_package_lock(lockfile_path)
         elif filename == "yarn.lock":
-            return self._parse_yarn_lock(lockfile_path)
+            return await self._parse_yarn_lock(lockfile_path)
         elif filename == "pnpm-lock.yaml":
-            return self._parse_pnpm_lock(lockfile_path)
+            return await self._parse_pnpm_lock(lockfile_path)
         else:
             raise ValueError(f"Unknown JavaScript lockfile type: {filename}")
 
-    def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
+    async def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
         """
         Detects JavaScript lockfiles in a directory.
 
@@ -131,11 +132,11 @@ class JavaScriptResolver(LanguageResolver):
                 detected.append(lockfile)
         return detected
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Return list of JavaScript manifest file names."""
         return ["package.json"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a JavaScript manifest file (package.json).
 
@@ -158,14 +159,15 @@ class JavaScriptResolver(LanguageResolver):
                 f"Unknown JavaScript manifest file type: {manifest_path.name}"
             )
 
-        return self._parse_package_json(manifest_path)
+        return await self._parse_package_json(manifest_path)
 
     @staticmethod
-    def _parse_package_json(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_package_json(manifest_path: Path) -> list[PackageInfo]:
         """Parse package.json file."""
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                data = json.loads(content)
 
             packages = []
 
@@ -192,11 +194,12 @@ class JavaScriptResolver(LanguageResolver):
             raise ValueError(f"Failed to parse package.json: {e}") from e
 
     @staticmethod
-    def _parse_package_lock(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_package_lock(lockfile_path: Path) -> list[PackageInfo]:
         """Parse package-lock.json file."""
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                data = json.loads(content)
 
             packages = []
             dependencies = data.get("dependencies", {})
@@ -232,7 +235,7 @@ class JavaScriptResolver(LanguageResolver):
             return []
 
     @staticmethod
-    def _parse_yarn_lock(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_yarn_lock(lockfile_path: Path) -> list[PackageInfo]:
         """
         Parse yarn.lock file.
 
@@ -242,8 +245,8 @@ class JavaScriptResolver(LanguageResolver):
             ...
         """
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             packages = set()
 
@@ -281,13 +284,14 @@ class JavaScriptResolver(LanguageResolver):
             return []
 
     @staticmethod
-    def _parse_pnpm_lock(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_pnpm_lock(lockfile_path: Path) -> list[PackageInfo]:
         """Parse pnpm-lock.yaml file."""
         try:
             import yaml
 
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                data = yaml.safe_load(content)
 
             packages = set()
 
@@ -340,3 +344,6 @@ def _extract_npm_package_name(package_path: str) -> str | None:
     if name_parts[0].startswith("@") and len(name_parts) >= 2:
         return "/".join(name_parts[:2])
     return name_parts[0]
+
+
+RESOLVER = JavaScriptResolver()

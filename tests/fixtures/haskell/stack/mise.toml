@@ -1,0 +1,3 @@
+[tools]
+haskell = "latest"
+stack = "latest"

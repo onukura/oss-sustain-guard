@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 from dotenv import load_dotenv
 
-from oss_sustain_guard.http_client import _get_http_client
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.vcs.base import BaseVCSProvider, VCSRepositoryData
 
 # Load environment variables
@@ -73,7 +73,7 @@ class GitHubProvider(BaseVCSProvider):
         """Construct GitHub repository URL."""
         return f"https://github.com/{owner}/{repo}"
 
-    def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
+    async def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
         """
         Fetch repository data from GitHub GraphQL API.
 
@@ -90,7 +90,7 @@ class GitHubProvider(BaseVCSProvider):
         """
         query = self._get_graphql_query()
         variables = {"owner": owner, "name": repo}
-        raw_data = self._query_graphql(query, variables)
+        raw_data = await self._query_graphql(query, variables)
 
         if "repository" not in raw_data or raw_data["repository"] is None:
             raise ValueError(f"Repository {owner}/{repo} not found or is inaccessible.")
@@ -98,7 +98,9 @@ class GitHubProvider(BaseVCSProvider):
         repo_info = raw_data["repository"]
         return self._normalize_github_data(repo_info)
 
-    def _query_graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+    async def _query_graphql(
+        self, query: str, variables: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Execute GraphQL query against GitHub API.
 
@@ -116,8 +118,8 @@ class GitHubProvider(BaseVCSProvider):
             "Authorization": f"bearer {self.token}",
             "Content-Type": "application/json",
         }
-        client = _get_http_client()
-        response = client.post(
+        client = await _get_async_http_client()
+        response = await client.post(
             GITHUB_GRAPHQL_API,
             json={"query": query, "variables": variables},
             headers=headers,
@@ -540,3 +542,6 @@ class GitHubProvider(BaseVCSProvider):
             sample_counts=sample_counts,
             raw_data=repo_info,  # Keep original data for debugging
         )
+
+
+PROVIDER = GitHubProvider

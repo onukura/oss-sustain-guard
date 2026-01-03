@@ -63,13 +63,19 @@ class TestResolverRegistry:
 
     def test_register_custom_resolver(self):
         """Test registering a custom resolver."""
+        from oss_sustain_guard.resolvers import _RESOLVERS
+
         mock_resolver = MockEcosystemResolver()
         register_resolver("test-ecosystem", mock_resolver)
 
-        resolver = get_resolver("test-ecosystem")
-        assert resolver is mock_resolver
-        if resolver is not None:
-            assert resolver.ecosystem_name == "mock-ecosystem"
+        try:
+            resolver = get_resolver("test-ecosystem")
+            assert resolver is mock_resolver
+            if resolver is not None:
+                assert resolver.ecosystem_name == "mock-ecosystem"
+        finally:
+            # Clean up: remove the test resolver
+            _RESOLVERS.pop("test-ecosystem", None)
 
     def test_get_all_resolvers(self):
         """Test getting all resolvers."""
@@ -79,42 +85,49 @@ class TestResolverRegistry:
 
     def test_get_all_resolvers_deduplication(self):
         """Test that get_all_resolvers deduplicates."""
+        from oss_sustain_guard.resolvers import _RESOLVERS
+
         # Register the same resolver with multiple aliases
         mock_resolver = MockEcosystemResolver()
         register_resolver("alias1", mock_resolver)
         register_resolver("alias2", mock_resolver)
 
-        resolvers = get_all_resolvers()
-        # Should not include duplicate references to the same resolver
-        resolver_ids = [id(r) for r in resolvers]
-        assert len(resolver_ids) == len(set(resolver_ids))
+        try:
+            resolvers = get_all_resolvers()
+            # Should not include duplicate references to the same resolver
+            resolver_ids = [id(r) for r in resolvers]
+            assert len(resolver_ids) == len(set(resolver_ids))
+        finally:
+            # Clean up: remove the test resolvers
+            _RESOLVERS.pop("alias1", None)
+            _RESOLVERS.pop("alias2", None)
 
-    def test_detect_ecosystems_python(self, tmp_path):
+    async def test_detect_ecosystems_python(self, tmp_path):
         """Test detecting Python ecosystem."""
         (tmp_path / "poetry.lock").touch()
 
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert "python" in ecosystems
 
-    def test_detect_ecosystems_none(self, tmp_path):
+    async def test_detect_ecosystems_none(self, tmp_path):
         """Test detecting no ecosystems."""
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert isinstance(ecosystems, list)
 
-    def test_detect_ecosystems_multiple(self, tmp_path):
+    async def test_detect_ecosystems_multiple(self, tmp_path):
         """Test detecting multiple ecosystems."""
         (tmp_path / "poetry.lock").touch()
 
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert isinstance(ecosystems, list)
         # Should be sorted
         assert ecosystems == sorted(ecosystems)
 
-    def test_detect_ecosystems_manifest_files(self, tmp_path):
+    async def test_detect_ecosystems_manifest_files(self, tmp_path):
         """Test detecting ecosystems by manifest files."""
         (tmp_path / "pyproject.toml").write_text("[project]")
 
-        ecosystems = detect_ecosystems(str(tmp_path))
+        ecosystems = await detect_ecosystems(str(tmp_path))
         assert "python" in ecosystems
 
     def test_get_php_resolver(self):
