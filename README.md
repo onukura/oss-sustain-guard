@@ -59,7 +59,7 @@ Metrics are one lens among many; they work best alongside project context and re
 - ✅ **Local caching** - Analysis results are cached locally in `~/.cache/oss-sustain-guard/`
   - No cloud storage or external uploads
   - You control the cache directory and can clear it anytime with `os4g clear-cache`
-  - Cache files are standard JSON (human-readable) with TTL metadata
+  - Cache files are standard JSON　gzip with TTL metadata
 
 - ✅ **Analysis is transparent** - All metrics are calculated client-side from public GitHub or GitLab data
   - No proprietary scoring sent to external services

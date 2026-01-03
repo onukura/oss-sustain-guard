@@ -161,7 +161,7 @@ def check_ci_status(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
 
 def _on_error(error: Exception) -> Metric:
     return Metric(
-        "CI/CD Status",
+        "Build Health",
         0,
         10,
         f"Note: Analysis incomplete - {error}",
