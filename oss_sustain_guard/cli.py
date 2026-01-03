@@ -1183,7 +1183,7 @@ async def analyze_packages_parallel(
                     )
                     resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
                     if show_dependencies and resolved_lockfile:
-                        dep_scores = _analyze_dependencies_for_package(
+                        dep_scores = await _analyze_dependencies_for_package(
                             ecosystem,
                             resolved_lockfile,
                             db,
@@ -1511,7 +1511,7 @@ async def analyze_package(
             # If show_dependencies is requested, analyze dependencies
             resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
             if show_dependencies and resolved_lockfile:
-                dep_scores = _analyze_dependencies_for_package(
+                dep_scores = await _analyze_dependencies_for_package(
                     ecosystem, resolved_lockfile, db, package_name, profile
                 )
                 result = result._replace(dependency_scores=dep_scores)
@@ -1588,7 +1588,7 @@ async def analyze_package(
         # If show_dependencies is requested, analyze dependencies
         resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
         if show_dependencies and resolved_lockfile:
-            dep_scores = _analyze_dependencies_for_package(
+            dep_scores = await _analyze_dependencies_for_package(
                 ecosystem, resolved_lockfile, db, package_name, profile
             )
             analysis_result = analysis_result._replace(dependency_scores=dep_scores)
@@ -2156,9 +2156,36 @@ async def check(
                 packages_to_analyze.append((eco, pkg_name))
                 direct_packages.append((eco, pkg_name))
 
-    # Remove duplicates while preserving order
+    # Remove duplicates while preserving order (package name level only)
     packages_to_analyze = _dedupe_packages(packages_to_analyze)
     direct_packages = _dedupe_packages(direct_packages)
+
+    # Dedupe by resolved repository to avoid analyzing the same repo multiple times
+    # But only do this for the analysis phase, not for dependency tracking
+    repo_seen = set()
+    repo_to_pkg: dict[str, tuple[str, str]] = {}  # repo_key -> (ecosystem, package)
+    unique_packages = []
+
+    for eco, pkg in packages_to_analyze:
+        resolver = get_resolver(eco)
+        if not resolver:
+            unique_packages.append((eco, pkg))
+            continue
+        try:
+            repo_info = await resolver.resolve_repository(pkg)
+            if repo_info:
+                key = f"{repo_info.owner}/{repo_info.name}"
+                if key not in repo_seen:
+                    repo_seen.add(key)
+                    repo_to_pkg[key] = (eco, pkg)
+                    unique_packages.append((eco, pkg))
+                # If duplicate repo, skip adding to unique_packages for analysis
+            else:
+                unique_packages.append((eco, pkg))
+        except Exception:
+            unique_packages.append((eco, pkg))
+
+    packages_to_analyze = unique_packages
 
     console.print(f"🔍 Analyzing {len(packages_to_analyze)} package(s)...")
 
