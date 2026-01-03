@@ -88,7 +88,7 @@ class BaseVCSProvider(ABC):
     """
 
     @abstractmethod
-    def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
+    async def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
         """
         Fetch normalized repository data from the VCS platform.
 

@@ -1065,10 +1065,10 @@ def _analyze_repository_data(
             checker = spec.checker
             if vcs_data is not None and hasattr(checker, "check"):
                 metric = checker.check(vcs_data, context)
-            elif vcs_data is None and hasattr(checker, "check_legacy"):
+            elif hasattr(checker, "check_legacy"):
                 metric = checker.check_legacy(repo_info, context)
             else:
-                metric = checker(repo_info, context)
+                metric = None
             if metric is None:
                 # Track skipped metrics (e.g., optional metrics without required API keys)
                 skipped_metrics.append(spec.name)
@@ -1132,7 +1132,7 @@ def _analyze_repository_data(
 # --- Main Analysis Function ---
 
 
-def analyze_repository(
+async def analyze_repository(
     owner: str,
     name: str,
     platform: str | None = None,
@@ -1169,7 +1169,7 @@ def analyze_repository(
         vcs = get_vcs_provider(vcs_platform)
 
         # Fetch normalized repository data from VCS
-        vcs_data = vcs.get_repository_data(owner, name)
+        vcs_data = await vcs.get_repository_data(owner, name)
 
         # Convert VCS data to legacy format for metrics compatibility
         repo_info = _vcs_data_to_repo_info(vcs_data)

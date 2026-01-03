@@ -5,9 +5,10 @@ Go package resolver (Go modules).
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -19,7 +20,7 @@ class GoResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "go"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Resolve Go module to repository URL.
 
@@ -45,57 +46,55 @@ class GoResolver(LanguageResolver):
 
         # For non-GitHub paths or short names, try to query pkg.go.dev
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                # First, try to search for the package if it's a short name
-                if "/" not in package_name:
-                    search_response = client.get(
-                        f"https://pkg.go.dev/search?q={package_name}&m=package",
-                        timeout=10,
-                        follow_redirects=True,
-                    )
-                    if search_response.status_code == 200:
-                        import re
-
-                        # Look for the first search result with data-test-id="snippet-title"
-                        # Pattern: <a href="/module/path" ... data-test-id="snippet-title">
-                        pattern = (
-                            r'<a href="/([^"?]+)"[^>]*data-test-id="snippet-title"'
-                        )
-                        matches = re.findall(pattern, search_response.text)
-                        if matches:
-                            # Use the first match as the canonical path
-                            package_name = matches[0]
-
-                # Query pkg.go.dev for package details
-                response = client.get(
-                    f"https://pkg.go.dev/{package_name}?tab=overview",
+            client = await _get_async_http_client()
+            # First, try to search for the package if it's a short name
+            if "/" not in package_name:
+                search_response = await client.get(
+                    f"https://pkg.go.dev/search?q={package_name}&m=package",
                     timeout=10,
                     follow_redirects=True,
                 )
-                response.raise_for_status()
+                if search_response.status_code == 200:
+                    import re
 
-                # Look for repository link in the UnitMeta-repo section
-                import re
+                    # Look for the first search result with data-test-id="snippet-title"
+                    # Pattern: <a href="/module/path" ... data-test-id="snippet-title">
+                    pattern = r'<a href="/([^"?]+)"[^>]*data-test-id="snippet-title"'
+                    matches = re.findall(pattern, search_response.text)
+                    if matches:
+                        # Use the first match as the canonical path
+                        package_name = matches[0]
 
-                # First try to find the repository link in UnitMeta-repo section
-                # This is more reliable than searching the entire page
-                pattern = r'class="UnitMeta-repo"[^>]*>.*?href="(https://[^"]+)"'
-                matches = re.findall(pattern, response.text, re.DOTALL)
-                for match in matches:
-                    repo = parse_repository_url(match)
-                    if repo:
-                        return repo
+            # Query pkg.go.dev for package details
+            response = await client.get(
+                f"https://pkg.go.dev/{package_name}?tab=overview",
+                timeout=10,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
 
-                # Fallback: search for any repository URL
-                pattern = r'https://(?:github|gitlab)\.com/[^/\s"<>]+/[^/\s"<>]+'
-                matches = re.findall(pattern, response.text)
-                for match in matches:
-                    # Filter out common false positives (golang/go is the Go logo link)
-                    if "github.com/golang/go" in match:
-                        continue
-                    repo = parse_repository_url(match)
-                    if repo:
-                        return repo
+            # Look for repository link in the UnitMeta-repo section
+            import re
+
+            # First try to find the repository link in UnitMeta-repo section
+            # This is more reliable than searching the entire page
+            pattern = r'class="UnitMeta-repo"[^>]*>.*?href="(https://[^"]+)"'
+            matches = re.findall(pattern, response.text, re.DOTALL)
+            for match in matches:
+                repo = parse_repository_url(match)
+                if repo:
+                    return repo
+
+            # Fallback: search for any repository URL
+            pattern = r'https://(?:github|gitlab)\.com/[^/\s"<>]+/[^/\s"<>]+'
+            matches = re.findall(pattern, response.text)
+            for match in matches:
+                # Filter out common false positives (golang/go is the Go logo link)
+                if "github.com/golang/go" in match:
+                    continue
+                repo = parse_repository_url(match)
+                if repo:
+                    return repo
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             print(
@@ -106,7 +105,7 @@ class GoResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse go.sum file and extract module information.
 
@@ -128,9 +127,9 @@ class GoResolver(LanguageResolver):
         if lockfile_path.name != "go.sum":
             raise ValueError(f"Unknown Go lockfile type: {lockfile_path.name}")
 
-        return self._parse_go_sum(lockfile_path)
+        return await self._parse_go_sum(lockfile_path)
 
-    def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
+    async def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
         """
         Detect Go lockfiles in a directory.
 
@@ -150,7 +149,7 @@ class GoResolver(LanguageResolver):
             detected.append(go_mod)
         return detected
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Return list of Go manifest file names."""
         return ["go.mod"]
 
@@ -180,7 +179,7 @@ class GoResolver(LanguageResolver):
         pattern = r"/v\d+$"
         return re.sub(pattern, "", module_path)
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a Go manifest file (go.mod).
 
@@ -201,14 +200,14 @@ class GoResolver(LanguageResolver):
         if manifest_path.name != "go.mod":
             raise ValueError(f"Unknown Go manifest file type: {manifest_path.name}")
 
-        return self._parse_go_mod(manifest_path)
+        return await self._parse_go_mod(manifest_path)
 
     @staticmethod
-    def _parse_go_mod(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_go_mod(manifest_path: Path) -> list[PackageInfo]:
         """Parse go.mod file."""
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             packages = []
             in_require = False
@@ -264,11 +263,11 @@ class GoResolver(LanguageResolver):
             raise ValueError(f"Failed to parse go.mod: {e}") from e
 
     @staticmethod
-    def _parse_go_sum(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_go_sum(lockfile_path: Path) -> list[PackageInfo]:
         """Parse go.sum file."""
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             packages = set()
 

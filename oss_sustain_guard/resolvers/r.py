@@ -9,9 +9,10 @@ import re
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -23,7 +24,7 @@ class RResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "r"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Resolve an R package to a repository URL.
 
@@ -34,14 +35,14 @@ class RResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                response = client.get(
-                    f"https://crandb.r-pkg.org/{package_name}", timeout=10
-                )
-                if response.status_code == 404:
-                    return None
-                response.raise_for_status()
-                data = response.json()
+            client = await _get_async_http_client()
+            response = await client.get(
+                f"https://crandb.r-pkg.org/{package_name}", timeout=10
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            data = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
             print(
                 f"Note: Unable to fetch CRAN data for {package_name}: {e}",
@@ -64,7 +65,7 @@ class RResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse renv.lock and extract package information.
 
@@ -86,8 +87,8 @@ class RResolver(LanguageResolver):
             raise ValueError(f"Unknown R lockfile type: {lockfile_path.name}")
 
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                data = json.loads(await f.read())
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse renv.lock: {e}") from e
 
@@ -109,7 +110,7 @@ class RResolver(LanguageResolver):
 
         return packages
 
-    def detect_lockfiles(self, directory: str) -> list[Path]:
+    async def detect_lockfiles(self, directory: str) -> list[Path]:
         """
         Detect R lockfiles in the directory.
 
@@ -123,11 +124,11 @@ class RResolver(LanguageResolver):
         lockfile = dir_path / "renv.lock"
         return [lockfile] if lockfile.exists() else []
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Get R manifest file names."""
         return ["DESCRIPTION"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse an R DESCRIPTION file and extract dependencies.
 
@@ -148,7 +149,7 @@ class RResolver(LanguageResolver):
         if manifest_path.name != "DESCRIPTION":
             raise ValueError(f"Unknown R manifest file type: {manifest_path.name}")
 
-        return _parse_description(manifest_path)
+        return await _parse_description(manifest_path)
 
 
 def _split_urls(value: object) -> list[str]:
@@ -163,11 +164,11 @@ def _split_urls(value: object) -> list[str]:
     return candidates
 
 
-def _parse_description(manifest_path: Path) -> list[PackageInfo]:
+async def _parse_description(manifest_path: Path) -> list[PackageInfo]:
     """Parse an R DESCRIPTION file for dependency names."""
     try:
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+        async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+            lines = (await f.read()).splitlines()
     except OSError as e:
         raise ValueError(f"Failed to read DESCRIPTION: {e}") from e
 

@@ -8,9 +8,10 @@ import re
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -39,7 +40,7 @@ class JavaResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "java"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Fetches package information from Maven Central and extracts repository URL from pom.xml.
 
@@ -62,50 +63,50 @@ class JavaResolver(LanguageResolver):
             group_id, artifact_id = package_name.split(":", 1)
             group_path = group_id.replace(".", "/")
 
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                # First, get the latest version from maven-metadata.xml
-                metadata_url = f"https://repo1.maven.org/maven2/{group_path}/{artifact_id}/maven-metadata.xml"
-                metadata_response = client.get(metadata_url, timeout=10)
-                metadata_response.raise_for_status()
+            client = await _get_async_http_client()
+            # First, get the latest version from maven-metadata.xml
+            metadata_url = f"https://repo1.maven.org/maven2/{group_path}/{artifact_id}/maven-metadata.xml"
+            metadata_response = await client.get(metadata_url, timeout=10)
+            metadata_response.raise_for_status()
 
-                # Extract latest version from metadata
-                latest_match = re.search(
-                    r"<latest>([^<]+)</latest>",
-                    metadata_response.text,
-                )
-                if not latest_match:
-                    return None
-
-                latest_version = latest_match.group(1)
-
-                # Fetch pom.xml from the latest version
-                pom_url = f"https://repo1.maven.org/maven2/{group_path}/{artifact_id}/{latest_version}/{artifact_id}-{latest_version}.pom"
-                pom_response = client.get(pom_url, timeout=10)
-                pom_response.raise_for_status()
-
-                # Extract SCM URL from pom.xml
-                scm_match = re.search(
-                    r"<scm>.*?<url>([^<]+)</url>.*?</scm>",
-                    pom_response.text,
-                    re.DOTALL,
-                )
-                if scm_match:
-                    scm_url = scm_match.group(1)
-                    repo = parse_repository_url(scm_url)
-                    if repo:
-                        return repo
-
-                # Fallback: look for repository URL in project url or any link
-                repo_match = re.search(
-                    r'https://(?:github|gitlab)\.com/[^\s<>"\']+',
-                    pom_response.text,
-                )
-                if repo_match:
-                    repo = parse_repository_url(repo_match.group(0))
-                    if repo:
-                        return repo
-
+            # Extract latest version from metadata
+            latest_match = re.search(
+                r"<latest>([^<]+)</latest>",
+                metadata_response.text,
+            )
+            if not latest_match:
                 return None
+
+            latest_version = latest_match.group(1)
+
+            # Fetch pom.xml from the latest version
+            pom_url = f"https://repo1.maven.org/maven2/{group_path}/{artifact_id}/{latest_version}/{artifact_id}-{latest_version}.pom"
+            pom_response = await client.get(pom_url, timeout=10)
+            pom_response.raise_for_status()
+
+            # Extract SCM URL from pom.xml
+            scm_match = re.search(
+                r"<scm>.*?<url>([^<]+)</url>.*?</scm>",
+                pom_response.text,
+                re.DOTALL,
+            )
+            if scm_match:
+                scm_url = scm_match.group(1)
+                repo = parse_repository_url(scm_url)
+                if repo:
+                    return repo
+
+            # Fallback: look for repository URL in project url or any link
+            repo_match = re.search(
+                r'https://(?:github|gitlab)\.com/[^\s<>"\']+',
+                pom_response.text,
+            )
+            if repo_match:
+                repo = parse_repository_url(repo_match.group(0))
+                if repo:
+                    return repo
+
+            return None
         except (httpx.RequestError, httpx.HTTPStatusError, ValueError, KeyError) as e:
             print(
                 f"Note: Unable to fetch Java data for {package_name}: {e}",
@@ -113,7 +114,7 @@ class JavaResolver(LanguageResolver):
             )
             return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse Maven/Gradle lockfile and extract package information.
 
@@ -132,15 +133,15 @@ class JavaResolver(LanguageResolver):
             raise FileNotFoundError(f"Lockfile not found: {lockfile_path}")
 
         if lockfile_path.name == "gradle.lockfile":
-            return self._parse_gradle_lockfile(lockfile_path)
+            return await self._parse_gradle_lockfile(lockfile_path)
         elif lockfile_path.name.endswith(".asc"):
-            return self._parse_maven_asc_lockfile(lockfile_path)
+            return await self._parse_maven_asc_lockfile(lockfile_path)
         elif lockfile_path.name == "build.sbt.lock":
-            return self._parse_sbt_lockfile(lockfile_path)
+            return await self._parse_sbt_lockfile(lockfile_path)
         else:
             raise ValueError(f"Unsupported lockfile format: {lockfile_path.name}")
 
-    def detect_lockfiles(self, directory: str | Path) -> list[Path]:
+    async def detect_lockfiles(self, directory: str | Path) -> list[Path]:
         """
         Detect Maven/Gradle lockfiles in the directory.
 
@@ -175,7 +176,7 @@ class JavaResolver(LanguageResolver):
 
         return lockfiles
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """
         Return list of Java manifest files.
 
@@ -184,7 +185,7 @@ class JavaResolver(LanguageResolver):
         """
         return ["pom.xml", "build.gradle", "build.gradle.kts", "build.sbt"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a Java manifest file (pom.xml, build.gradle, build.sbt).
 
@@ -205,16 +206,16 @@ class JavaResolver(LanguageResolver):
         filename = manifest_path.name
 
         if filename == "pom.xml":
-            return self._parse_pom_xml(manifest_path)
+            return await self._parse_pom_xml(manifest_path)
         elif filename in ("build.gradle", "build.gradle.kts"):
-            return self._parse_gradle_manifest(manifest_path)
+            return await self._parse_gradle_manifest(manifest_path)
         elif filename == "build.sbt":
-            return self._parse_sbt_manifest(manifest_path)
+            return await self._parse_sbt_manifest(manifest_path)
         else:
             raise ValueError(f"Unknown Java manifest file type: {filename}")
 
     @staticmethod
-    def _parse_pom_xml(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_pom_xml(manifest_path: Path) -> list[PackageInfo]:
         """Parse pom.xml file."""
         try:
             import xml.etree.ElementTree as ET
@@ -226,8 +227,12 @@ class JavaResolver(LanguageResolver):
         packages = []
 
         try:
-            tree = ET.parse(manifest_path)
-            root = tree.getroot()
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                tree = ET.ElementTree(ET.fromstring(content))
+                root = tree.getroot()
+                if root is None:
+                    return []
 
             # Define Maven namespace
             ns = {"mvn": "http://maven.apache.org/POM/4.0.0"}
@@ -252,13 +257,13 @@ class JavaResolver(LanguageResolver):
             raise ValueError(f"Failed to parse pom.xml: {e}") from e
 
     @staticmethod
-    def _parse_gradle_manifest(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_gradle_manifest(manifest_path: Path) -> list[PackageInfo]:
         """Parse build.gradle or build.gradle.kts file."""
         packages = []
 
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             import re
 
@@ -286,13 +291,13 @@ class JavaResolver(LanguageResolver):
             raise ValueError(f"Failed to parse gradle manifest: {e}") from e
 
     @staticmethod
-    def _parse_sbt_manifest(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_sbt_manifest(manifest_path: Path) -> list[PackageInfo]:
         """Parse build.sbt file."""
         packages = []
 
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             import re
 
@@ -316,7 +321,7 @@ class JavaResolver(LanguageResolver):
         except (IOError, ValueError) as e:
             raise ValueError(f"Failed to parse sbt manifest: {e}") from e
 
-    def _parse_gradle_lockfile(self, lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_gradle_lockfile(self, lockfile_path: Path) -> list[PackageInfo]:
         """
         Parse gradle.lockfile and extract dependencies.
 
@@ -331,8 +336,9 @@ class JavaResolver(LanguageResolver):
         """
         packages = []
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                lines = content.split("\n")
 
             # gradle.lockfile format:
             # # Comment lines
@@ -366,7 +372,7 @@ class JavaResolver(LanguageResolver):
         except Exception as e:
             raise ValueError(f"Failed to parse gradle.lockfile: {e}") from e
 
-    def _parse_maven_asc_lockfile(self, lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_maven_asc_lockfile(self, lockfile_path: Path) -> list[PackageInfo]:
         """
         Parse Maven pom.xml.asc and extract version information.
 
@@ -385,7 +391,7 @@ class JavaResolver(LanguageResolver):
         # Return empty list for now
         return []
 
-    def _parse_sbt_lockfile(self, lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_sbt_lockfile(self, lockfile_path: Path) -> list[PackageInfo]:
         """
         Parse build.sbt.lock and extract dependencies.
 
@@ -400,8 +406,8 @@ class JavaResolver(LanguageResolver):
         """
         packages = []
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             # build.sbt.lock uses TOML-like format
             # Try to parse as simple key-value pairs

@@ -7,9 +7,10 @@ import re
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -23,7 +24,7 @@ class CSharpResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "csharp"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Fetches package information from NuGet Flat Container API and extracts repository URL from nuspec.
 
@@ -36,14 +37,12 @@ class CSharpResolver(LanguageResolver):
         try:
             package_lower = package_name.lower()
 
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                # Get available versions using flat container API
-                versions_url = (
-                    f"{self.NUGET_FLAT_CONTAINER_URL}/{package_lower}/index.json"
-                )
-                versions_response = client.get(versions_url, timeout=10)
-                versions_response.raise_for_status()
-                versions_data = versions_response.json()
+            client = await _get_async_http_client()
+            # Get available versions using flat container API
+            versions_url = f"{self.NUGET_FLAT_CONTAINER_URL}/{package_lower}/index.json"
+            versions_response = await client.get(versions_url, timeout=10)
+            versions_response.raise_for_status()
+            versions_data = versions_response.json()
 
             versions = versions_data.get("versions", [])
             if not versions:
@@ -59,11 +58,9 @@ class CSharpResolver(LanguageResolver):
 
             # Fetch nuspec for the target version
             nuspec_url = f"{self.NUGET_FLAT_CONTAINER_URL}/{package_lower}/{target_version}/{package_lower}.nuspec"
-
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                nuspec_response = client.get(nuspec_url, timeout=10)
-                nuspec_response.raise_for_status()
-                nuspec_content = nuspec_response.text
+            nuspec_response = await client.get(nuspec_url, timeout=10)
+            nuspec_response.raise_for_status()
+            nuspec_content = nuspec_response.text
 
             # Extract repository URL from nuspec XML
             repo_match = re.search(
@@ -82,7 +79,7 @@ class CSharpResolver(LanguageResolver):
             )
             return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse packages.lock.json and extract package information.
 
@@ -101,8 +98,9 @@ class CSharpResolver(LanguageResolver):
             raise FileNotFoundError(f"Lockfile not found: {lockfile_path}")
 
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                data = json.loads(content)
 
             packages = []
 
@@ -137,7 +135,7 @@ class CSharpResolver(LanguageResolver):
         except (json.JSONDecodeError, KeyError) as e:
             raise ValueError(f"Invalid lockfile format: {lockfile_path}") from e
 
-    def detect_lockfiles(self, directory: str | Path) -> list[Path]:
+    async def detect_lockfiles(self, directory: str | Path) -> list[Path]:
         """
         Detect packages.lock.json files in the directory.
 
@@ -161,7 +159,7 @@ class CSharpResolver(LanguageResolver):
 
         return lockfiles
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """
         Return list of C# manifest files.
 
@@ -170,7 +168,7 @@ class CSharpResolver(LanguageResolver):
         """
         return ["*.csproj", "*.vbproj", "packages.config", "packages.lock.json"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a C# manifest file (.csproj, .vbproj, packages.config).
 

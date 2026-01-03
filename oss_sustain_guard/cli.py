@@ -2,14 +2,16 @@
 Command-line interface for OSS Sustain Guard.
 """
 
+import asyncio
 import json
 import sys
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from functools import wraps
 from html import escape
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -53,7 +55,7 @@ from oss_sustain_guard.core import (
     compute_weighted_total_score,
     get_metric_weights,
 )
-from oss_sustain_guard.http_client import close_http_client
+from oss_sustain_guard.http_client import close_async_http_client
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     find_lockfiles,
@@ -61,7 +63,6 @@ from oss_sustain_guard.resolvers import (
     get_all_resolvers,
     get_resolver,
 )
-from oss_sustain_guard.resolvers.base import close_resolver_http_client
 
 # Schema version for cached data compatibility
 ANALYSIS_VERSION = "1.5"
@@ -79,6 +80,10 @@ console = Console()
 # --- Lockfile Cache ---
 # Cache parsed lockfiles to avoid re-parsing during dependency analysis
 _lockfile_cache: dict[str, dict[str, list[str]]] = {}
+
+
+def syncify(f):
+    return wraps(f)(lambda *args, **kwargs: asyncio.run(f(*args, **kwargs)))
 
 
 def get_cached_lockfile_dependencies(
@@ -1069,7 +1074,7 @@ def display_results_detailed(
         console.print(deps_table)
 
 
-def analyze_packages_parallel(
+async def analyze_packages_parallel(
     packages_data: list[tuple[str, str]],
     db: dict,
     profile: str = "balanced",
@@ -1104,7 +1109,7 @@ def analyze_packages_parallel(
     # For single package, don't use parallel processing
     if total == 1:
         ecosystem, pkg = packages_data[0]
-        result = analyze_package(
+        result = await analyze_package(
             pkg,
             ecosystem,
             db,
@@ -1188,7 +1193,7 @@ def analyze_packages_parallel(
                 progress.advance(task)
                 continue
 
-            repo_info = resolver.resolve_repository(pkg)
+            repo_info = await resolver.resolve_repository(pkg)
             if not repo_info:
                 results_map[idx] = None
                 progress.advance(task)
@@ -1196,12 +1201,18 @@ def analyze_packages_parallel(
 
             uncached_packages.append((ecosystem, pkg))
 
-        # Step 2: Parallel analysis for uncached packages
+        # Step 2: Analyze uncached packages in parallel using asyncio with rate limiting
         if uncached_packages:
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_pkg = {
-                    executor.submit(
-                        analyze_package,
+            # Create a semaphore to limit concurrent API calls (avoid hitting GitHub rate limits)
+            # GitHub allows 5000 API calls/hour for authenticated requests
+            # Using max_workers to control concurrency
+            semaphore = asyncio.Semaphore(max_workers)
+
+            async def analyze_with_semaphore(
+                ecosystem: str, pkg: str
+            ) -> AnalysisResult | None:
+                async with semaphore:
+                    return await analyze_package(
                         pkg,
                         ecosystem,
                         db,
@@ -1210,20 +1221,28 @@ def analyze_packages_parallel(
                         lockfile_path,
                         False,
                         use_local_cache,
-                    ): (ecosystem, pkg)
-                    for ecosystem, pkg in uncached_packages
-                }
+                    )
 
-                for future in as_completed(future_to_pkg):
-                    ecosystem, pkg = future_to_pkg[future]
-                    idx = pkg_to_index[(ecosystem, pkg)]
-                    try:
-                        result = future.result()
-                        results_map[idx] = result
-                    except Exception:
-                        # Silently fail - errors are handled by None result
+            async def analyze_all() -> list[Any]:
+                tasks = [
+                    analyze_with_semaphore(ecosystem, pkg)
+                    for ecosystem, pkg in uncached_packages
+                ]
+                return await asyncio.gather(*tasks, return_exceptions=True)
+
+            results_list = await analyze_all()
+
+            for idx_offset, result in enumerate(results_list):
+                ecosystem, pkg = uncached_packages[idx_offset]
+                idx = pkg_to_index[(ecosystem, pkg)]
+                try:
+                    if isinstance(result, Exception):
                         results_map[idx] = None
-                    progress.advance(task)
+                    else:
+                        results_map[idx] = result
+                except Exception:
+                    results_map[idx] = None
+                progress.advance(task)
 
         # Return results in original order
         results = [results_map.get(i) for i in range(total)]
@@ -1231,7 +1250,7 @@ def analyze_packages_parallel(
     return results
 
 
-def _analyze_dependencies_for_package(
+async def _analyze_dependencies_for_package(
     ecosystem: str,
     lockfile_path: str | Path,
     db: dict,
@@ -1315,7 +1334,7 @@ def _analyze_dependencies_for_package(
             packages_to_analyze = [(ecosystem, dep) for dep in missing_deps]
 
             # Analyze in parallel (using the existing parallel analysis function)
-            results = analyze_packages_parallel(
+            results = await analyze_packages_parallel(
                 packages_to_analyze,
                 db,
                 profile,
@@ -1367,7 +1386,7 @@ def _resolve_lockfile_path(
     return Path(lockfile_path)
 
 
-def analyze_package(
+async def analyze_package(
     package_name: str,
     ecosystem: str,
     db: dict,
@@ -1476,7 +1495,7 @@ def analyze_package(
         )
         return None
 
-    repo_info = resolver.resolve_repository(package_name)
+    repo_info = await resolver.resolve_repository(package_name)
     if not repo_info:
         console.print(
             f"  -> [yellow]ℹ️  Repository not found for {db_key}. Package may not have public source code.[/yellow]"
@@ -1507,7 +1526,7 @@ def analyze_package(
         )
 
     try:
-        analysis_result = analyze_repository(
+        analysis_result = await analyze_repository(
             owner,
             repo_name,
             profile=profile,
@@ -1566,7 +1585,8 @@ def analyze_package(
 
 
 @app.command()
-def check(
+@syncify
+async def check(
     packages: list[str] = typer.Argument(
         None,
         help="Packages to analyze (format: 'package', 'ecosystem:package', or file path). Examples: 'requests', 'npm:react', 'go:gin', 'php:symfony/console', 'java:com.google.guava:guava', 'csharp:Newtonsoft.Json'. If omitted, auto-detects from manifest files.",
@@ -1839,8 +1859,7 @@ def check(
             profile=demo_profile or profile,
             demo_notice=demo_notice,
         )
-        close_http_client()
-        close_resolver_http_client()
+        await close_async_http_client()
         clear_lockfile_cache()
         raise typer.Exit(code=0)
 
@@ -1907,7 +1926,8 @@ def check(
             "swift",
         ]:
             resolver = get_resolver(eco)
-            if resolver and manifest_name in resolver.get_manifest_files():
+            manifest_files = await resolver.get_manifest_files() if resolver else []
+            if manifest_name in manifest_files:
                 detected_eco = eco
                 break
 
@@ -1931,7 +1951,7 @@ def check(
             raise typer.Exit(code=1)
 
         try:
-            manifest_packages = resolver.parse_manifest(str(manifest))
+            manifest_packages = await resolver.parse_manifest(str(manifest))
             console.print(
                 f"   Found {len(manifest_packages)} package(s) in {manifest_name}"
             )
@@ -1972,14 +1992,14 @@ def check(
                 f"🔍 No packages specified. Auto-detecting from manifest files in {root_dir}..."
             )
 
-        detected_ecosystems = detect_ecosystems(
+        detected_ecosystems = await detect_ecosystems(
             str(root_dir), recursive=recursive, max_depth=depth
         )
         if detected_ecosystems:
             console.print(f"✅ Detected ecosystems: {', '.join(detected_ecosystems)}")
 
             # Find all manifest files (recursively if requested)
-            manifest_files_dict = find_manifest_files(
+            manifest_files_dict = await find_manifest_files(
                 str(root_dir), recursive=recursive, max_depth=depth
             )
 
@@ -1997,7 +2017,9 @@ def check(
                     console.print(f"📋 Found manifest file: {relative_path}")
                     # Parse manifest to extract dependencies
                     try:
-                        manifest_packages = resolver.parse_manifest(str(manifest_path))
+                        manifest_packages = await resolver.parse_manifest(
+                            str(manifest_path)
+                        )
                         console.print(
                             f"   Found {len(manifest_packages)} package(s) in {manifest_path.name}"
                         )
@@ -2022,7 +2044,7 @@ def check(
                     )
 
                 # Find all lockfiles (recursively if requested)
-                lockfiles_dict = find_lockfiles(
+                lockfiles_dict = await find_lockfiles(
                     str(root_dir), recursive=recursive, max_depth=depth
                 )
 
@@ -2043,7 +2065,9 @@ def check(
                         )
                         for lockfile in lockfile_paths:
                             try:
-                                lock_packages = resolver.parse_lockfile(str(lockfile))
+                                lock_packages = await resolver.parse_lockfile(
+                                    str(lockfile)
+                                )
                                 console.print(
                                     f"   Found {len(lock_packages)} package(s) in {lockfile.name}"
                                 )
@@ -2096,7 +2120,9 @@ def check(
     # Find lockfiles for dependency analysis (if requested)
     lockfiles_map: dict[str, Path] = {}  # ecosystem -> lockfile path
     if show_dependencies:
-        lockfiles_dict = find_lockfiles(str(root_dir), recursive=False, max_depth=0)
+        lockfiles_dict = await find_lockfiles(
+            str(root_dir), recursive=False, max_depth=0
+        )
         for detected_eco, lockfile_paths in lockfiles_dict.items():
             if lockfile_paths:
                 lockfiles_map[detected_eco] = lockfile_paths[0]  # Use first found
@@ -2130,7 +2156,7 @@ def check(
         lockfile = lockfiles_map if show_dependencies else None
 
         # Use parallel processing for better performance
-        results = analyze_packages_parallel(
+        results = await analyze_packages_parallel(
             packages_to_process,
             db,
             profile,
@@ -2176,8 +2202,6 @@ def check(
         console.print("No results to display.")
 
     # Clean up HTTP clients and lockfile cache
-    close_http_client()
-    close_resolver_http_client()
     clear_lockfile_cache()
 
 

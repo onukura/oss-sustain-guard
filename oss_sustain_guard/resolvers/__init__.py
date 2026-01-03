@@ -108,7 +108,7 @@ def get_all_resolvers() -> list[LanguageResolver]:
     return unique_resolvers
 
 
-def detect_ecosystems(
+async def detect_ecosystems(
     directory: str | Path = ".", recursive: bool = False, max_depth: int | None = None
 ) -> list[str]:
     """
@@ -138,13 +138,13 @@ def detect_ecosystems(
 
     for scan_dir in directories_to_scan:
         for resolver in get_all_resolvers():
-            lockfiles = resolver.detect_lockfiles(str(scan_dir))
+            lockfiles = await resolver.detect_lockfiles(str(scan_dir))
             if any(lf.exists() for lf in lockfiles):
                 if resolver.ecosystem_name not in detected:
                     detected.append(resolver.ecosystem_name)
 
             # Also check for manifest files as a fallback
-            for manifest in resolver.get_manifest_files():
+            for manifest in await resolver.get_manifest_files():
                 if (scan_dir / manifest).exists():
                     if resolver.ecosystem_name not in detected:
                         detected.append(resolver.ecosystem_name)
@@ -193,7 +193,7 @@ def _get_directories_recursive(
     return directories
 
 
-def find_manifest_files(
+async def find_manifest_files(
     directory: str | Path = ".",
     ecosystem: str | None = None,
     recursive: bool = False,
@@ -233,7 +233,7 @@ def find_manifest_files(
             if eco_name not in manifest_files:
                 manifest_files[eco_name] = []
 
-            for manifest_name in resolver.get_manifest_files():
+            for manifest_name in await resolver.get_manifest_files():
                 manifest_path = scan_dir / manifest_name
                 if (
                     manifest_path.exists()
@@ -244,7 +244,7 @@ def find_manifest_files(
     return {k: v for k, v in manifest_files.items() if v}  # Remove empty entries
 
 
-def find_lockfiles(
+async def find_lockfiles(
     directory: str | Path = ".",
     ecosystem: str | None = None,
     recursive: bool = False,
@@ -284,7 +284,7 @@ def find_lockfiles(
             if eco_name not in lockfiles:
                 lockfiles[eco_name] = []
 
-            detected_locks = resolver.detect_lockfiles(str(scan_dir))
+            detected_locks = await resolver.detect_lockfiles(str(scan_dir))
             for lockfile in detected_locks:
                 if lockfile.exists() and lockfile not in lockfiles[eco_name]:
                     lockfiles[eco_name].append(lockfile)

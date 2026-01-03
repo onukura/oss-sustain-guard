@@ -5,9 +5,9 @@ Ruby package resolver (RubyGems).
 import sys
 from pathlib import Path
 
-import httpx
+import aiofiles
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -19,7 +19,7 @@ class RubyResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "ruby"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Resolve Ruby gem to repository URL.
 
@@ -32,30 +32,30 @@ class RubyResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                # Query RubyGems API
-                response = client.get(
-                    f"https://rubygems.org/api/v1/gems/{package_name}.json",
-                    timeout=10,
-                    follow_redirects=True,
-                )
-                response.raise_for_status()
-                data = response.json()
+            client = await _get_async_http_client()
+            # Query RubyGems API
+            response = await client.get(
+                f"https://rubygems.org/api/v1/gems/{package_name}.json",
+                timeout=10,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+            data = response.json()
 
-                # Check multiple URL fields
-                urls_to_check = [
-                    data.get("source_code_uri"),
-                    data.get("homepage_uri"),
-                    data.get("project_uri"),
-                ]
+            # Check multiple URL fields
+            urls_to_check = [
+                data.get("source_code_uri"),
+                data.get("homepage_uri"),
+                data.get("project_uri"),
+            ]
 
-                for url in urls_to_check:
-                    if isinstance(url, str) and url:
-                        repo = parse_repository_url(url)
-                        if repo:
-                            return repo
+            for url in urls_to_check:
+                if isinstance(url, str) and url:
+                    repo = parse_repository_url(url)
+                    if repo:
+                        return repo
 
-                return None
+            return None
 
         except Exception as e:
             print(
@@ -64,7 +64,7 @@ class RubyResolver(LanguageResolver):
             )
             return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse Gemfile.lock and extract gem information.
 
@@ -85,8 +85,8 @@ class RubyResolver(LanguageResolver):
         packages = []
 
         try:
-            with open(lockfile, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(lockfile, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             # Parse Gemfile.lock format
             # Format:
@@ -137,7 +137,7 @@ class RubyResolver(LanguageResolver):
 
         return packages
 
-    def detect_lockfiles(self, directory: str) -> list[Path]:
+    async def detect_lockfiles(self, directory: str) -> list[Path]:
         """
         Detect Ruby lockfiles in the directory.
 
@@ -156,7 +156,7 @@ class RubyResolver(LanguageResolver):
 
         return lockfiles
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """
         Get Ruby manifest file names.
 
@@ -165,7 +165,7 @@ class RubyResolver(LanguageResolver):
         """
         return ["Gemfile", "Gemfile.lock"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a Ruby manifest file (Gemfile).
 
@@ -186,14 +186,14 @@ class RubyResolver(LanguageResolver):
         if manifest_path.name != "Gemfile":
             raise ValueError(f"Unknown Ruby manifest file type: {manifest_path.name}")
 
-        return self._parse_gemfile(manifest_path)
+        return await self._parse_gemfile(manifest_path)
 
     @staticmethod
-    def _parse_gemfile(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_gemfile(manifest_path: Path) -> list[PackageInfo]:
         """Parse Gemfile file."""
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
             packages = []
 

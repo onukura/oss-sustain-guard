@@ -6,9 +6,10 @@ import json
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -20,7 +21,7 @@ class PythonResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "python"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Fetches package information from the PyPI JSON API and extracts repository URL.
 
@@ -31,12 +32,12 @@ class PythonResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                response = client.get(
-                    f"https://pypi.org/pypi/{package_name}/json", timeout=10
-                )
-                response.raise_for_status()
-                data = response.json()
+            client = await _get_async_http_client()
+            response = await client.get(
+                f"https://pypi.org/pypi/{package_name}/json", timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
 
             project_urls = data.get("info", {}).get("project_urls", {})
 
@@ -77,7 +78,7 @@ class PythonResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Auto-detects Python lockfile type and extracts package information.
 
@@ -99,15 +100,15 @@ class PythonResolver(LanguageResolver):
         filename = lockfile_path.name
 
         if filename == "poetry.lock":
-            return self._parse_lockfile_poetry(lockfile_path)
+            return await self._parse_lockfile_poetry(lockfile_path)
         elif filename == "uv.lock":
-            return self._parse_lockfile_uv(lockfile_path)
+            return await self._parse_lockfile_uv(lockfile_path)
         elif filename == "Pipfile.lock":
-            return self._parse_lockfile_pipenv(lockfile_path)
+            return await self._parse_lockfile_pipenv(lockfile_path)
         else:
             raise ValueError(f"Unknown Python lockfile type: {filename}")
 
-    def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
+    async def detect_lockfiles(self, directory: str | Path = ".") -> list[Path]:
         """
         Detects Python lockfiles in a directory.
 
@@ -126,11 +127,11 @@ class PythonResolver(LanguageResolver):
                 detected.append(lockfile)
         return detected
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Return list of Python manifest file names."""
         return ["requirements.txt", "pyproject.toml", "Pipfile", "setup.py"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a Python manifest file and extract package information.
 
@@ -153,21 +154,21 @@ class PythonResolver(LanguageResolver):
         filename = manifest_path.name
 
         if filename == "requirements.txt":
-            return self._parse_manifest_requirements(manifest_path)
+            return await self._parse_manifest_requirements(manifest_path)
         elif filename == "pyproject.toml":
-            return self._parse_manifest_pyproject(manifest_path)
+            return await self._parse_manifest_pyproject(manifest_path)
         elif filename == "Pipfile":
-            return self._parse_manifest_pipfile(manifest_path)
+            return await self._parse_manifest_pipfile(manifest_path)
         else:
             raise ValueError(f"Unknown Python manifest file type: {filename}")
 
     @staticmethod
-    def _parse_manifest_requirements(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_manifest_requirements(manifest_path: Path) -> list[PackageInfo]:
         """Parse requirements.txt file."""
         packages = []
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                for line in f:
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                async for line in f:
                     line = line.strip()
                     # Skip comments and empty lines
                     if not line or line.startswith("#"):
@@ -195,7 +196,7 @@ class PythonResolver(LanguageResolver):
         return packages
 
     @staticmethod
-    def _parse_manifest_pyproject(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_manifest_pyproject(manifest_path: Path) -> list[PackageInfo]:
         """Parse pyproject.toml file."""
         try:
             import tomllib
@@ -208,8 +209,9 @@ class PythonResolver(LanguageResolver):
 
         packages = []
         try:
-            with open(manifest_path, "rb") as f:
-                data = tomllib.load(f)
+            async with aiofiles.open(manifest_path, "rb") as f:
+                content = await f.read()
+                data = tomllib.loads(content.decode())
 
             # First, try to extract dependencies from [project] section (PEP 621)
             if "project" in data and "dependencies" in data["project"]:
@@ -313,7 +315,7 @@ class PythonResolver(LanguageResolver):
         return packages
 
     @staticmethod
-    def _parse_manifest_pipfile(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_manifest_pipfile(manifest_path: Path) -> list[PackageInfo]:
         """Parse Pipfile file."""
         try:
             import tomllib
@@ -326,8 +328,9 @@ class PythonResolver(LanguageResolver):
 
         packages = []
         try:
-            with open(manifest_path, "rb") as f:
-                data = tomllib.load(f)
+            async with aiofiles.open(manifest_path, "rb") as f:
+                content = await f.read()
+                data = tomllib.loads(content.decode())
 
             # Extract packages from [packages] section
             if "packages" in data:
@@ -355,7 +358,7 @@ class PythonResolver(LanguageResolver):
         return packages
 
     @staticmethod
-    def _parse_lockfile_poetry(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_lockfile_poetry(lockfile_path: Path) -> list[PackageInfo]:
         """Parse poetry.lock file."""
         try:
             import tomllib
@@ -367,8 +370,9 @@ class PythonResolver(LanguageResolver):
                 return []
 
         try:
-            with open(lockfile_path, "rb") as f:
-                data = tomllib.load(f)
+            async with aiofiles.open(lockfile_path, "rb") as f:
+                content = await f.read()
+                data = tomllib.loads(content.decode())
             packages = []
             for package in data.get("package", []):
                 if "name" in package:
@@ -384,7 +388,7 @@ class PythonResolver(LanguageResolver):
             return []
 
     @staticmethod
-    def _parse_lockfile_uv(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_lockfile_uv(lockfile_path: Path) -> list[PackageInfo]:
         """Parse uv.lock file."""
         try:
             import tomllib
@@ -396,8 +400,9 @@ class PythonResolver(LanguageResolver):
                 return []
 
         try:
-            with open(lockfile_path, "rb") as f:
-                data = tomllib.load(f)
+            async with aiofiles.open(lockfile_path, "rb") as f:
+                content = await f.read()
+                data = tomllib.loads(content.decode())
             packages = []
             for package in data.get("package", []):
                 if "name" in package:
@@ -413,11 +418,12 @@ class PythonResolver(LanguageResolver):
             return []
 
     @staticmethod
-    def _parse_lockfile_pipenv(lockfile_path: Path) -> list[PackageInfo]:
+    async def _parse_lockfile_pipenv(lockfile_path: Path) -> list[PackageInfo]:
         """Parse Pipfile.lock (JSON) file."""
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                data = json.loads(content)
             packages = []
             # Pipfile.lock has "default" and "develop" sections
             for section in ("default", "develop"):
@@ -436,47 +442,3 @@ class PythonResolver(LanguageResolver):
             return packages
         except Exception:
             return []
-
-
-# Legacy functions for backward compatibility
-def get_github_url_from_pypi(package_name: str) -> tuple[str, str] | None:
-    """
-    Legacy function for backward compatibility.
-    Use PythonResolver.resolve_github_url() instead.
-    """
-    resolver = PythonResolver()
-    return resolver.resolve_github_url(package_name)
-
-
-def parse_lockfile_poetry(lockfile_path: str | Path) -> list[str]:
-    """Legacy function for backward compatibility."""
-    resolver = PythonResolver()
-    packages = resolver._parse_lockfile_poetry(Path(lockfile_path))
-    return [p.name for p in packages]
-
-
-def parse_lockfile_uv(lockfile_path: str | Path) -> list[str]:
-    """Legacy function for backward compatibility."""
-    resolver = PythonResolver()
-    packages = resolver._parse_lockfile_uv(Path(lockfile_path))
-    return [p.name for p in packages]
-
-
-def parse_lockfile_pipenv(lockfile_path: str | Path) -> list[str]:
-    """Legacy function for backward compatibility."""
-    resolver = PythonResolver()
-    packages = resolver._parse_lockfile_pipenv(Path(lockfile_path))
-    return [p.name for p in packages]
-
-
-def get_packages_from_lockfile(lockfile_path: str | Path) -> list[str]:
-    """Legacy function for backward compatibility."""
-    resolver = PythonResolver()
-    packages = resolver.parse_lockfile(lockfile_path)
-    return [p.name for p in packages]
-
-
-def detect_lockfiles(directory: str | Path = ".") -> list[Path]:
-    """Legacy function for backward compatibility."""
-    resolver = PythonResolver()
-    return resolver.detect_lockfiles(directory)

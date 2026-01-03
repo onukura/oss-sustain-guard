@@ -6,9 +6,10 @@ import json
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -22,7 +23,7 @@ class PhpResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "php"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Fetches package information from Packagist V2 API and extracts repository URL.
 
@@ -33,13 +34,13 @@ class PhpResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                response = client.get(
-                    f"{self.PACKAGIST_API_URL}/{package_name}.json",
-                    timeout=10,
-                )
-                response.raise_for_status()
-                data = response.json()
+            client = await _get_async_http_client()
+            response = await client.get(
+                f"{self.PACKAGIST_API_URL}/{package_name}.json",
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
 
             # Extract repository URL from package metadata
             packages = data.get("packages", {})
@@ -92,7 +93,7 @@ class PhpResolver(LanguageResolver):
             )
             return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse composer.lock and extract package information.
 
@@ -111,8 +112,8 @@ class PhpResolver(LanguageResolver):
             raise FileNotFoundError(f"Lockfile not found: {lockfile_path}")
 
         try:
-            with open(lockfile_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                data = json.loads(await f.read())
 
             packages = []
             for pkg_entry in data.get("packages", []):
@@ -131,7 +132,7 @@ class PhpResolver(LanguageResolver):
         except (json.JSONDecodeError, KeyError) as e:
             raise ValueError(f"Invalid lockfile format: {lockfile_path}") from e
 
-    def detect_lockfiles(self, directory: str | Path) -> list[Path]:
+    async def detect_lockfiles(self, directory: str | Path) -> list[Path]:
         """
         Detect composer.lock files in the directory.
 
@@ -154,7 +155,7 @@ class PhpResolver(LanguageResolver):
 
         return lockfiles
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """
         Return list of PHP manifest files.
 
@@ -163,7 +164,7 @@ class PhpResolver(LanguageResolver):
         """
         return ["composer.json", "composer.lock"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a PHP manifest file (composer.json).
 
@@ -184,16 +185,16 @@ class PhpResolver(LanguageResolver):
         if manifest_path.name != "composer.json":
             raise ValueError(f"Unknown PHP manifest file type: {manifest_path.name}")
 
-        return self._parse_composer_json(manifest_path)
+        return await self._parse_composer_json(manifest_path)
 
     @staticmethod
-    def _parse_composer_json(manifest_path: Path) -> list[PackageInfo]:
+    async def _parse_composer_json(manifest_path: Path) -> list[PackageInfo]:
         """Parse composer.json file."""
         import json
 
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                data = json.loads(await f.read())
 
             packages = []
 
