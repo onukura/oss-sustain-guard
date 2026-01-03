@@ -2,6 +2,7 @@
 
 from importlib import import_module
 from importlib.metadata import entry_points
+from warnings import warn
 
 from oss_sustain_guard.metrics.base import (
     Metric,
@@ -52,12 +53,25 @@ def _load_builtin_metric_specs() -> list[MetricSpec]:
 def _load_entrypoint_metric_specs() -> list[MetricSpec]:
     specs: list[MetricSpec] = []
     for entry_point in entry_points(group="oss_sustain_guard.metrics"):
-        loaded = entry_point.load()
+        try:
+            loaded = entry_point.load()
+        except Exception as exc:
+            warn(
+                f"Note: Unable to load metric plugin '{entry_point.name}': {exc}"
+            )
+            continue
         if isinstance(loaded, MetricSpec):
             specs.append(loaded)
             continue
         if callable(loaded):
-            spec = loaded()
+            try:
+                spec = loaded()
+            except Exception as exc:
+                warn(
+                    "Note: Unable to initialize metric plugin "
+                    f"'{entry_point.name}': {exc}"
+                )
+                continue
             if isinstance(spec, MetricSpec):
                 specs.append(spec)
     return specs
