@@ -59,6 +59,7 @@ from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     find_lockfiles,
     find_manifest_files,
+    get_all_resolvers,
     get_resolver,
 )
 from oss_sustain_guard.resolvers.base import close_resolver_http_client
@@ -172,23 +173,7 @@ def load_database(
         return merged
 
     # List of ecosystems to load
-    ecosystems = [
-        "python",
-        "javascript",
-        "dart",
-        "elixir",
-        "haskell",
-        "perl",
-        "r",
-        "ruby",
-        "rust",
-        "php",
-        "java",
-        "kotlin",
-        "csharp",
-        "go",
-        "swift",
-    ]
+    ecosystems = sorted({r.ecosystem_name for r in get_all_resolvers()})
 
     # Load from local cache first if enabled
     if use_local_cache and is_cache_enabled():
