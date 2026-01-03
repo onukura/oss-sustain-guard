@@ -2,6 +2,21 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.16.0 - 2026-01-03
+
+### Added
+- GitLab VCS provider support for GitLab repository analysis
+
+### Improved
+- Metric checking refactored to use VCS-agnostic data model for better multi-provider support
+- Cache file format updated to JSON gzip with improved metric naming (Cache Build Health metric)
+- Plugin loading error handling with enhanced warning messages for better visibility of metric issues
+- Overall score calculation now uses weighted metric scoring
+
+### Fixed
+- Enhanced warning messages for metric plugin loading errors
+- Updated metric name to "Build Health" for consistency
+
 ## v0.15.0 - 2026-01-02
 
 ### Added
