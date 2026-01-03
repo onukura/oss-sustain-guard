@@ -2165,6 +2165,7 @@ async def check(
     repo_seen = set()
     repo_to_pkg: dict[str, tuple[str, str]] = {}  # repo_key -> (ecosystem, package)
     unique_packages = []
+    duplicate_count = 0
 
     for eco, pkg in packages_to_analyze:
         resolver = get_resolver(eco)
@@ -2179,13 +2180,24 @@ async def check(
                     repo_seen.add(key)
                     repo_to_pkg[key] = (eco, pkg)
                     unique_packages.append((eco, pkg))
-                # If duplicate repo, skip adding to unique_packages for analysis
+                else:
+                    # If duplicate repo, skip adding to unique_packages for analysis
+                    duplicate_count += 1
+                    console.print(
+                        f"  -> [dim]Skipping [bold yellow]{eco}:{pkg}[/bold yellow] "
+                        f"(maps to same repository as {repo_to_pkg[key][0]}:{repo_to_pkg[key][1]})[/dim]"
+                    )
             else:
                 unique_packages.append((eco, pkg))
         except Exception:
             unique_packages.append((eco, pkg))
 
     packages_to_analyze = unique_packages
+
+    if duplicate_count > 0:
+        console.print(
+            f"[dim]ℹ️  Skipped {duplicate_count} package(s) mapping to duplicate repositories[/dim]\n"
+        )
 
     console.print(f"🔍 Analyzing {len(packages_to_analyze)} package(s)...")
 
