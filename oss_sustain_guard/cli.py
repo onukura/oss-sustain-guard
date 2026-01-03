@@ -1184,11 +1184,12 @@ async def analyze_packages_parallel(
                     resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
                     if show_dependencies and resolved_lockfile:
                         dep_scores = await _analyze_dependencies_for_package(
-                            ecosystem,
-                            resolved_lockfile,
-                            db,
-                            pkg,
-                            profile,
+                            ecosystem=ecosystem,
+                            lockfile_path=resolved_lockfile,
+                            db=db,
+                            package_name=pkg,
+                            profile=profile,
+                            max_workers=max_workers,
                         )
                         result = result._replace(dependency_scores=dep_scores)
                     results_map[idx] = result
@@ -1271,6 +1272,7 @@ async def _analyze_dependencies_for_package(
     package_name: str,
     profile: str = "balanced",
     analyze_missing: bool = True,
+    max_workers: int = 5,
 ) -> dict[str, int]:
     """
     Analyze dependencies for a specific package from a lockfile and return their scores.
@@ -1356,7 +1358,7 @@ async def _analyze_dependencies_for_package(
                 lockfile_path=None,
                 verbose=False,
                 use_local_cache=True,
-                max_workers=5,
+                max_workers=max_workers,
             )
 
             # Add scores from newly analyzed packages
@@ -1410,6 +1412,7 @@ async def analyze_package(
     verbose: bool = False,
     use_local_cache: bool = True,
     log_buffer: dict[str, list[str]] | None = None,
+    max_workers: int = 5,
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -1512,7 +1515,12 @@ async def analyze_package(
             resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
             if show_dependencies and resolved_lockfile:
                 dep_scores = await _analyze_dependencies_for_package(
-                    ecosystem, resolved_lockfile, db, package_name, profile
+                    ecosystem=ecosystem,
+                    lockfile_path=resolved_lockfile,
+                    db=db,
+                    package_name=package_name,
+                    profile=profile,
+                    max_workers=max_workers,
                 )
                 result = result._replace(dependency_scores=dep_scores)
 
@@ -1589,7 +1597,12 @@ async def analyze_package(
         resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
         if show_dependencies and resolved_lockfile:
             dep_scores = await _analyze_dependencies_for_package(
-                ecosystem, resolved_lockfile, db, package_name, profile
+                ecosystem=ecosystem,
+                lockfile_path=resolved_lockfile,
+                db=db,
+                package_name=package_name,
+                profile=profile,
+                max_workers=max_workers,
             )
             analysis_result = analysis_result._replace(dependency_scores=dep_scores)
 
@@ -1770,6 +1783,12 @@ async def check(
         "--depth",
         "-d",
         help="Maximum directory depth for recursive scanning (default: unlimited).",
+    ),
+    num_workers: int = typer.Option(
+        10,
+        "--num-workers",
+        "-w",
+        help="Maximum number of parallel workers (default: 10, adjust based on GitHub API rate limits).",
     ),
 ):
     """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, Kotlin, Scala, C#, Ruby, R, Dart, Elixir, Haskell, Perl, Swift)."""
@@ -2248,7 +2267,7 @@ async def check(
             lockfile,
             verbose,
             use_local,
-            max_workers=5,  # Adjust based on GitHub API rate limits
+            max_workers=num_workers,
         )
 
         # Display verbose logs after progress bar is done
