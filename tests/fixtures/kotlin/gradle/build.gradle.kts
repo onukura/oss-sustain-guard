@@ -11,3 +11,4 @@ dependencies {
     implementation("io.ktor:ktor-server-core:2.3.7")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
 }
+

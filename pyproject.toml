@@ -100,6 +100,10 @@ swift = "oss_sustain_guard.resolvers.swift:RESOLVER"
 github = "oss_sustain_guard.vcs.github:PROVIDER"
 gitlab = "oss_sustain_guard.vcs.gitlab:PROVIDER"
 
+[tool.uv.workspace]
+members = [
+]  # Add this with empty value, so that tests/fixtures/python/uv/pyproject.toml works correctly
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
