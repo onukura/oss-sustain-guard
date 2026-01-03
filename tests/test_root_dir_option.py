@@ -75,7 +75,7 @@ class TestRootDirOption:
 
     def test_root_dir_file_instead_of_directory(self):
         """Test error handling when root-dir is a file."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
+        fixtures_dir = Path(__file__).parent / "fixtures" / "rust"
         # Find any existing file
         file_path = None
         for candidate in ["package.json", "requirements.txt", "Cargo.toml"]:
@@ -111,7 +111,7 @@ class TestRootDirOption:
 
         result = runner.invoke(
             app,
-            ["check", "--root-dir", "tests/fixtures", "--insecure"],
+            ["check", "--root-dir", "tests/fixtures/rust", "--insecure"],
         )
 
         # Should resolve relative path and process (though may find nothing with mocking)
@@ -184,7 +184,7 @@ class TestManifestOption:
     @pytest.mark.parametrize("option_name", ["--manifest", "-m"])
     def test_manifest_short_option(self, option_name, mock_analyzer):
         """Test both -m short option and --manifest for manifest files (fast, mocked)."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
+        fixtures_dir = Path(__file__).parent / "fixtures" / "rust"
         # Use any existing manifest file
         manifest_path = None
         for candidate in ["package.json", "requirements.txt", "Cargo.toml"]:
@@ -206,7 +206,7 @@ class TestManifestOption:
 
     def test_manifest_with_absolute_path(self, mock_analyzer):
         """Test --manifest with absolute path (fast, mocked)."""
-        fixtures_dir = Path(__file__).parent / "fixtures"
+        fixtures_dir = Path(__file__).parent / "fixtures" / "rust"
         # Use any existing manifest file
         manifest_path = None
         for candidate in ["package.json", "requirements.txt", "Cargo.toml"]:
