@@ -1083,7 +1083,7 @@ async def analyze_packages_parallel(
     verbose: bool = False,
     use_local_cache: bool = True,
     max_workers: int = 5,
-) -> list[AnalysisResult | None]:
+) -> tuple[list[AnalysisResult | None], dict[str, list[str]]]:
     """
     Analyze multiple packages in parallel using ThreadPoolExecutor.
 
@@ -1098,10 +1098,11 @@ async def analyze_packages_parallel(
         max_workers: Maximum number of parallel workers (default: 5).
 
     Returns:
-        List of AnalysisResult or None for each package.
+        Tuple of (List of AnalysisResult or None for each package, verbose logs dict)
     """
     results = []
     total = len(packages_data)
+    verbose_logs: dict[str, list[str]] = {}  # Collect logs instead of printing directly
 
     if total == 0:
         return results
@@ -1122,19 +1123,26 @@ async def analyze_packages_parallel(
         return [result]
 
     # Use progress bar for multiple packages
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("[cyan]Analyzing packages...", total=total)
+    # Suppress stderr from resolvers during analysis to keep progress bar clean
+    from io import StringIO
+    old_stderr = sys.stderr
+    sys.stderr = StringIO()
 
-        # Step 1: Check cache and resolve repositories
-        uncached_packages: list[tuple[str, str]] = []  # (ecosystem, pkg)
-        pkg_to_index: dict[tuple[str, str], int] = {}
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeElapsedColumn(),
+            console=console,
+            transient=True,  # Auto-hide progress bar after completion
+        ) as progress:
+            task = progress.add_task("[cyan]Analyzing packages...", total=total)
+
+            # Step 1: Check cache and resolve repositories
+            uncached_packages: list[tuple[str, str]] = []  # (ecosystem, pkg)
+            pkg_to_index: dict[tuple[str, str], int] = {}
         results_map: dict[int, AnalysisResult | None] = {}
 
         for idx, (ecosystem, pkg) in enumerate(packages_data):
@@ -1219,8 +1227,9 @@ async def analyze_packages_parallel(
                         profile,
                         show_dependencies,
                         lockfile_path,
-                        False,
+                        verbose,
                         use_local_cache,
+                        verbose_logs,
                     )
 
             async def analyze_all() -> list[Any]:
@@ -1247,7 +1256,11 @@ async def analyze_packages_parallel(
         # Return results in original order
         results = [results_map.get(i) for i in range(total)]
 
-    return results
+    finally:
+        # Restore stderr
+        sys.stderr = old_stderr
+
+    return results, verbose_logs
 
 
 async def _analyze_dependencies_for_package(
@@ -1334,7 +1347,7 @@ async def _analyze_dependencies_for_package(
             packages_to_analyze = [(ecosystem, dep) for dep in missing_deps]
 
             # Analyze in parallel (using the existing parallel analysis function)
-            results = await analyze_packages_parallel(
+            results, _ = await analyze_packages_parallel(
                 packages_to_analyze,
                 db,
                 profile,
@@ -1395,6 +1408,7 @@ async def analyze_package(
     lockfile_path: str | Path | dict[str, Path] | None = None,
     verbose: bool = False,
     use_local_cache: bool = True,
+    log_buffer: dict[str, list[str]] | None = None,
 ) -> AnalysisResult | None:
     """
     Analyze a single package.
@@ -1406,12 +1420,16 @@ async def analyze_package(
         profile: Scoring profile name.
         show_dependencies: Analyze and include dependency scores.
         lockfile_path: Path to lockfile for dependency analysis (or mapping by ecosystem).
-        verbose: If True, display cache source information.
+        verbose: If True, collect verbose information.
         use_local_cache: If False, skip local cache lookup.
+        log_buffer: Dictionary to collect verbose logs (for parallel execution).
 
     Returns:
         AnalysisResult or None if analysis fails.
     """
+    if log_buffer is None:
+        log_buffer = {}
+
     # Check if package is excluded
     if is_package_excluded(package_name):
         return None
@@ -1422,21 +1440,27 @@ async def analyze_package(
     # Check local cache first
     if db_key in db:
         if verbose:
-            console.print(
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append(
                 f"  -> 💾 Found [bold green]{db_key}[/bold green] in local cache"
             )
         cached_data = db[db_key]
         payload_version = cached_data.get("analysis_version")
         if payload_version != ANALYSIS_VERSION:
             if verbose:
-                console.print(
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
                     f"[dim]ℹ️  Cache version mismatch for {db_key} "
                     f"({payload_version or 'unknown'} != {ANALYSIS_VERSION}). "
                     f"Fetching fresh data...[/dim]"
                 )
         else:
             if verbose:
-                console.print(
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
                     f"  -> 🔄 Reconstructing metrics from cached data (analysis_version: {payload_version})"
                 )
 
@@ -1453,13 +1477,19 @@ async def analyze_package(
             ]
 
             if verbose:
-                console.print(f"     ✓ Reconstructed {len(metrics)} metrics")
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
+                    f"     ✓ Reconstructed {len(metrics)} metrics"
+                )
 
             # Recalculate total score with selected profile
             recalculated_score = compute_weighted_total_score(metrics, profile)
 
             if verbose:
-                console.print(
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
                     f"     ✓ Recalculated total score using profile '{profile}': {recalculated_score}/100"
                 )
 
@@ -1490,16 +1520,22 @@ async def analyze_package(
     # Resolve GitHub URL using appropriate resolver
     resolver = get_resolver(ecosystem)
     if not resolver:
-        console.print(
-            f"  -> [yellow]ℹ️  Ecosystem '{ecosystem}' is not yet supported[/yellow]"
-        )
+        if verbose:
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append(
+                f"  -> [yellow]ℹ️  Ecosystem '{ecosystem}' is not yet supported[/yellow]"
+            )
         return None
 
     repo_info = await resolver.resolve_repository(package_name)
     if not repo_info:
-        console.print(
-            f"  -> [yellow]ℹ️  Repository not found for {db_key}. Package may not have public source code.[/yellow]"
-        )
+        if verbose:
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append(
+                f"  -> [yellow]ℹ️  Repository not found for {db_key}. Package may not have public source code.[/yellow]"
+            )
         return None
 
     # Get provider and repository info
@@ -1510,9 +1546,12 @@ async def analyze_package(
         # GitLab supports nested groups, so we need to split path into parent/repo
         path_segments = repo_info.path.split("/")
         if len(path_segments) < 2:
-            console.print(
-                f"  -> [yellow]ℹ️  Invalid repository path for {db_key}[/yellow]"
-            )
+            if verbose:
+                if db_key not in log_buffer:
+                    log_buffer[db_key] = []
+                log_buffer[db_key].append(
+                    f"  -> [yellow]ℹ️  Invalid repository path for {db_key}[/yellow]"
+                )
             return None
         # Owner is everything except the last segment (project name)
         owner = "/".join(path_segments[:-1])
@@ -1521,7 +1560,9 @@ async def analyze_package(
         owner, repo_name = repo_info.owner, repo_info.name
 
     if verbose:
-        console.print(
+        if db_key not in log_buffer:
+            log_buffer[db_key] = []
+        log_buffer[db_key].append(
             f"  -> 🔍 [bold yellow]{db_key}[/bold yellow] analyzing real-time (no cache)..."
         )
 
@@ -1538,7 +1579,10 @@ async def analyze_package(
 
         # Save to cache for future use (without total_score - it will be recalculated based on profile)
         _cache_analysis_result(ecosystem, package_name, analysis_result)
-        console.print("    [dim]💾 Cached for future use[/dim]")
+        if verbose:
+            if db_key not in log_buffer:
+                log_buffer[db_key] = []
+            log_buffer[db_key].append("    [dim]💾 Cached for future use[/dim]")
 
         # If show_dependencies is requested, analyze dependencies
         resolved_lockfile = _resolve_lockfile_path(ecosystem, lockfile_path)
@@ -2156,7 +2200,7 @@ async def check(
         lockfile = lockfiles_map if show_dependencies else None
 
         # Use parallel processing for better performance
-        results = await analyze_packages_parallel(
+        results, verbose_logs = await analyze_packages_parallel(
             packages_to_process,
             db,
             profile,
@@ -2166,6 +2210,12 @@ async def check(
             use_local,
             max_workers=5,  # Adjust based on GitHub API rate limits
         )
+
+        # Display verbose logs after progress bar is done
+        if verbose and verbose_logs:
+            for _db_key, logs in verbose_logs.items():
+                for log in logs:
+                    console.print(log)
 
         result_map = {
             packages_to_process[idx]: result
