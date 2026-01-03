@@ -20,7 +20,7 @@ OSS Sustain Guard uses a **plugin-based metric system** with automatic discovery
 1. **Entry Points**: Metrics are discovered via `[project.entry-points."oss_sustain_guard.metrics"]`
 2. **MetricSpec**: Each metric exports a `MetricSpec` object containing:
    - `name`: Display name
-   - `checker`: Main evaluation function
+   - `checker`: `MetricChecker` (preferred) or callable using `VCSRepositoryData`
    - `on_error`: Error handler (optional)
    - `error_log`: Error log format (optional)
 3. **Automatic Loading**: Metrics are loaded automatically by `load_metric_specs()`
@@ -45,64 +45,73 @@ Create `oss_sustain_guard/metrics/my_metric.py`:
 ```python
 """My metric description."""
 
-from typing import Any
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
-
-
-def check_my_metric(repo_data: dict[str, Any]) -> Metric:
-    """
-    Evaluates [metric purpose].
-
-    Scoring:
-    - Excellent: 10/10
-    - Good: 7-9/10
-    - Moderate: 4-6/10
-    - Needs attention: 1-3/10
-    - Needs support: 0/10
-
-    CHAOSS Aligned: [CHAOSS metric name] (if applicable)
-    """
-    max_score = 10  # Always use 10 for consistency
-
-    # Extract data
-    data = repo_data.get("fieldName", {})
-
-    if not data:
-        return Metric(
-            "My Metric",
-            5,  # Default score
-            max_score,
-            "Note: No data available.",
-            "None",
-        )
-
-    # Calculate score based on data
-    value = data.get("value", 0)
-
-    if value >= 90:
-        score = 10
-        risk = "None"
-        message = f"Excellent: {value}%."
-    elif value >= 70:
-        score = 7
-        risk = "Low"
-        message = f"Good: {value}%."
-    else:
-        score = 2
-        risk = "High"
-        message = f"Needs attention: {value}%."
-
-    return Metric("My Metric", score, max_score, message, risk)
+_LEGACY_CONTEXT = MetricContext(owner="unknown", name="unknown", repo_url="")
 
 
-def _check(repo_data: dict[str, Any], context: MetricContext) -> Metric:
-    """Wrapper for metric spec."""
-    return check_my_metric(repo_data)
+class MyMetricChecker(MetricChecker):
+    """Evaluate my metric using normalized VCS data."""
+
+    def check(
+        self, vcs_data: VCSRepositoryData, _context: MetricContext
+    ) -> Metric | None:
+        """
+        Evaluates [metric purpose].
+
+        Scoring:
+        - Excellent: 10/10
+        - Good: 7-9/10
+        - Moderate: 4-6/10
+        - Needs attention: 1-3/10
+        - Needs support: 0/10
+
+        CHAOSS Aligned: [CHAOSS metric name] (if applicable)
+        """
+        max_score = 10
+
+        description = (vcs_data.description or "").lower()
+        if not description:
+            return Metric(
+                "My Metric",
+                5,
+                max_score,
+                "Note: No description available.",
+                "None",
+            )
+
+        if "security" in description:
+            score = 10
+            risk = "None"
+            message = "Excellent: Security focus mentioned."
+        elif "monitor" in description:
+            score = 7
+            risk = "Low"
+            message = "Good: Monitoring signals present."
+        else:
+            score = 4
+            risk = "Medium"
+            message = "Observe: No security focus mentioned."
+
+        return Metric("My Metric", score, max_score, message, risk)
+
+
+_CHECKER = MyMetricChecker()
+
+
+def check_my_metric(repo_data: dict[str, object] | VCSRepositoryData) -> Metric | None:
+    if isinstance(repo_data, VCSRepositoryData):
+        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
+    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:
-    """Error handler for metric spec."""
     return Metric(
         "My Metric",
         0,
@@ -112,10 +121,9 @@ def _on_error(error: Exception) -> Metric:
     )
 
 
-# Export MetricSpec for automatic discovery
 METRIC = MetricSpec(
     name="My Metric",
-    checker=_check,
+    checker=_CHECKER,
     on_error=_on_error,
 )
 ```
@@ -162,18 +170,60 @@ Create `tests/metrics/test_my_metric.py`:
 
 ```python
 from oss_sustain_guard.metrics.my_metric import check_my_metric
+from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+
+def _vcs_data(**overrides) -> VCSRepositoryData:
+    data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at=None,
+        owner_type="User",
+        owner_login="owner",
+        owner_name=None,
+        star_count=0,
+        description=None,
+        homepage_url=None,
+        topics=[],
+        readme_size=None,
+        contributing_file_size=None,
+        default_branch="main",
+        watchers_count=0,
+        open_issues_count=0,
+        language=None,
+        commits=[],
+        total_commits=0,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data=None,
+    )
+    return data._replace(**overrides)
 
 
 def test_check_my_metric_excellent():
-    mock_data = {"fieldName": {"value": 95}}
-    result = check_my_metric(mock_data)
+    result = check_my_metric(_vcs_data(description="Security automation"))
     assert result.score == 10
     assert result.risk == "None"
 
 
 def test_check_my_metric_no_data():
-    mock_data = {}
-    result = check_my_metric(mock_data)
+    result = check_my_metric(_vcs_data(description=None))
     assert result.score == 5
     assert "Note:" in result.message
 ```
@@ -240,39 +290,46 @@ custom_metric = "my_custom_metric:METRIC"
 ```python
 """Custom metric for OSS Sustain Guard."""
 
-from typing import Any
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 
+class CustomSecurityFocusChecker(MetricChecker):
+    """Custom metric logic using normalized VCS data."""
 
-def check_custom_metric(repo_data: dict[str, Any], context: MetricContext) -> Metric:
-    """
-    Custom metric logic.
+    def check(
+        self, vcs_data: VCSRepositoryData, context: MetricContext
+    ) -> Metric | None:
+        """
+        Custom metric logic.
 
-    Args:
-        repo_data: Repository data from GitHub GraphQL API
-        context: Metric context with owner, name, repo_url, etc.
+        Args:
+            vcs_data: Normalized repository data (GitHub, GitLab, etc.)
+            context: Metric context with owner, name, repo_url, etc.
 
-    Returns:
-        Metric with score, message, and status level
-    """
-    # Your custom logic here
-    owner = context.owner
-    repo_name = context.name
+        Returns:
+            Metric with score, message, and status level
+        """
+        _ = context.owner
+        _ = context.name
 
-    # Example: check if repo has certain keywords
-    description = repo_data.get("description", "")
+        description = (vcs_data.description or "").lower()
 
-    if "security" in description.lower():
-        score = 10
-        risk = "None"
-        message = "Excellent: Security-focused project."
-    else:
-        score = 5
-        risk = "Low"
-        message = "Moderate: No security focus detected."
+        if "security" in description:
+            score = 10
+            risk = "None"
+            message = "Excellent: Security-focused project."
+        else:
+            score = 5
+            risk = "Low"
+            message = "Moderate: No security focus detected."
 
-    return Metric("Custom Security Focus", score, 10, message, risk)
+        return Metric("Custom Security Focus", score, 10, message, risk)
 
 
 def _on_error(error: Exception) -> Metric:
@@ -289,7 +346,7 @@ def _on_error(error: Exception) -> Metric:
 # Export MetricSpec
 METRIC = MetricSpec(
     name="Custom Security Focus",
-    checker=check_custom_metric,
+    checker=CustomSecurityFocusChecker(),
     on_error=_on_error,
 )
 ```
@@ -338,8 +395,8 @@ class MetricSpec(NamedTuple):
     name: str
     """Display name of the metric."""
 
-    checker: Callable[[dict[str, Any], MetricContext], Metric | None]
-    """Main evaluation function."""
+    checker: MetricChecker | Callable[[dict[str, object], MetricContext], Metric | None]
+    """MetricChecker (preferred) or callable for legacy data."""
 
     on_error: Callable[[Exception], Metric] | None = None
     """Error handler (optional)."""
@@ -357,13 +414,13 @@ class MetricContext(NamedTuple):
     """Context provided to metric checks."""
 
     owner: str
-    """GitHub repository owner."""
+    """Repository owner."""
 
     name: str
     """Repository name."""
 
     repo_url: str
-    """Full GitHub repository URL."""
+    """Full repository URL."""
 
     platform: str | None = None
     """Package platform (e.g., 'pypi', 'npm')."""
@@ -381,7 +438,7 @@ class Metric(NamedTuple):
     name: str
     """Metric display name."""
 
-    score: int | float
+    score: int
     """Metric score (0-10)."""
 
     max_score: int
@@ -394,38 +451,39 @@ class Metric(NamedTuple):
     """Status label (internal values: "None", "Low", "Medium", "High", "Critical")."""
 ```
 
-### Accessing GitHub Data
+### Accessing VCS Data
 
-The `repo_data` parameter contains GitHub GraphQL API response:
+The `vcs_data` parameter contains normalized repository data:
 
 ```python
-def check_my_metric(repo_data: dict[str, Any], context: MetricContext) -> Metric:
+def check_my_metric(
+    vcs_data: VCSRepositoryData, context: MetricContext
+) -> Metric:
     # Repository metadata
-    name = repo_data.get("name")
-    description = repo_data.get("description")
-    created_at = repo_data.get("createdAt")
-
-    # Owner information
-    owner = repo_data.get("owner", {})
-    owner_type = owner.get("__typename")  # "Organization" or "User"
+    description = vcs_data.description or ""
+    owner_login = vcs_data.owner_login
+    owner_type = vcs_data.owner_type  # "Organization", "User", or "Group"
 
     # Stars, forks, watchers
-    stargazers = repo_data.get("stargazerCount", 0)
-    forks = repo_data.get("forkCount", 0)
+    stargazers = vcs_data.star_count
+    forks = vcs_data.total_forks
+    watchers = vcs_data.watchers_count
 
     # Issues and PRs
-    open_issues = repo_data.get("openIssues", {}).get("totalCount", 0)
-    closed_issues = repo_data.get("closedIssues", {}).get("totalCount", 0)
+    open_issues = vcs_data.open_issues_count
+    closed_issues = vcs_data.total_closed_issues
 
-    # Commit history
-    default_branch = repo_data.get("defaultBranchRef", {})
-    commits = default_branch.get("target", {}).get("history", {}).get("edges", [])
+    # Commits, releases, PRs
+    commits = vcs_data.commits
+    releases = vcs_data.releases
+    merged_prs = vcs_data.merged_prs
 
-    # Funding
-    funding_links = repo_data.get("fundingLinks", [])
+    # Funding and license info
+    funding_links = vcs_data.funding_links
+    license_info = vcs_data.license_info
 
-    # License
-    license_info = repo_data.get("licenseInfo", {})
+    # Host-specific data (may be None depending on provider)
+    raw_data = vcs_data.raw_data or {}
 
     # ... your metric logic
 ```
@@ -437,11 +495,12 @@ Two approaches for error handling:
 **1. Internal Error Handling:**
 
 ```python
-def check_my_metric(repo_data: dict[str, Any], context: MetricContext) -> Metric:
+def check_my_metric(vcs_data: VCSRepositoryData, context: MetricContext) -> Metric:
     try:
         # Metric logic
-        value = repo_data["requiredField"]
-    except KeyError:
+        license_id = vcs_data.license_info["spdxId"]
+        _ = context.repo_url
+    except (KeyError, TypeError):
         return Metric(
             "My Metric",
             0,
@@ -470,6 +529,11 @@ METRIC = MetricSpec(
 )
 ```
 
+### Skipping Metrics
+
+If a metric requires optional data (for example, a third-party API key), return `None`
+to mark it as skipped. Skipped metrics are shown in the CLI output.
+
 ## Best Practices
 
 ### Scoring Guidelines
@@ -480,11 +544,12 @@ METRIC = MetricSpec(
 - Set `max_score = 10` (consistency)
 - Use graduated thresholds (e.g., 10, 8, 5, 2, 0)
 - Return meaningful default scores for missing data
+- Return `None` only for intentionally skipped metrics (for example, optional API keys)
 
 ❌ **DON'T:**
 
 - Use arbitrary max_score values
-- Return None or raise exceptions for missing data
+- Raise exceptions for missing data
 - Use binary scoring (0 or 10 only)
 
 ### Message Guidelines
@@ -535,7 +600,7 @@ def test_metric_poor():
 
 def test_metric_no_data():
     """Test missing data handling."""
-    result = check_metric({}, MetricContext(...))
+    result = check_metric(_vcs_data(), MetricContext(...))
     assert result.max_score == 10
     assert "Note:" in result.message
 
@@ -552,41 +617,48 @@ def test_metric_error_handling():
 ```python
 """Code coverage metric."""
 
-from typing import Any
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
 
-def check_code_coverage(repo_data: dict[str, Any], context: MetricContext) -> Metric:
-    """
-    Evaluates code coverage percentage.
+class CodeCoverageChecker(MetricChecker):
+    """Detect coverage signals from repository metadata."""
 
-    Scoring:
-    - 90-100%: 10/10 (Excellent)
-    - 70-89%: 7/10 (Good)
-    - 50-69%: 4/10 (Moderate)
-    - <50%: 1/10 (Needs attention)
-    """
-    # Note: This is a simplified example
-    # Real implementation would fetch coverage from CI badges or APIs
+    def check(
+        self, vcs_data: VCSRepositoryData, _context: MetricContext
+    ) -> Metric | None:
+        """
+        Evaluates code coverage percentage.
 
-    description = repo_data.get("description", "").lower()
+        Scoring:
+        - 90-100%: 10/10 (Excellent)
+        - 70-89%: 7/10 (Good)
+        - 50-69%: 4/10 (Moderate)
+        - <50%: 1/10 (Needs attention)
+        """
+        description = (vcs_data.description or "").lower()
+        topics = [topic.lower() for topic in vcs_data.topics]
 
-    # Simplified logic: check for coverage badge
-    if "coverage" in description:
-        score = 8
-        risk = "Low"
-        message = "Good: Coverage tracking detected."
-    else:
-        score = 3
-        risk = "High"
-        message = "Needs attention: No coverage tracking detected."
+        if "coverage" in description or "coverage" in topics:
+            score = 8
+            risk = "Low"
+            message = "Good: Coverage tracking detected."
+        else:
+            score = 3
+            risk = "High"
+            message = "Needs attention: No coverage tracking detected."
 
-    return Metric("Code Coverage", score, 10, message, risk)
+        return Metric("Code Coverage", score, 10, message, risk)
 
 
 METRIC = MetricSpec(
     name="Code Coverage",
-    checker=check_code_coverage,
+    checker=CodeCoverageChecker(),
 )
 ```
 
@@ -595,68 +667,81 @@ METRIC = MetricSpec(
 ```python
 """Dependency update frequency metric."""
 
-from datetime import datetime, timedelta
-from typing import Any
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
 
+class DependencyUpdatesChecker(MetricChecker):
+    """Detect dependency update activity via bot authors."""
 
-def check_dependency_updates(repo_data: dict[str, Any], context: MetricContext) -> Metric:
-    """
-    Evaluates how frequently dependencies are updated.
+    def check(
+        self, vcs_data: VCSRepositoryData, _context: MetricContext
+    ) -> Metric | None:
+        """
+        Evaluates how frequently dependencies are updated.
 
-    Looks for dependency update commits (Dependabot, Renovate, etc.).
-    """
-    commits = (
-        repo_data.get("defaultBranchRef", {})
-        .get("target", {})
-        .get("history", {})
-        .get("edges", [])
-    )
+        Looks for bot-style commit authors (Dependabot, Renovate, etc.).
+        """
+        commits = vcs_data.commits
 
-    if not commits:
-        return Metric(
-            "Dependency Updates",
-            5,
-            10,
-            "Note: No commit history available.",
-            "None",
-        )
+        if not commits:
+            return Metric(
+                "Dependency Updates",
+                5,
+                10,
+                "Note: No commit history available.",
+                "None",
+            )
 
-    # Count dependency update commits
-    dep_keywords = ["bump", "update", "dependabot", "renovate", "dependencies"]
-    dep_commits = [
-        c for c in commits
-        if any(kw in c.get("node", {}).get("message", "").lower() for kw in dep_keywords)
-    ]
+        dep_keywords = ["dependabot", "renovate", "github-actions", "ci-"]
+        dep_commits = []
+        for commit in commits:
+            author = commit.get("author", {})
+            name = (author.get("name") or "").lower()
+            email = (author.get("email") or "").lower()
+            user = author.get("user") or {}
+            login = (user.get("login") or "").lower()
 
-    total = len(commits)
-    dep_count = len(dep_commits)
-    percentage = (dep_count / total * 100) if total > 0 else 0
+            if any(
+                keyword in name or keyword in email or keyword in login
+                for keyword in dep_keywords
+            ):
+                dep_commits.append(commit)
 
-    if percentage >= 20:
-        score = 10
-        risk = "None"
-        message = f"Excellent: {percentage:.1f}% of commits are dependency updates."
-    elif percentage >= 10:
-        score = 7
-        risk = "Low"
-        message = f"Good: {percentage:.1f}% of commits are dependency updates."
-    elif percentage >= 5:
-        score = 4
-        risk = "Medium"
-        message = f"Moderate: {percentage:.1f}% of commits are dependency updates."
-    else:
-        score = 1
-        risk = "High"
-        message = f"Needs attention: Only {percentage:.1f}% of commits are dependency updates."
+        total = len(commits)
+        dep_count = len(dep_commits)
+        percentage = (dep_count / total * 100) if total > 0 else 0
 
-    return Metric("Dependency Updates", score, 10, message, risk)
+        if percentage >= 20:
+            score = 10
+            risk = "None"
+            message = f"Excellent: {percentage:.1f}% of commits are dependency updates."
+        elif percentage >= 10:
+            score = 7
+            risk = "Low"
+            message = f"Good: {percentage:.1f}% of commits are dependency updates."
+        elif percentage >= 5:
+            score = 4
+            risk = "Medium"
+            message = f"Moderate: {percentage:.1f}% of commits are dependency updates."
+        else:
+            score = 1
+            risk = "High"
+            message = (
+                f"Needs attention: Only {percentage:.1f}% of commits are dependency updates."
+            )
+
+        return Metric("Dependency Updates", score, 10, message, risk)
 
 
 METRIC = MetricSpec(
     name="Dependency Updates",
-    checker=check_dependency_updates,
+    checker=DependencyUpdatesChecker(),
 )
 ```
 
@@ -665,52 +750,66 @@ METRIC = MetricSpec(
 ```python
 """Technical fork metric aligned with CHAOSS."""
 
-from typing import Any
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
 
-def check_technical_fork(repo_data: dict[str, Any], context: MetricContext) -> Metric:
-    """
-    Evaluates technical fork activity (downstream projects).
+class TechnicalForkChecker(MetricChecker):
+    """Evaluate fork activity via normalized VCS data."""
 
-    CHAOSS Aligned: Technical Fork
-    https://chaoss.community/kb/metric-technical-fork/
+    def check(
+        self, vcs_data: VCSRepositoryData, _context: MetricContext
+    ) -> Metric | None:
+        """
+        Evaluates technical fork activity (downstream projects).
 
-    Measures project reuse and impact via fork count.
-    """
-    forks = repo_data.get("forkCount", 0)
-    stargazers = repo_data.get("stargazerCount", 0)
+        CHAOSS Aligned: Technical Fork
+        https://chaoss.community/kb/metric-technical-fork/
 
-    # Calculate fork ratio (forks relative to stars)
-    if stargazers > 0:
-        fork_ratio = forks / stargazers
-    else:
-        fork_ratio = 0
+        Measures project reuse and impact via fork count.
+        """
+        forks = vcs_data.total_forks
+        stargazers = vcs_data.star_count
 
-    # High fork ratio indicates active reuse
-    if fork_ratio >= 0.5:
-        score = 10
-        risk = "None"
-        message = f"Excellent: High fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
-    elif fork_ratio >= 0.2:
-        score = 7
-        risk = "Low"
-        message = f"Good: Moderate fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
-    elif fork_ratio >= 0.1:
-        score = 4
-        risk = "Medium"
-        message = f"Moderate: Some fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
-    else:
-        score = 1
-        risk = "High"
-        message = f"Low: Limited fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
+        if stargazers > 0:
+            fork_ratio = forks / stargazers
+        else:
+            fork_ratio = 0
 
-    return Metric("Technical Fork", score, 10, message, risk)
+        if fork_ratio >= 0.5:
+            score = 10
+            risk = "None"
+            message = (
+                f"Excellent: High fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
+            )
+        elif fork_ratio >= 0.2:
+            score = 7
+            risk = "Low"
+            message = (
+                f"Good: Moderate fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
+            )
+        elif fork_ratio >= 0.1:
+            score = 4
+            risk = "Medium"
+            message = (
+                f"Moderate: Some fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
+            )
+        else:
+            score = 1
+            risk = "High"
+            message = f"Low: Limited fork activity ({forks} forks, {fork_ratio:.1%} ratio)."
+
+        return Metric("Technical Fork", score, 10, message, risk)
 
 
 METRIC = MetricSpec(
     name="Technical Fork",
-    checker=check_technical_fork,
+    checker=TechnicalForkChecker(),
 )
 ```
 
