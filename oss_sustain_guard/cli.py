@@ -2205,7 +2205,7 @@ async def check(
     lockfiles_map: dict[str, Path] = {}  # ecosystem -> lockfile path
     if show_dependencies:
         lockfiles_dict = await find_lockfiles(
-            str(root_dir), recursive=False, max_depth=0
+            str(root_dir), recursive=recursive, max_depth=depth
         )
         for detected_eco, lockfile_paths in lockfiles_dict.items():
             if lockfile_paths:
