@@ -826,13 +826,17 @@ All metrics use a **0-10 point scale** for consistency:
 
 ### Total Score Calculation
 
-**Overall Score = (Sum of all metric scores / Number of metrics) × 10**
+Overall Score uses metric weights from the selected scoring profile:
+
+**Overall Score = (Sum(metric_score x weight) / Sum(10 x weight)) x 100**
 
 Example:
 
-- 12 metrics analyzed
-- Total points: 87/120
-- Overall score: (87/120) × 10 = 7.3/10
+- 3 metrics analyzed
+- Scores: 8, 6, 10 with weights 2, 1, 1
+- Weighted score: (8x2 + 6x1 + 10x1) = 32
+- Weighted max: (10x2 + 10x1 + 10x1) = 40
+- Overall score: (32/40) x 100 = 80
 
 ### Metrics Models
 
