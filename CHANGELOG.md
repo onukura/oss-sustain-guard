@@ -2,6 +2,12 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.17.0 - 2026-01-03
+
+### Removed
+- Optional dependents analysis feature
+- Libraries.io integration for dependents analysis
+
 ## v0.16.0 - 2026-01-03
 
 ### Added
