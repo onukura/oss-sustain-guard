@@ -123,7 +123,12 @@ _CHECKER = ReleaseCadenceChecker()
 def check_release_cadence(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
     if isinstance(repo_data, VCSRepositoryData):
         return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
-    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
+    result = _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
+    return (
+        result
+        if result is not None
+        else _on_error(ValueError("Legacy check returned None"))
+    )
 
 
 def _on_error(error: Exception) -> Metric:
