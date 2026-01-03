@@ -2,146 +2,170 @@
 
 from typing import Any
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+_LEGACY_CONTEXT = MetricContext(owner="unknown", name="unknown", repo_url="")
 
 
-def check_maintainer_drain(repo_data: dict[str, Any]) -> Metric:
-    """
-    Checks for a recent drain in active maintainers with improved analysis.
+class MaintainerRetentionChecker(MetricChecker):
+    """Check maintainer retention using normalized VCS data."""
 
-    Improvements:
-    - Excludes bot accounts (dependabot, renovate, github-actions, etc.)
-    - Compares recent (last 25) vs older (25-50) commits
-    - Time-series based assessment
-    - Graduated status levels: 50%/70%/90% reduction
+    def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
+        """
+        Checks for a recent drain in active maintainers with improved analysis.
 
-    Status levels:
-    - 90%+ reduction: 15pt reduction (critical)
-    - 70-89% reduction: 10pt reduction (high)
-    - 50-69% reduction: 5pt reduction (medium)
-    - <50% reduction: 0pt reduction (acceptable)
-    """
-    max_score = 10
+        Improvements:
+        - Excludes bot accounts (dependabot, renovate, github-actions, etc.)
+        - Compares recent (last 25) vs older (25-50) commits
+        - Time-series based assessment
+        - Graduated status levels: 50%/70%/90% reduction
 
-    # Extract commit history
-    default_branch = repo_data.get("defaultBranchRef")
-    if not default_branch:
-        return Metric(
-            "Maintainer Retention",
-            max_score,
-            max_score,
-            "Note: Maintainer data not available for verification.",
-            "None",
-        )
+        Status levels:
+        - 90%+ reduction: 15pt reduction (critical)
+        - 70-89% reduction: 10pt reduction (high)
+        - 50-69% reduction: 5pt reduction (medium)
+        - <50% reduction: 0pt reduction (acceptable)
+        """
+        max_score = 10
 
-    target = default_branch.get("target")
-    if not target:
-        return Metric(
-            "Maintainer Retention",
-            max_score,
-            max_score,
-            "Note: Maintainer data not available for verification.",
-            "None",
-        )
+        commits = vcs_data.commits
+        if not commits:
+            if vcs_data.default_branch is None:
+                return Metric(
+                    "Maintainer Retention",
+                    max_score,
+                    max_score,
+                    "Note: Maintainer data not available for verification.",
+                    "None",
+                )
+            return Metric(
+                "Maintainer Retention",
+                max_score,
+                max_score,
+                "Insufficient commit history to detect drain.",
+                "None",
+            )
 
-    history = target.get("history", {}).get("edges", [])
-    if len(history) < 50:
-        # If history is too short, cannot detect drain
-        return Metric(
-            "Maintainer Retention",
-            max_score,
-            max_score,
-            "Insufficient commit history to detect drain.",
-            "None",
-        )
+        if len(commits) < 50:
+            # If history is too short, cannot detect drain
+            return Metric(
+                "Maintainer Retention",
+                max_score,
+                max_score,
+                "Insufficient commit history to detect drain.",
+                "None",
+            )
 
-    # Bot patterns to exclude
-    bot_keywords = [
-        "bot",
-        "action",
-        "dependabot",
-        "renovate",
-        "github-actions",
-        "ci-",
-        "autorelease",
-        "release-bot",
-    ]
+        # Bot patterns to exclude
+        bot_keywords = [
+            "bot",
+            "action",
+            "dependabot",
+            "renovate",
+            "github-actions",
+            "ci-",
+            "autorelease",
+            "release-bot",
+        ]
 
-    def is_bot(login: str) -> bool:
-        """Check if login appears to be a bot."""
-        lower = login.lower()
-        return any(keyword in lower for keyword in bot_keywords)
+        def is_bot(login: str) -> bool:
+            """Check if login appears to be a bot."""
+            lower = login.lower()
+            return any(keyword in lower for keyword in bot_keywords)
 
-    # Split into recent and older commits
-    recent_commits = history[:25]
-    older_commits = history[25:50]
+        def extract_login(commit: dict[str, Any]) -> str | None:
+            """Extract a stable contributor identifier from a commit."""
+            author = commit.get("author")
+            if not isinstance(author, dict):
+                return None
+            user = author.get("user")
+            if isinstance(user, dict):
+                login = user.get("login")
+                if login:
+                    return login
+            for key in ("name", "email"):
+                value = author.get(key)
+                if value:
+                    return value
+            return None
 
-    # Extract human contributors (exclude bots)
-    recent_authors = set()
-    for edge in recent_commits:
-        user = edge.get("node", {}).get("author", {}).get("user")
-        if user:
-            login = user.get("login")
+        # Split into recent and older commits
+        recent_commits = commits[:25]
+        older_commits = commits[25:50]
+
+        # Extract human contributors (exclude bots)
+        recent_authors = set()
+        for commit in recent_commits:
+            login = extract_login(commit)
             if login and not is_bot(login):
                 recent_authors.add(login)
 
-    older_authors = set()
-    for edge in older_commits:
-        user = edge.get("node", {}).get("author", {}).get("user")
-        if user:
-            login = user.get("login")
+        older_authors = set()
+        for commit in older_commits:
+            login = extract_login(commit)
             if login and not is_bot(login):
                 older_authors.add(login)
 
-    # If we have very few real contributors, cannot assess
-    if not older_authors or not recent_authors:
-        return Metric(
-            "Maintainer Retention",
-            max_score,
-            max_score,
-            "Insufficient human contributor data.",
-            "None",
-        )
+        # If we have very few real contributors, cannot assess
+        if not older_authors or not recent_authors:
+            return Metric(
+                "Maintainer Retention",
+                max_score,
+                max_score,
+                "Insufficient human contributor data.",
+                "None",
+            )
 
-    # Calculate drain ratio
-    drain_ratio = len(recent_authors) / len(older_authors)
-    reduction_percentage = (1 - drain_ratio) * 100
+        # Calculate drain ratio
+        drain_ratio = len(recent_authors) / len(older_authors)
+        reduction_percentage = (1 - drain_ratio) * 100
 
-    # Scoring logic with graduated status levels
-    if drain_ratio <= 0.1:  # 90%+ reduction
-        score = 0
-        risk = "Critical"
-        message = (
-            f"Needs support: {reduction_percentage:.0f}% reduction in maintainers. "
-            f"From {len(older_authors)} → {len(recent_authors)} active contributors."
-        )
-    elif drain_ratio <= 0.3:  # 70-89% reduction
-        score = 3
-        risk = "High"
-        message = (
-            f"Needs attention: {reduction_percentage:.0f}% reduction in maintainers. "
-            f"From {len(older_authors)} → {len(recent_authors)} contributors."
-        )
-    elif drain_ratio <= 0.5:  # 50-69% reduction
-        score = 5
-        risk = "Medium"
-        message = (
-            f"Monitor: {reduction_percentage:.0f}% reduction in maintainers. "
-            f"From {len(older_authors)} → {len(recent_authors)} contributors."
-        )
-    else:
-        score = max_score
-        risk = "None"
-        message = (
-            f"Stable: {len(recent_authors)} active maintainers. "
-            f"No significant drain detected."
-        )
+        # Scoring logic with graduated status levels
+        if drain_ratio <= 0.1:  # 90%+ reduction
+            score = 0
+            risk = "Critical"
+            message = (
+                f"Needs support: {reduction_percentage:.0f}% reduction in maintainers. "
+                f"From {len(older_authors)} → {len(recent_authors)} active contributors."
+            )
+        elif drain_ratio <= 0.3:  # 70-89% reduction
+            score = 3
+            risk = "High"
+            message = (
+                f"Needs attention: {reduction_percentage:.0f}% reduction in maintainers. "
+                f"From {len(older_authors)} → {len(recent_authors)} contributors."
+            )
+        elif drain_ratio <= 0.5:  # 50-69% reduction
+            score = 5
+            risk = "Medium"
+            message = (
+                f"Monitor: {reduction_percentage:.0f}% reduction in maintainers. "
+                f"From {len(older_authors)} → {len(recent_authors)} contributors."
+            )
+        else:
+            score = max_score
+            risk = "None"
+            message = (
+                f"Stable: {len(recent_authors)} active maintainers. "
+                f"No significant drain detected."
+            )
 
-    return Metric("Maintainer Retention", score, max_score, message, risk)
+        return Metric("Maintainer Retention", score, max_score, message, risk)
 
 
-def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
-    return check_maintainer_drain(repo_data)
+_CHECKER = MaintainerRetentionChecker()
+
+
+def check_maintainer_drain(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
+    if isinstance(repo_data, VCSRepositoryData):
+        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
+    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:
@@ -156,7 +180,7 @@ def _on_error(error: Exception) -> Metric:
 
 METRIC = MetricSpec(
     name="Maintainer Retention",
-    checker=_check,
+    checker=_CHECKER,
     on_error=_on_error,
     error_log="  [yellow]⚠️  Maintainer retention check incomplete: {error}[/yellow]",
 )

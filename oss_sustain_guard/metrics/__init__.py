@@ -3,7 +3,12 @@
 from importlib import import_module
 from importlib.metadata import entry_points
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
 
 _BUILTIN_MODULES = [
     "oss_sustain_guard.metrics.bus_factor",
@@ -76,4 +81,10 @@ def load_metric_specs() -> list[MetricSpec]:
     return specs
 
 
-__all__ = ["Metric", "MetricContext", "MetricSpec", "load_metric_specs"]
+__all__ = [
+    "Metric",
+    "MetricChecker",
+    "MetricContext",
+    "MetricSpec",
+    "load_metric_specs",
+]

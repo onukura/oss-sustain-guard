@@ -151,6 +151,7 @@ class GitHubProvider(BaseVCSProvider):
               }
             }
             defaultBranchRef {
+              name
               target {
                 ... on Commit {
                   history(first: 100) {
@@ -225,6 +226,7 @@ class GitHubProvider(BaseVCSProvider):
               }
             }
             issues(first: 20, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) {
+              totalCount
               edges {
                 node {
                   createdAt
@@ -285,6 +287,16 @@ class GitHubProvider(BaseVCSProvider):
               name
               spdxId
               url
+            }
+            primaryLanguage {
+              name
+            }
+            repositoryTopics(first: 20) {
+              nodes {
+                topic {
+                  name
+                }
+              }
             }
             stargazerCount
             forkCount
@@ -360,6 +372,38 @@ class GitHubProvider(BaseVCSProvider):
         owner_login = owner_data.get("login", "")
         owner_name = owner_data.get("name")
 
+        # Extract repository metadata
+        star_count = repo_info.get("stargazerCount", 0)
+        description = repo_info.get("description")
+        homepage_url = repo_info.get("homepageUrl")
+        topics_data = repo_info.get("repositoryTopics", {})
+        topics_nodes = topics_data.get("nodes", []) if topics_data else []
+        topics = []
+        for node in topics_nodes:
+            topic = node.get("topic") if node else None
+            name = topic.get("name") if isinstance(topic, dict) else None
+            if name:
+                topics.append(name)
+        readme_candidates = [
+            repo_info.get("readmeUpperCase"),
+            repo_info.get("readmeLowerCase"),
+            repo_info.get("readmeAllCaps"),
+        ]
+        readme_size = None
+        for candidate in readme_candidates:
+            if candidate is None:
+                continue
+            if "byteSize" in candidate:
+                readme_size = candidate.get("byteSize")
+                break
+        contributing_file = repo_info.get("contributingFile")
+        contributing_file_size = (
+            contributing_file.get("byteSize") if contributing_file else None
+        )
+        watchers_count = repo_info.get("watchers", {}).get("totalCount", 0)
+        primary_language = repo_info.get("primaryLanguage")
+        language = primary_language.get("name") if primary_language else None
+
         # Extract commits
         commits = []
         total_commits = 0
@@ -391,6 +435,7 @@ class GitHubProvider(BaseVCSProvider):
         # Extract issues
         open_issues_data = repo_info.get("issues", {})
         open_issues = [edge["node"] for edge in open_issues_data.get("edges", [])]
+        open_issues_count = open_issues_data.get("totalCount", len(open_issues))
 
         closed_issues_data = repo_info.get("closedIssues", {})
         closed_issues = [edge["node"] for edge in closed_issues_data.get("edges", [])]
@@ -462,6 +507,16 @@ class GitHubProvider(BaseVCSProvider):
             owner_type=owner_type,
             owner_login=owner_login,
             owner_name=owner_name,
+            star_count=star_count,
+            description=description,
+            homepage_url=homepage_url,
+            topics=topics,
+            readme_size=readme_size,
+            contributing_file_size=contributing_file_size,
+            default_branch=default_branch.get("name") if default_branch else None,
+            watchers_count=watchers_count,
+            open_issues_count=open_issues_count,
+            language=language,
             commits=commits,
             total_commits=total_commits,
             merged_prs=merged_prs,

@@ -2,101 +2,118 @@
 
 from typing import Any
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+_LEGACY_CONTEXT = MetricContext(owner="unknown", name="unknown", repo_url="")
 
 
-def check_merge_velocity(repo_data: dict[str, Any]) -> Metric:
-    """
-    Evaluates the merge velocity (PR turnaround time) with relaxed thresholds.
+class MergeVelocityChecker(MetricChecker):
+    """Evaluate merge velocity using normalized VCS data."""
 
-    Improvements:
-    - Graduated scoring based on actual merge times
-    - OSS-realistic thresholds (accounting for volunteer teams)
-    - Focuses on pathological slowness detection
+    def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
+        """
+        Evaluates the merge velocity (PR turnaround time) with relaxed thresholds.
 
-    Status levels:
-    - >2000 hours (83 days): Critical (severely slow)
-    - 1000-2000 hours (42-83 days): High (very slow)
-    - 500-1000 hours (21-42 days): Medium (slow but acceptable)
-    - <500 hours (21 days): Low/Excellent (responsive)
-    """
-    from datetime import datetime
+        Improvements:
+        - Graduated scoring based on actual merge times
+        - OSS-realistic thresholds (accounting for volunteer teams)
+        - Focuses on pathological slowness detection
 
-    max_score = 10
+        Status levels:
+        - >2000 hours (83 days): Critical (severely slow)
+        - 1000-2000 hours (42-83 days): High (very slow)
+        - 500-1000 hours (21-42 days): Medium (slow but acceptable)
+        - <500 hours (21 days): Low/Excellent (responsive)
+        """
+        from datetime import datetime
 
-    pull_requests = repo_data.get("pullRequests", {}).get("edges", [])
-    if not pull_requests:
-        return Metric(
-            "Change Request Resolution",
-            max_score,
-            max_score,
-            "No merged PRs available for analysis.",
-            "None",
-        )
+        max_score = 10
 
-    merge_times: list[int] = []
-    for edge in pull_requests:
-        node = edge.get("node", {})
-        created_at_str = node.get("createdAt")
-        merged_at_str = node.get("mergedAt")
+        pull_requests = vcs_data.merged_prs
+        if not pull_requests:
+            return Metric(
+                "Change Request Resolution",
+                max_score,
+                max_score,
+                "No merged PRs available for analysis.",
+                "None",
+            )
 
-        if created_at_str and merged_at_str:
-            try:
-                created_at = datetime.fromisoformat(
-                    created_at_str.replace("Z", "+00:00")
-                )
-                merged_at = datetime.fromisoformat(merged_at_str.replace("Z", "+00:00"))
-                merge_time_hours = (merged_at - created_at).total_seconds() / 3600
-                merge_times.append(int(merge_time_hours))
-            except (ValueError, AttributeError):
-                pass
+        merge_times: list[int] = []
+        for node in pull_requests:
+            created_at_str = node.get("createdAt")
+            merged_at_str = node.get("mergedAt")
 
-    if not merge_times:
-        return Metric(
-            "Change Request Resolution",
-            max_score,
-            max_score,
-            "Unable to analyze merge velocity.",
-            "None",
-        )
+            if created_at_str and merged_at_str:
+                try:
+                    created_at = datetime.fromisoformat(
+                        created_at_str.replace("Z", "+00:00")
+                    )
+                    merged_at = datetime.fromisoformat(
+                        merged_at_str.replace("Z", "+00:00")
+                    )
+                    merge_time_hours = (merged_at - created_at).total_seconds() / 3600
+                    merge_times.append(int(merge_time_hours))
+                except (ValueError, AttributeError):
+                    pass
 
-    avg_merge_time = sum(merge_times) / len(merge_times)
+        if not merge_times:
+            return Metric(
+                "Change Request Resolution",
+                max_score,
+                max_score,
+                "Unable to analyze merge velocity.",
+                "None",
+            )
 
-    # Scoring logic with OSS-realistic thresholds
-    if avg_merge_time > 2000:  # 83+ days
-        score = 0
-        risk = "Critical"
-        message = (
-            f"Observe: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
-            f"Consider reviewing PR review process."
-        )
-    elif avg_merge_time > 1000:  # 42-83 days
-        score = 2
-        risk = "High"
-        message = (
-            f"Note: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
-            f"Review cycle is quite slow."
-        )
-    elif avg_merge_time > 500:  # 21-42 days
-        score = 6
-        risk = "Medium"
-        message = (
-            f"Monitor: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
-            f"Slow but acceptable for volunteer-driven OSS."
-        )
-    else:  # <21 days
-        score = max_score
-        risk = "None"
-        message = (
-            f"Good: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
-            f"Responsive to PRs."
-        )
+        avg_merge_time = sum(merge_times) / len(merge_times)
 
-    return Metric("Change Request Resolution", score, max_score, message, risk)
+        # Scoring logic with OSS-realistic thresholds
+        if avg_merge_time > 2000:  # 83+ days
+            score = 0
+            risk = "Critical"
+            message = (
+                f"Observe: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
+                f"Consider reviewing PR review process."
+            )
+        elif avg_merge_time > 1000:  # 42-83 days
+            score = 2
+            risk = "High"
+            message = (
+                f"Note: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
+                f"Review cycle is quite slow."
+            )
+        elif avg_merge_time > 500:  # 21-42 days
+            score = 6
+            risk = "Medium"
+            message = (
+                f"Monitor: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
+                f"Slow but acceptable for volunteer-driven OSS."
+            )
+        else:  # <21 days
+            score = max_score
+            risk = "None"
+            message = (
+                f"Good: Average merge time {avg_merge_time:.0f} hours ({avg_merge_time / 24:.1f} days). "
+                f"Responsive to PRs."
+            )
+
+        return Metric("Change Request Resolution", score, max_score, message, risk)
 
 
-def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
-    return check_merge_velocity(repo_data)
+_CHECKER = MergeVelocityChecker()
+
+
+def check_merge_velocity(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
+    if isinstance(repo_data, VCSRepositoryData):
+        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
+    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:
@@ -111,6 +128,6 @@ def _on_error(error: Exception) -> Metric:
 
 METRIC = MetricSpec(
     name="Change Request Resolution",
-    checker=_check,
+    checker=_CHECKER,
     on_error=_on_error,
 )

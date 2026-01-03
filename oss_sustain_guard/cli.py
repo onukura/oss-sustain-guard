@@ -65,9 +65,7 @@ from oss_sustain_guard.resolvers import (
 from oss_sustain_guard.resolvers.base import close_resolver_http_client
 
 # Schema version for cached data compatibility
-ANALYSIS_VERSION = (
-    "1.3"  # Updated: Align scoring weights with Community Health metric naming
-)
+ANALYSIS_VERSION = "1.4"
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent

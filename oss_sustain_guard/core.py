@@ -210,8 +210,9 @@ def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
     # Reconstruct the structure that metrics expect
     # Handle case where commits or ci_status may be empty
     default_branch_data = None
-    if vcs_data.commits or vcs_data.ci_status:
+    if vcs_data.commits or vcs_data.ci_status or vcs_data.default_branch:
         default_branch_data = {
+            "name": vcs_data.default_branch,
             "target": {
                 "history": {
                     "edges": [{"node": commit} for commit in vcs_data.commits],
@@ -220,8 +221,20 @@ def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
                 "checkSuites": {
                     "nodes": [vcs_data.ci_status] if vcs_data.ci_status else [],
                 },
-            }
+            },
         }
+
+    readme_blob = None
+    if vcs_data.readme_size is not None:
+        readme_blob = {"byteSize": vcs_data.readme_size, "text": ""}
+
+    contributing_blob = (
+        {"byteSize": vcs_data.contributing_file_size}
+        if vcs_data.contributing_file_size is not None
+        else None
+    )
+
+    topics_nodes = [{"topic": {"name": topic}} for topic in vcs_data.topics if topic]
 
     return {
         "isArchived": vcs_data.is_archived,
@@ -247,6 +260,7 @@ def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
         },
         "issues": {
             "edges": [{"node": issue} for issue in vcs_data.open_issues],
+            "totalCount": vcs_data.open_issues_count,
         },
         "closedIssues": {
             "totalCount": vcs_data.total_closed_issues,
@@ -266,6 +280,16 @@ def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
         "hasDiscussionsEnabled": vcs_data.has_discussions,
         "codeOfConduct": vcs_data.code_of_conduct,
         "licenseInfo": vcs_data.license_info,
+        "stargazerCount": vcs_data.star_count,
+        "watchers": {"totalCount": vcs_data.watchers_count},
+        "description": vcs_data.description,
+        "homepageUrl": vcs_data.homepage_url,
+        "repositoryTopics": {"nodes": topics_nodes},
+        "readmeUpperCase": readme_blob,
+        "readmeLowerCase": None,
+        "readmeAllCaps": None,
+        "contributingFile": contributing_blob,
+        "primaryLanguage": {"name": vcs_data.language} if vcs_data.language else None,
         "forks": {
             "edges": [{"node": fork} for fork in vcs_data.forks],
         },
@@ -1319,6 +1343,7 @@ def _analyze_repository_data(
     owner: str,
     name: str,
     repo_info: dict[str, Any],
+    vcs_data: VCSRepositoryData | None = None,
     platform: str | None = None,
     package_name: str | None = None,
     profile: str = "balanced",
@@ -1340,7 +1365,13 @@ def _analyze_repository_data(
 
     for spec in load_metric_specs():
         try:
-            metric = spec.checker(repo_info, context)
+            checker = spec.checker
+            if vcs_data is not None and hasattr(checker, "check"):
+                metric = checker.check(vcs_data, context)
+            elif vcs_data is None and hasattr(checker, "check_legacy"):
+                metric = checker.check_legacy(repo_info, context)
+            else:
+                metric = checker(repo_info, context)
             if metric is None:
                 # Track skipped metrics (e.g., optional metrics without required API keys)
                 skipped_metrics.append(spec.name)
@@ -1452,6 +1483,7 @@ def analyze_repository(
             owner,
             name,
             repo_info,
+            vcs_data=vcs_data,
             platform=platform,
             package_name=package_name,
             profile=profile,

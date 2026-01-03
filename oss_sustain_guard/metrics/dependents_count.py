@@ -1,10 +1,15 @@
 """Downstream dependents metric."""
 
 import os
-from typing import Any
 
 from oss_sustain_guard.librariesio import query_librariesio_api
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
 
 def check_dependents_count(
@@ -106,10 +111,20 @@ def check_dependents_count(
     return Metric("Downstream Dependents", score, max_score, message, risk)
 
 
-def _check(repo_data: dict[str, Any], context: MetricContext) -> Metric | None:
-    return check_dependents_count(
-        context.repo_url, platform=context.platform, package_name=context.package_name
-    )
+class DependentsCountChecker(MetricChecker):
+    """Evaluate downstream dependents using registry context."""
+
+    def check(
+        self, _vcs_data: VCSRepositoryData, context: MetricContext
+    ) -> Metric | None:
+        return check_dependents_count(
+            context.repo_url,
+            platform=context.platform,
+            package_name=context.package_name,
+        )
+
+
+_CHECKER = DependentsCountChecker()
 
 
 def _on_error(error: Exception) -> Metric:
@@ -124,6 +139,6 @@ def _on_error(error: Exception) -> Metric:
 
 METRIC = MetricSpec(
     name="Downstream Dependents",
-    checker=_check,
+    checker=_CHECKER,
     on_error=_on_error,
 )

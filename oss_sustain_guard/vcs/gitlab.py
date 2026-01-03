@@ -242,6 +242,41 @@ class GitLabProvider(BaseVCSProvider):
         owner_name = namespace.get("name")
         owner_type = "Group" if "/" in namespace.get("fullPath", "") else "User"
 
+        # Extract repository metadata
+        star_count = project_info.get("starCount", 0)
+        description = project_info.get("description")
+        homepage_url = None
+        topics = project_info.get("topics", []) or []
+        default_branch = project_info.get("repository", {}).get("rootRef")
+        watchers_count = 0
+        readme_size = None
+        contributing_file_size = None
+        full_path = f"{owner}/{repo}"
+
+        if default_branch:
+            refs_to_try = [default_branch]
+        else:
+            refs_to_try = []
+        for fallback_ref in ("main", "master"):
+            if fallback_ref not in refs_to_try:
+                refs_to_try.append(fallback_ref)
+
+        for ref in refs_to_try:
+            if readme_size is None:
+                readme_size = self._fetch_first_matching_file_size(
+                    full_path,
+                    ref,
+                    ["README.md", "readme.md", "README"],
+                )
+            if contributing_file_size is None:
+                contributing_file_size = self._fetch_first_matching_file_size(
+                    full_path,
+                    ref,
+                    ["CONTRIBUTING.md", "CONTRIBUTING.MD", "CONTRIBUTING"],
+                )
+            if readme_size is not None and contributing_file_size is not None:
+                break
+
         # Fetch commits separately (GitLab GraphQL doesn't support commits in project query easily)
         commits = []
         total_commits = 0
@@ -281,12 +316,16 @@ class GitLabProvider(BaseVCSProvider):
             self._normalize_issue(edge["node"])
             for edge in open_issues_data.get("edges", [])
         ]
+        open_issues_count = open_issues_data.get("count", len(open_issues))
 
         closed_issues_data = project_info.get("closedIssues", {})
         closed_issues = [
             self._normalize_issue(edge["node"])
             for edge in closed_issues_data.get("edges", [])
         ]
+        rest_closed_issues = self._fetch_closed_issues(full_path)
+        if rest_closed_issues is not None:
+            closed_issues = rest_closed_issues
         total_closed_issues = closed_issues_data.get("count", len(closed_issues))
 
         # GitLab doesn't expose vulnerability alerts via GraphQL (requires REST API)
@@ -336,6 +375,16 @@ class GitLabProvider(BaseVCSProvider):
             owner_type=owner_type,
             owner_login=owner_login,
             owner_name=owner_name,
+            star_count=star_count,
+            description=description,
+            homepage_url=homepage_url,
+            topics=topics,
+            readme_size=readme_size,
+            contributing_file_size=contributing_file_size,
+            default_branch=default_branch,
+            watchers_count=watchers_count,
+            open_issues_count=open_issues_count,
+            language=None,
             commits=commits,
             total_commits=total_commits,
             merged_prs=merged_prs,
@@ -359,6 +408,107 @@ class GitLabProvider(BaseVCSProvider):
             sample_counts=sample_counts,
             raw_data=None,  # Don't use raw_data to force proper reconstruction
         )
+
+    def _fetch_first_matching_file_size(
+        self, full_path: str, ref: str, candidates: list[str]
+    ) -> int | None:
+        for file_path in candidates:
+            size = self._fetch_repository_file_size(full_path, ref, file_path)
+            if size is not None:
+                return size
+        return None
+
+    def _fetch_repository_file_size(
+        self, full_path: str, ref: str, file_path: str
+    ) -> int | None:
+        """
+        Fetch repository file size using GitLab REST API.
+
+        Args:
+            full_path: Full project path (owner/repo)
+            ref: Branch or tag name
+            file_path: File path in repository
+
+        Returns:
+            File size in bytes if file exists
+        """
+        try:
+            import urllib.parse
+
+            encoded_path = urllib.parse.quote(full_path, safe="")
+            encoded_file = urllib.parse.quote(file_path, safe="")
+            url = (
+                f"https://gitlab.com/api/v4/projects/{encoded_path}"
+                f"/repository/files/{encoded_file}"
+            )
+            headers = {"Authorization": f"Bearer {self.token}"}
+            client = _get_http_client()
+
+            response = client.get(
+                url,
+                headers=headers,
+                params={"ref": ref},
+                timeout=30,
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            data = response.json()
+            size = data.get("size")
+            if isinstance(size, int):
+                return size
+            if isinstance(size, str):
+                try:
+                    return int(size)
+                except ValueError:
+                    return None
+            return None
+        except Exception as exc:
+            print(
+                "Warning: Failed to fetch file size "
+                f"for {full_path}/{file_path}@{ref}: {exc}"
+            )
+            return None
+
+    def _fetch_closed_issues(self, full_path: str) -> list[dict[str, Any]] | None:
+        """
+        Fetch closed issues using GitLab REST API to capture close actors.
+
+        Args:
+            full_path: Full project path (owner/repo)
+
+        Returns:
+            List of normalized closed issue objects or None on failure
+        """
+        try:
+            import urllib.parse
+
+            encoded_path = urllib.parse.quote(full_path, safe="")
+            url = f"https://gitlab.com/api/v4/projects/{encoded_path}/issues"
+            headers = {"Authorization": f"Bearer {self.token}"}
+            client = _get_http_client()
+
+            response = client.get(
+                url,
+                headers=headers,
+                params={
+                    "state": "closed",
+                    "order_by": "updated_at",
+                    "sort": "desc",
+                    "per_page": 50,
+                    "page": 1,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            issues_data = response.json()
+            if not isinstance(issues_data, list):
+                return []
+
+            return [self._normalize_issue(issue) for issue in issues_data]
+        except Exception as exc:
+            print(f"Warning: Failed to fetch closed issues for {full_path}: {exc}")
+            return None
 
     def _fetch_commits(self, full_path: str) -> dict[str, Any]:
         """
@@ -495,25 +645,47 @@ class GitLabProvider(BaseVCSProvider):
 
     def _normalize_issue(self, issue_node: dict[str, Any]) -> dict[str, Any]:
         """Normalize GitLab issue to GitHub issue format."""
-        return {
-            "createdAt": issue_node.get("createdAt"),
-            "closedAt": issue_node.get("closedAt"),
-            "updatedAt": issue_node.get("updatedAt"),
-            "comments": {
-                "edges": [
-                    {"node": edge["node"]}
-                    for edge in issue_node.get("notes", {}).get("edges", [])
-                ]
-            },
+        created_at = issue_node.get("createdAt") or issue_node.get("created_at")
+        closed_at = issue_node.get("closedAt") or issue_node.get("closed_at")
+        updated_at = issue_node.get("updatedAt") or issue_node.get("updated_at")
+
+        notes = issue_node.get("notes", {})
+        note_edges = []
+        if isinstance(notes, dict):
+            note_edges = [
+                {"node": edge.get("node", {})}
+                for edge in notes.get("edges", [])
+                if isinstance(edge, dict)
+            ]
+
+        closed_by = issue_node.get("closedBy") or issue_node.get("closed_by")
+        closed_by_login = None
+        if isinstance(closed_by, dict):
+            closed_by_login = closed_by.get("login") or closed_by.get("username")
+
+        normalized = {
+            "createdAt": created_at,
+            "closedAt": closed_at,
+            "updatedAt": updated_at,
+            "comments": {"edges": note_edges},
         }
+        if closed_by_login:
+            normalized["closedBy"] = {"login": closed_by_login}
+        return normalized
 
     def _normalize_fork(self, fork_node: dict[str, Any]) -> dict[str, Any]:
         """Normalize GitLab fork (from REST API) to GitHub fork format."""
+        # Extract owner login from namespace
+        namespace = fork_node.get("namespace", {})
+        owner_login = (
+            namespace.get("path")
+            or namespace.get("fullPath", "").split("/")[0]
+            or fork_node.get("owner", {}).get("username", "")
+        )
+
         return {
-            "createdAt": fork_node.get("created_at"),
-            "pushedAt": fork_node.get("last_activity_at"),
-            "owner": {
-                "login": fork_node.get("namespace", {}).get("path", "")
-                or fork_node.get("owner", {}).get("username", "")
-            },
+            "createdAt": fork_node.get("createdAt") or fork_node.get("created_at"),
+            "pushedAt": fork_node.get("lastActivityAt")
+            or fork_node.get("last_activity_at"),
+            "owner": {"login": owner_login},
         }

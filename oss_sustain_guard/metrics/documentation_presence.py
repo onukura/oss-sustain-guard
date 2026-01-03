@@ -2,103 +2,144 @@
 
 from typing import Any
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+_LEGACY_CONTEXT = MetricContext(owner="unknown", name="unknown", repo_url="")
 
 
-def check_documentation_presence(repo_data: dict[str, Any]) -> Metric:
-    """
-    Checks for presence of essential documentation files.
+class DocumentationPresenceChecker(MetricChecker):
+    """Evaluate documentation signals using normalized VCS data."""
 
-    Evaluates:
-    - README.md existence and size
-    - CONTRIBUTING.md existence
-    - Wiki enabled
-    - Homepage/documentation link
-    - Description presence
+    def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
+        """
+        Checks for presence of essential documentation files.
 
-    Scoring:
-    - All docs present: 10/10
-    - README + some docs: 7/10
-    - Only README: 4/10
-    - No documentation: 0/10
-    """
-    max_score = 10
+        Evaluates:
+        - README.md existence and size
+        - CONTRIBUTING.md existence
+        - Wiki enabled
+        - Homepage/documentation link
+        - Description presence
 
-    # Check README (multiple patterns for case sensitivity)
-    readme_upper = repo_data.get("readmeUpperCase")  # README.md
-    readme_lower = repo_data.get("readmeLowerCase")  # readme.md
-    readme_all_caps = repo_data.get("readmeAllCaps")  # README
+        Scoring:
+        - All docs present: 10/10
+        - README + some docs: 7/10
+        - Only README: 4/10
+        - No documentation: 0/10
+        """
+        max_score = 10
 
-    # Use whichever README pattern exists
-    readme = readme_upper or readme_lower or readme_all_caps
+        readme_size = vcs_data.readme_size
+        readme_text = None
+        raw_data = vcs_data.raw_data or {}
 
-    # Check if README exists and handle symlinks
-    has_readme = False
-    if readme is not None:
-        byte_size = readme.get("byteSize", 0)
-        # If byte_size is small (< 100), it might be a symlink - check text content
-        if byte_size > 100:
+        if raw_data:
+            for candidate_key in (
+                "readmeUpperCase",
+                "readmeLowerCase",
+                "readmeAllCaps",
+            ):
+                candidate = raw_data.get(candidate_key)
+                if not isinstance(candidate, dict):
+                    continue
+                if readme_size is None:
+                    candidate_size = candidate.get("byteSize")
+                    if isinstance(candidate_size, int):
+                        readme_size = candidate_size
+                if readme_text is None:
+                    text = candidate.get("text")
+                    if isinstance(text, str):
+                        readme_text = text
+                if readme_size is not None and readme_text is not None:
+                    break
+
+        # Check if README exists and handle symlinks
+        has_readme = False
+        if readme_size is not None:
+            # If byte_size is small (< 100), it might be a symlink - check text content
+            if readme_size > 100:
+                has_readme = True
+            elif readme_size > 0:
+                if readme_text:
+                    # Small file - might be a symlink, check if text looks like a path
+                    if "/" in readme_text and not readme_text.startswith("#"):
+                        # Looks like a symlink path (e.g., "packages/next/README.md")
+                        # In this case, consider README as present since GitHub resolves it
+                        has_readme = True
+                    elif len(readme_text.strip()) >= 10:
+                        # Small but valid README content
+                        has_readme = True
+                elif vcs_data.raw_data is None:
+                    has_readme = True
+        elif readme_text and len(readme_text.strip()) >= 10:
             has_readme = True
-        elif byte_size > 0:
-            # Small file - might be a symlink, check if text looks like a path
-            text = readme.get("text", "")
-            if text and "/" in text and not text.startswith("#"):
-                # Looks like a symlink path (e.g., "packages/next/README.md")
-                # In this case, consider README as present since GitHub resolves it
-                has_readme = True
-            elif text and len(text.strip()) >= 10:
-                # Small but valid README content
-                has_readme = True
 
-    # Check CONTRIBUTING.md
-    contributing = repo_data.get("contributingFile")
-    has_contributing = contributing is not None
+        # Check CONTRIBUTING.md
+        contributing_size = vcs_data.contributing_file_size
+        has_contributing = contributing_size is not None
+        if not has_contributing and raw_data:
+            contributing = raw_data.get("contributingFile")
+            if isinstance(contributing, dict):
+                has_contributing = True
 
-    # Check Wiki
-    has_wiki = repo_data.get("hasWikiEnabled", False)
+        # Check Wiki
+        has_wiki = vcs_data.has_wiki
 
-    # Check Homepage URL
-    homepage = repo_data.get("homepageUrl")
-    has_homepage = bool(homepage and len(homepage) > 5)
+        # Check Homepage URL
+        homepage = vcs_data.homepage_url
+        has_homepage = bool(homepage and len(homepage) > 5)
 
-    # Check Description
-    description = repo_data.get("description")
-    has_description = bool(description and len(description) > 10)
+        # Check Description
+        description = vcs_data.description
+        has_description = bool(description and len(description) > 10)
 
-    # Count documentation signals
-    doc_signals = sum(
-        [has_readme, has_contributing, has_wiki, has_homepage, has_description]
-    )
-
-    # Scoring logic
-    if doc_signals >= 4:
-        score = max_score
-        risk = "None"
-        message = f"Excellent: {doc_signals}/5 documentation signals present."
-    elif doc_signals >= 3:
-        score = 7
-        risk = "Low"
-        message = f"Good: {doc_signals}/5 documentation signals present."
-    elif has_readme and doc_signals >= 2:
-        score = 5
-        risk = "Low"
-        message = (
-            f"Moderate: README present with {doc_signals}/5 documentation signals."
+        # Count documentation signals
+        doc_signals = sum(
+            [has_readme, has_contributing, has_wiki, has_homepage, has_description]
         )
-    elif has_readme:
-        score = 4
-        risk = "Medium"
-        message = "Basic: Only README detected. Consider adding CONTRIBUTING.md."
-    else:
-        score = 0
-        risk = "High"
-        message = "Observe: No README or documentation found. Add documentation to help contributors."
 
-    return Metric("Documentation Presence", score, max_score, message, risk)
+        # Scoring logic
+        if doc_signals >= 4:
+            score = max_score
+            risk = "None"
+            message = f"Excellent: {doc_signals}/5 documentation signals present."
+        elif doc_signals >= 3:
+            score = 7
+            risk = "Low"
+            message = f"Good: {doc_signals}/5 documentation signals present."
+        elif has_readme and doc_signals >= 2:
+            score = 5
+            risk = "Low"
+            message = (
+                f"Moderate: README present with {doc_signals}/5 documentation signals."
+            )
+        elif has_readme:
+            score = 4
+            risk = "Medium"
+            message = "Basic: Only README detected. Consider adding CONTRIBUTING.md."
+        else:
+            score = 0
+            risk = "High"
+            message = "Observe: No README or documentation found. Add documentation to help contributors."
+
+        return Metric("Documentation Presence", score, max_score, message, risk)
 
 
-def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
-    return check_documentation_presence(repo_data)
+_CHECKER = DocumentationPresenceChecker()
+
+
+def check_documentation_presence(
+    repo_data: dict[str, Any] | VCSRepositoryData,
+) -> Metric:
+    if isinstance(repo_data, VCSRepositoryData):
+        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
+    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:
@@ -113,6 +154,6 @@ def _on_error(error: Exception) -> Metric:
 
 METRIC = MetricSpec(
     name="Documentation Presence",
-    checker=_check,
+    checker=_CHECKER,
     on_error=_on_error,
 )

@@ -24,6 +24,18 @@ class VCSRepositoryData(NamedTuple):
     owner_login: str
     owner_name: str | None  # Display name (for organizations)
 
+    # Repository metadata
+    star_count: int  # GitHub stargazersCount, GitLab starCount
+    description: str | None  # Project description
+    homepage_url: str | None  # Project homepage URL
+    topics: list[str]  # Repository topics or tags
+    readme_size: int | None  # README byte size
+    contributing_file_size: int | None  # CONTRIBUTING byte size
+    default_branch: str | None  # Default branch name
+    watchers_count: int  # Repository watcher count
+    open_issues_count: int  # Total open issues
+    language: str | None  # Primary programming language
+
     # Commit data
     commits: list[dict[str, Any]]  # List of commit objects with author, date, etc.
     total_commits: int  # Total commit count (may be larger than sample)

@@ -2,87 +2,100 @@
 
 from typing import Any
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+_LEGACY_CONTEXT = MetricContext(owner="unknown", name="unknown", repo_url="")
 
 
-def check_pr_acceptance_ratio(repo_data: dict[str, Any]) -> Metric:
-    """
-    Evaluates the Change Request Acceptance Ratio (CHAOSS metric).
+class PrAcceptanceRatioChecker(MetricChecker):
+    """Evaluate PR acceptance ratio using normalized VCS data."""
 
-    Measures: merged PRs / (merged PRs + closed-without-merge PRs)
+    def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
+        """
+        Evaluates the Change Request Acceptance Ratio (CHAOSS metric).
 
-    A high ratio indicates openness to external contributions.
+        Measures: merged PRs / (merged PRs + closed-without-merge PRs)
 
-    Scoring:
-    - 80%+ acceptance: 10/10 (Very welcoming)
-    - 60-79%: 7/10 (Good)
-    - 40-59%: 4/10 (Moderate - may be selective)
-    - <40%: 0/10 (Needs attention)
-    """
-    max_score = 10
+        A high ratio indicates openness to external contributions.
 
-    # Get merged count
-    merged_prs = repo_data.get("mergedPullRequestsCount", {})
-    merged_count = merged_prs.get("totalCount", 0)
+        Scoring:
+        - 80%+ acceptance: 10/10 (Very welcoming)
+        - 60-79%: 7/10 (Good)
+        - 40-59%: 4/10 (Moderate - may be selective)
+        - <40%: 0/10 (Needs attention)
+        """
+        max_score = 10
 
-    # Get closed PRs (includes both merged and closed-without-merge)
-    closed_prs = repo_data.get("closedPullRequests", {})
-    closed_edges = closed_prs.get("edges", [])
+        merged_count = vcs_data.total_merged_prs
 
-    # Count closed-without-merge
-    closed_without_merge = sum(
-        1 for edge in closed_edges if edge.get("node", {}).get("merged") is False
-    )
-
-    total_resolved = merged_count + closed_without_merge
-
-    if total_resolved == 0:
-        return Metric(
-            "PR Acceptance Ratio",
-            max_score // 2,
-            max_score,
-            "Note: No resolved pull requests to analyze.",
-            "None",
+        closed_without_merge = sum(
+            1
+            for pr in vcs_data.closed_prs
+            if pr.get("merged") is False or pr.get("state") == "closed"
         )
 
-    acceptance_ratio = merged_count / total_resolved
-    percentage = acceptance_ratio * 100
+        total_resolved = merged_count + closed_without_merge
 
-    # Scoring logic
-    if acceptance_ratio >= 0.8:
-        score = max_score
-        risk = "None"
-        message = (
-            f"Excellent: {percentage:.0f}% PR acceptance rate. "
-            f"Very welcoming to contributions ({merged_count} merged)."
-        )
-    elif acceptance_ratio >= 0.6:
-        score = 7
-        risk = "Low"
-        message = (
-            f"Good: {percentage:.0f}% PR acceptance rate. "
-            f"Open to external contributions ({merged_count} merged)."
-        )
-    elif acceptance_ratio >= 0.4:
-        score = 4
-        risk = "Medium"
-        message = (
-            f"Moderate: {percentage:.0f}% PR acceptance rate. "
-            f"May be selective about contributions."
-        )
-    else:
-        score = 0
-        risk = "Medium"
-        message = (
-            f"Observe: {percentage:.0f}% PR acceptance rate. "
-            f"High rejection rate may discourage contributors."
-        )
+        if total_resolved == 0:
+            return Metric(
+                "PR Acceptance Ratio",
+                max_score // 2,
+                max_score,
+                "Note: No resolved pull requests to analyze.",
+                "None",
+            )
 
-    return Metric("PR Acceptance Ratio", score, max_score, message, risk)
+        acceptance_ratio = merged_count / total_resolved
+        percentage = acceptance_ratio * 100
+
+        # Scoring logic
+        if acceptance_ratio >= 0.8:
+            score = max_score
+            risk = "None"
+            message = (
+                f"Excellent: {percentage:.0f}% PR acceptance rate. "
+                f"Very welcoming to contributions ({merged_count} merged)."
+            )
+        elif acceptance_ratio >= 0.6:
+            score = 7
+            risk = "Low"
+            message = (
+                f"Good: {percentage:.0f}% PR acceptance rate. "
+                f"Open to external contributions ({merged_count} merged)."
+            )
+        elif acceptance_ratio >= 0.4:
+            score = 4
+            risk = "Medium"
+            message = (
+                f"Moderate: {percentage:.0f}% PR acceptance rate. "
+                f"May be selective about contributions."
+            )
+        else:
+            score = 0
+            risk = "Medium"
+            message = (
+                f"Observe: {percentage:.0f}% PR acceptance rate. "
+                f"High rejection rate may discourage contributors."
+            )
+
+        return Metric("PR Acceptance Ratio", score, max_score, message, risk)
 
 
-def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
-    return check_pr_acceptance_ratio(repo_data)
+_CHECKER = PrAcceptanceRatioChecker()
+
+
+def check_pr_acceptance_ratio(
+    repo_data: dict[str, Any] | VCSRepositoryData,
+) -> Metric:
+    if isinstance(repo_data, VCSRepositoryData):
+        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
+    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:
@@ -97,6 +110,6 @@ def _on_error(error: Exception) -> Metric:
 
 METRIC = MetricSpec(
     name="PR Acceptance Ratio",
-    checker=_check,
+    checker=_CHECKER,
     on_error=_on_error,
 )

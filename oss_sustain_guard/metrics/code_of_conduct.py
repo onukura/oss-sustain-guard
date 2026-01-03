@@ -2,40 +2,54 @@
 
 from typing import Any
 
-from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.metrics.base import (
+    Metric,
+    MetricChecker,
+    MetricContext,
+    MetricSpec,
+)
+from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+_LEGACY_CONTEXT = MetricContext(owner="unknown", name="unknown", repo_url="")
 
 
-def check_code_of_conduct(repo_data: dict[str, Any]) -> Metric:
-    """
-    Checks for presence of a Code of Conduct.
+class CodeOfConductChecker(MetricChecker):
+    """Evaluate Code of Conduct presence using normalized VCS data."""
 
-    A Code of Conduct signals a welcoming, inclusive community.
+    def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
+        """
+        Checks for presence of a Code of Conduct.
 
-    Scoring (0-10 scale):
-    - GitHub recognized CoC: 10/10
-    - No CoC: 0/10 (informational)
-    """
-    max_score = 10
+        A Code of Conduct signals a welcoming, inclusive community.
 
-    code_of_conduct = repo_data.get("codeOfConduct")
+        Scoring (0-10 scale):
+        - GitHub recognized CoC: 10/10
+        - No CoC: 0/10 (informational)
+        """
+        max_score = 10
 
-    if code_of_conduct and code_of_conduct.get("name"):
-        coc_name = code_of_conduct.get("name", "Unknown")
-        score = max_score
-        risk = "None"
-        message = f"Excellent: Code of Conduct present ({coc_name})."
-    else:
-        score = 0
-        risk = "Low"
-        message = (
-            "Note: No Code of Conduct detected. Consider adding one for inclusivity."
-        )
+        code_of_conduct = vcs_data.code_of_conduct
 
-    return Metric("Code of Conduct", score, max_score, message, risk)
+        if code_of_conduct and code_of_conduct.get("name"):
+            coc_name = code_of_conduct.get("name", "Unknown")
+            score = max_score
+            risk = "None"
+            message = f"Excellent: Code of Conduct present ({coc_name})."
+        else:
+            score = 0
+            risk = "Low"
+            message = "Note: No Code of Conduct detected. Consider adding one for inclusivity."
+
+        return Metric("Code of Conduct", score, max_score, message, risk)
 
 
-def _check(repo_data: dict[str, Any], _context: MetricContext) -> Metric:
-    return check_code_of_conduct(repo_data)
+_CHECKER = CodeOfConductChecker()
+
+
+def check_code_of_conduct(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
+    if isinstance(repo_data, VCSRepositoryData):
+        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
+    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:
@@ -50,6 +64,6 @@ def _on_error(error: Exception) -> Metric:
 
 METRIC = MetricSpec(
     name="Code of Conduct",
-    checker=_check,
+    checker=_CHECKER,
     on_error=_on_error,
 )
