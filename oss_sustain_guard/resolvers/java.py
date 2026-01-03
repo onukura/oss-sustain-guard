@@ -434,3 +434,6 @@ class JavaResolver(LanguageResolver):
             return packages
         except Exception as e:
             raise ValueError(f"Failed to parse build.sbt.lock: {e}") from e
+
+
+RESOLVER = JavaResolver()

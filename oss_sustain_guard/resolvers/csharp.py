@@ -262,3 +262,6 @@ class CSharpResolver(LanguageResolver):
             return packages
         except Exception as e:
             raise ValueError(f"Failed to parse packages.config: {e}") from e
+
+
+RESOLVER = CSharpResolver()

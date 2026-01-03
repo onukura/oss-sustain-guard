@@ -239,3 +239,6 @@ class RubyResolver(LanguageResolver):
             return packages
         except (IOError, ValueError) as e:
             raise ValueError(f"Failed to parse Gemfile: {e}") from e
+
+
+RESOLVER = RubyResolver()

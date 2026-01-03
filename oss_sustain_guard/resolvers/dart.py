@@ -181,3 +181,6 @@ class DartResolver(LanguageResolver):
                     packages.append(PackageInfo(name=name, ecosystem="dart"))
 
         return packages
+
+
+RESOLVER = DartResolver()

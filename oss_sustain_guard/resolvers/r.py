@@ -210,3 +210,6 @@ async def _parse_description(manifest_path: Path) -> list[PackageInfo]:
             )
 
     return packages
+
+
+RESOLVER = RResolver()

@@ -199,3 +199,6 @@ class RustResolver(LanguageResolver):
             return packages
         except Exception:
             return []
+
+
+RESOLVER = RustResolver()

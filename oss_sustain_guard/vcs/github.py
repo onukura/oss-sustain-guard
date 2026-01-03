@@ -542,3 +542,6 @@ class GitHubProvider(BaseVCSProvider):
             sample_counts=sample_counts,
             raw_data=repo_info,  # Keep original data for debugging
         )
+
+
+PROVIDER = GitHubProvider

@@ -442,3 +442,6 @@ class PythonResolver(LanguageResolver):
             return packages
         except Exception:
             return []
+
+
+RESOLVER = PythonResolver()

@@ -169,3 +169,6 @@ def _extract_package_urls(content: str) -> list[str]:
     """Extract package URLs from a Package.swift manifest."""
     pattern = re.compile(r"package\s*\(\s*url:\s*[\"']([^\"']+)[\"']")
     return pattern.findall(content)
+
+
+RESOLVER = SwiftResolver()

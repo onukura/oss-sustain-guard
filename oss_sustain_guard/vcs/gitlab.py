@@ -691,3 +691,6 @@ class GitLabProvider(BaseVCSProvider):
             or fork_node.get("last_activity_at"),
             "owner": {"login": owner_login},
         }
+
+
+PROVIDER = GitLabProvider

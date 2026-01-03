@@ -173,3 +173,6 @@ def _extract_deps_block(content: str) -> str | None:
     if not match:
         return None
     return match.group(1)
+
+
+RESOLVER = ElixirResolver()

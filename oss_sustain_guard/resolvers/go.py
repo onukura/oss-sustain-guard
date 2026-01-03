@@ -294,3 +294,6 @@ class GoResolver(LanguageResolver):
             ]
         except Exception:
             return []
+
+
+RESOLVER = GoResolver()

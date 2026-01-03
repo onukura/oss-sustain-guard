@@ -184,3 +184,6 @@ def _strip_distribution_version(name: str) -> str:
     if match:
         return match.group("base")
     return name
+
+
+RESOLVER = PerlResolver()

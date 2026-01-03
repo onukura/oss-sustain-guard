@@ -25,3 +25,6 @@ class KotlinResolver(JavaResolver):
         """
         # Prioritize Kotlin DSL build files
         return ["build.gradle.kts", "build.gradle", "pom.xml"]
+
+
+RESOLVER = KotlinResolver()

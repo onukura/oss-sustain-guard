@@ -214,3 +214,6 @@ class PhpResolver(LanguageResolver):
             return packages
         except (json.JSONDecodeError, IOError) as e:
             raise ValueError(f"Failed to parse composer.json: {e}") from e
+
+
+RESOLVER = PhpResolver()

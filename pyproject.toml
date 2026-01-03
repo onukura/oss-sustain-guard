@@ -79,6 +79,27 @@ stale_issue_ratio = "oss_sustain_guard.metrics.stale_issue_ratio:METRIC"
 pr_merge_speed = "oss_sustain_guard.metrics.pr_merge_speed:METRIC"
 maintainer_load_distribution = "oss_sustain_guard.metrics.single_maintainer_load:METRIC"
 
+[project.entry-points."oss_sustain_guard.resolvers"]
+python = "oss_sustain_guard.resolvers.python:RESOLVER"
+javascript = "oss_sustain_guard.resolvers.javascript:RESOLVER"
+dart = "oss_sustain_guard.resolvers.dart:RESOLVER"
+elixir = "oss_sustain_guard.resolvers.elixir:RESOLVER"
+go = "oss_sustain_guard.resolvers.go:RESOLVER"
+haskell = "oss_sustain_guard.resolvers.haskell:RESOLVER"
+java = "oss_sustain_guard.resolvers.java:RESOLVER"
+kotlin = "oss_sustain_guard.resolvers.kotlin:RESOLVER"
+perl = "oss_sustain_guard.resolvers.perl:RESOLVER"
+php = "oss_sustain_guard.resolvers.php:RESOLVER"
+r = "oss_sustain_guard.resolvers.r:RESOLVER"
+ruby = "oss_sustain_guard.resolvers.ruby:RESOLVER"
+rust = "oss_sustain_guard.resolvers.rust:RESOLVER"
+csharp = "oss_sustain_guard.resolvers.csharp:RESOLVER"
+swift = "oss_sustain_guard.resolvers.swift:RESOLVER"
+
+[project.entry-points."oss_sustain_guard.vcs"]
+github = "oss_sustain_guard.vcs.github:PROVIDER"
+gitlab = "oss_sustain_guard.vcs.gitlab:PROVIDER"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

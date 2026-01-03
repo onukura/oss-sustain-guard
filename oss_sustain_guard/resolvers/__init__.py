@@ -2,25 +2,89 @@
 Resolver registry and factory functions for managing multiple language resolvers.
 """
 
+from importlib import import_module
+from importlib.metadata import entry_points
 from pathlib import Path
+from warnings import warn
 
 from oss_sustain_guard.config import get_exclusion_patterns
 from oss_sustain_guard.resolvers.base import LanguageResolver
-from oss_sustain_guard.resolvers.csharp import CSharpResolver
-from oss_sustain_guard.resolvers.dart import DartResolver
-from oss_sustain_guard.resolvers.elixir import ElixirResolver
-from oss_sustain_guard.resolvers.go import GoResolver
-from oss_sustain_guard.resolvers.haskell import HaskellResolver
-from oss_sustain_guard.resolvers.java import JavaResolver
-from oss_sustain_guard.resolvers.javascript import JavaScriptResolver
-from oss_sustain_guard.resolvers.kotlin import KotlinResolver
-from oss_sustain_guard.resolvers.perl import PerlResolver
-from oss_sustain_guard.resolvers.php import PhpResolver
-from oss_sustain_guard.resolvers.python import PythonResolver
-from oss_sustain_guard.resolvers.r import RResolver
-from oss_sustain_guard.resolvers.ruby import RubyResolver
-from oss_sustain_guard.resolvers.rust import RustResolver
-from oss_sustain_guard.resolvers.swift import SwiftResolver
+
+_BUILTIN_MODULES = [
+    "oss_sustain_guard.resolvers.python",
+    "oss_sustain_guard.resolvers.javascript",
+    "oss_sustain_guard.resolvers.dart",
+    "oss_sustain_guard.resolvers.elixir",
+    "oss_sustain_guard.resolvers.go",
+    "oss_sustain_guard.resolvers.haskell",
+    "oss_sustain_guard.resolvers.java",
+    "oss_sustain_guard.resolvers.kotlin",
+    "oss_sustain_guard.resolvers.perl",
+    "oss_sustain_guard.resolvers.php",
+    "oss_sustain_guard.resolvers.r",
+    "oss_sustain_guard.resolvers.ruby",
+    "oss_sustain_guard.resolvers.rust",
+    "oss_sustain_guard.resolvers.csharp",
+    "oss_sustain_guard.resolvers.swift",
+]
+
+
+def _load_builtin_resolvers() -> list[LanguageResolver]:
+    resolvers: list[LanguageResolver] = []
+    for module_path in _BUILTIN_MODULES:
+        module = import_module(module_path)
+        resolver = getattr(module, "RESOLVER", None)
+        if resolver is not None:
+            resolvers.append(resolver)
+    return resolvers
+
+
+def _load_entrypoint_resolvers() -> list[LanguageResolver]:
+    resolvers: list[LanguageResolver] = []
+    for entry_point in entry_points(group="oss_sustain_guard.resolvers"):
+        try:
+            loaded = entry_point.load()
+        except Exception as exc:
+            warn(
+                f"Note: Unable to load resolver plugin '{entry_point.name}': {exc}",
+                stacklevel=2,
+            )
+            continue
+        if isinstance(loaded, LanguageResolver):
+            resolvers.append(loaded)
+            continue
+        if callable(loaded):
+            try:
+                resolver = loaded()
+            except Exception as exc:
+                warn(
+                    "Note: Unable to initialize resolver plugin "
+                    f"'{entry_point.name}': {exc}",
+                    stacklevel=2,
+                )
+                continue
+            if isinstance(resolver, LanguageResolver):
+                resolvers.append(resolver)
+    return resolvers
+
+
+def load_resolvers() -> list[LanguageResolver]:
+    """Load built-in and entrypoint resolvers.
+
+    Built-in resolvers are always loaded. Entrypoint resolvers are added if they do
+    not share an ecosystem name with an existing built-in resolver.
+    """
+    resolvers = _load_builtin_resolvers()
+    existing = {resolver.ecosystem_name for resolver in resolvers}
+
+    for resolver in _load_entrypoint_resolvers():
+        if resolver.ecosystem_name in existing:
+            continue
+        resolvers.append(resolver)
+        existing.add(resolver.ecosystem_name)
+
+    return resolvers
+
 
 # Global registry of resolvers
 _RESOLVERS: dict[str, LanguageResolver] = {}
@@ -30,37 +94,44 @@ def _initialize_resolvers() -> None:
     """Initialize all registered resolvers."""
     global _RESOLVERS
     if not _RESOLVERS:
-        _RESOLVERS["python"] = PythonResolver()
-        _RESOLVERS["py"] = PythonResolver()  # Alias
-        _RESOLVERS["javascript"] = JavaScriptResolver()
-        _RESOLVERS["typescript"] = JavaScriptResolver()  # Alias
-        _RESOLVERS["js"] = JavaScriptResolver()  # Alias
-        _RESOLVERS["npm"] = JavaScriptResolver()  # Alias
-        _RESOLVERS["dart"] = DartResolver()
-        _RESOLVERS["pub"] = DartResolver()  # Alias
-        _RESOLVERS["elixir"] = ElixirResolver()
-        _RESOLVERS["hex"] = ElixirResolver()  # Alias
-        _RESOLVERS["go"] = GoResolver()
-        _RESOLVERS["r"] = RResolver()
-        _RESOLVERS["cran"] = RResolver()  # Alias
-        _RESOLVERS["ruby"] = RubyResolver()
-        _RESOLVERS["gem"] = RubyResolver()  # Alias
-        _RESOLVERS["rust"] = RustResolver()
-        _RESOLVERS["haskell"] = HaskellResolver()
-        _RESOLVERS["hackage"] = HaskellResolver()  # Alias
-        _RESOLVERS["perl"] = PerlResolver()
-        _RESOLVERS["cpan"] = PerlResolver()  # Alias
-        _RESOLVERS["php"] = PhpResolver()
-        _RESOLVERS["composer"] = PhpResolver()  # Alias
-        _RESOLVERS["java"] = JavaResolver()
-        _RESOLVERS["kotlin"] = KotlinResolver()
-        _RESOLVERS["scala"] = JavaResolver()  # Alias (uses Maven Central/sbt)
-        _RESOLVERS["maven"] = JavaResolver()  # Alias
-        _RESOLVERS["csharp"] = CSharpResolver()
-        _RESOLVERS["dotnet"] = CSharpResolver()  # Alias
-        _RESOLVERS["nuget"] = CSharpResolver()  # Alias
-        _RESOLVERS["swift"] = SwiftResolver()
-        _RESOLVERS["spm"] = SwiftResolver()  # Alias
+        for resolver in load_resolvers():
+            _RESOLVERS[resolver.ecosystem_name] = resolver
+            # Add aliases
+            if resolver.ecosystem_name == "python":
+                _RESOLVERS["py"] = resolver
+            elif resolver.ecosystem_name == "javascript":
+                _RESOLVERS["typescript"] = resolver
+                _RESOLVERS["js"] = resolver
+                _RESOLVERS["npm"] = resolver
+            elif resolver.ecosystem_name == "dart":
+                _RESOLVERS["pub"] = resolver
+            elif resolver.ecosystem_name == "elixir":
+                _RESOLVERS["hex"] = resolver
+            elif resolver.ecosystem_name == "go":
+                pass  # No aliases
+            elif resolver.ecosystem_name == "haskell":
+                _RESOLVERS["hackage"] = resolver
+            elif resolver.ecosystem_name == "java":
+                _RESOLVERS["kotlin"] = resolver  # Kotlin uses JavaResolver
+                _RESOLVERS["scala"] = resolver
+                _RESOLVERS["maven"] = resolver
+            elif resolver.ecosystem_name == "kotlin":
+                pass  # Handled above
+            elif resolver.ecosystem_name == "perl":
+                _RESOLVERS["cpan"] = resolver
+            elif resolver.ecosystem_name == "php":
+                _RESOLVERS["composer"] = resolver
+            elif resolver.ecosystem_name == "r":
+                _RESOLVERS["cran"] = resolver
+            elif resolver.ecosystem_name == "ruby":
+                _RESOLVERS["gem"] = resolver
+            elif resolver.ecosystem_name == "rust":
+                pass  # No aliases
+            elif resolver.ecosystem_name == "csharp":
+                _RESOLVERS["dotnet"] = resolver
+                _RESOLVERS["nuget"] = resolver
+            elif resolver.ecosystem_name == "swift":
+                _RESOLVERS["spm"] = resolver
 
 
 def get_resolver(ecosystem: str) -> LanguageResolver | None:
@@ -98,14 +169,72 @@ def get_all_resolvers() -> list[LanguageResolver]:
     """
     _initialize_resolvers()
     # Deduplicate by resolver class to avoid returning the same resolver multiple times
-    seen = set()
+    seen_classes = set()
     unique_resolvers = []
     for resolver in _RESOLVERS.values():
-        resolver_id = id(resolver)
-        if resolver_id not in seen:
-            seen.add(resolver_id)
+        if resolver.__class__ not in seen_classes:
+            seen_classes.add(resolver.__class__)
             unique_resolvers.append(resolver)
     return unique_resolvers
+
+
+async def find_manifest_files(path: str) -> list[str]:
+    """
+    Find manifest files in the given path.
+
+    Args:
+        path: Path to search for manifest files.
+
+    Returns:
+        List of manifest file names found.
+    """
+    from pathlib import Path
+
+    manifests = set()
+    for resolver in get_all_resolvers():
+        try:
+            resolver_manifests = await resolver.get_manifest_files()
+            for manifest in resolver_manifests:
+                if (Path(path) / manifest).exists():
+                    manifests.add(manifest)
+        except Exception:
+            continue
+    return sorted(manifests)
+
+
+async def find_lockfiles(path: str) -> list[str]:
+    """
+    Find lockfiles in the given path.
+
+    Args:
+        path: Path to search for lockfiles.
+
+    Returns:
+        List of lockfile names found.
+    """
+    from pathlib import Path
+
+    lockfiles = set()
+    for resolver in get_all_resolvers():
+        try:
+            resolver_lockfiles = await resolver.get_lockfiles()
+            for lockfile in resolver_lockfiles:
+                if (Path(path) / lockfile).exists():
+                    lockfiles.add(lockfile)
+        except Exception:
+            continue
+    return sorted(lockfiles)
+
+
+__all__ = [
+    "LanguageResolver",
+    "get_resolver",
+    "register_resolver",
+    "get_all_resolvers",
+    "detect_ecosystems",
+    "find_manifest_files",
+    "find_lockfiles",
+]
 
 
 async def detect_ecosystems(

@@ -313,3 +313,6 @@ async def _parse_stack_manifest(manifest_path: Path) -> list[PackageInfo]:
         packages.append(PackageInfo(name=name, ecosystem="haskell"))
 
     return packages
+
+
+RESOLVER = HaskellResolver()

@@ -344,3 +344,6 @@ def _extract_npm_package_name(package_path: str) -> str | None:
     if name_parts[0].startswith("@") and len(name_parts) >= 2:
         return "/".join(name_parts[:2])
     return name_parts[0]
+
+
+RESOLVER = JavaScriptResolver()
