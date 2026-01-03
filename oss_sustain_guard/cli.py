@@ -48,7 +48,6 @@ from oss_sustain_guard.core import (
     Metric,
     MetricModel,
     analysis_result_to_dict,
-    analyze_repositories_batch,
     analyze_repository,
     apply_profile_overrides,
     compute_weighted_total_score,
@@ -1079,7 +1078,6 @@ def analyze_packages_parallel(
     verbose: bool = False,
     use_local_cache: bool = True,
     max_workers: int = 5,
-    use_batch_queries: bool = True,
 ) -> list[AnalysisResult | None]:
     """
     Analyze multiple packages in parallel using ThreadPoolExecutor.
@@ -1093,7 +1091,6 @@ def analyze_packages_parallel(
         verbose: If True, display cache source information.
         use_local_cache: If False, skip local cache lookup.
         max_workers: Maximum number of parallel workers (default: 5).
-        use_batch_queries: If True, use batch GraphQL queries for uncached packages.
 
     Returns:
         List of AnalysisResult or None for each package.
@@ -1131,9 +1128,7 @@ def analyze_packages_parallel(
         task = progress.add_task("[cyan]Analyzing packages...", total=total)
 
         # Step 1: Check cache and resolve repositories
-        uncached_packages: list[
-            tuple[str, str, str, str]
-        ] = []  # (ecosystem, pkg, owner, repo)
+        uncached_packages: list[tuple[str, str]] = []  # (ecosystem, pkg)
         pkg_to_index: dict[tuple[str, str], int] = {}
         results_map: dict[int, AnalysisResult | None] = {}
 
@@ -1194,57 +1189,15 @@ def analyze_packages_parallel(
                 continue
 
             repo_info = resolver.resolve_repository(pkg)
-            if not repo_info or repo_info.provider != "github":
+            if not repo_info:
                 results_map[idx] = None
                 progress.advance(task)
                 continue
 
-            uncached_packages.append((ecosystem, pkg, repo_info.owner, repo_info.name))
+            uncached_packages.append((ecosystem, pkg))
 
-        # Step 2: Batch query for uncached packages
-        if use_batch_queries and uncached_packages:
-            # Process in batches to update progress incrementally
-            batch_size = 3  # Match the batch size in analyze_repositories_batch
-            for batch_idx in range(0, len(uncached_packages), batch_size):
-                batch_end = min(batch_idx + batch_size, len(uncached_packages))
-                current_batch = uncached_packages[batch_idx:batch_end]
-                current_repo_list = [
-                    (owner, repo) for _, _pkg, owner, repo in current_batch
-                ]
-
-                # Analyze current batch
-                batch_results = analyze_repositories_batch(
-                    current_repo_list, profile=profile
-                )
-
-                # Process results and update progress for each package in batch
-                for ecosystem, pkg, owner, repo in current_batch:
-                    idx = pkg_to_index[(ecosystem, pkg)]
-                    result = batch_results.get((owner, repo))
-
-                    if result:
-                        # Add ecosystem to result
-                        result = result._replace(ecosystem=ecosystem)
-                        resolved_lockfile = _resolve_lockfile_path(
-                            ecosystem, lockfile_path
-                        )
-                        if show_dependencies and resolved_lockfile:
-                            dep_scores = _analyze_dependencies_for_package(
-                                ecosystem,
-                                resolved_lockfile,
-                                db,
-                                pkg,
-                                profile,
-                            )
-                            result = result._replace(dependency_scores=dep_scores)
-
-                        _cache_analysis_result(ecosystem, pkg, result)
-
-                    results_map[idx] = result
-                    progress.advance(task)
-
-        elif not use_batch_queries and uncached_packages:
-            # Fall back to parallel processing without batch queries
+        # Step 2: Parallel analysis for uncached packages
+        if uncached_packages:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_pkg = {
                     executor.submit(
@@ -1258,7 +1211,7 @@ def analyze_packages_parallel(
                         False,
                         use_local_cache,
                     ): (ecosystem, pkg)
-                    for ecosystem, pkg, _, _ in uncached_packages
+                    for ecosystem, pkg in uncached_packages
                 }
 
                 for future in as_completed(future_to_pkg):
@@ -1371,7 +1324,6 @@ def _analyze_dependencies_for_package(
                 verbose=False,
                 use_local_cache=True,
                 max_workers=5,
-                use_batch_queries=True,
             )
 
             # Add scores from newly analyzed packages
