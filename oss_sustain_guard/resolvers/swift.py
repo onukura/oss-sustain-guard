@@ -37,7 +37,7 @@ class SwiftResolver(LanguageResolver):
             return parse_repository_url(candidate)
 
         if candidate.startswith("github.com/") or candidate.startswith("gitlab.com/"):
-            return parse_repository_url(candidate)
+            return parse_repository_url(f"https://{candidate}")
 
         if "/" in candidate:
             return parse_repository_url(f"https://github.com/{candidate}")
