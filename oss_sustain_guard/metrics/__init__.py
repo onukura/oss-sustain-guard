@@ -57,7 +57,8 @@ def _load_entrypoint_metric_specs() -> list[MetricSpec]:
             loaded = entry_point.load()
         except Exception as exc:
             warn(
-                f"Note: Unable to load metric plugin '{entry_point.name}': {exc}"
+                f"Note: Unable to load metric plugin '{entry_point.name}': {exc}",
+                stacklevel=2,
             )
             continue
         if isinstance(loaded, MetricSpec):
@@ -69,7 +70,8 @@ def _load_entrypoint_metric_specs() -> list[MetricSpec]:
             except Exception as exc:
                 warn(
                     "Note: Unable to initialize metric plugin "
-                    f"'{entry_point.name}': {exc}"
+                    f"'{entry_point.name}': {exc}",
+                    stacklevel=2,
                 )
                 continue
             if isinstance(spec, MetricSpec):
