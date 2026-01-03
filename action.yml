@@ -31,10 +31,6 @@ inputs:
     description: 'Analyze and display dependency package scores (requires lockfiles)'
     required: false
     default: 'false'
-  enable-dependents:
-    description: 'Enable downstream dependents analysis via Libraries.io API (requires LIBRARIESIO_API_KEY)'
-    required: false
-    default: 'false'
   root-dir:
     description: 'Root directory for auto-detection of manifest files (default: current directory)'
     required: false
@@ -70,7 +66,6 @@ runs:
     INPUT_VERBOSE: ${{ inputs.verbose }}
     INPUT_PROFILE: ${{ inputs.profile }}
     INPUT_SHOW_DEPENDENCIES: ${{ inputs.show-dependencies }}
-    INPUT_ENABLE_DEPENDENTS: ${{ inputs.enable-dependents }}
     INPUT_ROOT_DIR: ${{ inputs.root-dir }}
     INPUT_MANIFEST: ${{ inputs.manifest }}
     INPUT_RECURSIVE: ${{ inputs.recursive }}

@@ -76,7 +76,6 @@ ci_status = "oss_sustain_guard.metrics.ci_status:METRIC"
 stale_issue_ratio = "oss_sustain_guard.metrics.stale_issue_ratio:METRIC"
 pr_merge_speed = "oss_sustain_guard.metrics.pr_merge_speed:METRIC"
 maintainer_load_distribution = "oss_sustain_guard.metrics.single_maintainer_load:METRIC"
-dependents_count = "oss_sustain_guard.metrics.dependents_count:METRIC"
 
 [build-system]
 requires = ["hatchling"]

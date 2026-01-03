@@ -149,58 +149,10 @@ class TestAnalyzePackage:
 
         result = analyze_package("requests", "python", {})
         assert result == mock_result
-        # By default, enable_dependents=False, so platform and package_name should be None
+        # Registry context is not used when analyzing packages directly.
         mock_analyze_repo.assert_called_once_with(
             "psf",
             "requests",
-            platform=None,
-            package_name=None,
-            profile="balanced",
-            vcs_platform="github",
-        )
-
-    @patch("oss_sustain_guard.cli.save_cache")
-    @patch("oss_sustain_guard.cli.analyze_repository")
-    @patch("oss_sustain_guard.cli.get_resolver")
-    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
-    def test_analyze_package_with_dependents(
-        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
-    ):
-        """Test package analysis with dependents enabled."""
-        mock_resolver = MagicMock()
-        mock_resolver.resolve_repository.return_value = RepositoryReference(
-            provider="github",
-            host="github.com",
-            path="psf/requests",
-            owner="psf",
-            name="requests",
-        )
-        mock_get_resolver.return_value = mock_resolver
-
-        mock_result = AnalysisResult(
-            repo_url="https://github.com/psf/requests",
-            total_score=85,
-            metrics=[
-                Metric(
-                    name="Test Metric",
-                    score=85,
-                    max_score=100,
-                    message="Package analyzed successfully",
-                    risk="Low",
-                )
-            ],
-            ecosystem="python",
-        )
-        mock_analyze_repo.return_value = mock_result
-
-        result = analyze_package("requests", "python", {}, enable_dependents=True)
-        assert result == mock_result
-        # With enable_dependents=True, platform and package_name should be passed
-        mock_analyze_repo.assert_called_once_with(
-            "psf",
-            "requests",
-            platform="Pypi",
-            package_name="requests",
             profile="balanced",
             vcs_platform="github",
         )

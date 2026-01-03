@@ -36,7 +36,6 @@ _BUILTIN_MODULES = [
     "oss_sustain_guard.metrics.stale_issue_ratio",
     "oss_sustain_guard.metrics.pr_merge_speed",
     "oss_sustain_guard.metrics.single_maintainer_load",
-    "oss_sustain_guard.metrics.dependents_count",
 ]
 
 

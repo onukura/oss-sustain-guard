@@ -3,7 +3,6 @@ Command-line interface for OSS Sustain Guard.
 """
 
 import json
-import os
 import sys
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -65,7 +64,7 @@ from oss_sustain_guard.resolvers import (
 from oss_sustain_guard.resolvers.base import close_resolver_http_client
 
 # Schema version for cached data compatibility
-ANALYSIS_VERSION = "1.4"
+ANALYSIS_VERSION = "1.5"
 
 # project_root is the parent directory of oss_sustain_guard/
 project_root = Path(__file__).resolve().parent.parent
@@ -137,21 +136,6 @@ def _cache_analysis_result(
         }
     }
     save_cache(ecosystem, cache_entry)
-
-
-def _get_librariesio_platform(ecosystem: str) -> str | None:
-    platform_map = {
-        "python": "Pypi",
-        "javascript": "NPM",
-        "rust": "Cargo",
-        "java": "Maven",
-        "php": "Packagist",
-        "ruby": "Rubygems",
-        "csharp": "Nuget",
-        "dotnet": "Nuget",
-        "go": "Go",
-    }
-    return platform_map.get(ecosystem.lower())
 
 
 def apply_scoring_profiles(profile_file: Path | None) -> None:
@@ -679,9 +663,6 @@ def display_results_table(
                 f"\n⚠️  [yellow]{result.repo_url.replace('https://github.com/', '')}:[/yellow] "
                 f"[yellow]{len(result.skipped_metrics)} metric(s) not measured:[/yellow] {', '.join(result.skipped_metrics)}"
             )
-            for skipped in result.skipped_metrics:
-                if skipped == "Downstream Dependents":
-                    console.print("[dim]   Set LIBRARIESIO_API_KEY to enable[/dim]")
 
     # Display funding links if available
     for result in results:
@@ -984,11 +965,6 @@ def display_results_detailed(
             console.print(
                 f"   [yellow]⚠️  {len(result.skipped_metrics)} metric(s) not measured:[/yellow] {', '.join(result.skipped_metrics)}"
             )
-            for skipped in result.skipped_metrics:
-                if skipped == "Downstream Dependents":
-                    console.print(
-                        "[dim]      Set LIBRARIESIO_API_KEY to enable dependents analysis[/dim]"
-                    )
 
         # Display CHAOSS metric models if available and requested
         if show_models and result.models:
@@ -1113,7 +1089,6 @@ def analyze_packages_parallel(
     packages_data: list[tuple[str, str]],
     db: dict,
     profile: str = "balanced",
-    enable_dependents: bool = False,
     show_dependencies: bool = False,
     lockfile_path: str | Path | dict[str, Path] | None = None,
     verbose: bool = False,
@@ -1128,7 +1103,6 @@ def analyze_packages_parallel(
         packages_data: List of (ecosystem, package_name) tuples.
         db: Cached database dictionary.
         profile: Scoring profile name.
-        enable_dependents: Enable dependents analysis.
         show_dependencies: Analyze and include dependency scores.
         lockfile_path: Path to lockfile for dependency analysis (or mapping by ecosystem).
         verbose: If True, display cache source information.
@@ -1153,7 +1127,6 @@ def analyze_packages_parallel(
             ecosystem,
             db,
             profile,
-            enable_dependents,
             show_dependencies,
             lockfile_path,
             verbose,
@@ -1174,8 +1147,8 @@ def analyze_packages_parallel(
 
         # Step 1: Check cache and resolve repositories
         uncached_packages: list[
-            tuple[str, str, str, str, str | None]
-        ] = []  # (ecosystem, pkg, owner, repo, platform)
+            tuple[str, str, str, str]
+        ] = []  # (ecosystem, pkg, owner, repo)
         pkg_to_index: dict[tuple[str, str], int] = {}
         results_map: dict[int, AnalysisResult | None] = {}
 
@@ -1241,12 +1214,7 @@ def analyze_packages_parallel(
                 progress.advance(task)
                 continue
 
-            platform = (
-                _get_librariesio_platform(ecosystem) if enable_dependents else None
-            )
-            uncached_packages.append(
-                (ecosystem, pkg, repo_info.owner, repo_info.name, platform)
-            )
+            uncached_packages.append((ecosystem, pkg, repo_info.owner, repo_info.name))
 
         # Step 2: Batch query for uncached packages
         if use_batch_queries and uncached_packages:
@@ -1256,8 +1224,7 @@ def analyze_packages_parallel(
                 batch_end = min(batch_idx + batch_size, len(uncached_packages))
                 current_batch = uncached_packages[batch_idx:batch_end]
                 current_repo_list = [
-                    (owner, repo, platform, pkg)
-                    for _, pkg, owner, repo, platform in current_batch
+                    (owner, repo) for _, _pkg, owner, repo in current_batch
                 ]
 
                 # Analyze current batch
@@ -1266,7 +1233,7 @@ def analyze_packages_parallel(
                 )
 
                 # Process results and update progress for each package in batch
-                for ecosystem, pkg, owner, repo, _platform in current_batch:
+                for ecosystem, pkg, owner, repo in current_batch:
                     idx = pkg_to_index[(ecosystem, pkg)]
                     result = batch_results.get((owner, repo))
 
@@ -1301,13 +1268,12 @@ def analyze_packages_parallel(
                         ecosystem,
                         db,
                         profile,
-                        enable_dependents,
                         show_dependencies,
                         lockfile_path,
                         False,
                         use_local_cache,
                     ): (ecosystem, pkg)
-                    for ecosystem, pkg, _, _, _ in uncached_packages
+                    for ecosystem, pkg, _, _ in uncached_packages
                 }
 
                 for future in as_completed(future_to_pkg):
@@ -1415,7 +1381,6 @@ def _analyze_dependencies_for_package(
                 packages_to_analyze,
                 db,
                 profile,
-                enable_dependents=False,
                 show_dependencies=False,  # Don't recurse
                 lockfile_path=None,
                 verbose=False,
@@ -1470,7 +1435,6 @@ def analyze_package(
     ecosystem: str,
     db: dict,
     profile: str = "balanced",
-    enable_dependents: bool = False,
     show_dependencies: bool = False,
     lockfile_path: str | Path | dict[str, Path] | None = None,
     verbose: bool = False,
@@ -1484,7 +1448,6 @@ def analyze_package(
         ecosystem: Ecosystem name (python, javascript, go, rust).
         db: Cached database dictionary.
         profile: Scoring profile name.
-        enable_dependents: Enable dependents analysis.
         show_dependencies: Analyze and include dependency scores.
         lockfile_path: Path to lockfile for dependency analysis (or mapping by ecosystem).
         verbose: If True, display cache source information.
@@ -1606,19 +1569,10 @@ def analyze_package(
             f"  -> 🔍 [bold yellow]{db_key}[/bold yellow] analyzing real-time (no cache)..."
         )
 
-    # Only enable dependents analysis if explicitly requested
-    platform = None
-    pkg_name = None
-    if enable_dependents:
-        platform = _get_librariesio_platform(ecosystem)
-        pkg_name = package_name
-
     try:
         analysis_result = analyze_repository(
             owner,
             repo_name,
-            platform=platform,
-            package_name=pkg_name,
             profile=profile,
             vcs_platform=provider,
         )
@@ -1756,12 +1710,6 @@ def check(
         "--profile-file",
         help="Path to a TOML file with scoring profile definitions.",
     ),
-    enable_dependents: bool = typer.Option(
-        False,
-        "--enable-dependents",
-        "-DD",
-        help="Enable downstream dependents analysis via Libraries.io API (requires LIBRARIESIO_API_KEY).",
-    ),
     insecure: bool = typer.Option(
         False,
         "--insecure",
@@ -1859,7 +1807,6 @@ def check(
         "Stale Issue Ratio",
         "PR Merge Speed",
         "Maintainer Load Distribution",
-        "Downstream Dependents",
     }
 
     weights = get_metric_weights(profile)
@@ -1977,18 +1924,6 @@ def check(
         set_verify_ssl(str(ca_cert))
     else:
         set_verify_ssl(not insecure)
-
-    # Validate --enable-dependents flag
-    if enable_dependents and not os.getenv("LIBRARIESIO_API_KEY"):
-        console.print(
-            "[yellow]ℹ️  --enable-dependents requires LIBRARIESIO_API_KEY environment variable.[/yellow]"
-        )
-        console.print(
-            "[yellow]   The dependents metric will be skipped during analysis.[/yellow]"
-        )
-        console.print(
-            "[dim]   Set LIBRARIESIO_API_KEY to enable downstream dependents analysis.[/dim]"
-        )
 
     # Determine cache usage flags
     use_cache = not no_cache
@@ -2262,7 +2197,6 @@ def check(
             packages_to_process,
             db,
             profile,
-            enable_dependents,
             show_dependencies,
             lockfile,
             verbose,

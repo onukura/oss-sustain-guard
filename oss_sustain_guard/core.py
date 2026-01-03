@@ -9,7 +9,6 @@ import httpx
 from dotenv import load_dotenv
 from rich.console import Console
 
-from oss_sustain_guard.librariesio import query_librariesio_api
 from oss_sustain_guard.metrics import load_metric_specs
 from oss_sustain_guard.metrics.attraction import check_attraction  # noqa: F401
 from oss_sustain_guard.metrics.base import Metric, MetricContext
@@ -20,9 +19,6 @@ from oss_sustain_guard.metrics.code_of_conduct import (  # noqa: F401
 )
 from oss_sustain_guard.metrics.community_health import (  # noqa: F401
     check_community_health,  # noqa: F401
-)
-from oss_sustain_guard.metrics.dependents_count import (  # noqa: F401
-    check_dependents_count,  # noqa: F401
 )
 from oss_sustain_guard.metrics.documentation_presence import (  # noqa: F401
     check_documentation_presence,  # noqa: F401
@@ -159,24 +155,6 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
         "sample_counts": result.sample_counts or {},
         "skipped_metrics": list(result.skipped_metrics or []),
     }
-
-
-def _query_librariesio_api(platform: str, package_name: str) -> dict[str, Any] | None:
-    """
-    Queries Libraries.io API for package information including dependents count.
-
-    Args:
-        platform: Package platform (e.g., 'pypi', 'npm', 'cargo', 'maven')
-        package_name: Package name
-
-    Returns:
-        Package information dict or None if API key not set or request fails
-
-    Note:
-        Requires LIBRARIESIO_API_KEY environment variable.
-        Get free API key at: https://libraries.io/api
-    """
-    return query_librariesio_api(platform, package_name)
 
 
 # --- Helper Functions for VCS Data Conversion ---
@@ -1452,9 +1430,8 @@ def analyze_repository(
     Args:
         owner: Repository owner (username or organization)
         name: Repository name
-        platform: Optional package platform (e.g., 'Pypi', 'NPM', 'Cargo')
-                  for dependents analysis via Libraries.io
-        package_name: Optional package name on the registry for dependents analysis
+        platform: Optional package platform for registry-aware metrics.
+        package_name: Optional package name for registry-aware metrics.
         profile: Scoring profile name
         vcs_platform: VCS platform ('github', 'gitlab', etc.). Default: 'github'
 

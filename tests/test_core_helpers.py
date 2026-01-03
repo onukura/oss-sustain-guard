@@ -16,7 +16,6 @@ from oss_sustain_guard.core import (
     Metric,
     MetricModel,
     _get_batch_repository_query,
-    _query_librariesio_api,
     analysis_result_to_dict,
     analyze_dependencies,
     analyze_repositories_batch,
@@ -92,13 +91,6 @@ def test_analysis_result_to_dict_handles_mixed_metrics_and_models():
     assert data["models"][0]["observation"] == "Observation A"
     assert data["models"][2]["name"] == "Legacy Model"
     assert data["dependency_scores"] == {"dep": 80}
-
-
-def test_query_librariesio_api_delegates():
-    with patch("oss_sustain_guard.core.query_librariesio_api") as mock_query:
-        mock_query.return_value = {"ok": True}
-        assert _query_librariesio_api("pypi", "requests") == {"ok": True}
-        mock_query.assert_called_once_with("pypi", "requests")
 
 
 def test_apply_profile_overrides_resets_defaults():

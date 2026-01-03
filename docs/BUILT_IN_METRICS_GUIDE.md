@@ -15,7 +15,7 @@ This guide provides a comprehensive reference for all built-in metrics included 
 
 ## Overview
 
-OSS Sustain Guard evaluates projects across **25+ built-in metrics** organized into four categories:
+OSS Sustain Guard evaluates projects across **24+ built-in metrics** organized into four categories:
 
 | Category | Focus | Purpose |
 | ---------- | ------- | --------- |
@@ -68,7 +68,6 @@ Measure project impact and ecosystem integration:
 - [PR Merge Speed](#pr-merge-speed)
 - [PR Responsiveness](#pr-responsiveness)
 - [Organizational Diversity](#organizational-diversity)
-- [Dependents Count](#dependents-count)
 - [Single Maintainer Load](#single-maintainer-load)
 
 ---
@@ -745,38 +744,6 @@ Measure project impact and ecosystem integration:
 **CHAOSS Alignment:** ✅ [Organizational Diversity](https://chaoss.community/kb/metric-organizational-diversity/)
 
 **Use Case:** Assess ecosystem independence and sustainability.
-
----
-
-### Dependents Count
-
-**Purpose:** Measures downstream projects that depend on this package.
-
-**Data Source:** Libraries.io (requires `LIBRARIESIO_API_KEY`)
-
-**Availability:** Enabled only with `--enable-dependents`; skipped if the API key is not set.
-
-**Calculation:**
-
-- Counts downstream packages and dependent repositories from Libraries.io
-
-**Scoring:**
-
-- 10000+ dependents: 10/10 (Core infrastructure)
-- 1000+ dependents: 9/10 (Widely adopted)
-- 500+ dependents: 8/10 (Popular)
-- 100+ dependents: 6/10 (Established)
-- 50+ dependents: 5/10 (Growing adoption)
-- 10+ dependents: 3/10 (Early adoption)
-- 1+ dependents: 2/10 (Used by others)
-- 0 dependents: 0/10 (No downstream dependencies)
-
-**Status Levels:**
-
-- **None:** Very high adoption
-- **Low:** Low-to-moderate adoption
-
-**Use Case:** Assess strategic importance in package ecosystem.
 
 ---
 
