@@ -51,68 +51,78 @@ def test_gitlab_provider_get_repository_url():
 async def test_gitlab_provider_get_repository_data(mock_get_client):
     """Test GitLabProvider fetches and normalizes repository data."""
     # Mock HTTP client response
-    mock_client = mock_get_client.return_value
-    mock_response = MagicMock()
-    mock_client.post.return_value = mock_response
-    mock_response.raise_for_status.return_value = None
-    mock_response.json.return_value = {
-        "data": {
-            "project": {
-                "archived": False,
-                "lastActivityAt": "2024-01-01T00:00:00Z",
-                "namespace": {"fullPath": "testgroup/subgroup", "name": "Test Group"},
-                "repository": {"rootRef": "main"},
-                "mergeRequests": {
-                    "edges": [
-                        {
-                            "node": {
-                                "mergedAt": "2024-01-01T00:00:00Z",
-                                "createdAt": "2023-12-31T00:00:00Z",
-                                "mergeUser": {"username": "user1"},
-                                "approvedBy": {"nodes": []},
+    mock_client = AsyncMock()
+    mock_graphql_response = MagicMock()
+    mock_graphql_response.raise_for_status = MagicMock(return_value=None)
+    mock_graphql_response.json = MagicMock(
+        return_value={
+            "data": {
+                "project": {
+                    "archived": False,
+                    "lastActivityAt": "2024-01-01T00:00:00Z",
+                    "namespace": {
+                        "fullPath": "testgroup/subgroup",
+                        "name": "Test Group",
+                    },
+                    "repository": {"rootRef": "main"},
+                    "mergeRequests": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "mergedAt": "2024-01-01T00:00:00Z",
+                                    "createdAt": "2023-12-31T00:00:00Z",
+                                    "mergeUser": {"username": "user1"},
+                                    "approvedBy": {"nodes": []},
+                                }
                             }
-                        }
-                    ],
-                    "pageInfo": {"hasNextPage": False},
-                    "count": 1,
-                },
-                "closedMergeRequests": {
-                    "edges": [],
-                    "count": 0,
-                },
-                "releases": {
-                    "edges": [
-                        {
-                            "node": {
-                                "releasedAt": "2024-01-01T00:00:00Z",
-                                "tagName": "v1.0.0",
+                        ],
+                        "pageInfo": {"hasNextPage": False},
+                        "count": 1,
+                    },
+                    "closedMergeRequests": {
+                        "edges": [],
+                        "count": 0,
+                    },
+                    "releases": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "releasedAt": "2024-01-01T00:00:00Z",
+                                    "tagName": "v1.0.0",
+                                }
                             }
-                        }
-                    ]
-                },
-                "issues": {
-                    "edges": [
-                        {
-                            "node": {
-                                "createdAt": "2024-01-01T00:00:00Z",
-                                "notes": {"edges": []},
+                        ]
+                    },
+                    "issues": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "notes": {"edges": []},
+                                }
                             }
-                        }
-                    ]
-                },
-                "closedIssues": {
-                    "edges": [],
-                    "count": 0,
-                },
-                "issuesEnabled": True,
-                "wikiEnabled": True,
-                "starCount": 100,
-                "forksCount": 1,
-                "description": "Test project",
-                "webUrl": "https://gitlab.com/testgroup/testrepo",
+                        ]
+                    },
+                    "closedIssues": {
+                        "edges": [],
+                        "count": 0,
+                    },
+                    "issuesEnabled": True,
+                    "wikiEnabled": True,
+                    "starCount": 100,
+                    "forksCount": 1,
+                    "description": "Test project",
+                    "webUrl": "https://gitlab.com/testgroup/testrepo",
+                }
             }
         }
-    }
+    )
+    mock_rest_response = MagicMock()
+    mock_rest_response.raise_for_status = MagicMock(return_value=None)
+    mock_rest_response.json = MagicMock(return_value=[])
+    mock_client.post = AsyncMock(return_value=mock_graphql_response)
+    mock_client.get = AsyncMock(return_value=mock_rest_response)
+    mock_get_client.return_value = mock_client
 
     provider = GitLabProvider(token="test_token")
     vcs_data = await provider.get_repository_data("testgroup", "testrepo")
@@ -133,10 +143,10 @@ async def test_gitlab_provider_get_repository_data(mock_get_client):
 @patch("oss_sustain_guard.vcs.gitlab._get_async_http_client")
 async def test_gitlab_provider_handles_missing_repository(mock_get_client):
     """Test GitLabProvider handles missing repository."""
-    mock_client = MagicMock()
+    mock_client = AsyncMock()
     mock_response = MagicMock()
-    mock_response.raise_for_status.return_value = None
-    mock_response.json.return_value = {"data": {"project": None}}
+    mock_response.raise_for_status = MagicMock(return_value=None)
+    mock_response.json = MagicMock(return_value={"data": {"project": None}})
     mock_client.post = AsyncMock(return_value=mock_response)
     mock_get_client.return_value = mock_client
 
@@ -149,10 +159,10 @@ async def test_gitlab_provider_handles_missing_repository(mock_get_client):
 @patch("oss_sustain_guard.vcs.gitlab._get_async_http_client")
 async def test_gitlab_provider_handles_api_error(mock_get_client):
     """Test GitLabProvider handles API errors."""
-    mock_client = MagicMock()
+    mock_client = AsyncMock()
     mock_response = MagicMock()
-    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "API Error", request=None, response=None
+    mock_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError("API Error", request=None, response=None)
     )
     mock_client.post = AsyncMock(return_value=mock_response)
     mock_get_client.return_value = mock_client
@@ -166,12 +176,15 @@ async def test_gitlab_provider_handles_api_error(mock_get_client):
 @patch("oss_sustain_guard.vcs.gitlab._get_async_http_client")
 async def test_gitlab_provider_handles_graphql_errors(mock_get_client):
     """Test GitLabProvider handles GraphQL errors in response."""
-    mock_client = mock_get_client.return_value
+    mock_client = AsyncMock()
     mock_response = MagicMock()
-    mock_client.post.return_value = mock_response
-    mock_response.raise_for_status.return_value = None
-    mock_response.json.return_value = {"errors": [{"message": "Some GraphQL error"}]}
+    mock_response.raise_for_status = MagicMock(return_value=None)
+    mock_response.json = MagicMock(
+        return_value={"errors": [{"message": "Some GraphQL error"}]}
+    )
     mock_response.request = None
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_get_client.return_value = mock_client
 
     provider = GitLabProvider(token="test_token")
 
