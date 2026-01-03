@@ -178,54 +178,6 @@ def get_all_resolvers() -> list[LanguageResolver]:
     return unique_resolvers
 
 
-async def find_manifest_files(path: str) -> list[str]:
-    """
-    Find manifest files in the given path.
-
-    Args:
-        path: Path to search for manifest files.
-
-    Returns:
-        List of manifest file names found.
-    """
-    from pathlib import Path
-
-    manifests = set()
-    for resolver in get_all_resolvers():
-        try:
-            resolver_manifests = await resolver.get_manifest_files()
-            for manifest in resolver_manifests:
-                if (Path(path) / manifest).exists():
-                    manifests.add(manifest)
-        except Exception:
-            continue
-    return sorted(manifests)
-
-
-async def find_lockfiles(path: str) -> list[str]:
-    """
-    Find lockfiles in the given path.
-
-    Args:
-        path: Path to search for lockfiles.
-
-    Returns:
-        List of lockfile names found.
-    """
-    from pathlib import Path
-
-    lockfiles = set()
-    for resolver in get_all_resolvers():
-        try:
-            resolver_lockfiles = await resolver.get_lockfiles()
-            for lockfile in resolver_lockfiles:
-                if (Path(path) / lockfile).exists():
-                    lockfiles.add(lockfile)
-        except Exception:
-            continue
-    return sorted(lockfiles)
-
-
 __all__ = [
     "LanguageResolver",
     "get_resolver",
