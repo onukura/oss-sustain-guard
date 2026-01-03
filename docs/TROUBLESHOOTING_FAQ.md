@@ -4,32 +4,44 @@ This section covers common issues and solutions when using OSS Sustain Guard.
 
 ## 🔴 Common Errors
 
-### 1. "GITHUB_TOKEN environment variable is required" Error
+### 1. "Token environment variable is required" Error
 
 **Error Message:**
 
 ```shell
 ValueError: GITHUB_TOKEN environment variable is required.
-
-To get started:
-1. Create a GitHub Personal Access Token (classic):
-   → https://github.com/settings/tokens/new
-2. Select scopes: 'public_repo' and 'security_events'
-3. Set the token:
-   export GITHUB_TOKEN='your_token_here'  # Linux/macOS
-   or add to your .env file: GITHUB_TOKEN=your_token_here
 ```
 
-**When This Happens:** Every time you run `os4g check` without a GitHub token set.
+or
+
+```shell
+ValueError: GITLAB_TOKEN is required for GitLab provider.
+
+To get started:
+1. Create a GitLab Personal Access Token:
+   → https://gitlab.com/-/user_settings/personal_access_tokens
+2. Select scopes: 'read_api' and 'read_repository'
+3. Set the token:
+   export GITLAB_TOKEN='your_token_here'  # Linux/macOS
+   or add to your .env file: GITLAB_TOKEN=your_token_here
+```
+
+**When This Happens:** Every time you run `os4g check` without the required token for the repository host. Most packages are on GitHub, so `GITHUB_TOKEN` alone is usually enough; `GITLAB_TOKEN` is only required for gitlab.com-hosted sources.
 
 **Solution:**
 
-OSS Sustain Guard requires a GitHub token for all analyses:
+OSS Sustain Guard requires a token for the repository host:
 
 ```bash
 # Create token at: https://github.com/settings/tokens/new
 export GITHUB_TOKEN="your_github_token_here"
 os4g check requests  # Now works
+```
+
+```bash
+# Create token at: https://gitlab.com/-/user_settings/personal_access_tokens
+export GITLAB_TOKEN="your_gitlab_token_here"
+os4g check <package-hosted-on-gitlab>  # Now works
 ```
 
 **How to Create a GitHub Token:**
@@ -51,7 +63,25 @@ os4g check requests  # Now works
    GITHUB_TOKEN=your_token_here
    ```
 
-**Why Required:** GitHub's API requires authentication to query repository data (contributors, releases, issues, funding, etc.).
+**How to Create a GitLab Token:**
+
+1. Go to [GitLab Personal Access Tokens](https://gitlab.com/-/user_settings/personal_access_tokens)
+2. Token name: `oss-sustain-guard` (or any name you prefer)
+3. Select `read_api` and `read_repository` scopes
+4. Click "Create personal access token" and **copy it immediately**
+5. Set the environment variable:
+
+   ```bash
+   export GITLAB_TOKEN="your_token"  # Linux/macOS
+   ```
+
+   Or add to `.env` file in your project:
+
+   ```shell
+   GITLAB_TOKEN=your_token_here
+   ```
+
+**Why Required:** The host API requires authentication to query repository data (contributors, releases, issues, funding, etc.).
 
 ### 2. "Package not found" Error
 
@@ -148,8 +178,9 @@ HTTPStatusError: 403 Forbidden - Rate limit exceeded
 **Solution:**
 
 ```shell
-# Set GitHub token (required)
+# Set GitHub or GitLab token (required for the host)
 export GITHUB_TOKEN="your_token"
+export GITLAB_TOKEN="your_token"
 os4g check package1 package2 package3
 
 # Use cache (cached packages don't require API calls)
@@ -228,9 +259,9 @@ exclude = [
 
 See [Exclude Configuration Guide](EXCLUDE_PACKAGES_GUIDE.md) for details.
 
-### Q5: How do I pass the GitHub token in GitHub Actions?
+### Q5: How do I pass tokens in GitHub Actions?
 
-**A:** Use `secrets.GITHUB_TOKEN`
+**A:** Use `secrets.GITHUB_TOKEN` for GitHub and `secrets.GITLAB_TOKEN` for GitLab.
 
 ```yaml
 name: Check Dependencies
@@ -248,6 +279,11 @@ jobs:
         with:
           packages: 'requests django flask'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check GitLab packages
+        uses: onukura/oss-sustain-guard@main
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
 ```
 
 See [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) for details.
@@ -337,6 +373,10 @@ cat ~/.cache/oss-sustain-guard/requests.json
 curl -H "Authorization: token $GITHUB_TOKEN" \
   https://api.github.com/user
 
+# Check GitLab API availability
+curl -H "Authorization: Bearer $GITLAB_TOKEN" \
+  https://gitlab.com/api/v4/user
+
 # Run without cache
 os4g check requests --no-cache
 ```
@@ -355,8 +395,9 @@ os4g check requests  # Remove -v flag
 # 3. Use compact output
 os4g check requests -o compact
 
-# 4. Set GitHub token (required)
+# 4. Set host token (required)
 export GITHUB_TOKEN="your_token"
+export GITLAB_TOKEN="your_token"
 ```
 
 ### CI/CD Optimization
@@ -376,25 +417,19 @@ export GITHUB_TOKEN="your_token"
 
 ### "Package X is on GitLab/Gitea but wasn't analyzed—why?"
 
-**Answer:** OSS Sustain Guard currently supports **GitHub-hosted repositories only** for real-time analysis.
+**Answer:** OSS Sustain Guard supports **GitHub and GitLab (gitlab.com)** for real-time analysis. If a GitLab package was skipped, it is usually due to one of these reasons:
 
-When a package's source is detected on another platform (GitLab, Gitea, SourceForge, etc.), the tool will:
+1. **Missing or invalid `GITLAB_TOKEN`** (needs `read_api` + `read_repository` scopes)
+2. **Unsupported host** (self-hosted GitLab or other platforms like Gitea/SourceForge)
+3. **Repository access restrictions** (private repo without access)
 
-1. **Detect the non-GitHub host** during package resolution
-2. **Display a note** like: "Repository is hosted on GitLab. Real-time analysis currently supports GitHub only."
+When the host is unsupported, the tool will:
+
+1. **Detect the host** during package resolution
+2. **Display a note** indicating the repository host
 3. **Skip analysis** for that package (no data is sent to external services)
 
-**Why only GitHub?**
-- GitHub's GraphQL API provides deep repository metrics (contributors, activity timeline, PR review patterns, etc.)
-- Other platforms have different APIs with varying data availability and rate limits
-- We want to maintain consistent metric quality across all analyzed packages
-
-**When will GitLab/other platforms be supported?**
-- Support for GitLab, Gitea, and other platforms is under consideration for future releases
-- The team is exploring API integration possibilities with other major platforms
-- Check [GitHub Issues](https://github.com/onukura/oss-sustain-guard/issues) for progress and feature requests
-
-**Workaround:** If you need to analyze GitLab projects, consider opening an issue or contributing to the project on GitHub.
+**Note:** On GitLab, some metrics may be skipped when data is not available. For example, Build Health is omitted until CI data is wired in and will appear in the skipped metrics list.
 
 ### "Why is my analysis incomplete with 'Note: Unable to access this data'?"
 

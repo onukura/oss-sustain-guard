@@ -101,24 +101,19 @@
 
 ---
 
-### 5️⃣ 非GitHubリポジトリの扱いをREADMEで明記
+### 5. Repository host handling documented
 
-**実装内容:**
-- ✅ README.mdに「Repository Source Handling」セクション追加
-  - GitHub-hosted: ✅ フル分析対応
-  - 非GitHub (GitLab等): ℹ️ スキップ対応
+**What changed:**
+- README now documents repository host handling.
+  - GitHub-hosted: full analysis supported.
+  - GitLab-hosted (gitlab.com): real-time analysis supported with `GITLAB_TOKEN`.
+  - Other hosts (Gitea, SourceForge, etc.): detected and skipped.
+- FAQ clarifies why a package might be skipped and how to configure tokens.
+- Skipped metrics (such as Build Health when CI data is unavailable) are called out.
 
-- ✅ なぜGitHubだけ対応なのかを説明
-  - GitHubのGraphQL APIの深い機能を活用
-  - 他のプラットフォームは異なるAPI仕様
-
-- ✅ TROUBLESHOOTING_FAQ.mdに詳細FAQ追加
-  - 「Package X is on GitLab but wasn't analyzed—why?」
-  - 一般的なエラーメッセージの解釈表
-
-**ファイル:**
-- `README.md`: 「Repository Source Handling」セクション追加
-- `docs/TROUBLESHOOTING_FAQ.md`: 非GitHubについてのFAQセクション追加
+**Files:**
+- `README.md`: Repository source handling updates.
+- `docs/TROUBLESHOOTING_FAQ.md`: GitLab support details and skip reasons.
 
 ---
 

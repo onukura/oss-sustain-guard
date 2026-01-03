@@ -26,7 +26,7 @@ We believe that:
 
 Metrics are one lens among many; they work best alongside project context and real-world knowledge.
 
-- **Local caching:** Analysis results are cached locally to minimize API calls. GitHub token required for real-time analysis, with a built-in demo mode available.
+- **Local caching:** Analysis results are cached locally to minimize API calls. GitHub tokens cover most repos; GitLab tokens are only needed for gitlab.com sources, with a built-in demo mode available.
 - **Multi-ecosystem support:** Analyze packages from Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, and Ruby in one command.
 - **Actionable insights:** Metrics use empathetic language that encourages collaboration with maintainers rather than blame.
 - **Sustainable by design:** Respects open-source sustainability models with funding awareness for community-driven projects.
@@ -48,14 +48,14 @@ Metrics are one lens among many; they work best alongside project context and re
 - **Recursive scanning** for monorepos and multi-service projects
 - **Exclude configuration** for internal or legacy dependencies
 - **Integration-ready** for GitHub Actions, pre-commit hooks, and CI/CD pipelines
-- **GitHub-hosted analysis** - Real-time analysis currently supports GitHub repositories
+- **GitHub/GitLab analysis** - Real-time analysis supports GitHub and GitLab (gitlab.com)
 
 ### 📝 Extensibility & Configuration
 
 - **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins
 - **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
-- **Minimal Setup** - Requires a GitHub token for real-time analysis (demo mode uses snapshot data)
+- **Minimal Setup** - Requires a GitHub token for most repos; a GitLab token is only needed for gitlab.com (demo mode uses snapshot data)
 
 ### 🌍 Multi-Language Support
 

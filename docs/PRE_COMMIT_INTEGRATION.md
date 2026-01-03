@@ -34,10 +34,14 @@ Now, whenever you commit changes to dependency files, OSS Sustain Guard will aut
 
 ## FAQ
 
-- **Do I need a GitHub token?**: Yes. Set `GITHUB_TOKEN`:
+- **Do I need a token?**: Yes. `GITHUB_TOKEN` covers most repos; `GITLAB_TOKEN` is only needed for gitlab.com sources:
 
 ```bash
 export GITHUB_TOKEN=your_github_token
+```
+
+```bash
+export GITLAB_TOKEN=your_gitlab_token
 ```
 
 - **Does it support other languages?**: Yes! You can check npm, Rust, Go, Ruby, PHP, etc. (e.g. `os4g check npm:react`)

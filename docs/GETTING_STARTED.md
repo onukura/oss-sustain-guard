@@ -20,11 +20,11 @@ os4g check --demo
 
 Demo data is a snapshot for illustration and may differ from current repository status.
 
-## 🔐 GitHub Token Setup (Required for Real-Time Analysis)
+## 🔐 GitHub and GitLab Token Setup (Required for Real-Time Analysis)
 
-**OSS Sustain Guard requires a GitHub Personal Access Token for real-time package analysis.**
+**OSS Sustain Guard requires a GitHub Personal Access Token for most real-time analyses; a GitLab token is only needed when the source is hosted on gitlab.com.**
 
-This is needed because the tool fetches repository data directly from GitHub's API to analyze:
+This is needed because the tool fetches repository data directly from the host API to analyze:
 
 - Contributor activity and redundancy
 - Release patterns and commit history
@@ -32,7 +32,7 @@ This is needed because the tool fetches repository data directly from GitHub's A
 - Security policies and funding information
 - And more sustainability metrics
 
-### Quick Setup (3 steps)
+### GitHub Token Setup (3 steps)
 
 **1. Create a token:**
 Visit [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a classic token with `public_repo` and `security_events` scopes.
@@ -56,13 +56,37 @@ echo "GITHUB_TOKEN=your_token_here" > .env
 os4g check requests
 ```
 
+### GitLab Token Setup (3 steps)
+
+**1. Create a token:**
+Visit [https://gitlab.com/-/user_settings/personal_access_tokens](https://gitlab.com/-/user_settings/personal_access_tokens) and create a token with `read_api` and `read_repository` scopes.
+
+**2. Set the environment variable:**
+
+```bash
+# Linux/macOS
+export GITLAB_TOKEN='your_token_here'
+
+# Windows PowerShell
+$env:GITLAB_TOKEN='your_token_here'
+
+# Or add to .env file in your project
+echo "GITLAB_TOKEN=your_token_here" > .env
+```
+
+**3. Verify it works:**
+
+```bash
+os4g check <package-hosted-on-gitlab>
+```
+
 > **Why is this required?**
 >
-> - GitHub's unauthenticated API has very low rate limits (60 requests/hour)
-> - Authenticated requests get 5,000 requests/hour
+> - Unauthenticated API access has very low rate limits
+> - Authenticated requests get higher limits and consistent access
 > - Package analysis requires multiple API calls per repository
 >
-> **Security:** The token only needs `public_repo` and `security_events` scopes for public repositories. Never commit tokens to version control.
+> **Security:** Use minimal scopes (`public_repo`/`security_events` for GitHub, `read_api`/`read_repository` for GitLab). Never commit tokens to version control.
 
 ## 🚀 First Steps
 
@@ -158,11 +182,11 @@ os4g check requests --profile long_term_stability
 os4g check requests --no-cache
 ```
 
-## 🔐 GitHub Token Setup
+## 🔐 Token Setup (GitHub or GitLab)
 
-**Required:** OSS Sustain Guard requires a GitHub Personal Access Token to analyze repositories.
+**Required:** OSS Sustain Guard needs a token for the host where the repository lives.
 
-### Quick Setup (5 minutes)
+### GitHub (github.com)
 
 1. **Create a token:**
 
@@ -199,17 +223,54 @@ os4g check requests --no-cache
    os4g check requests
    ```
 
+### GitLab (gitlab.com)
+
+1. **Create a token:**
+
+   - Visit: <https://gitlab.com/-/user_settings/personal_access_tokens>
+   - Token name: `oss-sustain-guard`
+   - Select scopes: ✓ `read_api`, ✓ `read_repository`
+   - Click "Create personal access token" and **copy it immediately**
+
+2. **Set the token:**
+
+   **Linux/macOS:**
+
+   ```bash
+   export GITLAB_TOKEN='your_token_here'
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   $env:GITLAB_TOKEN='your_token_here'
+   ```
+
+   **Persistent (recommended):**
+
+   Add to your `.env` file in your project directory:
+
+   ```shell
+   GITLAB_TOKEN=your_token_here
+   ```
+
+3. **Verify:**
+
+   ```bash
+   os4g check <package-hosted-on-gitlab>
+   ```
+
 ### Why is a token needed?
 
-GitHub's API requires authentication for repository analysis. The token allows OSS Sustain Guard to:
+The host API requires authentication for repository analysis. The token allows OSS Sustain Guard to:
 
 - Query repository metadata (contributors, releases, issues)
 - Access funding information
 - Analyze project health metrics
 
-**Rate Limits:** With a token, you get 5,000 requests/hour (vs 60 without). Local caching minimizes API calls.
+**Rate Limits:** With a token, you get higher rate limits than unauthenticated requests. Local caching minimizes API calls.
 
-**Security:** Your token is only stored locally and never sent anywhere except GitHub's API.
+**Security:** Your token is only stored locally and never sent anywhere except the host API.
 
 ## 📚 Next Steps
 

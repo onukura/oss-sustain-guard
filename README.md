@@ -44,23 +44,24 @@ Metrics are one lens among many; they work best alongside project context and re
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks
-- **Minimal Setup** - Requires a GitHub token for real-time analysis (use `--demo` to try it without one)
+- **Minimal Setup** - Requires a GitHub token for most repos; a GitLab token is only needed when the source is on gitlab.com (use `--demo` to try it without one)
 
 ## 🔒 Privacy & Security
 
 **Your data stays local:**
 
-- ✅ **GitHub token usage** - Your `GITHUB_TOKEN` is used **only** for real-time GitHub API queries
-  - Data flows directly from GitHub API → your machine
-  - Token is **not** stored, logged, or sent anywhere except GitHub's official API
-  - Requires scopes: `public_repo` and `security_events` (read-only access)
+- ✅ **GitHub/GitLab token usage** - Your `GITHUB_TOKEN` or `GITLAB_TOKEN` is used **only** for real-time API queries on the matching host
+  - Data flows directly from the GitHub/GitLab API → your machine
+  - Token is **not** stored, logged, or sent anywhere except the host's official API
+  - GitHub scopes: `public_repo` and `security_events` (read-only access)
+  - GitLab scopes: `read_api` and `read_repository`
 
 - ✅ **Local caching** - Analysis results are cached locally in `~/.cache/oss-sustain-guard/`
   - No cloud storage or external uploads
   - You control the cache directory and can clear it anytime with `os4g clear-cache`
   - Cache files are standard JSON (human-readable) with TTL metadata
 
-- ✅ **Analysis is transparent** - All metrics are calculated client-side from public GitHub data
+- ✅ **Analysis is transparent** - All metrics are calculated client-side from public GitHub or GitLab data
   - No proprietary scoring sent to external services
   - No profiling or telemetry
   - Open-source metric implementations for full audit
@@ -88,7 +89,10 @@ os4g check --demo
 # Set GitHub token (classic) with public_repo and security_events scopes
 export GITHUB_TOKEN='your_token_here'  # Get from: https://github.com/settings/tokens/new
 
-# Real-time analysis currently supports GitHub-hosted repositories
+# For GitLab-hosted repos (gitlab.com), set GITLAB_TOKEN with read_api and read_repository scopes
+export GITLAB_TOKEN='your_token_here'  # Get from: https://gitlab.com/-/user_settings/personal_access_tokens
+
+# Real-time analysis supports GitHub and GitLab (gitlab.com) repositories
 
 # Check your dependencies (auto-detect from manifest files)
 os4g check
@@ -134,14 +138,11 @@ See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTE
 
 #### Repository Source Handling
 
-- **GitHub-hosted repositories**: ✅ Full real-time analysis supported
-- **Non-GitHub repositories** (GitLab, Gitea, etc.): ℹ️ Automatically detected and skipped
-  - If a package's source is hosted on GitLab, Gitea, or other platforms, the tool will:
-    1. Display a note indicating the repository host (e.g., "hosted on GitLab")
-    2. Skip real-time analysis for that package
-    3. Mark the package as unable to analyze
-  - This is by design: OSS Sustain Guard leverages GitHub's GraphQL API for deep repository insights, which is only available for GitHub-hosted projects
-  - **Future enhancement**: Support for GitLab API is planned for a future release
+- **GitHub-hosted repositories**: ✅ Full real-time analysis supported (requires `GITHUB_TOKEN`)
+- **GitLab-hosted repositories (gitlab.com)**: ✅ Real-time analysis supported (requires `GITLAB_TOKEN`)
+  - If CI data is not available, Build Health is listed under skipped metrics.
+- **Other hosts** (Gitea, SourceForge, etc.): ℹ️ Detected and skipped
+  - The tool will display a note indicating the repository host and skip real-time analysis.
 
 ### 24 Core Sustainability Metrics
 

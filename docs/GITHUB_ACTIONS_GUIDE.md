@@ -153,7 +153,7 @@ jobs:
 
 ## FAQ
 
-- **Do I need a GitHub token?**: Yes. Set `GITHUB_TOKEN` or a custom token in your workflow secrets.
+- **Do I need a token?**: Yes. `GITHUB_TOKEN` covers most repos; `GITLAB_TOKEN` is only needed for gitlab.com sources.
 - **Does it support multiple languages?**: Yes! Python, JavaScript, Rust, Go, Ruby, PHP, and more are supported out of the box.
 - **How do I check only specific packages?**: Use the `packages` input: `packages: 'flask django npm:react'`
 - **How do I skip the check?**: Remove or comment out the step in your workflow.
@@ -199,11 +199,11 @@ Then update the cache step to use the same path:
 
 This is useful if you want to isolate caches between jobs or workflows.
 
-This ensures that package analysis results are reused between CI runs, making subsequent checks much faster and reducing GitHub API usage.
+This ensures that package analysis results are reused between CI runs, making subsequent checks much faster and reducing API usage.
 
 ## Security Considerations
 
-1. **Token scoping** - Use read-only GitHub tokens when possible
+1. **Token scoping** - Use read-only GitHub or GitLab tokens when possible
 1. **Sensitive packages** - Don't expose internal package names in logs
 1. **PR comments** - Be careful when posting results as PR comments
 
