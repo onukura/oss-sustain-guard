@@ -48,10 +48,11 @@ Metrics are one lens among many; they work best alongside project context and re
 - **Exclude configuration** for internal or legacy dependencies
 - **Integration-ready** for GitHub Actions, pre-commit hooks, and CI/CD pipelines
 - **GitHub/GitLab analysis** - Real-time analysis supports GitHub and GitLab (gitlab.com)
+- **Extensible VCS support** - Add support for additional version control systems via plugins
 
 ### 📝 Extensibility & Configuration
 
-- **Pluggable Metrics System** - Easily extend analysis by adding your own sustainability metrics as plugins
+- **Pluggable Architecture** - Easily extend analysis by adding your own sustainability metrics, language resolvers, and VCS providers as plugins
 - **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
 - **Minimal Setup** - Requires a GitHub token for most repos; a GitLab token is only needed for gitlab.com (demo mode uses snapshot data)
@@ -60,6 +61,7 @@ Metrics are one lens among many; they work best alongside project context and re
 
 - **Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby** and more
 - **Multi-ecosystem support** - Analyze packages from all supported languages in one command
+- **Extensible resolvers** - Add support for new package ecosystems via plugins
 
 ### 💝 Sustainability Focus
 
@@ -83,12 +85,16 @@ Metrics are one lens among many; they work best alongside project context and re
 **Configuration:**
 
 - [Exclude Configuration](EXCLUDE_PACKAGES_GUIDE.md) - Skip internal or legacy packages
+- [Custom Resolvers](CUSTOM_RESOLVERS_GUIDE.md) - Add support for new package ecosystems
+- [Custom VCS Providers](CUSTOM_VCS_GUIDE.md) - Add support for new version control systems
 
 **Scoring & Metrics:**
 
 - [Scoring Profiles](SCORING_PROFILES_GUIDE.md) - Choose the right scoring model for your needs
 - [CHAOSS Metrics Alignment](CHAOSS_METRICS_ALIGNMENT_VALIDATION.md) - Understanding our metrics
 - [Custom Metrics](CUSTOM_METRICS_GUIDE.md) - Create your own sustainability metrics
+- [Custom Resolvers](CUSTOM_RESOLVERS_GUIDE.md) - Add support for new package ecosystems
+- [Custom VCS Providers](CUSTOM_VCS_GUIDE.md) - Add support for new version control systems
 
 **Integrations:**
 
@@ -107,6 +113,8 @@ pip install oss-sustain-guard
 
 ## Supported Ecosystems
 
+OSS Sustain Guard supports the following ecosystems out of the box:
+
 - **Python** - PyPI
 - **JavaScript/TypeScript** - npm
 - **Rust** - Cargo
@@ -122,6 +130,8 @@ pip install oss-sustain-guard
 - **C# / .NET** - NuGet
 - **Go** - Go Modules
 - **Kotlin** - Maven
+
+**Extensibility:** You can add support for additional ecosystems by creating custom resolver plugins. See the [Custom Resolvers Guide](CUSTOM_RESOLVERS_GUIDE.md) for details.
 
 ## Community Standards
 
