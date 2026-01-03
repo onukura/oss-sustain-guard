@@ -87,7 +87,7 @@ class JavaScriptResolver(LanguageResolver):
         """
         Auto-detects JavaScript lockfile type and extracts package information.
 
-        Supports: package-lock.json, yarn.lock, pnpm-lock.yaml
+        Supports: package-lock.json, yarn.lock, pnpm-lock.yaml, bun.lock, bun.lockb, deno.lock
 
         Args:
             lockfile_path: Path to a JavaScript lockfile.
@@ -110,6 +110,10 @@ class JavaScriptResolver(LanguageResolver):
             return await self._parse_yarn_lock(lockfile_path)
         elif filename == "pnpm-lock.yaml":
             return await self._parse_pnpm_lock(lockfile_path)
+        elif filename == "bun.lock" or filename == "bun.lockb":
+            return await self._parse_bun_lock(lockfile_path)
+        elif filename == "deno.lock":
+            return await self._parse_deno_lock(lockfile_path)
         else:
             raise ValueError(f"Unknown JavaScript lockfile type: {filename}")
 
@@ -124,7 +128,14 @@ class JavaScriptResolver(LanguageResolver):
             List of detected lockfile paths that exist.
         """
         directory = Path(directory)
-        lockfile_names = ["package-lock.json", "yarn.lock", "pnpm-lock.yaml"]
+        lockfile_names = [
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+            "bun.lock",
+            "bun.lockb",
+            "deno.lock",
+        ]
         detected = []
         for name in lockfile_names:
             lockfile = directory / name
@@ -134,14 +145,14 @@ class JavaScriptResolver(LanguageResolver):
 
     async def get_manifest_files(self) -> list[str]:
         """Return list of JavaScript manifest file names."""
-        return ["package.json"]
+        return ["package.json", "deno.json"]
 
     async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
-        Parse a JavaScript manifest file (package.json).
+        Parse a JavaScript manifest file (package.json or deno.json).
 
         Args:
-            manifest_path: Path to package.json.
+            manifest_path: Path to package.json or deno.json.
 
         Returns:
             List of PackageInfo objects.
@@ -154,12 +165,14 @@ class JavaScriptResolver(LanguageResolver):
         if not manifest_path.exists():
             raise FileNotFoundError(f"Manifest file not found: {manifest_path}")
 
-        if manifest_path.name != "package.json":
+        if manifest_path.name == "package.json":
+            return await self._parse_package_json(manifest_path)
+        elif manifest_path.name == "deno.json":
+            return await self._parse_deno_json(manifest_path)
+        else:
             raise ValueError(
                 f"Unknown JavaScript manifest file type: {manifest_path.name}"
             )
-
-        return await self._parse_package_json(manifest_path)
 
     @staticmethod
     async def _parse_package_json(manifest_path: Path) -> list[PackageInfo]:
@@ -314,6 +327,178 @@ class JavaScriptResolver(LanguageResolver):
                             package_name = parts[-1].split("_")[0]
                             if package_name:
                                 packages.add(package_name)
+
+            return [
+                PackageInfo(
+                    name=pkg_name,
+                    ecosystem="javascript",
+                    version=None,
+                )
+                for pkg_name in sorted(packages)
+            ]
+        except Exception:
+            return []
+
+    @staticmethod
+    async def _parse_deno_lock(lockfile_path: Path) -> list[PackageInfo]:
+        """Parse deno.lock file (Deno lock format)."""
+        try:
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                data = json.loads(content)
+
+            packages = set()
+
+            # Deno v5 format: check 'specifiers' section for npm packages
+            specifiers = data.get("specifiers", {})
+            if specifiers:
+                for spec_key in specifiers.keys():
+                    # spec_key format: "npm:package@version" or "npm:@scope/package@version"
+                    if spec_key.startswith("npm:"):
+                        # Remove "npm:" prefix
+                        npm_spec = spec_key[4:]
+                        # Extract package name (before @version)
+                        # Handle scoped packages (@scope/package@version)
+                        if npm_spec.startswith("@"):
+                            # Scoped package: @scope/package@version
+                            # Find the last @ to separate name from version
+                            last_at_idx = npm_spec.rfind("@")
+                            if last_at_idx > 0:
+                                pkg_name = npm_spec[:last_at_idx]
+                                packages.add(pkg_name)
+                        else:
+                            # Regular package: package@version
+                            at_idx = npm_spec.find("@")
+                            if at_idx > 0:
+                                package_name = npm_spec[:at_idx]
+                            else:
+                                package_name = npm_spec
+                            if package_name:
+                                packages.add(package_name)
+
+            # Legacy format: check 'remote' section (older Deno versions)
+            remote = data.get("remote", {})
+            if remote:
+                for url in remote.keys():
+                    # Try to extract package name from URL
+                    if "registry.npmjs.org" in url:
+                        parts = url.split("/")
+                        for part in parts:
+                            if part and not part.startswith("http") and "@" not in part:
+                                packages.add(part)
+                                break
+
+            return [
+                PackageInfo(
+                    name=pkg_name,
+                    ecosystem="javascript",
+                    version=None,
+                )
+                for pkg_name in sorted(packages)
+            ]
+        except Exception:
+            return []
+
+    @staticmethod
+    async def _parse_deno_json(manifest_path: Path) -> list[PackageInfo]:
+        """Parse deno.json file (Deno manifest)."""
+        try:
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
+                data = json.loads(content)
+
+            packages = []
+
+            # deno.json can have imports section with npm dependencies
+            imports = data.get("imports", {})
+            if isinstance(imports, dict):
+                for import_key, import_value in imports.items():
+                    # Extract package name from npm: specifiers
+                    if isinstance(import_value, str) and import_value.startswith(
+                        "npm:"
+                    ):
+                        # Format: npm:package@version or npm:@scope/package@version
+                        npm_spec = import_value[4:]  # Remove "npm:" prefix
+                        # Extract package name (before @version)
+                        if npm_spec.startswith("@"):
+                            # Scoped package: @scope/package@version
+                            # Find the last @ to separate name from version
+                            last_at_idx = npm_spec.rfind("@")
+                            if last_at_idx > 0:
+                                pkg_name = npm_spec[:last_at_idx]
+                                version = npm_spec[last_at_idx + 1 :]
+                                packages.append(
+                                    PackageInfo(
+                                        name=pkg_name,
+                                        ecosystem="javascript",
+                                        version=version if version else None,
+                                    )
+                                )
+                        else:
+                            # Regular package: package@version
+                            parts = npm_spec.split("@", 1)  # Split only on first @
+                            if parts[0]:
+                                version = parts[1] if len(parts) > 1 else None
+                                packages.append(
+                                    PackageInfo(
+                                        name=parts[0],
+                                        ecosystem="javascript",
+                                        version=version if version else None,
+                                    )
+                                )
+
+            return packages
+        except (json.JSONDecodeError, IOError) as e:
+            raise ValueError(f"Failed to parse deno.json: {e}") from e
+
+    @staticmethod
+    async def _parse_bun_lock(lockfile_path: Path) -> list[PackageInfo]:
+        """Parse bun.lock (JSON format) or bun.lockb (binary format) file.
+
+        bun.lock is a JSON file with workspaces, dependencies, and packages sections.
+        bun.lockb is a binary format with similar structure.
+        """
+        try:
+            packages = set()
+
+            # Try to parse as JSON first (bun.lock)
+            try:
+                async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                    data = json.loads(content)
+
+                # Extract from workspaces section (direct dependencies)
+                workspaces = data.get("workspaces", {})
+                if isinstance(workspaces, dict):
+                    for workspace_name, workspace_data in workspaces.items():
+                        if isinstance(workspace_data, dict):
+                            # Get dependencies and devDependencies from workspaces
+                            for section in ("dependencies", "devDependencies"):
+                                deps = workspace_data.get(section, {})
+                                if isinstance(deps, dict):
+                                    for package_name in deps.keys():
+                                        if package_name:
+                                            packages.add(package_name)
+
+            except (json.JSONDecodeError, ValueError):
+                # If JSON parsing fails, try binary format (bun.lockb)
+                with open(lockfile_path, "rb") as f:
+                    content = f.read()
+
+                # Decode as UTF-8 where possible, ignoring errors
+                text_content = content.decode("utf-8", errors="ignore")
+
+                # Look for npm: patterns and extract package names
+                import re
+
+                # Match npm:package@version patterns
+                npm_patterns = re.finditer(
+                    r"npm:([a-z0-9@/_-]+?)@", text_content, re.IGNORECASE
+                )
+                for match in npm_patterns:
+                    package_name = match.group(1)
+                    if package_name:
+                        packages.add(package_name)
 
             return [
                 PackageInfo(

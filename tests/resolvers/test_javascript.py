@@ -494,3 +494,143 @@ packages: []
         packages = await resolver.parse_lockfile(str(lock_file))
         # Should return empty list or handle gracefully
         assert isinstance(packages, list)
+
+    async def test_parse_deno_lock(self, tmp_path):
+        """Test parsing deno.lock file."""
+        deno_lock_content = {
+            "version": "5",
+            "specifiers": {
+                "npm:react@^18.2.0": "18.3.1",
+                "npm:lodash@^4.17.21": "4.17.21",
+                "npm:@types/react@^18.2.0": "18.3.27",
+            },
+            "npm": {},
+        }
+        lock_file = tmp_path / "deno.lock"
+        lock_file.write_text(json.dumps(deno_lock_content))
+
+        resolver = JavaScriptResolver()
+        packages = await resolver.parse_lockfile(str(lock_file))
+
+        names = {p.name for p in packages}
+        assert "react" in names
+        assert "lodash" in names
+        assert "@types/react" in names
+        assert len(packages) == 3
+
+    async def test_parse_deno_json(self, tmp_path):
+        """Test parsing deno.json file."""
+        deno_json_content = {
+            "name": "test-project",
+            "version": "1.0.0",
+            "imports": {
+                "react": "npm:react@^18.2.0",
+                "lodash": "npm:lodash@^4.17.21",
+                "@types/react": "npm:@types/react@^18.2.0",
+            },
+        }
+        manifest_file = tmp_path / "deno.json"
+        manifest_file.write_text(json.dumps(deno_json_content))
+
+        resolver = JavaScriptResolver()
+        packages = await resolver.parse_manifest(str(manifest_file))
+
+        names = {p.name for p in packages}
+        assert "react" in names
+        assert "lodash" in names
+        assert "@types/react" in names
+        assert len(packages) == 3
+
+    async def test_parse_deno_lock_legacy_format(self, tmp_path):
+        """Test parsing deno.lock in legacy format with remote section."""
+        deno_lock_content = {
+            "version": "4",
+            "remote": {
+                "https://registry.npmjs.org/react/18.3.1/": {"integrity": "..."},
+            },
+        }
+        lock_file = tmp_path / "deno.lock"
+        lock_file.write_text(json.dumps(deno_lock_content))
+
+        resolver = JavaScriptResolver()
+        packages = await resolver.parse_lockfile(str(lock_file))
+        assert isinstance(packages, list)
+
+    async def test_get_manifest_files_includes_deno_json(self):
+        """Test that manifest files include deno.json."""
+        resolver = JavaScriptResolver()
+        manifests = await resolver.get_manifest_files()
+        assert "package.json" in manifests
+        assert "deno.json" in manifests
+
+    async def test_detect_lockfiles_includes_deno_lock(self, tmp_path):
+        """Test that detect_lockfiles includes deno.lock."""
+        # Create deno.lock file
+        deno_lock = tmp_path / "deno.lock"
+        deno_lock.write_text("{}")
+
+        resolver = JavaScriptResolver()
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
+
+        assert str(deno_lock) in [str(f) for f in lockfiles]
+
+    async def test_parse_bun_lock_json(self, tmp_path):
+        """Test parsing bun.lock file (JSON format)."""
+        bun_lock_content = {
+            "lockfileVersion": 1,
+            "configVersion": 1,
+            "workspaces": {
+                "": {
+                    "name": "test-project",
+                    "dependencies": {
+                        "react": "^18.2.0",
+                        "lodash": "^4.17.21",
+                    },
+                    "devDependencies": {
+                        "@types/react": "^18.2.0",
+                    },
+                }
+            },
+            "packages": {},
+        }
+        bun_lock = tmp_path / "bun.lock"
+        bun_lock.write_text(json.dumps(bun_lock_content))
+
+        resolver = JavaScriptResolver()
+        packages = await resolver.parse_lockfile(str(bun_lock))
+
+        names = {p.name for p in packages}
+        assert "react" in names
+        assert "lodash" in names
+        assert "@types/react" in names
+
+    async def test_parse_bun_lock_binary(self, tmp_path):
+        """Test parsing bun.lockb file (binary format)."""
+        # Create a minimal bun.lockb-like binary file with npm package names
+        bun_lockb_content = (
+            b"\x00\x00npm:react@18.3.1\x00\x00npm:lodash@4.17.21\x00\x00"
+        )
+        bun_lockb = tmp_path / "bun.lockb"
+        bun_lockb.write_bytes(bun_lockb_content)
+
+        resolver = JavaScriptResolver()
+        packages = await resolver.parse_lockfile(str(bun_lockb))
+
+        names = {p.name for p in packages}
+        assert "react" in names
+        assert "lodash" in names
+
+    async def test_detect_lockfiles_includes_bun_lock_and_lockb(self, tmp_path):
+        """Test that detect_lockfiles includes both bun.lock and bun.lockb."""
+        # Create both bun.lock and bun.lockb files
+        bun_lock = tmp_path / "bun.lock"
+        bun_lockb = tmp_path / "bun.lockb"
+        bun_lock.write_text("{}")
+        bun_lockb.write_bytes(b"")
+
+        resolver = JavaScriptResolver()
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
+
+        lockfile_strs = [str(f) for f in lockfiles]
+        assert str(bun_lock) in lockfile_strs
+        assert str(bun_lockb) in lockfile_strs
