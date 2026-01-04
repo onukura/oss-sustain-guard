@@ -1,4 +1,4 @@
-"""Poetry lockfile dependency parser."""
+"""Rust Cargo.lock dependency parser."""
 
 from __future__ import annotations
 
@@ -7,24 +7,20 @@ from typing import TYPE_CHECKING
 
 from oss_sustain_guard.dependency_graph import tomllib
 from oss_sustain_guard.dependency_parsers.base import DependencyParserSpec
-from oss_sustain_guard.dependency_parsers.python.shared import (
-    get_poetry_direct_dependencies,
-    get_python_project_name,
-)
 
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
-    from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
+    from oss_sustain_guard.dependency_graph import DependencyGraph
 
 
 PARSER = DependencyParserSpec(
-    name="poetry",
-    lockfile_names={"poetry.lock"},
-    parse=lambda lockfile_path: parse_poetry_lockfile(lockfile_path),
+    name="cargo",
+    lockfile_names={"Cargo.lock"},
+    parse=lambda lockfile_path: parse_cargo_lockfile(lockfile_path),
 )
 
 
-def parse_poetry_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
-    """Parse poetry.lock file."""
+def parse_cargo_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
+    """Parse Cargo.lock (TOML format)."""
     from oss_sustain_guard.dependency_graph import (
         DependencyEdge,
         DependencyGraph,
@@ -43,19 +39,25 @@ def parse_poetry_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
 
     direct_deps: list[DependencyInfo] = []
     transitive_deps: list[DependencyInfo] = []
-    direct_package_names = get_poetry_direct_dependencies(lockfile_path.parent)
     edges: list[DependencyEdge] = []
 
-    for package in data.get("package", []):
+    packages = data.get("package", [])
+    root_name = None
+
+    for i, package in enumerate(packages):
         name = package.get("name", "")
         version = package.get("version", "")
         if not name:
             continue
 
-        is_direct = name.lower() in {p.lower() for p in direct_package_names}
+        # First package is typically the root
+        is_direct = i == 0
+        if is_direct:
+            root_name = name
+
         dep_info = DependencyInfo(
             name=name,
-            ecosystem="python",
+            ecosystem="rust",
             version=version,
             is_direct=is_direct,
             depth=0 if is_direct else 1,
@@ -67,27 +69,25 @@ def parse_poetry_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
             transitive_deps.append(dep_info)
 
         # Extract dependency edges
-        dependencies = package.get("dependencies", {})
-        if isinstance(dependencies, dict):
-            for dep_name, dep_spec in dependencies.items():
-                version_spec = None
-                if isinstance(dep_spec, dict):
-                    version_spec = dep_spec.get("version")
-                elif isinstance(dep_spec, str):
-                    version_spec = dep_spec
-                edges.append(
-                    DependencyEdge(
-                        source=name,
-                        target=dep_name,
-                        version_spec=version_spec,
+        dependencies = package.get("dependencies", [])
+        if isinstance(dependencies, list):
+            for dep in dependencies:
+                if isinstance(dep, str):
+                    # Format: "package_name version" or "package_name"
+                    parts = dep.split(" ", 1)
+                    dep_name = parts[0]
+                    version_spec = parts[1] if len(parts) > 1 else None
+                    edges.append(
+                        DependencyEdge(
+                            source=name,
+                            target=dep_name,
+                            version_spec=version_spec,
+                        )
                     )
-                )
-
-    root_name = get_python_project_name(lockfile_path.parent)
 
     return DependencyGraph(
         root_package=root_name or "unknown",
-        ecosystem="python",
+        ecosystem="rust",
         direct_dependencies=direct_deps,
         transitive_dependencies=transitive_deps,
         edges=edges,

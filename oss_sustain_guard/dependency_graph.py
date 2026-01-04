@@ -31,6 +31,14 @@ class DependencyInfo(NamedTuple):
     depth: int = 0  # 0 for direct, 1+ for transitive
 
 
+class DependencyEdge(NamedTuple):
+    """Edge representing a dependency relationship."""
+
+    source: str  # Package that depends on target
+    target: str  # Package being depended on
+    version_spec: str | None = None  # Version specifier (e.g., ">=2.0")
+
+
 class DependencyGraph(NamedTuple):
     """Graph of package dependencies."""
 
@@ -38,6 +46,7 @@ class DependencyGraph(NamedTuple):
     ecosystem: str
     direct_dependencies: list[DependencyInfo]
     transitive_dependencies: list[DependencyInfo]
+    edges: list[DependencyEdge] = []  # Package dependency relationships
 
 
 def parse_python_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:

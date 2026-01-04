@@ -30,6 +30,9 @@ dependencies = [
     "tomli>=2.0.0",
     "pyyaml>=6.0",
     "aiofiles>=25.1.0",
+    "networkx>=3.0",
+    "plotly>=6.5.0",
+    "scipy>=1.15.3",
 ]
 
 [dependency-groups]
@@ -106,8 +109,8 @@ yarn = "oss_sustain_guard.dependency_parsers.javascript.yarn:PARSER"
 pnpm = "oss_sustain_guard.dependency_parsers.javascript.pnpm:PARSER"
 bun = "oss_sustain_guard.dependency_parsers.javascript.bun:PARSER"
 deno = "oss_sustain_guard.dependency_parsers.javascript.deno:PARSER"
-rust = "oss_sustain_guard.dependency_parsers.rust.cargo:PARSER"
-go = "oss_sustain_guard.dependency_parsers.go.modsum:PARSER"
+rust = "oss_sustain_guard.dependency_parsers.rust.cargo_lock:PARSER"
+go = "oss_sustain_guard.dependency_parsers.go.gomod:PARSER"
 ruby = "oss_sustain_guard.dependency_parsers.ruby.bundler:PARSER"
 php = "oss_sustain_guard.dependency_parsers.php.composer:PARSER"
 csharp = "oss_sustain_guard.dependency_parsers.csharp.nuget:PARSER"

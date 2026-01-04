@@ -25,7 +25,11 @@ PARSER = DependencyParserSpec(
 
 def parse_npm_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
     """Parse package-lock.json (npm v7+ format with nested packages)."""
-    from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
+    from oss_sustain_guard.dependency_graph import (
+        DependencyEdge,
+        DependencyGraph,
+        DependencyInfo,
+    )
 
     lockfile_path = Path(lockfile_path)
     if not lockfile_path.exists():
@@ -39,6 +43,7 @@ def parse_npm_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
 
     direct_deps: list[DependencyInfo] = []
     transitive_deps: list[DependencyInfo] = []
+    edges: list[DependencyEdge] = []
 
     packages = data.get("packages", {})
     for pkg_spec, pkg_data in packages.items():
@@ -63,6 +68,18 @@ def parse_npm_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
         else:
             transitive_deps.append(dep_info)
 
+        # Extract dependency edges
+        dependencies = pkg_data.get("dependencies", {})
+        if isinstance(dependencies, dict):
+            for dep_name in dependencies.keys():
+                edges.append(
+                    DependencyEdge(
+                        source=name,
+                        target=dep_name,
+                        version_spec=None,
+                    )
+                )
+
     root_name = get_javascript_project_name(lockfile_path.parent)
 
     return DependencyGraph(
@@ -70,4 +87,5 @@ def parse_npm_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
         ecosystem="javascript",
         direct_dependencies=direct_deps,
         transitive_dependencies=transitive_deps,
+        edges=edges,
     )

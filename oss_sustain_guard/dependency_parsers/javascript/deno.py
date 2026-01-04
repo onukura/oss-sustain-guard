@@ -9,7 +9,11 @@ from typing import TYPE_CHECKING
 from oss_sustain_guard.dependency_parsers.base import DependencyParserSpec
 
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
-    from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
+    from oss_sustain_guard.dependency_graph import (
+        DependencyEdge,
+        DependencyGraph,
+        DependencyInfo,
+    )
 
 
 PARSER = DependencyParserSpec(
@@ -98,11 +102,53 @@ def parse_deno_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
     # Try to get project name from deno.json
     root_name = _get_deno_project_name(lockfile_path.parent)
 
+    # Extract dependency edges from npm section
+    from oss_sustain_guard.dependency_graph import DependencyEdge
+
+    edges: list[DependencyEdge] = []
+    npm_packages = data.get("npm", {})
+    if isinstance(npm_packages, dict):
+        for pkg_key, pkg_data in npm_packages.items():
+            if not isinstance(pkg_data, dict):
+                continue
+
+            # Extract package name and version from key (format: "package@version")
+            if "@" in pkg_key:
+                # Handle scoped packages like "@babel/core@7.28.5"
+                parts = pkg_key.rsplit("@", 1)
+                source_name = parts[0] if len(parts) > 0 else pkg_key
+            else:
+                source_name = pkg_key
+
+            # Get dependencies array
+            deps = pkg_data.get("dependencies", [])
+            if isinstance(deps, list):
+                for dep_name in deps:
+                    if isinstance(dep_name, str):
+                        # Dependencies may include version info (e.g., "debug@4.4.3")
+                        if "@" in dep_name:
+                            # Extract just the package name for target
+                            dep_parts = dep_name.rsplit("@", 1)
+                            target_name = dep_parts[0]
+                            version_spec = dep_parts[1] if len(dep_parts) > 1 else None
+                        else:
+                            target_name = dep_name
+                            version_spec = None
+
+                        edges.append(
+                            DependencyEdge(
+                                source=source_name,
+                                target=target_name,
+                                version_spec=version_spec,
+                            )
+                        )
+
     return DependencyGraph(
         root_package=root_name or "unknown",
         ecosystem="javascript",
         direct_dependencies=direct_deps,
         transitive_dependencies=transitive_deps,
+        edges=edges,
     )
 
 

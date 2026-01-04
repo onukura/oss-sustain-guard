@@ -12,7 +12,11 @@ from oss_sustain_guard.dependency_parsers.javascript.shared import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
-    from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
+    from oss_sustain_guard.dependency_graph import (
+        DependencyEdge,
+        DependencyGraph,
+        DependencyInfo,
+    )
 
 
 PARSER = DependencyParserSpec(
@@ -83,26 +87,53 @@ def parse_bun_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
         if not name:
             continue
 
+        is_direct = name in direct_deps_set
         dep_info = DependencyInfo(
             name=name,
             ecosystem="javascript",
             version=version,
-            is_direct=name in direct_deps_set,
-            depth=0,
+            is_direct=is_direct,
+            depth=0 if is_direct else 1,
         )
 
-        if name in direct_deps_set:
+        if is_direct:
             direct_deps.append(dep_info)
         else:
             transitive_deps.append(dep_info)
 
     root_name = get_javascript_project_name(lockfile_path.parent)
 
+    # Extract dependency edges from packages section
+    from oss_sustain_guard.dependency_graph import DependencyEdge
+
+    edges: list[DependencyEdge] = []
+    packages = data.get("packages", {})
+    if isinstance(packages, dict):
+        for pkg_name, pkg_info in packages.items():
+            if isinstance(pkg_info, list) and len(pkg_info) >= 3:
+                # Format: ["name@version", "", {dependencies: {...}}, "sha"]
+                metadata = pkg_info[2] if len(pkg_info) > 2 else {}
+                if isinstance(metadata, dict):
+                    deps = metadata.get("dependencies", {})
+                    if isinstance(deps, dict):
+                        # Extract source name from pkg_name or first element
+                        source_name = pkg_name
+                        for dep_name, dep_spec in deps.items():
+                            version_spec = str(dep_spec) if dep_spec else None
+                            edges.append(
+                                DependencyEdge(
+                                    source=source_name,
+                                    target=dep_name,
+                                    version_spec=version_spec,
+                                )
+                            )
+
     return DependencyGraph(
         root_package=root_name or "unknown",
         ecosystem="javascript",
         direct_dependencies=direct_deps,
         transitive_dependencies=transitive_deps,
+        edges=edges,
     )
 
 
@@ -155,12 +186,13 @@ def _parse_bun_json_output(lockfile_path: Path, data: dict) -> DependencyGraph |
 
             version = info.get("version") or info.get("resolved", "").split("@")[-1]
 
+            is_direct = name in direct_deps_set
             dep_info = DependencyInfo(
                 name=name,
                 ecosystem="javascript",
                 version=version,
-                is_direct=name in direct_deps_set,
-                depth=0,
+                is_direct=is_direct,
+                depth=0 if is_direct else 1,
             )
             direct_deps.append(dep_info)
 

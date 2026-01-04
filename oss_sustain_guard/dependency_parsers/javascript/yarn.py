@@ -27,7 +27,11 @@ PARSER = DependencyParserSpec(
 
 def parse_yarn_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
     """Parse yarn.lock (supports Yarn v1 format)."""
-    from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
+    from oss_sustain_guard.dependency_graph import (
+        DependencyEdge,
+        DependencyGraph,
+        DependencyInfo,
+    )
 
     lockfile_path = Path(lockfile_path)
     if not lockfile_path.exists():
@@ -40,10 +44,13 @@ def parse_yarn_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
 
     versions_by_name: dict[str, tuple[str, str | None]] = {}
     current_packages: list[str] = []
+    edges: list[DependencyEdge] = []
+    current_package_name: str | None = None
 
     for line in content.splitlines():
         if not line.strip() or line.lstrip().startswith("#"):
             current_packages = []
+            current_package_name = None
             continue
 
         if not line.startswith(" ") and line.endswith(":"):
@@ -55,6 +62,7 @@ def parse_yarn_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
                 if not name:
                     continue
                 current_packages.append(name)
+                current_package_name = name
                 versions_by_name.setdefault(name.lower(), (name, None))
             continue
 
@@ -63,6 +71,21 @@ def parse_yarn_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
             version = version_match.group(1).strip()
             for name in current_packages:
                 versions_by_name[name.lower()] = (name, version)
+            continue
+
+        # Extract dependencies (dependencies section in yarn.lock)
+        dep_match = re.match(r"\s+(\w[\w\-\.]*)\s+(.+)", line)
+        if dep_match and current_package_name:
+            dep_name = dep_match.group(1).strip()
+            dep_spec = dep_match.group(2).strip()
+            if dep_name and dep_spec:
+                edges.append(
+                    DependencyEdge(
+                        source=current_package_name,
+                        target=dep_name,
+                        version_spec=dep_spec,
+                    )
+                )
 
     direct_names = get_javascript_direct_dependencies(lockfile_path.parent)
     dev_names = get_javascript_dev_dependencies(lockfile_path.parent)
@@ -95,4 +118,5 @@ def parse_yarn_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
         ecosystem="javascript",
         direct_dependencies=direct_deps,
         transitive_dependencies=transitive_deps,
+        edges=edges,
     )

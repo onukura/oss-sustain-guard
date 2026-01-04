@@ -18,7 +18,11 @@ from oss_sustain_guard.dependency_parsers.javascript.shared import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
-    from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
+    from oss_sustain_guard.dependency_graph import (
+        DependencyEdge,
+        DependencyGraph,
+        DependencyInfo,
+    )
 
 
 PARSER = DependencyParserSpec(
@@ -120,9 +124,39 @@ def parse_pnpm_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
 
     root_name = get_javascript_project_name(lockfile_path.parent)
 
+    # Extract dependency edges from packages section
+    from oss_sustain_guard.dependency_graph import DependencyEdge
+
+    edges: list[DependencyEdge] = []
+    packages_section = data.get("packages", {})
+    if isinstance(packages_section, dict):
+        for pkg_key, pkg_data in packages_section.items():
+            if not isinstance(pkg_data, dict):
+                continue
+
+            # Extract source package name from key
+            source_name = extract_pnpm_package_name(str(pkg_key))
+            if not source_name:
+                continue
+
+            # Get dependencies from package data
+            deps = pkg_data.get("dependencies", {})
+            if isinstance(deps, dict):
+                for dep_name, dep_version in deps.items():
+                    # dep_version format: "1.2.3" or path reference
+                    version_spec = str(dep_version) if dep_version else None
+                    edges.append(
+                        DependencyEdge(
+                            source=source_name,
+                            target=dep_name,
+                            version_spec=version_spec,
+                        )
+                    )
+
     return DependencyGraph(
         root_package=root_name or "unknown",
         ecosystem="javascript",
         direct_dependencies=direct_deps,
         transitive_dependencies=transitive_deps,
+        edges=edges,
     )
