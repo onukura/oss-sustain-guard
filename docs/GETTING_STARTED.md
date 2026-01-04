@@ -229,6 +229,23 @@ os4g check requests --profile long_term_stability
 os4g check requests --no-cache
 ```
 
+### Visualize Your Dependency Network
+
+Create an interactive graph of your project's dependencies and their health scores:
+
+```bash
+# Generate an interactive HTML dependency graph
+os4g graph package.json
+
+# Export as JSON for integration with other tools
+os4g graph Cargo.lock --output deps.json
+
+# Expoer as HTML file
+os4g graph uv.lock --output my-dependencies.html
+```
+
+See [Dependency Graph Visualization Guide](DEPENDENCY_GRAPH_VISUALIZATION.md) for more options.
+
 ## 🔐 Token Setup (GitHub or GitLab)
 
 **Required:** OSS Sustain Guard needs a token for the host where the repository lives.
@@ -391,6 +408,7 @@ os4g check requests --no-cache
 
 - **Configure Exclusions**: [Exclude Configuration Guide](EXCLUDE_PACKAGES_GUIDE.md) - Exclude internal packages
 - **Scan Entire Project**: [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) - Scan monorepos and complex projects
+- **Visualize Dependencies**: [Dependency Graph Visualization](DEPENDENCY_GRAPH_VISUALIZATION.md) - Interactive dependency health networks
 - **Track Changes**: Monitor dependency health over time
 - **CI/CD Integration**: [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) - Integrate with your workflow
 - **Discover Projects to Support**: [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects that need support

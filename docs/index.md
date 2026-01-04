@@ -80,6 +80,7 @@ Metrics are one lens among many; they work best alongside project context and re
 **Usage:**
 
 - [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md) - Analyze entire projects and monorepos
+- [Dependency Graph Visualization](DEPENDENCY_GRAPH_VISUALIZATION.md) - Visualize and analyze dependency networks
 - [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects to support
 
 **Configuration:**

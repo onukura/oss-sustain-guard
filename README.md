@@ -190,6 +190,7 @@ For detailed usage, configuration, and features, see our documentation site:
 
 - **[Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/)** - Installation and basic usage
 - **[Scoring Profiles](https://onukura.github.io/oss-sustain-guard/SCORING_PROFILES_GUIDE/)** - Different evaluation perspectives
+- **[Dependency Graph Visualization](https://onukura.github.io/oss-sustain-guard/DEPENDENCY_GRAPH_VISUALIZATION/)** - Visualize dependency health networks
 - **[GitHub Actions Integration](https://onukura.github.io/oss-sustain-guard/GITHUB_ACTIONS_GUIDE/)** - CI/CD setup
 - **[Pre-Commit Hooks](https://onukura.github.io/oss-sustain-guard/PRE_COMMIT_INTEGRATION/)** - Automated checks
 - **[Exclude Packages](https://onukura.github.io/oss-sustain-guard/EXCLUDE_PACKAGES_GUIDE/)** - Configuration
@@ -241,6 +242,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code st
 ## 📝 Documentation
 
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
+- [Dependency Graph Visualization](./docs/DEPENDENCY_GRAPH_VISUALIZATION.md) - Visualize dependency health networks
 - [Custom Metrics Guide](./docs/CUSTOM_METRICS_GUIDE.md) - Create your own sustainability metrics
 - [Custom Resolvers Guide](./docs/CUSTOM_RESOLVERS_GUIDE.md) - Add support for new package ecosystems
 - [Custom VCS Providers Guide](./docs/CUSTOM_VCS_GUIDE.md) - Add support for new version control systems

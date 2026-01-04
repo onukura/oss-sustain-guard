@@ -1,187 +1,60 @@
 # Dependency Analysis Guide
 
-## Overview
+The `--show-dependencies` (`-D`) flag analyzes and displays health scores of your project's dependencies.
 
-The `--show-dependencies` (`-D`) flag enables OSS Sustain Guard to analyze and display the health scores of your project's dependencies. This provides a **holistic sustainability assessment** by evaluating not just the primary package, but also the health of its entire dependency tree.
-
-> ℹ️ **Experimental feature**: Dependency analysis is still undergoing validation. The results are provided as a helpful reference and may evolve as we improve accuracy and coverage.
-
-## Why Dependency Analysis Matters
-
-When assessing package sustainability, evaluating only the primary package is incomplete. Dependencies form the foundation of your project:
-
-- **Downstream Concerns**: Unmaintained dependencies can introduce security vulnerabilities and technical debt
-- **Supply Chain Health**: A healthy package built on unstable dependencies is like a "thin toothpick supporting a building"
-- **Long-term Viability**: Understanding the health of your entire dependency tree helps you make informed decisions about package adoption
+> ℹ️ **Experimental feature**: Results are provided as helpful reference and may evolve.
 
 ## Requirements
 
-The `--show-dependencies` flag **only works when your project contains a lockfile**. Supported lockfiles include:
+Requires a **lockfile** (manifest files alone are insufficient). Supported lockfiles:
 
-### Python
-
-- `uv.lock` (UV package manager)
-- `poetry.lock` (Poetry)
-- `Pipfile.lock` (Pipenv)
-
-### JavaScript/TypeScript
-
-- `package-lock.json` (npm v7+)
-- `yarn.lock` (Yarn)
-- `pnpm-lock.yaml` (pnpm)
-
-### Other Ecosystems
-
-- `Cargo.lock` (Rust)
-- `go.mod`, `go.sum` (Go modules)
-- `cabal.project.freeze`, `stack.yaml.lock` (Haskell)
-- `cpanfile.snapshot` (Perl)
-- `mix.lock` (Elixir)
-- `pubspec.lock` (Dart)
-- `renv.lock` (R)
-- `Package.resolved` (Swift Package Manager)
-- `Gemfile.lock` (Ruby)
-- `composer.lock` (PHP)
+- **Python**: `uv.lock`, `poetry.lock`, `Pipfile.lock`
+- **JavaScript**: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`
+- **Rust**: `Cargo.lock`
+- **Go**: `go.mod`, `go.sum`
+- **Other**: `Gemfile.lock` (Ruby), `composer.lock` (PHP), `mix.lock` (Elixir), `cabal.project.freeze`/`stack.yaml.lock` (Haskell), `cpanfile.snapshot` (Perl), `pubspec.lock` (Dart), `renv.lock` (R), `Package.resolved` (Swift)
 
 ## Usage
 
-### Basic Usage
-
-Analyze your project with dependency scores:
-
 ```bash
+# Analyze project with dependency scores
 os4g check --show-dependencies
-```
 
-Or with auto-detection:
-
-```bash
+# With auto-detection
 os4g check --show-dependencies --include-lock
-```
 
-### With Specific Packages
+# Compact format (CI/CD-friendly)
+os4g check --show-dependencies -o compact
 
-Dependency scores are **only available when analyzing your project directory with lockfiles present**. Specifying individual packages will show a warning:
-
-```bash
-cd /path/to/your/project
-os4g check requests --show-dependencies
-# ℹ️  --show-dependencies specified but no lockfiles found in .
-#    Dependency scores are only available when analyzing projects with lockfiles.
-```
-
-### Compact Format
-
-Display dependency statistics in compact format (ideal for CI/CD):
-
-```bash
-os4g check --show-dependencies -c
-```
-
-Output:
-
-```shell
-✓ my-project (87/100) - Healthy
-  🔗 Dependencies: avg=75, min=45, max=92, count=23
-```
-
-### Detail Format
-
-Display detailed dependency tables:
-
-```bash
+# Detail format with all metrics
 os4g check --show-dependencies -o detail
 ```
 
-Output:
-
-```shell
-🔗 my-project - Dependency Reference Scores (Top 15):
-┏━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
-┃ Package        ┃ Score  ┃ Health          ┃
-┡━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
-│ click          │ 87/100 │ Healthy ✓       │
-│ requests       │ 76/100 │ Monitor │
-│ urllib3        │ 68/100 │ Monitor │
-│ ...            │        │                 │
-└────────────────┴────────┴─────────────────┘
-```
-
-### Standard Format
-
-Display top 10 dependencies with health status:
-
-```bash
-os4g check --show-dependencies
-```
-
-Output:
-
-```shell
-🔗 my-project - Dependency Reference Scores (Top 10):
-   • click 87/100 ✓ Healthy
-   • requests 76/100 ⚠ Monitor
-   • urllib3 68/100 ⚠ Monitor
-   • ...
-```
+Dependency scores are only available when analyzing projects with lockfiles. Individual package analysis won't show dependency scores.
 
 ## Interpreting Results
 
-Dependency scores use the same 0-100 scale as primary packages:
+Scores use the same 0-100 scale:
 
-| Score Range | Status | Interpretation |
-| -------- | -------- | -------- |
-| 80-100 | ✓ Healthy | Well-maintained, actively developed |
-| 50-79 | ⚠ Monitor | Monitor for updates, consider alternatives |
-| 0-49 | ✗ Needs support | Needs support, prioritize alternatives or direct support |
+| Score | Status | Action |
+|-------|--------|--------|
+| 80-100 | ✓ Healthy | Well-maintained |
+| 50-79 | ⚠ Monitor | Review regularly |
+| 0-49 | ✗ Needs support | Consider alternatives or contribute |
 
-## Real-World Example
+## Tips
 
-```bash
-# Analyze your project with dependency insights
-cd my-python-project
-os4g check --show-dependencies
-
-# Results show:
-# ✓ my-project (85/100) - Healthy
-#
-# 🔗 Dependency Reference Scores (Top 10):
-#    • click 87/100 ✓ Healthy
-#    • charset-normalizer 80/100 ✓ Healthy
-#    • coverage 74/100 ⚠ Monitor
-#    • anyio 66/100 ⚠ Monitor
-#    • ...
-```
-
-This reveals that while your project is healthy, some dependencies need monitoring. You can then:
-
-1. Check if updated versions are available
-2. Evaluate alternative packages with better sustainability scores
-3. Consider contributing to low-scoring dependencies you rely on
-4. Adjust your attention threshold based on your use case
-
-## Tips & Best Practices
-
-1. **Run regularly**: Dependency health changes over time. Include this in your CI/CD pipeline.
-
-2. **Combine with other tools**: Use alongside security scanners and vulnerability databases for comprehensive analysis.
-
-3. **Prioritize key dependencies**: Focus on dependencies that are:
-   - Core to your application logic
-   - Frequently updated or actively used
-   - On the core path of your system
-
-4. **Support low-scoring projects**: If a low-scoring dependency is core to your project, consider:
-   - Contributing code or documentation
-   - Sponsoring the maintainer
-   - Volunteering as a maintainer
+- Run regularly in CI/CD to track changes
+- Combine with security scanners for comprehensive analysis
+- Focus on high-impact dependencies
+- Consider supporting low-scoring projects you rely on
 
 ## Limitations
 
-- Dependency analysis requires lockfiles (manifest files alone are insufficient)
-- Only direct dependencies are analyzed (not transitive dependencies)
-- Scores are based on GitHub repository metrics (private packages won't be scored)
-- Cross-ecosystem dependencies (e.g., Python calling Rust native code) are not analyzed
+- Requires lockfiles (not manifest files alone)
+- Only direct dependencies analyzed
+- GitHub-only (private packages not scored)
+- Cross-ecosystem dependencies not included
 
 ## See Also
 
