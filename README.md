@@ -115,8 +115,25 @@ These samples are sufficient for evaluating sustainability trends. Results inclu
 
 ## 🚀 Quick Start
 
+### Installation Options
+
+**Recommended for non-Python developers** (isolated environment):
+
 ```bash
-# Install
+# Using pipx (recommended - isolated environment)
+pipx install oss-sustain-guard
+
+# Using uv tool (recommended - fast isolated environment)
+uv tool install oss-sustain-guard
+
+# Using Docker (no Python installation needed)
+docker run --rm -e GITHUB_TOKEN=$GITHUB_TOKEN ghcr.io/onukura/oss-sustain-guard:latest check requests
+```
+
+**For Python developers:**
+
+```bash
+# Using pip (standard installation)
 pip install oss-sustain-guard
 
 # Try built-in demo data (no token required)

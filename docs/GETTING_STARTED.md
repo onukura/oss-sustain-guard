@@ -4,7 +4,54 @@ OSS Sustain Guard is a multi-language package sustainability analyzer that helps
 
 ## 📦 Installation
 
-Install easily from PyPI:
+### Recommended: Isolated Environment (for non-Python developers)
+
+If you're not a Python developer or want to avoid polluting your global Python environment, use one of these methods:
+
+**Using pipx** (recommended for most users):
+
+```bash
+# Install pipx first (if not already installed)
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+
+# Install oss-sustain-guard in isolated environment
+pipx install oss-sustain-guard
+```
+
+**Using uv tool** (fastest option):
+
+```bash
+# Install uv first (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install oss-sustain-guard in isolated environment
+uv tool install oss-sustain-guard
+```
+
+**Using Docker** (no Python installation needed):
+
+```bash
+# Pull the Docker image
+docker pull ghcr.io/onukura/oss-sustain-guard:latest
+
+# Run analysis (pass GitHub token as environment variable)
+docker run --rm -e GITHUB_TOKEN=$GITHUB_TOKEN ghcr.io/onukura/oss-sustain-guard:latest check requests
+```
+
+**Using GitHub Actions** (for CI/CD):
+
+```yaml
+- uses: onukura/oss-sustain-guard@v2
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+See [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) for more details.
+
+### Standard Installation (for Python developers)
+
+Install directly from PyPI:
 
 ```bash
 pip install oss-sustain-guard

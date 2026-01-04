@@ -22,7 +22,7 @@ CHAOSS organizes metrics into:
 ### ✅ Directly Aligned Metrics (9/12)
 
 | OSS Sustain Guard Metric | CHAOSS Metric | Alignment Status |
-|--------------------------|---------------|------------------|
+| ------------------------ | ------------- | ---------------- |
 | **Contributor Redundancy** | [Elephant Factor](https://chaoss.community/kb/metric-elephant-factor/) | ✅ **Perfect** - Measures contributor concentration |
 | **Maintainer Retention** | [Inactive Contributors](https://chaoss.community/kb/metric-inactive-contributors/) | ✅ **Strong** - Tracks maintainer activity over time |
 | **Recent Activity** | [Activity Dates and Times](https://chaoss.community/kb/metric-activity-dates-and-times/) | ✅ **Perfect** - Measures project activity recency |
@@ -36,14 +36,14 @@ CHAOSS organizes metrics into:
 ### ⚠️  Partially Aligned Metrics (2/12)
 
 | OSS Sustain Guard Metric | CHAOSS Equivalent | Gap Analysis |
-|--------------------------|-------------------|--------------|
+| ------------------------ | ----------------- | ------------ |
 | **Build Health** | [Test Coverage](https://chaoss.community/kb/metric-test-coverage/) (partial) | ⚠️ **Partial** - CHAOSS focuses on test coverage; we measure CI status. Both are valid quality signals. |
 | **Security Signals** | [Open Source Security Foundation (OpenSSF) Best Practices Badge](https://chaoss.community/kb/metric-open-source-security-foundation-openssf-best-practices-badge/) | ⚠️ **Partial** - CHAOSS uses OpenSSF badges; we check security policies and alerts. Complementary approaches. |
 
 ### 🆕 OSS Sustain Guard Specific (1/12)
 
 | OSS Sustain Guard Metric | Notes |
-|--------------------------|-------|
+| ------------------------ | ----- |
 | **Funding Signals** | 🆕 **Original** - CHAOSS has [Sponsorship](https://chaoss.community/kb/metric-sponsorship/) but focuses on event sponsorship. Our metric specifically tracks GitHub Sponsors, Open Collective, etc. for project sustainability. This is a valuable addition to the CHAOSS ecosystem. |
 
 ## Metrics Models Alignment
@@ -107,21 +107,21 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 
 ### Medium Priority
 
-4. **[Change Request Acceptance Ratio](https://chaoss.community/kb/metric-change-request-acceptance-ratio/)** - PR acceptance rate
-5. **[Burstiness](https://chaoss.community/kb/metric-burstiness/)** - Activity pattern regularity
-6. **[Project Velocity](https://chaoss.community/kb/metric-project-velocity/)** - Overall development pace
+1. **[Change Request Acceptance Ratio](https://chaoss.community/kb/metric-change-request-acceptance-ratio/)** - PR acceptance rate
+2. **[Burstiness](https://chaoss.community/kb/metric-burstiness/)** - Activity pattern regularity
+3. **[Project Velocity](https://chaoss.community/kb/metric-project-velocity/)** - Overall development pace
 
 ### Low Priority (Data-Intensive)
 
-7. **[Organizational Diversity](https://chaoss.community/kb/metric-organizational-diversity/)** - Company diversity in contributors
-8. **[Types of Contributions](https://chaoss.community/kb/metric-types-of-contributions/)** - Code vs. docs vs. issues
+1. **[Organizational Diversity](https://chaoss.community/kb/metric-organizational-diversity/)** - Company diversity in contributors
+2. **[Types of Contributions](https://chaoss.community/kb/metric-types-of-contributions/)** - Code vs. docs vs. issues
 
 ## Naming Validation
 
 ### ✅ Excellent CHAOSS-Aligned Names (Phase 1-4 Renames)
 
 | Original Name | Current Name | CHAOSS Alignment |
-|---------------|--------------|------------------|
+| ------------- | ------------ | ---------------- |
 | Bus Factor | **Contributor Redundancy** | ✅ More professional than "Elephant Factor" |
 | Maintainer Drain | **Maintainer Retention** | ✅ Positive framing, CHAOSS-compatible |
 | Zombie Check | **Recent Activity** | ✅ Neutral, observation-focused |
@@ -198,15 +198,17 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 
 ### Short-term (Minor Enhancements)
 
-4. 📋 **Add `--raw` flag** - Output CHAOSS-style uninterpreted metrics
-5. 📋 **Export to CHAOSS JSON** - Provide CHAOSS-compatible output format
-6. 📋 **Contributor Count metric** - Surface existing calculation as standalone metric
+1. 📋 **Add `--raw` flag** - Output CHAOSS-style uninterpreted metrics
+2. 📋 **Export to CHAOSS JSON** - Provide CHAOSS-compatible output format
+3. 📋 **Contributor Count metric** - Surface existing calculation as standalone metric
 
 ### Long-term (New Features)
 
-7. 📋 **Libyears implementation** - Dependency freshness (already planned)
-8. 📋 **Change Request Acceptance Ratio** - PR acceptance rate
-9. 📋 **Organizational Diversity** - Company diversity analysis
+1. 📋 **Libyears implementation** - Dependency freshness (already planned)
+2. 📋 **Change Request Acceptance Ratio** - PR acceptance rate
+3. 📋 **Organizational Diversity** - Company diversity analysis
+4. 📋 **Binary Distribution** - Standalone binaries via PyInstaller/Nuitka for non-Python developers
+5. 📋 **Homebrew Formula** - `brew install oss-sustain-guard` for macOS/Linux users
 
 ## Conclusion
 
