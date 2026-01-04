@@ -158,7 +158,14 @@ class ContributorAttractionChecker(MetricChecker):
                 f"Consider community engagement."
             )
 
-        return Metric("Contributor Attraction", score, max_score, message, risk)
+        metadata = {
+            "new_contributors": new_count,
+            "total_contributors": total_contributors,
+        }
+
+        return Metric(
+            "Contributor Attraction", score, max_score, message, risk, metadata
+        )
 
 
 _CHECKER = ContributorAttractionChecker()

@@ -898,36 +898,21 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
             if author_counts:
                 signals["contributor_count"] = len(author_counts)
 
-    # Add new contributor metrics (Phase 4)
+    # Add new contributor metrics (Phase 4) - use metadata instead of parsing messages
     if "Contributor Attraction" in metric_dict:
         m = metric_dict["Contributor Attraction"]
-        # Extract new contributor count from message if available
-        if "new contributor" in m.message.lower():
-            import re
-
-            match = re.search(r"(\d+) new contributor", m.message)
-            if match:
-                signals["new_contributors_6mo"] = int(match.group(1))
+        if m.metadata and "new_contributors" in m.metadata:
+            signals["new_contributors_6mo"] = m.metadata["new_contributors"]
 
     if "Contributor Retention" in metric_dict:
         m = metric_dict["Contributor Retention"]
-        # Extract retention percentage from message
-        if "%" in m.message:
-            import re
-
-            match = re.search(r"(\d+)%", m.message)
-            if match:
-                signals["contributor_retention_rate"] = int(match.group(1))
+        if m.metadata and "retention_rate" in m.metadata:
+            signals["contributor_retention_rate"] = m.metadata["retention_rate"]
 
     if "Review Health" in metric_dict:
         m = metric_dict["Review Health"]
-        # Extract average review time from message
-        if "Avg time to first review" in m.message:
-            import re
-
-            match = re.search(r"(\d+\.?\d*)h", m.message)
-            if match:
-                signals["avg_review_time_hours"] = float(match.group(1))
+        if m.metadata and "avg_review_time_hours" in m.metadata:
+            signals["avg_review_time_hours"] = m.metadata["avg_review_time_hours"]
 
     return signals
 

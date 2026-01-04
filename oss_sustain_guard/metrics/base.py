@@ -16,6 +16,7 @@ class Metric(NamedTuple):
     max_score: int
     message: str
     risk: str  # "Critical", "High", "Medium", "Low", "None"
+    metadata: dict[str, Any] | None = None  # Structured data independent of message
 
 
 class MetricContext(NamedTuple):

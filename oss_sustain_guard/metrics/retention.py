@@ -166,7 +166,15 @@ class ContributorRetentionChecker(MetricChecker):
                 f"contributors remain active."
             )
 
-        return Metric("Contributor Retention", score, max_score, message, risk)
+        metadata = {
+            "retention_rate": int(retention_percentage),
+            "retained_contributors": len(retained_contributors),
+            "earlier_contributors": len(earlier_contributors),
+        }
+
+        return Metric(
+            "Contributor Retention", score, max_score, message, risk, metadata
+        )
 
 
 _CHECKER = ContributorRetentionChecker()

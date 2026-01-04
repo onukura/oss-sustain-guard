@@ -248,18 +248,38 @@ def test_compute_metric_models_with_monitoring_messages():
 
 
 def test_extract_signals_parses_repo_and_metric_messages():
+    # Use metadata instead of parsing messages for structured data
     metrics = [
-        Metric("Funding Signals", 5, 10, "msg", "Low"),
-        Metric("Recent Activity", 5, 10, "msg", "Low"),
+        Metric("Funding Signals", 5, 10, "msg", "Low", None),
+        Metric("Recent Activity", 5, 10, "msg", "Low", None),
         Metric(
             "Contributor Attraction",
             5,
             10,
             "2 new contributors in 6 months",
             "Low",
+            {"new_contributors": 2, "total_contributors": 10},
         ),
-        Metric("Contributor Retention", 5, 10, "Retention at 75%", "Low"),
-        Metric("Review Health", 5, 10, "Avg time to first review: 3.5h", "Low"),
+        Metric(
+            "Contributor Retention",
+            5,
+            10,
+            "Retention at 75%",
+            "Low",
+            {
+                "retention_rate": 75,
+                "retained_contributors": 3,
+                "earlier_contributors": 4,
+            },
+        ),
+        Metric(
+            "Review Health",
+            5,
+            10,
+            "Avg time to first review: 3.5h",
+            "Low",
+            {"avg_review_time_hours": 3.5, "avg_review_count": 2.1},
+        ),
     ]
     repo_data = {
         "fundingLinks": [

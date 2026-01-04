@@ -136,7 +136,12 @@ class ReviewHealthChecker(MetricChecker):
                 f"Consider increasing reviewer engagement."
             )
 
-        return Metric("Review Health", score, max_score, message, risk)
+        metadata = {
+            "avg_review_time_hours": round(avg_review_time, 2),
+            "avg_review_count": round(avg_review_count, 2),
+        }
+
+        return Metric("Review Health", score, max_score, message, risk, metadata)
 
 
 _CHECKER = ReviewHealthChecker()
