@@ -157,126 +157,6 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
     }
 
 
-# --- Helper Functions for VCS Data Conversion ---
-
-
-def _vcs_data_to_repo_info(vcs_data: VCSRepositoryData) -> dict[str, Any]:
-    """
-    Convert VCSRepositoryData to legacy repo_info format for metrics.
-
-    This maintains compatibility with existing metric functions that expect
-    the GitHub GraphQL response structure.
-
-    Args:
-        vcs_data: Normalized VCSRepositoryData from any VCS provider
-
-    Returns:
-        Dictionary matching the legacy GitHub GraphQL response format
-    """
-    # Use raw_data if available (for GitHub), otherwise reconstruct from normalized data
-    if vcs_data.raw_data:
-        repo_info = (
-            vcs_data.raw_data.copy()
-            if isinstance(vcs_data.raw_data, dict)
-            else vcs_data.raw_data
-        )
-        # Ensure sample_counts is included
-        if isinstance(repo_info, dict) and vcs_data.sample_counts:
-            repo_info["sample_counts"] = vcs_data.sample_counts
-        return repo_info
-
-    # Reconstruct the structure that metrics expect
-    # Handle case where commits or ci_status may be empty
-    default_branch_data = None
-    if vcs_data.commits or vcs_data.ci_status or vcs_data.default_branch:
-        default_branch_data = {
-            "name": vcs_data.default_branch,
-            "target": {
-                "history": {
-                    "edges": [{"node": commit} for commit in vcs_data.commits],
-                    "totalCount": vcs_data.total_commits,
-                },
-                "checkSuites": {
-                    "nodes": [vcs_data.ci_status] if vcs_data.ci_status else [],
-                },
-            },
-        }
-
-    readme_blob = None
-    if vcs_data.readme_size is not None:
-        readme_blob = {"byteSize": vcs_data.readme_size, "text": ""}
-
-    contributing_blob = (
-        {"byteSize": vcs_data.contributing_file_size}
-        if vcs_data.contributing_file_size is not None
-        else None
-    )
-
-    topics_nodes = [{"topic": {"name": topic}} for topic in vcs_data.topics if topic]
-
-    return {
-        "isArchived": vcs_data.is_archived,
-        "pushedAt": vcs_data.pushed_at,
-        "owner": {
-            "__typename": vcs_data.owner_type,
-            "login": vcs_data.owner_login,
-            "name": vcs_data.owner_name,
-        },
-        "defaultBranchRef": default_branch_data,
-        "pullRequests": {
-            "edges": [{"node": pr} for pr in vcs_data.merged_prs],
-        },
-        "closedPullRequests": {
-            "totalCount": len(vcs_data.closed_prs),
-            "edges": [{"node": pr} for pr in vcs_data.closed_prs],
-        },
-        "mergedPullRequestsCount": {
-            "totalCount": vcs_data.total_merged_prs,
-        },
-        "releases": {
-            "edges": [{"node": release} for release in vcs_data.releases],
-        },
-        "issues": {
-            "edges": [{"node": issue} for issue in vcs_data.open_issues],
-            "totalCount": vcs_data.open_issues_count,
-        },
-        "closedIssues": {
-            "totalCount": vcs_data.total_closed_issues,
-            "edges": [{"node": issue} for issue in vcs_data.closed_issues],
-        },
-        "vulnerabilityAlerts": {
-            "edges": [
-                {"node": alert} for alert in (vcs_data.vulnerability_alerts or [])
-            ],
-        }
-        if vcs_data.vulnerability_alerts
-        else None,
-        "isSecurityPolicyEnabled": vcs_data.has_security_policy,
-        "fundingLinks": vcs_data.funding_links,
-        "hasWikiEnabled": vcs_data.has_wiki,
-        "hasIssuesEnabled": vcs_data.has_issues,
-        "hasDiscussionsEnabled": vcs_data.has_discussions,
-        "codeOfConduct": vcs_data.code_of_conduct,
-        "licenseInfo": vcs_data.license_info,
-        "stargazerCount": vcs_data.star_count,
-        "watchers": {"totalCount": vcs_data.watchers_count},
-        "description": vcs_data.description,
-        "homepageUrl": vcs_data.homepage_url,
-        "repositoryTopics": {"nodes": topics_nodes},
-        "readmeUpperCase": readme_blob,
-        "readmeLowerCase": None,
-        "readmeAllCaps": None,
-        "contributingFile": contributing_blob,
-        "primaryLanguage": {"name": vcs_data.language} if vcs_data.language else None,
-        "forks": {
-            "edges": [{"node": fork} for fork in vcs_data.forks],
-        },
-        "forkCount": vcs_data.total_forks,
-        # Include sample_counts from VCS data
-        "sample_counts": vcs_data.sample_counts,
-    }
-
-
 # --- Scoring System ---
 
 # Metric weight definitions for different profiles
@@ -828,13 +708,15 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
     return models
 
 
-def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[str, Any]:
+def extract_signals(
+    metrics: list[Metric], vcs_data: VCSRepositoryData
+) -> dict[str, Any]:
     """
     Extracts raw signal values for transparency and debugging.
 
     Args:
         metrics: List of computed metrics
-        repo_data: Raw repository data from GitHub API
+        vcs_data: Normalized VCS repository data
 
     Returns:
         Dictionary of signal key-value pairs
@@ -845,11 +727,11 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
     metric_dict = {m.name: m for m in metrics}
 
     if "Funding Signals" in metric_dict:
-        funding_links = repo_data.get("fundingLinks", [])
+        funding_links = vcs_data.funding_links or []
         signals["funding_link_count"] = len(funding_links)
 
     if "Recent Activity" in metric_dict:
-        pushed_at = repo_data.get("pushedAt")
+        pushed_at = vcs_data.pushed_at
         if pushed_at:
             from datetime import datetime
 
@@ -860,43 +742,37 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
             except (ValueError, AttributeError):
                 pass
 
-    # Add contributor count if available
-    default_branch = repo_data.get("defaultBranchRef")
-    if default_branch:
-        target = default_branch.get("target")
-        if target:
-            history = target.get("history", {}).get("edges", [])
+    # Add contributor count if available from commits
+    if vcs_data.commits:
+        # Bot patterns to exclude (same as check_bus_factor)
+        bot_keywords = [
+            "bot",
+            "action",
+            "dependabot",
+            "renovate",
+            "github-actions",
+            "ci-",
+            "autorelease",
+            "release-bot",
+            "copilot",
+            "actions-user",
+        ]
 
-            # Bot patterns to exclude (same as check_bus_factor)
-            bot_keywords = [
-                "bot",
-                "action",
-                "dependabot",
-                "renovate",
-                "github-actions",
-                "ci-",
-                "autorelease",
-                "release-bot",
-                "copilot",
-                "actions-user",
-            ]
+        def is_bot(login: str) -> bool:
+            """Check if login appears to be a bot."""
+            lower = login.lower()
+            return any(keyword in lower for keyword in bot_keywords)
 
-            def is_bot(login: str) -> bool:
-                """Check if login appears to be a bot."""
-                lower = login.lower()
-                return any(keyword in lower for keyword in bot_keywords)
-
-            author_counts = {}
-            for edge in history:
-                node = edge.get("node", {})
-                author = node.get("author", {})
-                user = author.get("user")
-                if user:
-                    login = user.get("login")
-                    if login and not is_bot(login):  # Exclude bots
-                        author_counts[login] = author_counts.get(login, 0) + 1
-            if author_counts:
-                signals["contributor_count"] = len(author_counts)
+        author_counts = {}
+        for commit in vcs_data.commits:
+            author = commit.get("author", {})
+            user = author.get("user")
+            if user:
+                login = user.get("login")
+                if login and not is_bot(login):  # Exclude bots
+                    author_counts[login] = author_counts.get(login, 0) + 1
+        if author_counts:
+            signals["contributor_count"] = len(author_counts)
 
     # Add new contributor metrics (Phase 4) - use metadata instead of parsing messages
     if "Contributor Attraction" in metric_dict:
@@ -915,80 +791,6 @@ def extract_signals(metrics: list[Metric], repo_data: dict[str, Any]) -> dict[st
             signals["avg_review_time_hours"] = m.metadata["avg_review_time_hours"]
 
     return signals
-
-
-def _extract_sample_counts(repo_info: dict[str, Any]) -> dict[str, int]:
-    """Extract actual sample counts from repository data."""
-    # If sample_counts already provided by VCS provider, use that
-    if "sample_counts" in repo_info and repo_info["sample_counts"]:
-        return repo_info["sample_counts"]
-
-    # Otherwise, extract from GraphQL structure (for GitHub or legacy data)
-    samples = {}
-
-    # Commits
-    try:
-        default_branch = repo_info.get("defaultBranchRef")
-        if default_branch and default_branch.get("target"):
-            commits_history = (
-                default_branch.get("target", {}).get("history", {}).get("edges", [])
-            )
-            samples["commits"] = len(commits_history)
-        else:
-            samples["commits"] = 0
-    except (TypeError, KeyError, AttributeError):
-        samples["commits"] = 0
-
-    # Merged PRs
-    try:
-        merged_prs = repo_info.get("pullRequests", {}).get("edges", [])
-        samples["merged_prs"] = len(merged_prs)
-    except (TypeError, KeyError):
-        samples["merged_prs"] = 0
-
-    # Closed PRs
-    try:
-        closed_prs = repo_info.get("closedPullRequests", {}).get("edges", [])
-        samples["closed_prs"] = len(closed_prs)
-    except (TypeError, KeyError):
-        samples["closed_prs"] = 0
-
-    # Open Issues
-    try:
-        open_issues = repo_info.get("issues", {}).get("edges", [])
-        samples["open_issues"] = len(open_issues)
-    except (TypeError, KeyError):
-        samples["open_issues"] = 0
-
-    # Closed Issues
-    try:
-        closed_issues = repo_info.get("closedIssues", {}).get("edges", [])
-        samples["closed_issues"] = len(closed_issues)
-    except (TypeError, KeyError):
-        samples["closed_issues"] = 0
-
-    # Releases
-    try:
-        releases = repo_info.get("releases", {}).get("edges", [])
-        samples["releases"] = len(releases)
-    except (TypeError, KeyError):
-        samples["releases"] = 0
-
-    # Vulnerability alerts
-    try:
-        vuln_alerts = repo_info.get("vulnerabilityAlerts", {}).get("edges", [])
-        samples["vulnerability_alerts"] = len(vuln_alerts)
-    except (TypeError, KeyError):
-        samples["vulnerability_alerts"] = 0
-
-    # Forks
-    try:
-        forks = repo_info.get("forks", {}).get("edges", [])
-        samples["forks"] = len(forks)
-    except (TypeError, KeyError):
-        samples["forks"] = 0
-
-    return samples
 
 
 def _get_user_friendly_error(exc: Exception) -> str:
@@ -1024,19 +826,18 @@ def _get_user_friendly_error(exc: Exception) -> str:
 def _analyze_repository_data(
     owner: str,
     name: str,
-    repo_info: dict[str, Any],
-    vcs_data: VCSRepositoryData | None = None,
+    vcs_data: VCSRepositoryData,
     platform: str | None = None,
     package_name: str | None = None,
     profile: str = "balanced",
 ) -> AnalysisResult:
-    """Analyze repository data (extracted from GraphQL response).
+    """Analyze repository data using normalized VCS data.
 
-    This is the core analysis logic separated from the GraphQL query.
+    This is the core analysis logic that works with VCS-agnostic repository data.
     """
     metrics: list[Metric] = []
     skipped_metrics: list[str] = []
-    repo_url = f"https://github.com/{owner}/{name}"
+    repo_url = f"https://github.com/{owner}/{name}"  # Will be replaced by caller
     context = MetricContext(
         owner=owner,
         name=name,
@@ -1048,12 +849,7 @@ def _analyze_repository_data(
     for spec in load_metric_specs():
         try:
             checker = spec.checker
-            if vcs_data is not None and hasattr(checker, "check"):
-                metric = checker.check(vcs_data, context)
-            elif hasattr(checker, "check_legacy"):
-                metric = checker.check_legacy(repo_info, context)
-            else:
-                metric = None
+            metric = checker.check(vcs_data, context)
             if metric is None:
                 # Track skipped metrics (e.g., optional metrics without required API keys)
                 skipped_metrics.append(spec.name)
@@ -1079,24 +875,24 @@ def _analyze_repository_data(
     # Calculate total score using category-weighted scoring system
     total_score = compute_weighted_total_score(metrics, profile=profile)
 
-    # Extract funding information directly from repo data
-    funding_links = repo_info.get("fundingLinks", [])
+    # Extract funding information directly from VCS data
+    funding_links = vcs_data.funding_links or []
 
     # Determine if project is community-driven
     # Projects with funding links are considered community-driven (seeking support)
     # Projects owned by Users (not Organizations) are also community-driven
     has_funding = len(funding_links) > 0
-    is_user_owned = repo_info.get("owner", {}).get("__typename", "") == "User"
+    is_user_owned = vcs_data.owner_type == "User"
     is_community = has_funding or is_user_owned
 
     # Generate CHAOSS metric models
     models: list[MetricModel] = compute_metric_models(metrics)
 
     # Extract raw signals for transparency
-    signals = extract_signals(metrics, repo_info)
+    signals = extract_signals(metrics, vcs_data)
 
     # Extract sample counts for transparency
-    sample_counts = _extract_sample_counts(repo_info)
+    sample_counts = vcs_data.sample_counts or {}
 
     # Note: Progress display is handled by CLI layer, not here
     # Individual completion messages would interfere with progress bar
@@ -1163,15 +959,11 @@ async def analyze_repository(
             owner, name, scan_depth=scan_depth, days_lookback=days_lookback
         )
 
-        # Convert VCS data to legacy format for metrics compatibility
-        repo_info = _vcs_data_to_repo_info(vcs_data)
-
-        # Use the shared analysis logic
+        # Use the shared analysis logic with VCS data
         result = _analyze_repository_data(
             owner,
             name,
-            repo_info,
-            vcs_data=vcs_data,
+            vcs_data,
             platform=platform,
             package_name=package_name,
             profile=profile,

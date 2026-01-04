@@ -249,6 +249,8 @@ def test_compute_metric_models_with_monitoring_messages():
 
 def test_extract_signals_parses_repo_and_metric_messages():
     # Use metadata instead of parsing messages for structured data
+    from oss_sustain_guard.vcs.base import VCSRepositoryData
+
     metrics = [
         Metric("Funding Signals", 5, 10, "msg", "Low", None),
         Metric("Recent Activity", 5, 10, "msg", "Low", None),
@@ -281,25 +283,52 @@ def test_extract_signals_parses_repo_and_metric_messages():
             {"avg_review_time_hours": 3.5, "avg_review_count": 2.1},
         ),
     ]
-    repo_data = {
-        "fundingLinks": [
-            {"platform": "GitHub", "url": "https://github.com/sponsors/x"}
-        ],
-        "pushedAt": "2024-01-01T00:00:00Z",
-        "defaultBranchRef": {
-            "target": {
-                "history": {
-                    "edges": [
-                        {"node": {"author": {"user": {"login": "alice"}}}},
-                        {"node": {"author": {"user": {"login": "dependabot[bot]"}}}},
-                        {"node": {"author": {"user": {"login": "bob"}}}},
-                    ]
-                }
-            }
-        },
-    }
 
-    signals = extract_signals(metrics, repo_data)
+    vcs_data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at="2024-01-01T00:00:00Z",
+        owner_type="User",
+        owner_login="testuser",
+        owner_name="Test User",
+        star_count=100,
+        description="Test repo",
+        homepage_url=None,
+        topics=[],
+        readme_size=None,
+        contributing_file_size=None,
+        default_branch="main",
+        watchers_count=10,
+        open_issues_count=5,
+        language="Python",
+        commits=[
+            {"author": {"user": {"login": "alice"}}},
+            {"author": {"user": {"login": "dependabot[bot]"}}},
+            {"author": {"user": {"login": "bob"}}},
+        ],
+        total_commits=3,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[{"platform": "GitHub", "url": "https://github.com/sponsors/x"}],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data=None,
+    )
+
+    signals = extract_signals(metrics, vcs_data)
 
     assert signals["funding_link_count"] == 1
     assert isinstance(signals["last_activity_days"], int)
@@ -310,8 +339,10 @@ def test_extract_signals_parses_repo_and_metric_messages():
 
 
 def test_analyze_repository_data_handles_metric_errors():
+    from oss_sustain_guard.vcs.base import VCSRepositoryData
+
     class FailingChecker:
-        def check_legacy(self, _repo_info, _context):
+        def check(self, _vcs_data, _context):
             raise ValueError("broken")
 
     def on_error_metric(exc: Exception) -> Metric:
@@ -328,22 +359,57 @@ def test_analyze_repository_data_handles_metric_errors():
         MetricSpec(name="Second", checker=failing_checker),
     ]
 
-    repo_info = {
-        "fundingLinks": [
-            {"platform": "GitHub", "url": "https://github.com/sponsors/x"}
-        ],
-        "owner": {"__typename": "Organization"},
-    }
+    vcs_data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at=None,
+        owner_type="Organization",
+        owner_login="testorg",
+        owner_name="Test Org",
+        star_count=100,
+        description="Test repo",
+        homepage_url=None,
+        topics=[],
+        readme_size=None,
+        contributing_file_size=None,
+        default_branch="main",
+        watchers_count=10,
+        open_issues_count=5,
+        language="Python",
+        commits=[],
+        total_commits=0,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[{"platform": "GitHub", "url": "https://github.com/sponsors/x"}],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data=None,
+    )
 
     with (
         patch("oss_sustain_guard.core.load_metric_specs", return_value=specs),
         patch("oss_sustain_guard.core.console.print") as mock_print,
     ):
-        result = core._analyze_repository_data("owner", "repo", repo_info)
+        result = core._analyze_repository_data("owner", "repo", vcs_data)
 
     assert len(result.metrics) == 2
     assert result.is_community_driven is True
-    assert result.funding_links == repo_info["fundingLinks"]
+    assert result.funding_links == [
+        {"platform": "GitHub", "url": "https://github.com/sponsors/x"}
+    ]
     assert any("Note: " in call.args[0] for call in mock_print.call_args_list)
 
 
