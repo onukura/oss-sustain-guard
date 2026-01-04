@@ -481,6 +481,39 @@ packages:
         names = {p.name for p in packages}
         assert "react" in names or "lodash" in names
 
+    async def test_parse_pnpm_lock_v9_format(self, tmp_path):
+        """Test parsing pnpm-lock.yaml v9 format with versioned package keys."""
+        pnpm_content = """lockfileVersion: '9.0'
+dependencies:
+  react:
+    specifier: ^18.2.0
+    version: 18.3.1
+packages:
+  accepts@1.3.8:
+    resolution: {integrity: sha512-...}
+  acorn@8.15.0:
+    resolution: {integrity: sha512-...}
+  '@babel/core@7.28.5':
+    resolution: {integrity: sha512-...}
+  '@types/react@18.3.27':
+    resolution: {integrity: sha512-...}
+"""
+        lock_file = tmp_path / "pnpm-lock.yaml"
+        lock_file.write_text(pnpm_content)
+
+        resolver = JavaScriptResolver()
+        packages = await resolver.parse_lockfile(str(lock_file))
+
+        names = {p.name for p in packages}
+        # Verify package names are extracted without version numbers
+        assert "accepts" in names
+        assert "acorn" in names
+        assert "@babel/core" in names
+        assert "@types/react" in names
+        # Ensure versioned names are not included
+        assert "accepts@1.3.8" not in names
+        assert "@babel/core@7.28.5" not in names
+
     async def test_parse_pnpm_lock_non_dict_packages(self, tmp_path):
         """Test parsing pnpm-lock.yaml with non-dict packages."""
         pnpm_content = """lockfileVersion: '6.0'
