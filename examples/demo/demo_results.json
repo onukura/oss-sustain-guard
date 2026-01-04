@@ -215,34 +215,34 @@
       "is_community_driven": true,
       "models": [
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Stability Model",
+          "score": 48,
+          "max_score": 100,
+          "observation": "Contributor Redundancy needs attention; Security Signals needs attention."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Sustainability Model",
+          "score": 75,
+          "max_score": 100,
+          "observation": "Maintainer Retention is strong; Release Rhythm is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Community Engagement Model",
+          "score": 55,
+          "max_score": 100,
+          "observation": "Community Health is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Project Maturity Model",
+          "score": 65,
+          "max_score": 100,
+          "observation": "Documentation Presence is strong; Code of Conduct is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Contributor Experience Model",
+          "score": 45,
+          "max_score": 100,
+          "observation": "Contributor experience could be improved."
         }
       ],
       "signals": {
@@ -443,34 +443,34 @@
       "is_community_driven": false,
       "models": [
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Stability Model",
+          "score": 85,
+          "max_score": 100,
+          "observation": "All stability indicators are healthy."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Sustainability Model",
+          "score": 90,
+          "max_score": 100,
+          "observation": "Funding Signals is strong; Maintainer Retention is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Community Engagement Model",
+          "score": 75,
+          "max_score": 100,
+          "observation": "Contributor Attraction is strong; Contributor Retention is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Project Maturity Model",
+          "score": 95,
+          "max_score": 100,
+          "observation": "Documentation Presence is strong; Code of Conduct is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Contributor Experience Model",
+          "score": 80,
+          "max_score": 100,
+          "observation": "PR Acceptance Ratio is excellent; Build Health is excellent."
         }
       ],
       "signals": {
@@ -670,34 +670,34 @@
       "is_community_driven": false,
       "models": [
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Stability Model",
+          "score": 90,
+          "max_score": 100,
+          "observation": "All stability indicators are healthy."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Sustainability Model",
+          "score": 92,
+          "max_score": 100,
+          "observation": "Funding Signals is strong; Maintainer Retention is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Community Engagement Model",
+          "score": 85,
+          "max_score": 100,
+          "observation": "Contributor Attraction is strong; Contributor Retention is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Project Maturity Model",
+          "score": 80,
+          "max_score": 100,
+          "observation": "Documentation Presence is strong; Code of Conduct is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Contributor Experience Model",
+          "score": 88,
+          "max_score": 100,
+          "observation": "PR Acceptance Ratio is excellent; Build Health is excellent."
         }
       ],
       "signals": {
