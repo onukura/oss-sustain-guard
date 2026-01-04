@@ -321,7 +321,7 @@ def _load_report_template() -> str:
     return template_path.read_text(encoding="utf-8")
 
 
-def _coerce_int(value: object, default: int = 0) -> int:
+def _coerce_int(value: Any, default: int = 0) -> int:
     try:
         return int(value)
     except (TypeError, ValueError):
