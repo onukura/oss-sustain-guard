@@ -110,6 +110,53 @@ def is_package_excluded(package_name: str) -> bool:
     return package_name.lower() in [pkg.lower() for pkg in excluded]
 
 
+def get_excluded_users() -> list[str]:
+    """
+    Load excluded users (bots) from configuration files.
+
+    Priority:
+    1. .oss-sustain-guard.toml (local config, highest priority)
+    2. pyproject.toml (project-level config, fallback)
+
+    This allows users to configure which accounts should be treated as bots.
+    Useful for CI/CD accounts or internal automation accounts not in the default list.
+
+    Example in .oss-sustain-guard.toml:
+        [tool.oss-sustain-guard]
+        exclude-users = ["my-ci-user", "release-bot"]
+
+    Returns:
+        List of excluded user logins.
+    """
+    excluded = []
+
+    # Try .oss-sustain-guard.toml first (highest priority)
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        # Support both "exclude-users" (TOML style) and "exclude_users" (Python style)
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude-users", [])
+        )
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude_users", [])
+        )
+
+    # Try pyproject.toml (fallback)
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists() and not excluded:
+        config = load_config_file(pyproject_path)
+        # Support both "exclude-users" (TOML style) and "exclude_users" (Python style)
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude-users", [])
+        )
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude_users", [])
+        )
+
+    return list(set(excluded))  # Remove duplicates
+
+
 def get_default_exclusion_patterns() -> set[str]:
     """
     Get default directory exclusion patterns for recursive scanning.

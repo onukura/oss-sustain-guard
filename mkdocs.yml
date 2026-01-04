@@ -31,6 +31,7 @@ nav:
       - Gratitude Vending Machine: GRATITUDE_VENDING_MACHINE.md
   - Configuration:
       - Exclude Packages: EXCLUDE_PACKAGES_GUIDE.md
+      - Bot Detection: BOT_DETECTION_GUIDE.md
       - Scan Depth & Time Windows: SCAN_DEPTH_GUIDE.md
       - Caching: CACHING_GUIDE.md
   - Scoring & Metrics:

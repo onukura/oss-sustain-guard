@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from oss_sustain_guard.bot_detection import extract_login, is_bot
+from oss_sustain_guard.config import get_excluded_users
 from oss_sustain_guard.metrics.base import (
     Metric,
     MetricChecker,
@@ -53,46 +55,26 @@ class ContributorRedundancyChecker(MetricChecker):
                 "Critical",
             )
 
-        # Bot patterns to exclude (same as check_maintainer_drain)
-        bot_keywords = [
-            "bot",
-            "action",
-            "dependabot",
-            "renovate",
-            "github-actions",
-            "ci-",
-            "autorelease",
-            "release-bot",
-            "copilot",
-            "actions-user",
-        ]
+        # Bot patterns to exclude
+        excluded_users = get_excluded_users()
 
-        def is_bot(login: str) -> bool:
-            """Check if login appears to be a bot."""
-            lower = login.lower()
-            return any(keyword in lower for keyword in bot_keywords)
-
-        def extract_login(commit: dict[str, Any]) -> str | None:
-            """Extract a stable contributor identifier from a commit."""
-            author = commit.get("author")
-            if not isinstance(author, dict):
-                return None
-            user = author.get("user")
-            if isinstance(user, dict):
-                login = user.get("login")
-                if login:
-                    return login
-            for key in ("name", "email"):
-                value = author.get(key)
-                if value:
-                    return value
-            return None
+        def extract_author_info(
+            commit: dict[str, Any],
+        ) -> tuple[str | None, str | None, str | None]:
+            """Extract login, email, and name from a commit."""
+            login = extract_login(commit)
+            author = commit.get("author", {})
+            email = author.get("email") if isinstance(author, dict) else None
+            name = author.get("name") if isinstance(author, dict) else None
+            return login, email, name
 
         # Count commits per author (excluding bots)
         author_counts: dict[str, int] = {}
         for commit in commits:
-            login = extract_login(commit)
-            if login and not is_bot(login):
+            login, email, name = extract_author_info(commit)
+            if login and not is_bot(
+                login, email=email, name=name, excluded_users=excluded_users
+            ):
                 author_counts[login] = author_counts.get(login, 0) + 1
 
         # Check if we have any human contributors

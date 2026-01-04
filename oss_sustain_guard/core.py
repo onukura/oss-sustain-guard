@@ -744,33 +744,22 @@ def extract_signals(
 
     # Add contributor count if available from commits
     if vcs_data.commits:
-        # Bot patterns to exclude (same as check_bus_factor)
-        bot_keywords = [
-            "bot",
-            "action",
-            "dependabot",
-            "renovate",
-            "github-actions",
-            "ci-",
-            "autorelease",
-            "release-bot",
-            "copilot",
-            "actions-user",
-        ]
+        from oss_sustain_guard.bot_detection import extract_login, is_bot
+        from oss_sustain_guard.config import get_excluded_users
 
-        def is_bot(login: str) -> bool:
-            """Check if login appears to be a bot."""
-            lower = login.lower()
-            return any(keyword in lower for keyword in bot_keywords)
+        # Get excluded users
+        excluded_users = get_excluded_users()
 
         author_counts = {}
         for commit in vcs_data.commits:
+            login = extract_login(commit)
             author = commit.get("author", {})
-            user = author.get("user")
-            if user:
-                login = user.get("login")
-                if login and not is_bot(login):  # Exclude bots
-                    author_counts[login] = author_counts.get(login, 0) + 1
+            email = author.get("email") if isinstance(author, dict) else None
+            name = author.get("name") if isinstance(author, dict) else None
+            if login and not is_bot(
+                login, email=email, name=name, excluded_users=excluded_users
+            ):  # Exclude bots
+                author_counts[login] = author_counts.get(login, 0) + 1
         if author_counts:
             signals["contributor_count"] = len(author_counts)
 

@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from oss_sustain_guard.bot_detection import extract_login, is_bot
+from oss_sustain_guard.config import get_excluded_users
 from oss_sustain_guard.metrics.base import (
     Metric,
     MetricChecker,
@@ -63,37 +65,17 @@ class MaintainerRetentionChecker(MetricChecker):
             )
 
         # Bot patterns to exclude
-        bot_keywords = [
-            "bot",
-            "action",
-            "dependabot",
-            "renovate",
-            "github-actions",
-            "ci-",
-            "autorelease",
-            "release-bot",
-        ]
+        excluded_users = get_excluded_users()
 
-        def is_bot(login: str) -> bool:
-            """Check if login appears to be a bot."""
-            lower = login.lower()
-            return any(keyword in lower for keyword in bot_keywords)
-
-        def extract_login(commit: dict[str, Any]) -> str | None:
-            """Extract a stable contributor identifier from a commit."""
-            author = commit.get("author")
-            if not isinstance(author, dict):
-                return None
-            user = author.get("user")
-            if isinstance(user, dict):
-                login = user.get("login")
-                if login:
-                    return login
-            for key in ("name", "email"):
-                value = author.get(key)
-                if value:
-                    return value
-            return None
+        def extract_author_info(
+            commit: dict[str, Any],
+        ) -> tuple[str | None, str | None, str | None]:
+            """Extract login, email, and name from a commit."""
+            login = extract_login(commit)
+            author = commit.get("author", {})
+            email = author.get("email") if isinstance(author, dict) else None
+            name = author.get("name") if isinstance(author, dict) else None
+            return login, email, name
 
         # Split into recent and older commits
         recent_commits = commits[:25]
@@ -102,14 +84,18 @@ class MaintainerRetentionChecker(MetricChecker):
         # Extract human contributors (exclude bots)
         recent_authors = set()
         for commit in recent_commits:
-            login = extract_login(commit)
-            if login and not is_bot(login):
+            login, email, name = extract_author_info(commit)
+            if login and not is_bot(
+                login, email=email, name=name, excluded_users=excluded_users
+            ):
                 recent_authors.add(login)
 
         older_authors = set()
         for commit in older_commits:
-            login = extract_login(commit)
-            if login and not is_bot(login):
+            login, email, name = extract_author_info(commit)
+            if login and not is_bot(
+                login, email=email, name=name, excluded_users=excluded_users
+            ):
                 older_authors.add(login)
 
         # If we have very few real contributors, cannot assess
