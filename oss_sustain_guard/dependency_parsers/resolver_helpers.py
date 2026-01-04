@@ -41,7 +41,7 @@ def make_resolver_parser(
         try:
             # Handle both sync and async parse_lockfile
             result = resolver.parse_lockfile(str(lockfile))
-            if hasattr(result, "__await__"):  # async result
+            if asyncio.iscoroutine(result):  # async result
                 packages = asyncio.run(result)
             else:
                 packages = result
