@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/Documentation-Online-blue)](https://onukura.github.io/oss-sustain-guard/)
 
-![demo](./docs/assets/os4g-demo.gif)
+![demo](https://github.com/onukura/oss-sustain-guard/blob/b13dbe6356c72873ffb95fc7d1af59e6c141230b/docs/assets/os4g-demo.gif?raw=true)
 
 Note: Demo shows a warm cache; first run may take longer depending on API response time.
 
