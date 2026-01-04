@@ -41,6 +41,7 @@ nav:
       - Scoring Profiles (Custom): SCORING_PROFILES_GUIDE.md
   - Integrations:
       - GitHub Actions: GITHUB_ACTIONS_GUIDE.md
+      - GitLab CI/CD: GITLAB_CICD_INTEGRATION_GUIDE.md
       - Pre-commit Integration: PRE_COMMIT_INTEGRATION.md
   - Support:
       - Troubleshooting & FAQ: TROUBLESHOOTING_FAQ.md
