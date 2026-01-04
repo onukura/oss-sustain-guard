@@ -1785,10 +1785,10 @@ async def check(
         help="Maximum directory depth for recursive scanning (default: unlimited).",
     ),
     num_workers: int = typer.Option(
-        10,
+        5,
         "--num-workers",
         "-w",
-        help="Maximum number of parallel workers (default: 10, adjust based on GitHub API rate limits).",
+        help="Maximum number of parallel workers (default: 5, adjust based on GitHub API rate limits).",
     ),
     scan_depth: str = typer.Option(
         "default",
