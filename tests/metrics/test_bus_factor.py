@@ -105,7 +105,10 @@ class TestBusFactorMetric:
         assert result.name == "Contributor Redundancy"
         assert result.score == 5  # New project: 100% by single author
         assert result.max_score == 10
-        assert "Estimated from public contributions: 100% by single author" in result.message
+        assert (
+            "Estimated from public contributions: 100% by single author"
+            in result.message
+        )
         assert result.risk == "Medium"
 
     def test_bus_factor_healthy_diversity(self):
@@ -115,7 +118,9 @@ class TestBusFactorMetric:
         assert result.name == "Contributor Redundancy"
         assert result.score == 10
         assert result.max_score == 10
-        assert "Estimated from public contributions: Healthy diversity" in result.message
+        assert (
+            "Estimated from public contributions: Healthy diversity" in result.message
+        )
         assert result.risk == "None"
 
     def test_bus_factor_only_bots(self):
@@ -139,7 +144,10 @@ class TestBusFactorMetric:
         # 2 active contributors total (user1, user2), 50% each
         # 50% => 8/10 score (Medium risk)
         assert result.score == 8
-        assert "Estimated from public contributions: 50% by top contributor" in result.message
+        assert (
+            "Estimated from public contributions: 50% by top contributor"
+            in result.message
+        )
         assert "2 contributor(s) total" in result.message
 
     def test_bus_factor_mature_bdfl(self):
@@ -174,7 +182,10 @@ class TestBusFactorMetric:
         vcs_data = _vcs_with_commits(["user1"] * 6 + ["user2"] * 4, total_count=80)
         result = check_bus_factor(vcs_data)
         assert result.score == 8
-        assert "Estimated from public contributions: 60% by top contributor" in result.message
+        assert (
+            "Estimated from public contributions: 60% by top contributor"
+            in result.message
+        )
         assert result.risk == "Medium"
 
     def test_bus_factor_total_commits_zero(self, monkeypatch):
