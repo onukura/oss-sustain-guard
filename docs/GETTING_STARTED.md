@@ -42,7 +42,7 @@ docker run --rm -e GITHUB_TOKEN=$GITHUB_TOKEN ghcr.io/onukura/oss-sustain-guard:
 **Using GitHub Actions** (for CI/CD):
 
 ```yaml
-- uses: onukura/oss-sustain-guard@v2
+- uses: onukura/oss-sustain-guard@main
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
