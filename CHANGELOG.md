@@ -2,6 +2,27 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.19.0 - 2026-01-04
+
+### Added
+
+- Strategic product roadmap documenting planned features and future improvements
+- Interactive dependency graph visualization with interactive visualization capabilities
+- Launch configurations for debugging various languages in VSCode
+
+### Improved
+
+- Demo data with populated CHAOSS metric models and observations for better examples
+- Bus Factor metric to recognize PR mergers as contributors alongside commit authors
+- GitHub Actions documentation to include bun.lock and deno.lock in JavaScript ecosystem detection
+- Metric messages to refer to "public contributions" instead of just "commits"
+- Pre-commit hook version references to v0.18.0
+
+### Documentation
+
+- Added GitLab CI/CD integration guide for repository analysis workflows
+- Dependency graph visualization documentation
+
 ## v0.18.0 - 2026-01-04
 
 ### Added
