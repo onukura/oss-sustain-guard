@@ -2,30 +2,59 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## v0.18.0 - 2026-01-04
+
+### Added
+
+- Robust, multi-stage bot detection and exclusion system with configurable rules for contributor analysis
+- Support for parsing pnpm-lock.yaml v9 format for improved lockfile compatibility
+
+### Improved
+
+- Installation instructions with expanded options (pipx, uv, Docker, GitHub Actions) and better isolation guidance
+- CHAOSS metrics alignment documentation with refined table consistency and priority ordering
+- Package name extraction for pnpm paths with scoped and versioned package handling
+- Bun.lock parsing with array-based and dict-based package format support
+- JSONC compatibility with trailing comma handling in lockfile parsing
+- API rate limit handling with reduced default parallel worker count (10 → 5)
+- Bus factor metric documentation emphasizing estimation limitations and encouraging further investigation
+- Overall transparency in contributor redundancy metrics with explicit warnings about data accuracy
+
+### Fixed
+
+- Markdown links for Quality & Maintenance and Visibility & Adoption metrics documentation
+- Async result handling in make_resolver_parser function
+- Type hint for _coerce_int function parameter
+
 ## v0.17.0 - 2026-01-03
 
 ### Removed
+
 - Optional dependents analysis feature
 - Libraries.io integration for dependents analysis
 
 ## v0.16.0 - 2026-01-03
 
 ### Added
+
 - GitLab VCS provider support for GitLab repository analysis
 
 ### Improved
+
 - Metric checking refactored to use VCS-agnostic data model for better multi-provider support
 - Cache file format updated to JSON gzip with improved metric naming (Cache Build Health metric)
 - Plugin loading error handling with enhanced warning messages for better visibility of metric issues
 - Overall score calculation now uses weighted metric scoring
 
 ### Fixed
+
 - Enhanced warning messages for metric plugin loading errors
 - Updated metric name to "Build Health" for consistency
 
 ## v0.15.0 - 2026-01-02
 
 ### Added
+
 - VCS abstraction layer for flexible version control system support.
 - Demo mode support for testing without actual API calls.
 - Skipped metric reporting in analysis results.
@@ -35,12 +64,14 @@ All notable changes to OSS Sustain Guard are documented in this file.
 - Multi-ecosystem dependency summary with enhanced lockfile support.
 
 ### Improved
+
 - Unified metric naming to 'Community Health' for consistency.
 - Optional field handling across multiple resolvers for better Python compatibility.
 - Dependency extraction capabilities for Swift, Stack (Haskell), and CPAN (Perl) ecosystems.
 - Ecosystem descriptions to accurately reflect supported languages.
 
 ### Documentation
+
 - Clarified dependency analysis as an experimental feature.
 - Enhanced release process documentation with detailed CHANGELOG guidelines.
 - Renamed 'Maintainer Responsiveness' metric to 'Community Health' for better alignment.
