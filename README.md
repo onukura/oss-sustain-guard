@@ -32,6 +32,32 @@ We believe that:
 
 Metrics are one lens among many; they work best alongside project context and real-world knowledge.
 
+## ⚠️ Important: Understanding Metric Limitations
+
+**OSS Sustain Guard provides signals, not absolute truths.** All metrics are based on publicly available data and have inherent limitations:
+
+- **Bus Factor (Contributor Redundancy)** - Estimated from public commit history only. Does not account for:
+  - Internal/corporate Git mirrors or private repositories
+  - Non-code contributions (documentation, issue triage, community support)
+  - Organizational knowledge transfer or succession planning
+  - Full-time maintainers vs. part-time contributors
+
+- **Funding Signals** - Shows only publicly visible funding links; many projects have private sponsorship or corporate backing not reflected in GitHub metadata
+
+- **Activity Metrics** - Recent activity patterns may not reflect long-term health; mature, stable projects naturally have lower commit frequency
+
+- **Community Metrics** - Based on observable interactions; does not capture private discussions, mailing lists, or chat platforms
+
+**Think of these metrics as conversation starters, not verdicts.** They highlight areas worth investigating, but every project has unique circumstances. Use them as one input among many when making decisions about dependencies.
+
+For critical dependencies, we recommend:
+
+1. Review metrics as a starting point
+2. Read project documentation and governance models  
+3. Check community discussions and maintainer communication
+4. Consider the project's maturity stage and sustainability model
+5. Engage with maintainers to understand their perspective
+
 ## 🎯 Key Features
 
 - **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)

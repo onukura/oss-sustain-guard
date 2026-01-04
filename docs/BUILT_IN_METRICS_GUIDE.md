@@ -76,9 +76,25 @@ Measure project impact and ecosystem integration:
 
 ### Contributor Redundancy
 
-**Alternative Name:** Bus Factor
+**Alternative Name:** Bus Factor (Estimated)
 
 **Purpose:** Evaluates whether the project depends on a single contributor or has a healthy distribution.
+
+**⚠️ Important Limitations:**
+
+This metric is **estimated from public commit history only** and has significant limitations:
+
+- **Cannot see internal Git mirrors** - Many organizations use internal Git systems that sync to public repos, making contribution patterns appear more concentrated than reality
+- **Code-only view** - Ignores non-code contributions like documentation, issue triage, community management, and project governance
+- **No organizational context** - Cannot detect succession planning, knowledge transfer practices, or full-time maintainer status
+- **Snapshot, not trajectory** - Recent patterns may not reflect long-term team structure or onboarding efforts
+
+**Use this metric as a signal to investigate further, not as a definitive assessment.** Projects with a single dominant contributor may have:
+
+- Strong corporate backing with internal teams
+- Active mentorship and onboarding processes  
+- Clear governance and succession plans
+- Other forms of redundancy not visible in commit history
 
 **Data Source:** Commit history (recent commits analyzed)
 

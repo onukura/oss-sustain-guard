@@ -10,62 +10,84 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 from oss_sustain_guard.metrics import load_metric_specs
-from oss_sustain_guard.metrics.attraction import check_attraction  # noqa: F401
+
+# Import all metrics to ensure they are registered via entry points.
+# Note: These imports are required for metric plugin registration via entry points
+# defined in pyproject.toml, even though they appear unused.
+from oss_sustain_guard.metrics.attraction import (
+    check_attraction,  # type: ignore[import-untyped] # noqa: F401
+)
 from oss_sustain_guard.metrics.base import Metric, MetricContext
-from oss_sustain_guard.metrics.bus_factor import check_bus_factor  # noqa: F401
-from oss_sustain_guard.metrics.ci_status import check_ci_status  # noqa: F401
-from oss_sustain_guard.metrics.code_of_conduct import (  # noqa: F401
-    check_code_of_conduct,
+from oss_sustain_guard.metrics.bus_factor import (
+    check_bus_factor,  # type: ignore[import-untyped] # noqa: F401
 )
-from oss_sustain_guard.metrics.community_health import (  # noqa: F401
-    check_community_health,  # noqa: F401
+from oss_sustain_guard.metrics.ci_status import (
+    check_ci_status,  # type: ignore[import-untyped] # noqa: F401
 )
-from oss_sustain_guard.metrics.documentation_presence import (  # noqa: F401
-    check_documentation_presence,  # noqa: F401
+from oss_sustain_guard.metrics.code_of_conduct import (
+    check_code_of_conduct,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.fork_activity import check_fork_activity  # noqa: F401
-from oss_sustain_guard.metrics.funding import (  # noqa: F401
-    check_funding,  # noqa: F401
-    is_corporate_backed,  # noqa: F401
+from oss_sustain_guard.metrics.community_health import (
+    check_community_health,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.issue_resolution_duration import (  # noqa: F401
-    check_issue_resolution_duration,  # noqa: F401
+from oss_sustain_guard.metrics.documentation_presence import (
+    check_documentation_presence,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.license_clarity import (  # noqa: F401
-    check_license_clarity,
+from oss_sustain_guard.metrics.fork_activity import (
+    check_fork_activity,  # type: ignore[import-untyped] # noqa: F401
 )
-from oss_sustain_guard.metrics.maintainer_drain import (  # noqa: F401
-    check_maintainer_drain,
+from oss_sustain_guard.metrics.funding import (
+    check_funding,  # type: ignore[import-untyped]  # noqa: F401
+    is_corporate_backed,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.merge_velocity import check_merge_velocity  # noqa: F401
-from oss_sustain_guard.metrics.organizational_diversity import (  # noqa: F401
-    check_organizational_diversity,  # noqa: F401
+from oss_sustain_guard.metrics.issue_resolution_duration import (
+    check_issue_resolution_duration,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.pr_acceptance_ratio import (  # noqa: F401
-    check_pr_acceptance_ratio,  # noqa: F401
+from oss_sustain_guard.metrics.license_clarity import (
+    check_license_clarity,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.pr_merge_speed import check_pr_merge_speed  # noqa: F401
-from oss_sustain_guard.metrics.pr_responsiveness import (  # noqa: F401
-    check_pr_responsiveness,  # noqa: F401
+from oss_sustain_guard.metrics.maintainer_drain import (
+    check_maintainer_drain,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.project_popularity import (  # noqa: F401
-    check_project_popularity,  # noqa: F401
+from oss_sustain_guard.metrics.merge_velocity import (
+    check_merge_velocity,  # type: ignore[import-untyped] # noqa: F401
 )
-from oss_sustain_guard.metrics.release_cadence import (  # noqa: F401
-    check_release_cadence,
+from oss_sustain_guard.metrics.organizational_diversity import (
+    check_organizational_diversity,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.retention import check_retention  # noqa: F401
-from oss_sustain_guard.metrics.review_health import check_review_health  # noqa: F401
-from oss_sustain_guard.metrics.security_posture import (  # noqa: F401
-    check_security_posture,
+from oss_sustain_guard.metrics.pr_acceptance_ratio import (
+    check_pr_acceptance_ratio,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.single_maintainer_load import (  # noqa: F401
-    check_single_maintainer_load,  # noqa: F401
+from oss_sustain_guard.metrics.pr_merge_speed import (
+    check_pr_merge_speed,  # type: ignore[import-untyped] # noqa: F401
 )
-from oss_sustain_guard.metrics.stale_issue_ratio import (  # noqa: F401
-    check_stale_issue_ratio,
+from oss_sustain_guard.metrics.pr_responsiveness import (
+    check_pr_responsiveness,  # type: ignore[import-untyped]  # noqa: F401
 )
-from oss_sustain_guard.metrics.zombie_status import check_zombie_status  # noqa: F401
+from oss_sustain_guard.metrics.project_popularity import (
+    check_project_popularity,  # type: ignore[import-untyped]  # noqa: F401
+)
+from oss_sustain_guard.metrics.release_cadence import (
+    check_release_cadence,  # type: ignore[import-untyped]   # noqa: F401
+)
+from oss_sustain_guard.metrics.retention import (
+    check_retention,  # type: ignore[import-untyped] # noqa: F401
+)
+from oss_sustain_guard.metrics.review_health import (
+    check_review_health,  # type: ignore[import-untyped] # noqa: F401
+)
+from oss_sustain_guard.metrics.security_posture import (
+    check_security_posture,  # type: ignore[import-untyped]  # noqa: F401
+)
+from oss_sustain_guard.metrics.single_maintainer_load import (
+    check_single_maintainer_load,  # type: ignore[import-untyped]  # noqa: F401
+)
+from oss_sustain_guard.metrics.stale_issue_ratio import (
+    check_stale_issue_ratio,  # type: ignore[import-untyped]  # noqa: F401
+)
+from oss_sustain_guard.metrics.zombie_status import (
+    check_zombie_status,  # type: ignore[import-untyped] # noqa: F401
+)
 from oss_sustain_guard.vcs import get_vcs_provider
 from oss_sustain_guard.vcs.base import VCSRepositoryData
 

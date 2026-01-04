@@ -1,5 +1,5 @@
 name: 'OSS Sustain Guard - Package Sustainability Checker'
-description: 'Check package sustainability metrics (bus factor, maintainer drain, funding, etc.) across multiple ecosystems'
+description: 'Check package sustainability metrics (estimated contributor redundancy, maintainer retention, funding signals, etc.) across multiple ecosystems'
 author: 'onukura'
 
 inputs:

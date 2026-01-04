@@ -105,7 +105,7 @@ class TestBusFactorMetric:
         assert result.name == "Contributor Redundancy"
         assert result.score == 5  # New project: 100% by single author
         assert result.max_score == 10
-        assert "New project: 100% by single author" in result.message
+        assert "Estimated from public commits: 100% by single author" in result.message
         assert result.risk == "Medium"
 
     def test_bus_factor_healthy_diversity(self):
@@ -115,7 +115,7 @@ class TestBusFactorMetric:
         assert result.name == "Contributor Redundancy"
         assert result.score == 10
         assert result.max_score == 10
-        assert "Healthy: 5 active contributors" in result.message
+        assert "Estimated from public commits: Healthy diversity" in result.message
         assert result.risk == "None"
 
     def test_bus_factor_only_bots(self):
@@ -131,7 +131,8 @@ class TestBusFactorMetric:
         vcs_data = _vcs_with_commits(["founder"] * 10, total_count=1500)
         result = check_bus_factor(vcs_data)
         assert result.score == 8
-        assert "BDFL model" in result.message
+        assert "Estimated from public commits" in result.message
+        assert "May have internal redundancy" in result.message
         assert result.risk == "Low"
 
     def test_bus_factor_mature_high_concentration(self):
@@ -139,7 +140,7 @@ class TestBusFactorMetric:
         vcs_data = _vcs_with_commits(["user1"] * 9 + ["user2"], total_count=200)
         result = check_bus_factor(vcs_data)
         assert result.score == 2
-        assert "Needs attention: 90% of recent commits" in result.message
+        assert "Estimated from public commits: 90%" in result.message
         assert result.risk == "High"
 
     def test_bus_factor_high_concentration(self):
@@ -149,7 +150,7 @@ class TestBusFactorMetric:
         )
         result = check_bus_factor(vcs_data)
         assert result.score == 5
-        assert "Needs attention: 70% of commits" in result.message
+        assert "Estimated from public commits: 70%" in result.message
         assert result.risk == "High"
 
     def test_bus_factor_medium_concentration(self):
@@ -157,7 +158,7 @@ class TestBusFactorMetric:
         vcs_data = _vcs_with_commits(["user1"] * 6 + ["user2"] * 4, total_count=80)
         result = check_bus_factor(vcs_data)
         assert result.score == 8
-        assert "Monitor: 60% by top contributor" in result.message
+        assert "Estimated from public commits: 60% by top contributor" in result.message
         assert result.risk == "Medium"
 
     def test_bus_factor_total_commits_zero(self, monkeypatch):

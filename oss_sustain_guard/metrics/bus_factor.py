@@ -16,11 +16,21 @@ _LEGACY_CONTEXT = MetricContext(owner="unknown", name="unknown", repo_url="")
 
 
 class ContributorRedundancyChecker(MetricChecker):
-    """Evaluate contributor redundancy with VCS-agnostic data."""
+    """Evaluate contributor redundancy with VCS-agnostic data.
+
+    IMPORTANT: This is an ESTIMATE based on public commit history only.
+    Limitations include:
+    - Cannot detect internal Git mirrors or private repositories
+    - Ignores non-code contributions (docs, triage, community management)
+    - No visibility into organizational knowledge transfer or succession plans
+    - May not reflect full-time maintainer status or corporate backing
+
+    Use this metric as a signal to investigate further, not as a definitive verdict.
+    """
 
     def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
         """
-        Analyzes the 'Bus Factor' of a repository with improved logic.
+        Analyzes estimated 'Bus Factor' from public commit history.
 
         Considers:
         - Top contributor percentage (recent commits)
@@ -34,6 +44,7 @@ class ContributorRedundancyChecker(MetricChecker):
         - <50%: 0pt reduction (healthy)
 
         Note: All metrics are now scored on a 0-10 scale for consistency.
+        Note: This is an estimate; actual project redundancy may differ.
         """
         max_score = 10
 
@@ -115,6 +126,7 @@ class ContributorRedundancyChecker(MetricChecker):
         is_mature_project = total_repo_commits >= 100
 
         # Scoring logic with BDFL model recognition (0-10 scale)
+        # Note: All messages include "Estimated from public commits" to be transparent about limitations
         if percentage >= 90:
             # Very high single-author concentration
             if is_mature_bdfl:
@@ -122,43 +134,47 @@ class ContributorRedundancyChecker(MetricChecker):
                 score = 8  # 15/20 → 8/10
                 risk = "Low"
                 message = (
-                    f"BDFL model: {percentage:.0f}% by founder/leader. "
-                    f"Mature project ({total_repo_commits} commits). Proven stability."
+                    f"Estimated from public commits: {percentage:.0f}% by founder/leader. "
+                    f"Mature project ({total_repo_commits} commits). May have internal redundancy."
                 )
             elif is_mature_project:
                 # Mature project but recently single-heavy = concern
                 score = 2  # 5/20 → 2/10
                 risk = "High"
                 message = (
-                    f"Needs attention: {percentage:.0f}% of recent commits by single author. "
-                    f"{num_contributors} contributor(s), {total_repo_commits} total commits."
+                    f"Estimated from public commits: {percentage:.0f}% by single author. "
+                    f"{num_contributors} contributor(s), {total_repo_commits} total commits. "
+                    f"Consider investigating project's internal structure."
                 )
             else:
                 # New project with founder-heavy commit = acceptable
                 score = 5  # 10/20 → 5/10
                 risk = "Medium"
                 message = (
-                    f"New project: {percentage:.0f}% by single author. "
+                    f"Estimated from public commits: {percentage:.0f}% by single author. "
                     f"Expected for early-stage projects."
                 )
         elif percentage >= 70:
             score = 5  # 10/20 → 5/10
             risk = "High"
             message = (
-                f"Needs attention: {percentage:.0f}% of commits by single author. "
-                f"{num_contributors} contributor(s) total."
+                f"Estimated from public commits: {percentage:.0f}% by single author. "
+                f"{num_contributors} contributor(s) total. Review project governance."
             )
         elif percentage >= 50:
             score = 8  # 15/20 → 8/10
             risk = "Medium"
             message = (
-                f"Monitor: {percentage:.0f}% by top contributor. "
+                f"Estimated from public commits: {percentage:.0f}% by top contributor. "
                 f"{num_contributors} contributor(s) total."
             )
         else:
             score = max_score
             risk = "None"
-            message = f"Healthy: {num_contributors} active contributors."
+            message = (
+                f"Estimated from public commits: Healthy diversity with "
+                f"{num_contributors} active contributors."
+            )
 
         return Metric("Contributor Redundancy", score, max_score, message, risk)
 
