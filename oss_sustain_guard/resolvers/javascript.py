@@ -321,12 +321,25 @@ class JavaScriptResolver(LanguageResolver):
                 for package_path in packages_obj.keys():
                     if package_path and package_path != ".":
                         # Extract package name from path
-                        parts = package_path.split("/")
-                        if len(parts) >= 1:
-                            # Remove version info if present
-                            package_name = parts[-1].split("_")[0]
-                            if package_name:
-                                packages.add(package_name)
+                        # pnpm uses format: "package@version" or "/package@version" or "/@scope/package@version"
+                        package_path_cleaned = package_path.lstrip("/")
+
+                        # Handle scoped packages (@scope/package@version)
+                        if package_path_cleaned.startswith("@"):
+                            # Split on the last @ to separate name from version
+                            last_at_idx = package_path_cleaned.rfind("@")
+                            if last_at_idx > 0:
+                                package_name = package_path_cleaned[:last_at_idx]
+                                if package_name:
+                                    packages.add(package_name)
+                        else:
+                            # Regular package (package@version)
+                            # Split on @ to remove version
+                            parts = package_path_cleaned.split("@")
+                            if len(parts) > 0 and parts[0]:
+                                package_name = parts[0]
+                                if package_name:
+                                    packages.add(package_name)
 
             return [
                 PackageInfo(
