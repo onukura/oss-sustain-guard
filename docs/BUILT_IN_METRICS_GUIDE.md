@@ -92,7 +92,7 @@ This metric is **estimated from public commit history only** and has significant
 **Use this metric as a signal to investigate further, not as a definitive assessment.** Projects with a single dominant contributor may have:
 
 - Strong corporate backing with internal teams
-- Active mentorship and onboarding processes  
+- Active mentorship and onboarding processes
 - Clear governance and succession plans
 - Other forms of redundancy not visible in commit history
 

@@ -53,7 +53,7 @@ Metrics are one lens among many; they work best alongside project context and re
 For critical dependencies, we recommend:
 
 1. Review metrics as a starting point
-2. Read project documentation and governance models  
+2. Read project documentation and governance models
 3. Check community discussions and maintainer communication
 4. Consider the project's maturity stage and sustainability model
 5. Engage with maintainers to understand their perspective
