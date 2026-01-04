@@ -88,6 +88,20 @@ class ContributorRedundancyChecker(MetricChecker):
             ):
                 author_counts[login] = author_counts.get(login, 0) + 1
 
+        # Enhance with PR mergers data (who merges PRs might be different from who commits)
+        # This helps identify maintainers who triage/review but don't commit directly
+        if hasattr(vcs_data, "merged_prs") and vcs_data.merged_prs:
+            for pr in vcs_data.merged_prs:
+                merged_by = pr.get("mergedBy")
+                if isinstance(merged_by, dict):
+                    login = merged_by.get("login")
+                    if login and not is_bot(
+                        login, email=None, name=None, excluded_users=excluded_users
+                    ):
+                        # Weight merges same as commits for now to simply count active maintainers
+                        # A better approach might be weighted (e.g., 1 merge = 1 contribution)
+                        author_counts[login] = author_counts.get(login, 0) + 1
+
         # Check if we have any human contributors
         if not author_counts:
             return Metric(
@@ -126,7 +140,7 @@ class ContributorRedundancyChecker(MetricChecker):
         is_mature_project = total_repo_commits >= 100
 
         # Scoring logic with BDFL model recognition (0-10 scale)
-        # Note: All messages include "Estimated from public commits" to be transparent about limitations
+        # Note: All messages include "Estimated from public contributions" to be transparent about limitations
         if percentage >= 90:
             # Very high single-author concentration
             if is_mature_bdfl:
@@ -134,7 +148,7 @@ class ContributorRedundancyChecker(MetricChecker):
                 score = 8  # 15/20 → 8/10
                 risk = "Low"
                 message = (
-                    f"Estimated from public commits: {percentage:.0f}% by founder/leader. "
+                    f"Estimated from public contributions: {percentage:.0f}% by founder/leader. "
                     f"Mature project ({total_repo_commits} commits). May have internal redundancy."
                 )
             elif is_mature_project:
@@ -142,7 +156,7 @@ class ContributorRedundancyChecker(MetricChecker):
                 score = 2  # 5/20 → 2/10
                 risk = "High"
                 message = (
-                    f"Estimated from public commits: {percentage:.0f}% by single author. "
+                    f"Estimated from public contributions: {percentage:.0f}% by single author. "
                     f"{num_contributors} contributor(s), {total_repo_commits} total commits. "
                     f"Consider investigating project's internal structure."
                 )
@@ -151,28 +165,28 @@ class ContributorRedundancyChecker(MetricChecker):
                 score = 5  # 10/20 → 5/10
                 risk = "Medium"
                 message = (
-                    f"Estimated from public commits: {percentage:.0f}% by single author. "
+                    f"Estimated from public contributions: {percentage:.0f}% by single author. "
                     f"Expected for early-stage projects."
                 )
         elif percentage >= 70:
             score = 5  # 10/20 → 5/10
             risk = "High"
             message = (
-                f"Estimated from public commits: {percentage:.0f}% by single author. "
+                f"Estimated from public contributions: {percentage:.0f}% by single author. "
                 f"{num_contributors} contributor(s) total. Review project governance."
             )
         elif percentage >= 50:
             score = 8  # 15/20 → 8/10
             risk = "Medium"
             message = (
-                f"Estimated from public commits: {percentage:.0f}% by top contributor. "
+                f"Estimated from public contributions: {percentage:.0f}% by top contributor. "
                 f"{num_contributors} contributor(s) total."
             )
         else:
             score = max_score
             risk = "None"
             message = (
-                f"Estimated from public commits: Healthy diversity with "
+                f"Estimated from public contributions: Healthy diversity with "
                 f"{num_contributors} active contributors."
             )
 
