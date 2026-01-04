@@ -465,9 +465,39 @@ class JavaScriptResolver(LanguageResolver):
             try:
                 async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
                     content = await f.read()
+
+                    # Remove trailing commas before closing braces/brackets (JSONC compatibility)
+                    import re
+
+                    content = re.sub(r",(\s*[}\]])", r"\1", content)
+
                     data = json.loads(content)
 
-                # Extract from workspaces section (direct dependencies)
+                # Extract from packages section (all installed packages)
+                packages_section = data.get("packages", {})
+                if isinstance(packages_section, dict):
+                    for pkg_name, pkg_info in packages_section.items():
+                        if pkg_name:
+                            # Handle array format: "pkg": ["pkg@version", "", {...}, "sha512-..."]
+                            if isinstance(pkg_info, list) and len(pkg_info) > 0:
+                                # Extract package name from first element
+                                full_identifier = pkg_info[0]
+                                if "@" in full_identifier:
+                                    # Handle scoped packages like "@babel/core@7.28.5"
+                                    parts = full_identifier.rsplit("@", 1)
+                                    name = parts[0] if len(parts) > 0 else pkg_name
+                                else:
+                                    name = full_identifier
+                                packages.add(name)
+                            # Handle dict format (fallback)
+                            elif isinstance(pkg_info, dict):
+                                name = pkg_info.get("name", pkg_name)
+                                packages.add(name)
+                            else:
+                                packages.add(pkg_name)
+
+                # Also extract from workspaces section (direct dependencies)
+                # This handles cases where packages section is empty
                 workspaces = data.get("workspaces", {})
                 if isinstance(workspaces, dict):
                     for _workspace_name, workspace_data in workspaces.items():

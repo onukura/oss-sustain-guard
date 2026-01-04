@@ -41,7 +41,14 @@ def parse_bun_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
     # Handle text bun.lock format
     try:
         with open(lockfile_path) as f:
-            data = json.load(f)
+            content = f.read()
+
+        # Remove trailing commas before closing braces/brackets (JSONC compatibility)
+        import re
+
+        content = re.sub(r",(\s*[}\]])", r"\1", content)
+
+        data = json.loads(content)
     except (OSError, json.JSONDecodeError):
         return None
 
@@ -52,13 +59,26 @@ def parse_bun_lockfile(lockfile_path: str | Path) -> DependencyGraph | None:
     packages = data.get("packages", {})
     direct_deps_set = _get_bun_direct_dependencies(lockfile_path.parent)
 
-    for _pkg_key, pkg_info in packages.items():
-        if not isinstance(pkg_info, dict):
+    for pkg_name, pkg_info in packages.items():
+        # bun.lock format: "package-name": ["package-name@version", "", {...}, "sha512-..."]
+        # The first element is the full package identifier
+        if isinstance(pkg_info, list) and len(pkg_info) > 0:
+            # Extract package name and version from first element "name@version"
+            full_identifier = pkg_info[0]
+            if "@" in full_identifier:
+                # Handle scoped packages like "@babel/core@7.28.5"
+                parts = full_identifier.rsplit("@", 1)
+                name = parts[0] if len(parts) > 0 else pkg_name
+                version = parts[1] if len(parts) > 1 else None
+            else:
+                name = full_identifier
+                version = None
+        elif isinstance(pkg_info, dict):
+            # Fallback for dict format
+            name = pkg_info.get("name", pkg_name)
+            version = pkg_info.get("version")
+        else:
             continue
-
-        # Extract package name and version
-        name = pkg_info.get("name")
-        version = pkg_info.get("version")
 
         if not name:
             continue
