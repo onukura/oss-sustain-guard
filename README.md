@@ -67,7 +67,18 @@ Metrics are one lens among many; they work best alongside project context and re
 
 **API Limits & Sampling:**
 
-For performance reasons, we sample GitHub data with these limits (per analysis):
+OSS Sustain Guard provides flexible data sampling to balance speed, accuracy, and API usage:
+
+- **Default mode**: Balanced sampling (100 commits, 50 PRs, 20 issues, etc.)
+- **Shallow mode** (`--scan-depth shallow`): Quick scan with fewer samples (~50% reduction)
+- **Deep mode** (`--scan-depth deep`): Comprehensive analysis with more samples (~2x default)
+
+You can also limit analysis to recent activity:
+
+- `--days-lookback 90` - Only analyze the last 3 months
+- `--days-lookback 180` - Only analyze the last 6 months
+
+Default sample limits (balanced mode):
 
 - **Commits**: Last 100 analyzed
 - **Pull Requests**: Last 50 merged + last 50 closed sampled
@@ -111,6 +122,17 @@ os4g check django flask numpy
 
 # Multi-language support
 os4g check python:requests npm:react rust:tokio r:ggplot2 haskell:text swift:apple/swift-nio
+
+# Adjust data sampling depth
+os4g check requests --scan-depth shallow  # Quick scan (fewer samples)
+os4g check requests --scan-depth deep     # Comprehensive scan (more samples)
+
+# Analyze recent activity only
+os4g check requests --days-lookback 90   # Last 3 months
+os4g check requests --days-lookback 180  # Last 6 months
+
+# Combine options for targeted analysis
+os4g check --recursive --scan-depth deep --days-lookback 90
 
 # Export results to JSON
 os4g check requests --output-format json --output-file oss-report.json

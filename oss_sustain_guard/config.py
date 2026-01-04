@@ -38,6 +38,20 @@ DEFAULT_CACHE_TTL = 7 * 24 * 60 * 60
 _CACHE_DIR: Path | None = None
 _CACHE_TTL: int | None = None
 
+# Scan depth configuration for GitHub/GitLab API sampling
+# Options: "shallow", "default", "deep"
+_SCAN_DEPTH: str = "default"
+
+# Days to look back for temporal filtering (None = no time limit)
+_DAYS_LOOKBACK: int | None = None
+
+# Scan depth configuration for GitHub API sampling
+# Options: "shallow", "default", "deep"
+_SCAN_DEPTH: str = "default"
+
+# Days to look back for temporal filtering (None = no time limit)
+_DAYS_LOOKBACK: int | None = None
+
 
 def load_config_file(config_path: Path) -> dict:
     """Load a TOML configuration file."""
@@ -411,6 +425,49 @@ def set_cache_ttl(seconds: int) -> None:
     """
     global _CACHE_TTL
     _CACHE_TTL = seconds
+
+
+def set_scan_depth(depth: str) -> None:
+    """Set the scan depth for data collection.
+
+    Args:
+        depth: One of "shallow", "default", "deep", "very_deep"
+
+    Raises:
+        ValueError: If depth is not a valid option
+    """
+    global _SCAN_DEPTH
+    valid_depths = {"shallow", "default", "deep", "very_deep"}
+    if depth not in valid_depths:
+        raise ValueError(
+            f"Invalid scan depth: {depth}. Must be one of: {', '.join(sorted(valid_depths))}"
+        )
+    _SCAN_DEPTH = depth
+
+
+def get_scan_depth() -> str:
+    """Get the configured scan depth (shallow, default, or deep)."""
+    return _SCAN_DEPTH
+
+
+def set_days_lookback(days: int | None) -> None:
+    """Set the number of days to look back for temporal filtering.
+
+    Args:
+        days: Number of days to look back, or None for no time limit
+
+    Raises:
+        ValueError: If days is negative
+    """
+    global _DAYS_LOOKBACK
+    if days is not None and days < 0:
+        raise ValueError(f"Days lookback must be non-negative, got {days}")
+    _DAYS_LOOKBACK = days
+
+
+def get_days_lookback() -> int | None:
+    """Get the configured days lookback value (None = no time limit)."""
+    return _DAYS_LOOKBACK
 
 
 def is_cache_enabled() -> bool:

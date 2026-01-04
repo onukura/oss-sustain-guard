@@ -88,13 +88,21 @@ class BaseVCSProvider(ABC):
     """
 
     @abstractmethod
-    async def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
+    async def get_repository_data(
+        self,
+        owner: str,
+        repo: str,
+        scan_depth: str = "default",
+        days_lookback: int | None = None,
+    ) -> VCSRepositoryData:
         """
         Fetch normalized repository data from the VCS platform.
 
         Args:
             owner: Repository owner (username or organization)
             repo: Repository name
+            scan_depth: Sampling depth - "shallow", "default", or "deep"
+            days_lookback: Optional time filter (days to look back), None = no limit
 
         Returns:
             Normalized VCSRepositoryData structure

@@ -1790,6 +1790,16 @@ async def check(
         "-w",
         help="Maximum number of parallel workers (default: 10, adjust based on GitHub API rate limits).",
     ),
+    scan_depth: str = typer.Option(
+        "default",
+        "--scan-depth",
+        help="Data sampling depth: shallow (quick scan, fewer samples), default (balanced), deep (comprehensive), very_deep (maximum detail, most samples). Affects how much data is collected from GitHub/GitLab APIs.",
+    ),
+    days_lookback: int | None = typer.Option(
+        None,
+        "--days-lookback",
+        help="Only analyze activity from the last N days (e.g., --days-lookback 90 for last 3 months). By default, analyzes all available data within sample limits.",
+    ),
 ):
     """Analyze the sustainability of packages across multiple ecosystems (Python, JavaScript, Go, Rust, PHP, Java, Kotlin, Scala, C#, Ruby, R, Dart, Elixir, Haskell, Perl, Swift)."""
     # Apply config defaults if not specified via CLI
@@ -1797,6 +1807,36 @@ async def check(
         verbose = is_verbose_enabled()
     if output_style is None:
         output_style = get_output_style()
+
+    # Validate scan depth
+    valid_scan_depths = ["shallow", "default", "deep", "very_deep"]
+    if scan_depth not in valid_scan_depths:
+        console.print(
+            f"[red]❌ Invalid scan depth: {scan_depth}[/red]\n"
+            f"Valid options: {', '.join(valid_scan_depths)}"
+        )
+        raise typer.Exit(code=1)
+
+    # Validate days lookback
+    if days_lookback is not None and days_lookback < 0:
+        console.print(
+            f"[red]❌ Days lookback must be non-negative, got {days_lookback}[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    # Set global scan configuration
+    from oss_sustain_guard.config import set_days_lookback, set_scan_depth
+
+    set_scan_depth(scan_depth)
+    set_days_lookback(days_lookback)
+
+    # Display scan configuration if verbose
+    if verbose:
+        console.print(f"[dim]📊 Scan depth: {scan_depth}[/dim]")
+        if days_lookback:
+            console.print(f"[dim]📅 Time window: last {days_lookback} days[/dim]")
+        else:
+            console.print("[dim]📅 Time window: all available data[/dim]")
 
     apply_scoring_profiles(profile_file)
 

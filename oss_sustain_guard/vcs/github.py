@@ -20,17 +20,59 @@ load_dotenv()
 # GitHub API endpoint
 GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
 
-# Sample size constants from GraphQL queries
-GRAPHQL_SAMPLE_LIMITS = {
-    "commits": 100,
-    "merged_prs": 50,
-    "closed_prs": 50,
-    "open_issues": 20,
-    "closed_issues": 50,
-    "releases": 10,
-    "vulnerability_alerts": 10,
-    "forks": 20,
+# Sample size constants by scan depth
+# shallow: Quick scan with minimal data
+# default: Balanced sampling for typical analysis
+# deep: Comprehensive sampling for thorough analysis
+SCAN_DEPTH_LIMITS = {
+    "shallow": {
+        "commits": 50,
+        "merged_prs": 20,
+        "closed_prs": 20,
+        "open_issues": 10,
+        "closed_issues": 20,
+        "releases": 5,
+        "vulnerability_alerts": 5,
+        "forks": 10,
+        "reviews": 3,
+    },
+    "default": {
+        "commits": 100,
+        "merged_prs": 50,
+        "closed_prs": 50,
+        "open_issues": 20,
+        "closed_issues": 50,
+        "releases": 10,
+        "vulnerability_alerts": 10,
+        "forks": 20,
+        "reviews": 10,
+    },
+    "deep": {
+        "commits": 100,  # GitHub API limit: max 100 per query
+        "merged_prs": 100,
+        "closed_prs": 100,
+        "open_issues": 50,
+        "closed_issues": 100,
+        "releases": 20,
+        "vulnerability_alerts": 20,
+        "forks": 50,
+        "reviews": 20,
+    },
+    "very_deep": {
+        "commits": 100,  # GitHub API limit: max 100 per query
+        "merged_prs": 100,  # GitHub API limit: max 100 per query
+        "closed_prs": 100,  # GitHub API limit: max 100 per query
+        "open_issues": 100,
+        "closed_issues": 100,  # GitHub API limit: max 100 per query
+        "releases": 30,
+        "vulnerability_alerts": 30,
+        "forks": 70,
+        "reviews": 30,
+    },
 }
+
+# Legacy constant for backward compatibility (uses default)
+GRAPHQL_SAMPLE_LIMITS = SCAN_DEPTH_LIMITS["default"]
 
 
 class GitHubProvider(BaseVCSProvider):
@@ -73,13 +115,21 @@ class GitHubProvider(BaseVCSProvider):
         """Construct GitHub repository URL."""
         return f"https://github.com/{owner}/{repo}"
 
-    async def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
+    async def get_repository_data(
+        self,
+        owner: str,
+        repo: str,
+        scan_depth: str = "default",
+        days_lookback: int | None = None,
+    ) -> VCSRepositoryData:
         """
         Fetch repository data from GitHub GraphQL API.
 
         Args:
             owner: GitHub repository owner (username or organization)
             repo: GitHub repository name
+            scan_depth: Sampling depth - "shallow", "default", or "deep"
+            days_lookback: Optional time filter (days to look back), None = no limit
 
         Returns:
             Normalized VCSRepositoryData structure
@@ -88,8 +138,23 @@ class GitHubProvider(BaseVCSProvider):
             ValueError: If repository not found or is inaccessible
             httpx.HTTPStatusError: If GitHub API returns an error
         """
-        query = self._get_graphql_query()
+        from datetime import datetime, timedelta, timezone
+
+        # Get sample limits based on scan depth
+        limits = SCAN_DEPTH_LIMITS.get(scan_depth, SCAN_DEPTH_LIMITS["default"])
+
+        # Calculate 'since' date if days_lookback is specified
+        since_date = None
+        if days_lookback is not None:
+            since_date = (
+                datetime.now(timezone.utc) - timedelta(days=days_lookback)
+            ).isoformat()
+
+        query = self._get_graphql_query(limits, use_since=since_date is not None)
         variables = {"owner": owner, "name": repo}
+        if since_date:
+            variables["since"] = since_date
+
         raw_data = await self._query_graphql(query, variables)
 
         if "repository" not in raw_data or raw_data["repository"] is None:
@@ -137,225 +202,243 @@ class GitHubProvider(BaseVCSProvider):
 
         return data.get("data", {})
 
-    def _get_graphql_query(self) -> str:
-        """Return the GraphQL query to fetch repository metrics."""
-        return """
-        query GetRepository($owner: String!, $name: String!) {
-          repository(owner: $owner, name: $name) {
+    def _get_graphql_query(
+        self, limits: dict[str, int], use_since: bool = False
+    ) -> str:
+        """
+        Return the GraphQL query to fetch repository metrics.
+
+        Args:
+            limits: Dictionary with sample size limits for each data type
+            use_since: Whether to include $since variable for time filtering
+        """
+        # Build query signature with optional $since parameter
+        query_params = "$owner: String!, $name: String!"
+        if use_since:
+            query_params += ", $since: GitTimestamp"
+
+        # Build history() parameters
+        history_params = f"first: {limits['commits']}"
+        if use_since:
+            history_params += ", since: $since"
+
+        return f"""
+        query GetRepository({query_params}) {{
+          repository(owner: $owner, name: $name) {{
             isArchived
             pushedAt
-            owner {
+            owner {{
               __typename
               login
-              ... on Organization {
+              ... on Organization {{
                 name
                 login
-              }
-            }
-            defaultBranchRef {
+              }}
+            }}
+            defaultBranchRef {{
               name
-              target {
-                ... on Commit {
-                  history(first: 100) {
-                    edges {
-                      node {
+              target {{
+                ... on Commit {{
+                  history({history_params}) {{
+                    edges {{
+                      node {{
                         authoredDate
-                        author {
-                          user {
+                        author {{
+                          user {{
                             login
                             company
-                          }
+                          }}
                           email
-                        }
-                      }
-                    }
+                        }}
+                      }}
+                    }}
                     totalCount
-                  }
-                  checkSuites(last: 1) {
-                    nodes {
+                  }}
+                  checkSuites(last: 1) {{
+                    nodes {{
                       conclusion
                       status
-                    }
-                  }
-                }
-              }
-            }
-            pullRequests(first: 50, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
-              edges {
-                node {
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            pullRequests(first: {limits["merged_prs"]}, states: MERGED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
+              edges {{
+                node {{
                   mergedAt
                   createdAt
-                  mergedBy {
+                  mergedBy {{
                     login
-                  }
-                  reviews(first: 10) {
+                  }}
+                  reviews(first: {limits["reviews"]}) {{
                     totalCount
-                    edges {
-                      node {
+                    edges {{
+                      node {{
                         createdAt
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            closedPullRequests: pullRequests(first: 50, states: CLOSED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+                      }}
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            closedPullRequests: pullRequests(first: {limits["closed_prs"]}, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
               totalCount
-              edges {
-                node {
+              edges {{
+                node {{
                   closedAt
                   createdAt
                   merged
-                  reviews(first: 1) {
-                    edges {
-                      node {
+                  reviews(first: 1) {{
+                    edges {{
+                      node {{
                         createdAt
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            mergedPullRequestsCount: pullRequests(states: MERGED) {
+                      }}
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            mergedPullRequestsCount: pullRequests(states: MERGED) {{
               totalCount
-            }
-            releases(first: 10, orderBy: {field: CREATED_AT, direction: DESC}) {
-              edges {
-                node {
+            }}
+            releases(first: {limits["releases"]}, orderBy: {{field: CREATED_AT, direction: DESC}}) {{
+              edges {{
+                node {{
                   publishedAt
                   tagName
-                }
-              }
-            }
-            issues(first: 20, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) {
+                }}
+              }}
+            }}
+            issues(first: {limits["open_issues"]}, states: OPEN, orderBy: {{field: CREATED_AT, direction: DESC}}) {{
               totalCount
-              edges {
-                node {
+              edges {{
+                node {{
                   createdAt
-                  comments(first: 1) {
-                    edges {
-                      node {
+                  comments(first: 1) {{
+                    edges {{
+                      node {{
                         createdAt
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            closedIssues: issues(first: 50, states: CLOSED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+                      }}
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            closedIssues: issues(first: {limits["closed_issues"]}, states: CLOSED, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
               totalCount
-              edges {
-                node {
+              edges {{
+                node {{
                   createdAt
                   closedAt
                   updatedAt
-                  timelineItems(first: 1, itemTypes: CLOSED_EVENT) {
-                    edges {
-                      node {
-                        ... on ClosedEvent {
-                          actor {
+                  timelineItems(first: 1, itemTypes: CLOSED_EVENT) {{
+                    edges {{
+                      node {{
+                        ... on ClosedEvent {{
+                          actor {{
                             login
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            vulnerabilityAlerts(first: 10) {
-              edges {
-                node {
-                  securityVulnerability {
+                          }}
+                        }}
+                      }}
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            vulnerabilityAlerts(first: {limits["vulnerability_alerts"]}) {{
+              edges {{
+                node {{
+                  securityVulnerability {{
                     severity
-                  }
+                  }}
                   dismissedAt
-                }
-              }
-            }
+                }}
+              }}
+            }}
             isSecurityPolicyEnabled
-            fundingLinks {
+            fundingLinks {{
               platform
               url
-            }
+            }}
             hasWikiEnabled
             hasIssuesEnabled
             hasDiscussionsEnabled
-            codeOfConduct {
+            codeOfConduct {{
               name
               url
-            }
-            licenseInfo {
+            }}
+            licenseInfo {{
               name
               spdxId
               url
-            }
-            primaryLanguage {
+            }}
+            primaryLanguage {{
               name
-            }
-            repositoryTopics(first: 20) {
-              nodes {
-                topic {
+            }}
+            repositoryTopics(first: 20) {{
+              nodes {{
+                topic {{
                   name
-                }
-              }
-            }
+                }}
+              }}
+            }}
             stargazerCount
             forkCount
-            watchers {
+            watchers {{
               totalCount
-            }
-            forks(first: 20, orderBy: {field: PUSHED_AT, direction: DESC}) {
-              edges {
-                node {
+            }}
+            forks(first: {limits["forks"]}, orderBy: {{field: PUSHED_AT, direction: DESC}}) {{
+              edges {{
+                node {{
                   createdAt
                   pushedAt
-                  defaultBranchRef {
-                    target {
-                      ... on Commit {
-                        history(first: 1) {
-                          edges {
-                            node {
+                  defaultBranchRef {{
+                    target {{
+                      ... on Commit {{
+                        history(first: 1) {{
+                          edges {{
+                            node {{
                               committedDate
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                  owner {
+                            }}
+                          }}
+                        }}
+                      }}
+                    }}
+                  }}
+                  owner {{
                     login
-                  }
-                }
-              }
-            }
-            readmeUpperCase: object(expression: "HEAD:README.md") {
-              ... on Blob {
+                  }}
+                }}
+              }}
+            }}
+            readmeUpperCase: object(expression: "HEAD:README.md") {{
+              ... on Blob {{
                 byteSize
                 text
-              }
-            }
-            readmeLowerCase: object(expression: "HEAD:readme.md") {
-              ... on Blob {
+              }}
+            }}
+            readmeLowerCase: object(expression: "HEAD:readme.md") {{
+              ... on Blob {{
                 byteSize
                 text
-              }
-            }
-            readmeAllCaps: object(expression: "HEAD:README") {
-              ... on Blob {
+              }}
+            }}
+            readmeAllCaps: object(expression: "HEAD:README") {{
+              ... on Blob {{
                 byteSize
                 text
-              }
-            }
-            contributingFile: object(expression: "HEAD:CONTRIBUTING.md") {
-              ... on Blob {
+              }}
+            }}
+            contributingFile: object(expression: "HEAD:CONTRIBUTING.md") {{
+              ... on Blob {{
                 byteSize
-              }
-            }
+              }}
+            }}
             description
             homepageUrl
-          }
-        }
+          }}
+        }}
         """
 
     def _normalize_github_data(self, repo_info: dict[str, Any]) -> VCSRepositoryData:
@@ -368,6 +451,12 @@ class GitHubProvider(BaseVCSProvider):
         Returns:
             Normalized VCSRepositoryData structure
         """
+        from datetime import datetime
+
+        # Since we're using API-level filtering with 'since' parameter,
+        # we no longer need client-side filtering
+        cutoff_date = None
+
         # Extract owner information
         owner_data = repo_info.get("owner", {})
         owner_type = owner_data.get("__typename", "User")
@@ -412,36 +501,112 @@ class GitHubProvider(BaseVCSProvider):
         default_branch = repo_info.get("defaultBranchRef")
         if default_branch and default_branch.get("target"):
             history = default_branch["target"].get("history", {})
-            commits = [edge["node"] for edge in history.get("edges", [])]
-            total_commits = history.get("totalCount", len(commits))
+            all_commits = [edge["node"] for edge in history.get("edges", [])]
+            total_commits = history.get("totalCount", len(all_commits))
+
+            # Apply time filter if specified
+            if cutoff_date:
+                commits = [
+                    c
+                    for c in all_commits
+                    if c.get("authoredDate")
+                    and datetime.fromisoformat(c["authoredDate"].replace("Z", "+00:00"))
+                    >= cutoff_date
+                ]
+            else:
+                commits = all_commits
 
         # Extract pull requests
         merged_prs_data = repo_info.get("pullRequests", {})
-        merged_prs = [edge["node"] for edge in merged_prs_data.get("edges", [])]
+        all_merged_prs = [edge["node"] for edge in merged_prs_data.get("edges", [])]
+
+        # Apply time filter if specified
+        if cutoff_date:
+            merged_prs = [
+                pr
+                for pr in all_merged_prs
+                if pr.get("mergedAt")
+                and datetime.fromisoformat(pr["mergedAt"].replace("Z", "+00:00"))
+                >= cutoff_date
+            ]
+        else:
+            merged_prs = all_merged_prs
 
         closed_prs_data = repo_info.get("closedPullRequests", {})
-        closed_prs = [
+        all_closed_prs = [
             edge["node"]
             for edge in closed_prs_data.get("edges", [])
             if not edge["node"].get("merged", False)
         ]
 
+        # Apply time filter if specified
+        if cutoff_date:
+            closed_prs = [
+                pr
+                for pr in all_closed_prs
+                if pr.get("closedAt")
+                and datetime.fromisoformat(pr["closedAt"].replace("Z", "+00:00"))
+                >= cutoff_date
+            ]
+        else:
+            closed_prs = all_closed_prs
+
         total_merged_prs = repo_info.get("mergedPullRequestsCount", {}).get(
-            "totalCount", len(merged_prs)
+            "totalCount", len(all_merged_prs)
         )
 
         # Extract releases
         releases_data = repo_info.get("releases", {})
-        releases = [edge["node"] for edge in releases_data.get("edges", [])]
+        all_releases = [edge["node"] for edge in releases_data.get("edges", [])]
+
+        # Apply time filter if specified
+        if cutoff_date:
+            releases = [
+                r
+                for r in all_releases
+                if r.get("publishedAt")
+                and datetime.fromisoformat(r["publishedAt"].replace("Z", "+00:00"))
+                >= cutoff_date
+            ]
+        else:
+            releases = all_releases
 
         # Extract issues
         open_issues_data = repo_info.get("issues", {})
-        open_issues = [edge["node"] for edge in open_issues_data.get("edges", [])]
-        open_issues_count = open_issues_data.get("totalCount", len(open_issues))
+        all_open_issues = [edge["node"] for edge in open_issues_data.get("edges", [])]
+        open_issues_count = open_issues_data.get("totalCount", len(all_open_issues))
+
+        # Apply time filter if specified
+        if cutoff_date:
+            open_issues = [
+                i
+                for i in all_open_issues
+                if i.get("createdAt")
+                and datetime.fromisoformat(i["createdAt"].replace("Z", "+00:00"))
+                >= cutoff_date
+            ]
+        else:
+            open_issues = all_open_issues
 
         closed_issues_data = repo_info.get("closedIssues", {})
-        closed_issues = [edge["node"] for edge in closed_issues_data.get("edges", [])]
-        total_closed_issues = closed_issues_data.get("totalCount", len(closed_issues))
+        all_closed_issues = [
+            edge["node"] for edge in closed_issues_data.get("edges", [])
+        ]
+        total_closed_issues = closed_issues_data.get(
+            "totalCount", len(all_closed_issues)
+        )
+
+        # Apply time filter if specified
+        if cutoff_date:
+            closed_issues = [
+                i
+                for i in all_closed_issues
+                if i.get("closedAt")
+                and datetime.fromisoformat(i["closedAt"].replace("Z", "+00:00"))
+                >= cutoff_date
+            ]
+        else:
+            closed_issues = all_closed_issues
 
         # Extract vulnerability alerts
         vuln_data = repo_info.get("vulnerabilityAlerts", {})

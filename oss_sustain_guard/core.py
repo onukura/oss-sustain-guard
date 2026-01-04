@@ -1161,6 +1161,7 @@ async def analyze_repository(
         ValueError: If credentials not set or repository not found
         httpx.HTTPStatusError: If VCS API returns an error
     """
+    from oss_sustain_guard.config import get_days_lookback, get_scan_depth
 
     console.print(f"Analyzing [bold cyan]{owner}/{name}[/bold cyan]...")
 
@@ -1168,8 +1169,14 @@ async def analyze_repository(
         # Get VCS provider instance
         vcs = get_vcs_provider(vcs_platform)
 
-        # Fetch normalized repository data from VCS
-        vcs_data = await vcs.get_repository_data(owner, name)
+        # Get scan configuration
+        scan_depth = get_scan_depth()
+        days_lookback = get_days_lookback()
+
+        # Fetch normalized repository data from VCS with scan configuration
+        vcs_data = await vcs.get_repository_data(
+            owner, name, scan_depth=scan_depth, days_lookback=days_lookback
+        )
 
         # Convert VCS data to legacy format for metrics compatibility
         repo_info = _vcs_data_to_repo_info(vcs_data)
