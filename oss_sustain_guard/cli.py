@@ -35,6 +35,7 @@ from oss_sustain_guard.cache import (
 )
 from oss_sustain_guard.config import (
     get_cache_ttl,
+    get_lfx_config,
     get_output_style,
     is_cache_enabled,
     is_package_excluded,
@@ -57,6 +58,7 @@ from oss_sustain_guard.core import (
 )
 from oss_sustain_guard.dependency_graph import get_all_dependencies
 from oss_sustain_guard.http_client import close_async_http_client
+from oss_sustain_guard.integrations.lfx import get_lfx_info
 from oss_sustain_guard.resolvers import (
     detect_ecosystems,
     find_lockfiles,
@@ -283,6 +285,41 @@ def _write_json_results(
 ) -> None:
     """Write results as JSON to stdout or a file."""
     weights = get_metric_weights(profile)
+
+    # Load LFX configuration
+    lfx_config = get_lfx_config()
+    lfx_enabled = lfx_config.get("enabled", True)
+    lfx_project_map = lfx_config.get("project_map", {})
+    lfx_badge_types = lfx_config.get("badges", ["health-score", "active-contributors"])
+
+    # Add LFX info to results
+    results_with_lfx = []
+    for result in results:
+        result_dict = analysis_result_to_dict(result)
+
+        if lfx_enabled:
+            repo_name = result.repo_url.replace("https://github.com/", "")
+            package_id = (
+                f"{result.ecosystem}:{repo_name}" if result.ecosystem else repo_name
+            )
+
+            lfx_info = get_lfx_info(
+                package_name=package_id,
+                repo_url=result.repo_url,
+                config_mapping=lfx_project_map,
+                badge_types=lfx_badge_types,
+            )
+
+            if lfx_info:
+                result_dict["lfx"] = {
+                    "project_slug": lfx_info.project_slug,
+                    "project_url": lfx_info.project_url,
+                    "badges": lfx_info.badges,
+                    "resolution": lfx_info.resolution,
+                }
+
+        results_with_lfx.append(result_dict)
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "profile": profile,
@@ -291,7 +328,7 @@ def _write_json_results(
             "metric_weights": weights,
         },
         "summary": _build_summary(results),
-        "results": [analysis_result_to_dict(result) for result in results],
+        "results": results_with_lfx,
     }
     if dependency_summary:
         payload["dependency_summary"] = dependency_summary
@@ -480,10 +517,45 @@ def _render_html_report(
         for label, value in summary_cards
     )
 
+    # Load LFX configuration
+    lfx_config = get_lfx_config()
+    lfx_enabled = lfx_config.get("enabled", True)
+    lfx_project_map = lfx_config.get("project_map", {})
+    lfx_badge_types = lfx_config.get("badges", ["health-score", "active-contributors"])
+
     rows_html = []
     for result in results:
         status_text, status_color = _format_health_status(result.total_score)
         repo_name = result.repo_url.replace("https://github.com/", "")
+
+        # Generate LFX info
+        lfx_html = '<td class="lfx-not-available">—</td>'
+        if lfx_enabled:
+            # Create package identifier for LFX mapping
+            package_id = (
+                f"{result.ecosystem}:{repo_name}" if result.ecosystem else repo_name
+            )
+
+            lfx_info = get_lfx_info(
+                package_name=package_id,
+                repo_url=result.repo_url,
+                config_mapping=lfx_project_map,
+                badge_types=lfx_badge_types,
+            )
+
+            if lfx_info:
+                # Build LFX cell HTML with link and badges
+                badge_imgs = " ".join(
+                    f'<img src="{badge_url}" alt="{badge_type}" title="{badge_type}">'
+                    for badge_type, badge_url in lfx_info.badges.items()
+                )
+                lfx_html = (
+                    f'<td><div class="lfx-badges">'
+                    f'<a href="{lfx_info.project_url}" class="lfx-link" target="_blank" rel="noopener">View</a>'
+                    f"{badge_imgs}"
+                    f"</div></td>"
+                )
+
         rows_html.append(
             "<tr>"
             f"<td>{escape(repo_name)}</td>"
@@ -491,6 +563,7 @@ def _render_html_report(
             f'<td class="score {status_color}">{result.total_score}/100</td>'
             f'<td class="status {status_color}">{escape(status_text)}</td>'
             f"<td>{escape(_summarize_observations(result.metrics))}</td>"
+            f"{lfx_html}"
             "</tr>"
         )
 
@@ -657,6 +730,28 @@ def display_results_table(
                 f"\n⚠️  [yellow]{result.repo_url.replace('https://github.com/', '')}:[/yellow] "
                 f"[yellow]{len(result.skipped_metrics)} metric(s) not measured:[/yellow] {', '.join(result.skipped_metrics)}"
             )
+
+    # Display LFX Insights links if available
+    lfx_config = get_lfx_config()
+    if lfx_config.get("enabled", True):
+        lfx_project_map = lfx_config.get("project_map", {})
+        for result in results:
+            repo_name = result.repo_url.replace("https://github.com/", "")
+            package_id = (
+                f"{result.ecosystem}:{repo_name}" if result.ecosystem else repo_name
+            )
+
+            lfx_info = get_lfx_info(
+                package_name=package_id,
+                repo_url=result.repo_url,
+                config_mapping=lfx_project_map,
+            )
+
+            if lfx_info:
+                console.print(
+                    f"\n📊 [bold cyan]{repo_name}[/bold cyan] "
+                    f"- LFX Insights: [link={lfx_info.project_url}]{lfx_info.project_url}[/link]"
+                )
 
     # Display funding links if available
     for result in results:
@@ -861,6 +956,26 @@ def display_results_detailed(
         console.print(
             f"   Total Score: [{risk_color}]{result.total_score}/100[/{risk_color}]"
         )
+
+        # Display LFX Insights link if available
+        lfx_config = get_lfx_config()
+        if lfx_config.get("enabled", True):
+            lfx_project_map = lfx_config.get("project_map", {})
+            repo_name = result.repo_url.replace("https://github.com/", "")
+            package_id = (
+                f"{result.ecosystem}:{repo_name}" if result.ecosystem else repo_name
+            )
+
+            lfx_info = get_lfx_info(
+                package_name=package_id,
+                repo_url=result.repo_url,
+                config_mapping=lfx_project_map,
+            )
+
+            if lfx_info:
+                console.print(
+                    f"   📊 [bold cyan]LFX Insights:[/bold cyan] [link={lfx_info.project_url}]{lfx_info.project_url}[/link]"
+                )
 
         # Display funding information if available
         if result.funding_links:

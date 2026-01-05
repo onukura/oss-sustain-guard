@@ -8,8 +8,8 @@ This guide provides a comprehensive reference for all built-in metrics included 
 - [Metrics by Category](#metrics-by-category)
 - [Core Sustainability Metrics](#core-sustainability-metrics)
 - [Community Engagement Metrics](#community-engagement-metrics)
-- [Quality & Maintenance Metrics](#quality--maintenance-metrics)
-- [Visibility & Adoption Metrics](#visibility--adoption-metrics)
+- [Quality & Maintenance Metrics](#quality-maintenance-metrics)
+- [Visibility & Adoption Metrics](#visibility-adoption-metrics)
 - [Scoring System](#scoring-system)
 - [Status Levels](#status-levels)
 

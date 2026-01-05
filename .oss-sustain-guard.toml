@@ -56,3 +56,23 @@ use_gitignore = true
 # "Security Signals" = 4
 # "Funding Signals" = 3
 # "PR Responsiveness" = 2
+
+# LFX Insights Integration
+# Enable/disable LFX Insights badges and links in reports
+[tool.oss-sustain-guard.integrations.lfx]
+# Enable LFX Insights integration
+enabled = true
+
+# Badge types to display in reports
+# Available: "health-score", "active-contributors", "contributors"
+badges = ["health-score", "active-contributors"]
+
+# Explicit package to LFX project slug mapping
+# This is the most reliable way to ensure correct LFX links
+# Format: "ecosystem:package" = "lfx-project-slug"
+#
+# Examples:
+# [tool.oss-sustain-guard.integrations.lfx.project_map]
+# "npm:react" = "facebook-react"
+# "pypi:requests" = "psf-requests"
+# "github:kubernetes/kubernetes" = "kubernetes-kubernetes"

@@ -41,8 +41,13 @@ nav:
       - Custom Metrics: CUSTOM_METRICS_GUIDE.md
       - Scoring Profiles (Custom): SCORING_PROFILES_GUIDE.md
   - Integrations:
+      - LFX Insights: LFX_INSIGHTS_INTEGRATION.md
       - GitHub Actions: GITHUB_ACTIONS_GUIDE.md
       - GitLab CI/CD: GITLAB_CICD_INTEGRATION_GUIDE.md
       - Pre-commit Integration: PRE_COMMIT_INTEGRATION.md
+  - Extending:
+      - Custom Dependency Parsers: CUSTOM_DEPENDENCY_PARSERS_GUIDE.md
+      - Custom Resolvers: CUSTOM_RESOLVERS_GUIDE.md
+      - Custom VCS Providers: CUSTOM_VCS_GUIDE.md
   - Support:
       - Troubleshooting & FAQ: TROUBLESHOOTING_FAQ.md

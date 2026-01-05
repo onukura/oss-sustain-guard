@@ -66,6 +66,7 @@ For critical dependencies, we recommend:
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
 - **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case.
 - **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby (extensible via plugins)
+- **LFX Insights Integration** - Automatic badges and links to Linux Foundation Insights dashboards in HTML/JSON reports
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks
 - **CI/CD Integration** - GitHub Actions, Pre-commit hooks

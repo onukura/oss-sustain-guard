@@ -667,3 +667,53 @@ def is_verbose_enabled() -> bool:
 
     # Default: disabled
     return False
+
+
+def get_lfx_config() -> dict:
+    """
+    Load LFX Insights integration configuration.
+
+    Returns:
+        Dictionary with LFX configuration:
+        - enabled: bool (default: True)
+        - badges: list of badge types (default: ["health-score", "active-contributors"])
+        - project_map: dict mapping package names to LFX project slugs (default: {})
+
+    Priority:
+    1. .oss-sustain-guard.toml
+    2. pyproject.toml
+    3. Default values
+    """
+    default_config = {
+        "enabled": True,
+        "badges": ["health-score", "active-contributors"],
+        "project_map": {},
+    }
+
+    # Try .oss-sustain-guard.toml first
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        lfx_config = (
+            config.get("tool", {})
+            .get("oss-sustain-guard", {})
+            .get("integrations", {})
+            .get("lfx", {})
+        )
+        if lfx_config:
+            return {**default_config, **lfx_config}
+
+    # Try pyproject.toml (fallback)
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists():
+        config = load_config_file(pyproject_path)
+        lfx_config = (
+            config.get("tool", {})
+            .get("oss-sustain-guard", {})
+            .get("integrations", {})
+            .get("lfx", {})
+        )
+        if lfx_config:
+            return {**default_config, **lfx_config}
+
+    return default_config

@@ -28,6 +28,10 @@ Indexes aggregate dependency graphs, release history, and repository metadata. O
 
 CHAOSS defines how to measure community health. OSS Sustain Guard implements a concrete, runnable CLI using CHAOSS-aligned metrics, adds sustainability-focused signals like funding presence, and offers scoring profiles for different priorities.
 
+### Project health dashboards (for example: [LFX Insights](https://insights.linuxfoundation.org/))
+
+LFX Insights provides comprehensive project analytics and dashboards with detailed visualizations of contributor activity, organizational diversity, and community health over time. OSS Sustain Guard integrates with LFX Insights by automatically generating links and badges in reports, allowing you to quickly access these detailed dashboards for your dependencies. While LFX focuses on in-depth analytics for individual projects, OSS Sustain Guard provides a quick sustainability health check across all your dependencies with a focus on actionable signals and local caching.
+
 ## Recommended use
 
-Use OSS Sustain Guard alongside security scanners and compliance checkers for a fuller view: security posture plus sustainability health.
+Use OSS Sustain Guard alongside security scanners and compliance checkers for a fuller view: security posture plus sustainability health. For deeper analysis of specific projects, follow the LFX Insights links provided in OSS Sustain Guard reports to access comprehensive dashboards and historical trends.
