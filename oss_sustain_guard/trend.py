@@ -237,7 +237,6 @@ async def analyze_repository_trend(
     from oss_sustain_guard.core import (
         _analyze_repository_data,
         compute_weighted_total_score,
-        DEFAULT_SCORING_PROFILES,
     )
     from oss_sustain_guard.vcs import get_vcs_provider
 

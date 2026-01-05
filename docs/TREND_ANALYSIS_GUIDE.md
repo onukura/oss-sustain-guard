@@ -73,7 +73,7 @@ Analyze 2 years of history with 90-day periods.
 Displays period-by-period scores with change indicators:
 
 ```shell
-            Score Trend             
+            Score Trend
 ┏━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━┓
 ┃ Period  ┃ Score ┃ Change ┃ Trend ┃
 ┡━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━┩
@@ -97,16 +97,16 @@ Displays period-by-period scores with change indicators:
 Visual representation of score changes over time:
 
 ```shell
-57 ┤ ─ ─ ─ ─ ─ ─ ─ ─●─ 
+57 ┤ ─ ─ ─ ─ ─ ─ ─ ─●─
 56 ┤ ─ ─ ─ ─ ─ ─ ─ ─│─│
 55 ┤●─ ─ ─ ─ ─ ─ ─ ─│─●
-55 ┤ ─│─ ─ ─ ─ ─ ─ ─│─ 
-54 ┤ ─│─ ─ ─ ─ ─ ─●─ ─ 
-54 ┤ ─│─ ─ ─ ─ ─ ─│─ ─ 
-53 ┤ ─●─ ─ ─ ─ ─●─ ─ ─ 
-53 ┤ ─ ─│─ ─ ─ ─│─ ─ ─ 
-52 ┤ ─ ─│─ ─ ─ ─│─ ─ ─ 
-52 ┤ ─ ─●─●─●─●─ ─ ─ ─ 
+55 ┤ ─│─ ─ ─ ─ ─ ─ ─│─
+54 ┤ ─│─ ─ ─ ─ ─ ─●─ ─
+54 ┤ ─│─ ─ ─ ─ ─ ─│─ ─
+53 ┤ ─●─ ─ ─ ─ ─●─ ─ ─
+53 ┤ ─ ─│─ ─ ─ ─│─ ─ ─
+52 ┤ ─ ─│─ ─ ─ ─│─ ─ ─
+52 ┤ ─ ─●─●─●─●─ ─ ─ ─
 ```
 
 ### Top Metric Changes
