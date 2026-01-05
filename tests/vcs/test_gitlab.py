@@ -161,8 +161,12 @@ async def test_gitlab_provider_handles_api_error(mock_get_client):
     """Test GitLabProvider handles API errors."""
     mock_client = AsyncMock()
     mock_response = MagicMock()
+    mock_request = MagicMock(spec=httpx.Request)
+    mock_http_response = MagicMock(spec=httpx.Response)
     mock_response.raise_for_status = MagicMock(
-        side_effect=httpx.HTTPStatusError("API Error", request=None, response=None)
+        side_effect=httpx.HTTPStatusError(
+            "API Error", request=mock_request, response=mock_http_response
+        )
     )
     mock_client.post = AsyncMock(return_value=mock_response)
     mock_get_client.return_value = mock_client

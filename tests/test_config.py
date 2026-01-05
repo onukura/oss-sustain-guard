@@ -340,8 +340,12 @@ description = "Custom profile"
 
     profiles = load_profile_config()
     assert "custom" in profiles
-    assert profiles["custom"]["name"] == "Custom"
-    assert profiles["custom"]["weights"]["Contributor Redundancy"] == 1
+    custom_profile = profiles.get("custom")
+    assert isinstance(custom_profile, dict)
+    assert custom_profile.get("name") == "Custom"
+    weights = custom_profile.get("weights")
+    assert isinstance(weights, dict)
+    assert weights.get("Contributor Redundancy") == 1
 
 
 def test_load_profile_config_from_profile_file(tmp_path):
@@ -359,7 +363,11 @@ name = "Custom Profile"
 
     profiles = load_profile_config(profile_file)
     assert "custom_profile" in profiles
-    assert profiles["custom_profile"]["weights"]["Contributor Redundancy"] == 2
+    custom_profile = profiles.get("custom_profile")
+    assert isinstance(custom_profile, dict)
+    weights = custom_profile.get("weights")
+    assert isinstance(weights, dict)
+    assert weights.get("Contributor Redundancy") == 2
 
 
 def test_load_profile_config_missing_profiles_raises(tmp_path):

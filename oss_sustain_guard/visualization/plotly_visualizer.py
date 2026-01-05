@@ -32,7 +32,7 @@ class PlotlyVisualizer:
         self.graph = graph
         self._layout = None
 
-    def _compute_layout(self) -> dict[str, tuple[float, float]]:
+    def _compute_layout(self) -> dict:
         """Compute force-directed layout for the graph.
 
         Uses spring layout optimized for large graphs (up to 1000+ nodes).

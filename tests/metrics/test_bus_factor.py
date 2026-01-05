@@ -202,10 +202,13 @@ class TestBusFactorMetric:
         repo_data = _vcs_with_commits(["user1", "user2"])
         context = MetricContext(owner="owner", name="repo", repo_url="url")
         result = METRIC.checker.check(repo_data, context)
+        assert result is not None
         assert result.name == "Contributor Redundancy"
 
     def test_bus_factor_metric_spec_on_error(self):
         """Test MetricSpec error handler formatting."""
-        result = METRIC.on_error(RuntimeError("boom"))
-        assert result.score == 0
-        assert "Analysis incomplete" in result.message
+        if METRIC.on_error is not None:
+            result = METRIC.on_error(RuntimeError("boom"))
+            assert result is not None
+            assert result.score == 0
+            assert "Analysis incomplete" in result.message

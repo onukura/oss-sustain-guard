@@ -161,12 +161,11 @@ version = "1.9.0"
         lock_file.write_text('[[package]]\nname = "tokio"\nversion = "1.0.0"\n')
 
         import sys
-        import types
 
         def _raise(*_args, **_kwargs):
             raise ValueError("parse error")
 
-        fake_tomllib = types.ModuleType("tomllib")
+        fake_tomllib = MagicMock()
         fake_tomllib.load = _raise
         monkeypatch.setitem(sys.modules, "tomllib", fake_tomllib)
 

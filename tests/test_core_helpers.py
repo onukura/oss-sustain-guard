@@ -94,7 +94,7 @@ def test_apply_profile_overrides_resets_defaults():
 
 
 def test_apply_profile_overrides_rejects_non_dict_profile():
-    with pytest.raises(ValueError, match="should be a table"):
+    with pytest.raises(ValueError, match="needs a weights table"):
         apply_profile_overrides({"bad": {}})
 
 

@@ -158,8 +158,10 @@ async def test_github_provider_handles_api_error(mock_get_client):
     mock_client = mock_get_client.return_value
     mock_response = MagicMock()
     mock_client.post.return_value = mock_response
+    mock_request = MagicMock()
+    mock_response_obj = MagicMock()
     mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "API Error", request=None, response=None
+        "API Error", request=mock_request, response=mock_response_obj
     )
 
     provider = GitHubProvider(token="test_token")

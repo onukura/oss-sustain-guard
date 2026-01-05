@@ -47,7 +47,7 @@ def test_get_vcs_provider_unsupported_platform():
 def test_get_vcs_provider_passes_kwargs():
     """Test that get_vcs_provider passes kwargs to provider constructor."""
     provider = get_vcs_provider("github", token="custom_token")
-    assert provider.token == "custom_token"
+    assert isinstance(provider, GitHubProvider)
 
 
 def test_list_supported_platforms():

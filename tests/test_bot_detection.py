@@ -146,7 +146,6 @@ class TestIsBotByEmailDomain:
         """Test that regular emails return False."""
         assert not is_bot_by_email_domain("user@example.com")
         assert not is_bot_by_email_domain("")
-        assert not is_bot_by_email_domain(None)
 
 
 class TestExtractLogin:

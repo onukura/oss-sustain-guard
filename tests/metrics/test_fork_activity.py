@@ -345,10 +345,12 @@ class TestForkActivity:
         repo_data = _vcs_data()
         context = MetricContext(owner="owner", name="repo", repo_url="url")
         result = METRIC.checker.check(repo_data, context)
+        assert result is not None
         assert result.name == "Fork Activity"
 
     def test_fork_activity_metric_spec_on_error(self):
         """Test MetricSpec error handler formatting."""
+        assert METRIC.on_error is not None
         result = METRIC.on_error(RuntimeError("boom"))
         assert result.score == 0
         assert "Analysis incomplete" in result.message
