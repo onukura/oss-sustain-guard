@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from oss_sustain_guard import metrics
 from oss_sustain_guard.metrics.base import Metric, MetricContext, MetricSpec
+from oss_sustain_guard.vcs.base import VCSRepositoryData
 
 
 class DummyEntryPoint:
@@ -19,10 +20,11 @@ class DummyEntryPoint:
 
 
 def _spec(name: str) -> MetricSpec:
-    def _checker(_data: dict, _context: MetricContext) -> Metric | None:
-        return None
+    class TestChecker(metrics.MetricChecker):
+        def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
+            return Metric(name, 5, 10, "Test metric", "None")
 
-    return MetricSpec(name=name, checker=_checker)
+    return MetricSpec(name=name, checker=TestChecker(), on_error=lambda e: None)
 
 
 def test_load_builtin_metric_specs_filters_missing_metric(monkeypatch):
