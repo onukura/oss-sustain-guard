@@ -59,21 +59,15 @@ def test_analysis_result_to_dict_handles_mixed_metrics_and_models():
         total_score=88,
         metrics=[
             Metric("Metric A", 7, 10, "Message A", "Low"),
-            {
-                "name": "Metric B",
-                "score": 4,
-                "max_score": 10,
-                "message": "B",
-                "risk": "Medium",
-            },
-            _LegacyMetric(),
+            Metric("Metric B", 4, 10, "B", "Medium"),
+            Metric("Legacy Metric", 4, 10, "Legacy message", "Low"),
         ],
         funding_links=[{"platform": "GitHub", "url": "https://github.com/sponsors/x"}],
         is_community_driven=True,
         models=[
             MetricModel("Model A", 6, 10, "Observation A"),
-            {"name": "Model B", "score": 3, "max_score": 10, "observation": "B"},
-            _LegacyModel(),
+            MetricModel("Model B", 3, 10, "B"),
+            MetricModel("Legacy Model", 6, 10, "Legacy observation"),
         ],
         signals={"signal": 1},
         dependency_scores={"dep": 80},
@@ -101,7 +95,7 @@ def test_apply_profile_overrides_resets_defaults():
 
 def test_apply_profile_overrides_rejects_non_dict_profile():
     with pytest.raises(ValueError, match="should be a table"):
-        apply_profile_overrides({"bad": "nope"})
+        apply_profile_overrides({"bad": {}})
 
 
 def test_apply_profile_overrides_requires_weights_for_new_profile():
@@ -339,9 +333,10 @@ def test_extract_signals_parses_repo_and_metric_messages():
 
 
 def test_analyze_repository_data_handles_metric_errors():
+    from oss_sustain_guard.metrics.base import MetricChecker
     from oss_sustain_guard.vcs.base import VCSRepositoryData
 
-    class FailingChecker:
+    class FailingChecker(MetricChecker):
         def check(self, _vcs_data, _context):
             raise ValueError("broken")
 

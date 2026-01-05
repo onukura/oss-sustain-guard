@@ -1,7 +1,5 @@
 """Change request resolution metric."""
 
-from typing import Any
-
 from oss_sustain_guard.metrics.base import (
     Metric,
     MetricChecker,
@@ -110,15 +108,8 @@ class MergeVelocityChecker(MetricChecker):
 _CHECKER = MergeVelocityChecker()
 
 
-def check_merge_velocity(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
-    if isinstance(repo_data, VCSRepositoryData):
-        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
-    result = _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
-    return (
-        result
-        if result is not None
-        else _on_error(ValueError("Legacy check returned None"))
-    )
+def check_merge_velocity(repo_data: VCSRepositoryData) -> Metric:
+    return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:
