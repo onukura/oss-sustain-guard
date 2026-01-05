@@ -23,3 +23,8 @@ This document outlines the planned features and improvements for OSS Sustain Gua
 - Integrate AI capabilities for qualitative analysis of repository data.
 - Use machine learning models to provide deeper insights into maintainer behavior, community engagement, and potential risks.
 - Generate natural language summaries and recommendations based on quantitative metrics.
+
+### Reorganization CLI Commands
+
+- Current commands are implemented in a single cli.py file.
+- Plan to modularize commands into separate files for better maintainability.
