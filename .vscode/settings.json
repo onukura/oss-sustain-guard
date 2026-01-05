@@ -4,6 +4,16 @@
         "javascriptreact",
         "typescript"
     ],
+    // Ty settings
+    // Disable the built-in Python language server (Pylance)
+    "python.languageServer": "None",
+    "ty.importStrategy": "fromEnvironment",
+    "ty.completions.autoImport": true,
+    "ty.configuration": {
+        "rules": {
+            "unresolved-reference": "warn"
+        }
+    },
     // Python linter and formatter settings
     "python.analysis.typeCheckingMode": "basic",
     "python.testing.pytestArgs": [
