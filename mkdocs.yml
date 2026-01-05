@@ -27,6 +27,7 @@ nav:
       - How We Differ: DIFFERENCES_FROM_SIMILAR_INITIATIVES.md
   - Usage:
       - Recursive Scanning: RECURSIVE_SCANNING_GUIDE.md
+      - Trend Analysis: TREND_ANALYSIS_GUIDE.md
       - Dependency Analysis: DEPENDENCY_ANALYSIS_GUIDE.md
       - Dependency Graph Visualization: DEPENDENCY_GRAPH_VISUALIZATION.md
       - Gratitude Vending Machine: GRATITUDE_VENDING_MACHINE.md

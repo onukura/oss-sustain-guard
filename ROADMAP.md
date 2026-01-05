@@ -10,11 +10,13 @@ This document outlines the planned features and improvements for OSS Sustain Gua
 - Allow users to configure custom VCS endpoints for analysis.
 - Ensure compatibility with authentication mechanisms for self-hosted environments.
 
-### Time Machine Mode (Trend Analysis)
+### Time Machine Mode (Trend Analysis) ✅ Implemented
 
-- Implement a feature to analyze score changes over time by moving the time window of collected data.
-- Enable users to visualize trends in repository health metrics across different periods.
-- Provide insights into how sustainability factors evolve over time.
+- ✅ Analyze score changes over time by collecting data across multiple time windows.
+- ✅ Visualize trends in repository health metrics with terminal-based charts.
+- ✅ Provide insights into how sustainability factors evolve over time.
+- ✅ CLI command: `os4g trend <package>` with customizable intervals and window sizes.
+- Note: Some metrics (stars, security alerts, documentation) are excluded as they cannot be historically analyzed.
 
 ### AI-Powered Qualitative Analysis
 

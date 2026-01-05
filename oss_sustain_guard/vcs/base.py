@@ -94,6 +94,7 @@ class BaseVCSProvider(ABC):
         repo: str,
         scan_depth: str = "default",
         days_lookback: int | None = None,
+        time_window: tuple[str, str] | None = None,
     ) -> VCSRepositoryData:
         """
         Fetch normalized repository data from the VCS platform.
@@ -103,6 +104,8 @@ class BaseVCSProvider(ABC):
             repo: Repository name
             scan_depth: Sampling depth - "shallow", "default", or "deep"
             days_lookback: Optional time filter (days to look back), None = no limit
+            time_window: Optional (since, until) ISO timestamp tuple for precise window.
+                        If provided, takes precedence over days_lookback.
 
         Returns:
             Normalized VCSRepositoryData structure

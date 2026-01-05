@@ -121,6 +121,7 @@ class GitHubProvider(BaseVCSProvider):
         repo: str,
         scan_depth: str = "default",
         days_lookback: int | None = None,
+        time_window: tuple[str, str] | None = None,
     ) -> VCSRepositoryData:
         """
         Fetch repository data from GitHub GraphQL API.
@@ -130,6 +131,10 @@ class GitHubProvider(BaseVCSProvider):
             repo: GitHub repository name
             scan_depth: Sampling depth - "shallow", "default", or "deep"
             days_lookback: Optional time filter (days to look back), None = no limit
+            time_window: Optional (since, until) ISO timestamp tuple for precise window.
+                        If provided, takes precedence over days_lookback.
+                        Note: GitHub API only supports 'since', so 'until' is applied
+                        as a post-fetch filter.
 
         Returns:
             Normalized VCSRepositoryData structure
@@ -143,17 +148,32 @@ class GitHubProvider(BaseVCSProvider):
         # Get sample limits based on scan depth
         limits = SCAN_DEPTH_LIMITS.get(scan_depth, SCAN_DEPTH_LIMITS["default"])
 
-        # Calculate 'since' date if days_lookback is specified
+        # Determine time filter parameters
         since_date = None
-        if days_lookback is not None:
-            since_date = (
+        until_date = None
+
+        if time_window is not None:
+            # Use explicit time window (for trend analysis)
+            # IMPORTANT: Don't use 'since' parameter for trend analysis because:
+            # - GitHub API returns the LATEST N items since that date
+            # - For old time windows, this means we get recent data and filter it out
+            # - This creates sampling bias where old windows have fewer/no data
+            # Instead, fetch all data and filter client-side
+            since_date, until_date = time_window
+            # Don't pass since_date to API, only use for client-side filtering
+            api_since_date = None
+        elif days_lookback is not None:
+            # Use days_lookback (for regular analysis)
+            api_since_date = (
                 datetime.now(timezone.utc) - timedelta(days=days_lookback)
             ).isoformat()
+        else:
+            api_since_date = None
 
-        query = self._get_graphql_query(limits, use_since=since_date is not None)
+        query = self._get_graphql_query(limits, use_since=api_since_date is not None)
         variables = {"owner": owner, "name": repo}
-        if since_date:
-            variables["since"] = since_date
+        if api_since_date:
+            variables["since"] = api_since_date
 
         raw_data = await self._query_graphql(query, variables)
 
@@ -161,6 +181,17 @@ class GitHubProvider(BaseVCSProvider):
             raise ValueError(f"Repository {owner}/{repo} not found or is inaccessible.")
 
         repo_info = raw_data["repository"]
+
+        # If time_window is specified, filter the data by both since and until
+        if (
+            time_window is not None
+            and since_date is not None
+            and until_date is not None
+        ):
+            repo_info = self._filter_data_by_time_window(
+                repo_info, since_date, until_date
+            )
+
         return self._normalize_github_data(repo_info)
 
     async def _query_graphql(
@@ -440,6 +471,140 @@ class GitHubProvider(BaseVCSProvider):
           }}
         }}
         """
+
+    def _filter_data_by_time_window(
+        self, repo_info: dict[str, Any], since_date: str, until_date: str
+    ) -> dict[str, Any]:
+        """
+        Filter repository data to include only items within the time window.
+
+        GitHub API doesn't support proper time window filtering, so we filter client-side.
+
+        Args:
+            repo_info: Raw GitHub repository data
+            since_date: ISO timestamp string for start of time window
+            until_date: ISO timestamp string for end of time window
+
+        Returns:
+            Filtered repository data dictionary
+        """
+        from datetime import datetime
+
+        # Parse dates
+        since_dt = datetime.fromisoformat(since_date.replace("Z", "+00:00"))
+        until_dt = datetime.fromisoformat(until_date.replace("Z", "+00:00"))
+
+        # Create a deep copy to avoid modifying original
+        import copy
+
+        filtered = copy.deepcopy(repo_info)
+
+        # Filter commits
+        default_branch = filtered.get("defaultBranchRef")
+        if default_branch and default_branch.get("target"):
+            history = default_branch["target"].get("history", {})
+            edges = history.get("edges", [])
+            filtered_edges = [
+                edge
+                for edge in edges
+                if edge["node"].get("authoredDate")
+                and since_dt
+                <= datetime.fromisoformat(
+                    edge["node"]["authoredDate"].replace("Z", "+00:00")
+                )
+                <= until_dt
+            ]
+            history["edges"] = filtered_edges
+            if "totalCount" in history:
+                history["totalCount"] = len(filtered_edges)
+
+        # Filter merged PRs
+        pr_data = filtered.get("pullRequests", {})
+        if pr_data:
+            edges = pr_data.get("edges", [])
+            filtered_edges = [
+                edge
+                for edge in edges
+                if edge["node"].get("mergedAt")
+                and since_dt
+                <= datetime.fromisoformat(
+                    edge["node"]["mergedAt"].replace("Z", "+00:00")
+                )
+                <= until_dt
+            ]
+            pr_data["edges"] = filtered_edges
+
+        # Filter closed PRs
+        closed_pr_data = filtered.get("closedPullRequests", {})
+        if closed_pr_data:
+            edges = closed_pr_data.get("edges", [])
+            filtered_edges = [
+                edge
+                for edge in edges
+                if edge["node"].get("closedAt")
+                and since_dt
+                <= datetime.fromisoformat(
+                    edge["node"]["closedAt"].replace("Z", "+00:00")
+                )
+                <= until_dt
+            ]
+            closed_pr_data["edges"] = filtered_edges
+            if "totalCount" in closed_pr_data:
+                closed_pr_data["totalCount"] = len(filtered_edges)
+
+        # Filter releases
+        releases_data = filtered.get("releases", {})
+        if releases_data:
+            edges = releases_data.get("edges", [])
+            filtered_edges = [
+                edge
+                for edge in edges
+                if edge["node"].get("publishedAt")
+                and since_dt
+                <= datetime.fromisoformat(
+                    edge["node"]["publishedAt"].replace("Z", "+00:00")
+                )
+                <= until_dt
+            ]
+            releases_data["edges"] = filtered_edges
+
+        # Filter open issues (by creation date)
+        issues_data = filtered.get("issues", {})
+        if issues_data:
+            edges = issues_data.get("edges", [])
+            filtered_edges = [
+                edge
+                for edge in edges
+                if edge["node"].get("createdAt")
+                and since_dt
+                <= datetime.fromisoformat(
+                    edge["node"]["createdAt"].replace("Z", "+00:00")
+                )
+                <= until_dt
+            ]
+            issues_data["edges"] = filtered_edges
+            if "totalCount" in issues_data:
+                issues_data["totalCount"] = len(filtered_edges)
+
+        # Filter closed issues
+        closed_issues_data = filtered.get("closedIssues", {})
+        if closed_issues_data:
+            edges = closed_issues_data.get("edges", [])
+            filtered_edges = [
+                edge
+                for edge in edges
+                if edge["node"].get("closedAt")
+                and since_dt
+                <= datetime.fromisoformat(
+                    edge["node"]["closedAt"].replace("Z", "+00:00")
+                )
+                <= until_dt
+            ]
+            closed_issues_data["edges"] = filtered_edges
+            if "totalCount" in closed_issues_data:
+                closed_issues_data["totalCount"] = len(filtered_edges)
+
+        return filtered
 
     def _normalize_github_data(self, repo_info: dict[str, Any]) -> VCSRepositoryData:
         """

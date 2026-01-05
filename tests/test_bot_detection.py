@@ -225,10 +225,16 @@ class TestIntegration:
             },
         ]
 
-        bot_count = sum(
+        bot_count: int = sum(
             1
             for commit in commits_with_dependabot
-            if is_bot(commit.get("author", {}).get("user", {}).get("login"))
+            if is_bot(
+                (
+                    lambda author: author.get("user", {}).get("login")
+                    if isinstance(author, dict) and isinstance(author.get("user"), dict)
+                    else None
+                )(commit.get("author", {}))
+            )
         )
         assert bot_count == 1
 

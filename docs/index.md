@@ -36,6 +36,7 @@ Metrics are one lens among many; they work best alongside project context and re
 ### 🔍 Comprehensive Analysis
 
 - **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)
+- **Trend Analysis** - Track how repository sustainability scores change over time across multiple time windows
 - **CHAOSS-aligned metrics** measuring contributor health, development activity, community engagement, and project maturity
 - **5 CHAOSS-Aligned Models** - Stability, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Scoring profiles** optimized for different priorities (balanced, security-first, contributor-experience, long-term-stability)
@@ -80,6 +81,7 @@ Metrics are one lens among many; they work best alongside project context and re
 **Usage:**
 
 - [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md) - Analyze entire projects and monorepos
+- [Trend Analysis](TREND_ANALYSIS_GUIDE.md) - Track sustainability changes over time
 - [Dependency Graph Visualization](DEPENDENCY_GRAPH_VISUALIZATION.md) - Visualize and analyze dependency networks
 - [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects to support
 

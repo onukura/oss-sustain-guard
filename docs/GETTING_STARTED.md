@@ -246,6 +246,24 @@ os4g graph uv.lock --output my-dependencies.html
 
 See [Dependency Graph Visualization Guide](DEPENDENCY_GRAPH_VISUALIZATION.md) for more options.
 
+### Track Sustainability Trends Over Time
+
+Analyze how a repository's sustainability score changes over multiple time periods:
+
+```bash
+# Default: 6 monthly periods, 30-day windows
+os4g trend requests
+
+# Custom periods and intervals
+os4g trend requests --periods 12 --interval weekly
+os4g trend requests --periods 4 --interval quarterly --window-days 90
+
+# Analyze recent history with daily granularity
+os4g trend requests --periods 30 --interval daily --window-days 7
+```
+
+See [Trend Analysis Guide](TREND_ANALYSIS_GUIDE.md) for details on time-dependent metrics and visualization.
+
 ## 🔐 Token Setup (GitHub or GitLab)
 
 **Required:** OSS Sustain Guard needs a token for the host where the repository lives.
@@ -409,7 +427,7 @@ os4g check requests --no-cache
 - **Configure Exclusions**: [Exclude Configuration Guide](EXCLUDE_PACKAGES_GUIDE.md) - Exclude internal packages
 - **Scan Entire Project**: [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) - Scan monorepos and complex projects
 - **Visualize Dependencies**: [Dependency Graph Visualization](DEPENDENCY_GRAPH_VISUALIZATION.md) - Interactive dependency health networks
-- **Track Changes**: Monitor dependency health over time
+- **Track Sustainability Trends**: [Trend Analysis Guide](TREND_ANALYSIS_GUIDE.md) - Monitor health changes over time
 - **CI/CD Integration**: [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) - Integrate with your workflow
 - **Discover Projects to Support**: [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects that need support
 

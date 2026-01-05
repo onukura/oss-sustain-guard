@@ -61,6 +61,7 @@ For critical dependencies, we recommend:
 ## 🎯 Key Features
 
 - **24 Core Sustainability Metrics** - Comprehensive evaluation across maintainer health, development activity, community engagement, project maturity, and security (all core metrics scored 0-10)
+- **Trend Analysis** - Track how repository sustainability scores change over time across multiple time windows (daily, weekly, monthly, quarterly, semi-annual, annual)
 - **Pluggable Architecture** - Easily extend analysis by adding your own sustainability metrics, language resolvers, and VCS providers as plugins.
 - **5 CHAOSS-Aligned Models** - Stability, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
@@ -178,6 +179,12 @@ os4g check requests --days-lookback 180  # Last 6 months
 # Combine options for targeted analysis
 os4g check --recursive --scan-depth deep --days-lookback 90
 
+# Analyze sustainability trends over time
+os4g trend requests                                  # Default: 6 monthly periods (Python)
+os4g trend python:requests                           # Explicit ecosystem prefix
+os4g trend flask -e python                           # Ecosystem flag
+os4g trend javascript:react --periods 12 --interval weekly
+
 # Export results to JSON
 os4g check requests --output-format json --output-file oss-report.json
 
@@ -190,6 +197,7 @@ os4g check requests --output-format html --output-file oss-report.html
 For detailed usage, configuration, and features, see our documentation site:
 
 - **[Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/)** - Installation and basic usage
+- **[Trend Analysis Guide](https://onukura.github.io/oss-sustain-guard/TREND_ANALYSIS_GUIDE/)** - Track sustainability changes over time
 - **[Scoring Profiles](https://onukura.github.io/oss-sustain-guard/SCORING_PROFILES_GUIDE/)** - Different evaluation perspectives
 - **[Dependency Graph Visualization](https://onukura.github.io/oss-sustain-guard/DEPENDENCY_GRAPH_VISUALIZATION/)** - Visualize dependency health networks
 - **[GitHub Actions Integration](https://onukura.github.io/oss-sustain-guard/GITHUB_ACTIONS_GUIDE/)** - CI/CD setup
@@ -242,6 +250,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, code st
 
 ## 📝 Documentation
 
+- [Trend Analysis Guide](./docs/TREND_ANALYSIS_GUIDE.md) - Track sustainability changes over time
 - [Scoring Profiles Guide](./docs/SCORING_PROFILES_GUIDE.md) - Different evaluation perspectives
 - [Dependency Graph Visualization](./docs/DEPENDENCY_GRAPH_VISUALIZATION.md) - Visualize dependency health networks
 - [Custom Metrics Guide](./docs/CUSTOM_METRICS_GUIDE.md) - Create your own sustainability metrics

@@ -114,6 +114,7 @@ class GitLabProvider(BaseVCSProvider):
         repo: str,
         scan_depth: str = "default",
         days_lookback: int | None = None,
+        time_window: tuple[str, str] | None = None,
     ) -> VCSRepositoryData:
         """
         Fetch repository data from GitLab GraphQL API.
@@ -123,6 +124,8 @@ class GitLabProvider(BaseVCSProvider):
             repo: GitLab repository name
             scan_depth: Sampling depth - "shallow", "default", or "deep"
             days_lookback: Optional time filter (days to look back), None = no limit
+            time_window: Optional (since, until) ISO timestamp tuple for precise window.
+                        If provided, takes precedence over days_lookback.
 
         Returns:
             Normalized VCSRepositoryData structure
@@ -136,9 +139,15 @@ class GitLabProvider(BaseVCSProvider):
         # Get sample limits based on scan depth
         limits = SCAN_DEPTH_LIMITS.get(scan_depth, SCAN_DEPTH_LIMITS["default"])
 
-        # Calculate 'since' date if days_lookback is specified
+        # Determine time filter parameters
         since_date = None
-        if days_lookback is not None:
+        until_date = None
+
+        if time_window is not None:
+            # Use explicit time window (for trend analysis)
+            since_date, until_date = time_window
+        elif days_lookback is not None:
+            # Use days_lookback (for regular analysis)
             since_date = (
                 datetime.now(timezone.utc) - timedelta(days=days_lookback)
             ).isoformat()
@@ -154,7 +163,7 @@ class GitLabProvider(BaseVCSProvider):
 
         project_info = raw_data["project"]
         return await self._normalize_gitlab_data(
-            project_info, owner, repo, since_date, limits
+            project_info, owner, repo, since_date, limits, until_date
         )
 
     async def _query_graphql(
@@ -294,6 +303,7 @@ class GitLabProvider(BaseVCSProvider):
         repo: str,
         since_date: str | None = None,
         limits: dict[str, int] | None = None,
+        until_date: str | None = None,
     ) -> VCSRepositoryData:
         """
         Normalize GitLab GraphQL response to VCSRepositoryData format.
@@ -302,8 +312,9 @@ class GitLabProvider(BaseVCSProvider):
             project_info: GitLab project data from GraphQL response
             owner: Repository owner
             repo: Repository name
-            since_date: ISO format date string for time filtering, None = no limit
+            since_date: ISO format date string for time filtering (start), None = no limit
             limits: Sample size limits for data fetching
+            until_date: ISO format date string for time filtering (end), None = no limit
 
         Returns:
             Normalized VCSRepositoryData structure
@@ -312,8 +323,14 @@ class GitLabProvider(BaseVCSProvider):
 
         # For backward compatibility with client-side filtering (MRs and issues)
         cutoff_date = None
+        until_cutoff_date = None
+
         if since_date:
             cutoff_date = datetime.fromisoformat(since_date.replace("Z", "+00:00"))
+        if until_date:
+            until_cutoff_date = datetime.fromisoformat(
+                until_date.replace("Z", "+00:00")
+            )
 
         # Extract namespace (owner) information
         namespace = project_info.get("namespace", {})
@@ -379,14 +396,18 @@ class GitLabProvider(BaseVCSProvider):
         ]
 
         # Apply time filter if specified
-        if cutoff_date:
-            merged_prs = [
-                pr
-                for pr in all_merged_prs
-                if pr.get("mergedAt")
-                and datetime.fromisoformat(pr["mergedAt"].replace("Z", "+00:00"))
-                >= cutoff_date
-            ]
+        if cutoff_date or until_cutoff_date:
+            merged_prs = []
+            for pr in all_merged_prs:
+                merged_at = pr.get("mergedAt")
+                if not merged_at:
+                    continue
+                merged_dt = datetime.fromisoformat(merged_at.replace("Z", "+00:00"))
+                if cutoff_date and merged_dt < cutoff_date:
+                    continue
+                if until_cutoff_date and merged_dt > until_cutoff_date:
+                    continue
+                merged_prs.append(pr)
         else:
             merged_prs = all_merged_prs
 
@@ -397,14 +418,18 @@ class GitLabProvider(BaseVCSProvider):
         ]
 
         # Apply time filter if specified
-        if cutoff_date:
-            closed_prs = [
-                pr
-                for pr in all_closed_prs
-                if pr.get("closedAt")
-                and datetime.fromisoformat(pr["closedAt"].replace("Z", "+00:00"))
-                >= cutoff_date
-            ]
+        if cutoff_date or until_cutoff_date:
+            closed_prs = []
+            for pr in all_closed_prs:
+                closed_at = pr.get("closedAt")
+                if not closed_at:
+                    continue
+                closed_dt = datetime.fromisoformat(closed_at.replace("Z", "+00:00"))
+                if cutoff_date and closed_dt < cutoff_date:
+                    continue
+                if until_cutoff_date and closed_dt > until_cutoff_date:
+                    continue
+                closed_prs.append(pr)
         else:
             closed_prs = all_closed_prs
 

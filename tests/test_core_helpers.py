@@ -104,28 +104,36 @@ def test_apply_profile_overrides_requires_weights_for_new_profile():
 
 
 def test_apply_profile_overrides_rejects_missing_metrics():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights.pop(next(iter(weights)))
     with pytest.raises(ValueError, match="missing metrics"):
         apply_profile_overrides({"balanced": {"weights": weights}})
 
 
 def test_apply_profile_overrides_rejects_unknown_metrics():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights["Unknown Metric"] = 2
     with pytest.raises(ValueError, match="includes unknown metrics"):
         apply_profile_overrides({"balanced": {"weights": weights}})
 
 
 def test_apply_profile_overrides_rejects_invalid_weights():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights["Contributor Redundancy"] = 0
     with pytest.raises(ValueError, match="Invalid values"):
         apply_profile_overrides({"balanced": {"weights": weights}})
 
 
 def test_apply_profile_overrides_accepts_valid_override():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights["Contributor Redundancy"] = 5
     apply_profile_overrides(
         {
@@ -137,7 +145,9 @@ def test_apply_profile_overrides_accepts_valid_override():
         }
     )
     assert core.SCORING_PROFILES["balanced"]["name"] == "Balanced Updated"
-    assert core.SCORING_PROFILES["balanced"]["weights"]["Contributor Redundancy"] == 5
+    balanced_weights = core.SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    assert balanced_weights["Contributor Redundancy"] == 5
 
 
 def test_compute_weighted_total_score_empty_metrics_returns_zero():
@@ -337,7 +347,9 @@ def test_analyze_repository_data_handles_metric_errors():
     from oss_sustain_guard.vcs.base import VCSRepositoryData
 
     class FailingChecker(MetricChecker):
-        def check(self, _vcs_data, _context):
+        def check(
+            self, vcs_data: VCSRepositoryData, _context: core.MetricContext
+        ) -> Metric:
             raise ValueError("broken")
 
     def on_error_metric(exc: Exception) -> Metric:
@@ -351,7 +363,12 @@ def test_analyze_repository_data_handles_metric_errors():
             on_error=on_error_metric,
             error_log="Note: {error}",
         ),
-        MetricSpec(name="Second", checker=failing_checker),
+        MetricSpec(
+            name="Second",
+            checker=failing_checker,
+            on_error=on_error_metric,
+            error_log="",
+        ),
     ]
 
     vcs_data = VCSRepositoryData(

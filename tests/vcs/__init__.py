@@ -67,7 +67,14 @@ def test_register_vcs_provider():
         def __init__(self, **kwargs):
             self.config = kwargs
 
-        def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
+        async def get_repository_data(
+            self,
+            owner: str,
+            repo: str,
+            scan_depth: str = "default",
+            days_lookback: int | None = None,
+            time_window: tuple[str, str] | None = None,
+        ) -> VCSRepositoryData:
             return VCSRepositoryData(
                 is_archived=False,
                 pushed_at=None,
@@ -117,6 +124,10 @@ def test_register_vcs_provider():
         def get_repository_url(self, owner: str, repo: str) -> str:
             return f"https://custom.com/{owner}/{repo}"
 
+        def __repr__(self) -> str:
+            """String representation of the provider."""
+            return f"{self.__class__.__name__}(platform='{self.get_platform_name()}')"
+
     # Register custom provider
     register_vcs_provider("custom", CustomProvider)
 
@@ -124,7 +135,7 @@ def test_register_vcs_provider():
     assert "custom" in list_supported_platforms()
 
     # Verify we can get it
-    provider = get_vcs_provider("custom", some_config="test")
+    provider: BaseVCSProvider = get_vcs_provider(platform="custom", some_config="test")
     assert isinstance(provider, CustomProvider)
     assert provider.get_platform_name() == "custom"
     assert provider.config["some_config"] == "test"

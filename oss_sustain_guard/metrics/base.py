@@ -33,9 +33,7 @@ class MetricChecker(ABC):
     """VCS-agnostic metric checker base class."""
 
     @abstractmethod
-    def check(
-        self, vcs_data: VCSRepositoryData, context: MetricContext
-    ) -> Metric | None:
+    def check(self, vcs_data: VCSRepositoryData, _context: MetricContext) -> Metric:
         """Check metric using normalized VCS data."""
         pass
 
@@ -44,6 +42,6 @@ class MetricSpec(NamedTuple):
     """Specification for a metric check."""
 
     name: str
-    checker: Callable[[dict[str, Any], MetricContext], Metric | None] | MetricChecker
-    on_error: Callable[[Exception], Metric] | None = None
+    checker: MetricChecker
+    on_error: Callable[[Exception], Metric]
     error_log: str | None = None
