@@ -2,6 +2,33 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## Unreleased
+
+## v0.20.0 - 2026-01-06
+
+### Added
+
+- Trend analysis feature (`os4g trend`) for tracking sustainability score changes over time
+  - Support for multiple time intervals: daily, weekly, monthly, quarterly, semi-annual, annual
+  - Configurable analysis periods and time window sizes
+  - Client-side filtering to prevent sampling bias in historical data
+  - Classification of 16 time-dependent metrics vs 8 time-independent metrics
+  - Terminal visualization with score trend table, ASCII chart, and top metric changes
+  - Package specification formats: `package`, `ecosystem:package`, or `-e ecosystem package`
+  - Ecosystem auto-inference (defaults to Python when not specified)
+  - Comprehensive trend analysis documentation
+- LFX Insights integration with badges and links for ecosystem visibility
+
+### Improved
+
+- VCS providers (GitHub, GitLab) to support time window filtering for historical analysis
+- Repository data fetching to avoid API sampling bias by filtering client-side
+- Trend command to support ecosystem:package format and ecosystem inference
+- Python type analysis with Ty integration for enhanced type checking
+- Unit tests robustness and error handling across the codebase
+- Metric API by removing legacy input support for simplified usage
+- Documentation with trend analysis guide and updated getting started examples
+
 ## v0.19.0 - 2026-01-04
 
 ### Added
