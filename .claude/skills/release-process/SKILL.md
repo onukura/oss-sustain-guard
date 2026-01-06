@@ -34,7 +34,7 @@ git push origin vX.Y.Z
 # 5. Prepare English release notes
 # → Claude will generate English release notes based on CHANGELOG
 # → Copy to GitHub Releases description
-# → Should be in Markdown format in RAW mode 
+# → Should be in Markdown format in RAW as code block
 ```
 
 ## The 5 Steps
