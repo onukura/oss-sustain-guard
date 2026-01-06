@@ -71,3 +71,6 @@ test-scala:
 
 test-swift:
 	uv run os4g check -r ./tests/fixtures/swift --insecure --include-lock --recursive
+
+test-all-commands:
+	./scripts/test_all_commands.sh
