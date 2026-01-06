@@ -74,9 +74,24 @@ async def resolve_dependency_tree(
             )
 
         return await tool.resolve_tree(package_name, version)
+
+    elif ecosystem == "javascript":
+        from oss_sustain_guard.external_tools.javascript_tools import (
+            get_javascript_tool,
+        )
+
+        tool = get_javascript_tool()
+        if not tool.is_available():
+            raise RuntimeError(
+                f"Required tool '{tool.name}' is not installed. "
+                f"Please install pnpm, bun, or npm to trace {ecosystem} packages."
+            )
+
+        return await tool.resolve_tree(package_name, version)
+
     else:
         raise NotImplementedError(
             f"Package mode is not yet implemented for {ecosystem} ecosystem. "
-            f"Currently only Python is supported. "
+            f"Currently supported: Python, JavaScript. "
             f"For other ecosystems, please use lockfile mode: os4g trace <lockfile>"
         )

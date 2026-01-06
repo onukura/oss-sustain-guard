@@ -299,8 +299,11 @@ async def trace(
             f"[cyan]Filtering to depth <= {max_depth}: {len(all_deps_list)} packages[/cyan]"
         )
 
-    # Collect all packages to analyze
-    all_packages = [dep.name for dep in all_deps_list]
+    # Collect all packages to analyze (with ecosystem prefix for correct registry lookup)
+    # Use dict.fromkeys to remove duplicates while preserving order
+    all_packages = list(
+        dict.fromkeys(f"{dep.ecosystem}:{dep.name}" for dep in all_deps_list)
+    )
 
     # Run batch analysis
     console.print("[cyan]Analyzing packages for sustainability scores...[/cyan]")
