@@ -1,21 +1,48 @@
-# Dependency Graph Visualization Guide
+# Dependency Tracing and Visualization Guide
 
-The `graph` command visualizes your project's dependency network with health scores. Supports HTML visualization and JSON export.
+The `trace` command traces and visualizes your project's dependency network with health scores. Displays in terminal by default for quick checks.
 
 ## Requirements
 
-- Lockfile (see [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) for formats)
+- For lockfile mode: A lockfile (see [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) for formats)
+- For package mode: External tool installed (`uv` for Python)
 - GitHub/GitLab token (`GITHUB_TOKEN` or `GITLAB_TOKEN`)
 
 ## Basic Usage
 
+### Quick Start (Terminal Output)
 ```bash
-# Generate HTML graph (default)
-os4g graph package-lock.json
+# Trace a package - shows in terminal
+os4g trace requests
 
-# Custom output
-os4g graph uv.lock --output deps.html
-os4g graph Cargo.lock --output deps.json
+# Trace from lockfile - shows in terminal
+os4g trace uv.lock
+os4g trace package.json
+```
+
+### Lockfile Mode
+```bash
+# Terminal output (default)
+os4g trace package-lock.json
+
+# Save to HTML for sharing
+os4g trace uv.lock --output deps.html
+
+# Export to JSON
+os4g trace Cargo.lock --output deps.json
+```
+
+### Package Mode
+```bash
+# Trace a specific package (Python default)
+os4g trace requests
+
+# Trace with specific version
+os4g trace requests --version 2.28.0
+
+# Trace from other ecosystems (future support)
+os4g trace javascript:react
+os4g trace -e rust serde
 ```
 
 ## HTML Output example
@@ -26,7 +53,9 @@ os4g graph Cargo.lock --output deps.json
 
 | Option | Description |
 |--------|-------------|
-| `--output`, `-o` | Output file (default: `dependency_graph.html`) |
+| `--ecosystem`, `-e` | Package ecosystem (python, javascript, rust, etc.) - for package mode |
+| `--version`, `-V` | Package version (default: latest) - for package mode |
+| `--output`, `-o` | Output destination (default: terminal). Use file path for HTML/JSON export |
 | `--direct-only` | Direct dependencies only (exclude transitive) |
 | `--max-depth N` | Limit tree depth (1=direct, 2=direct+1st transitive, etc.) |
 | `--profile` | Scoring profile: `balanced`, `security_first`, `contributor_experience`, `long_term_stability` |
@@ -40,9 +69,18 @@ os4g graph Cargo.lock --output deps.json
 **Examples:**
 
 ```bash
-os4g graph package.json --direct-only --output direct-deps.html
-os4g graph Cargo.lock --max-depth 2 --profile security_first
-os4g graph uv.lock --scan-depth shallow --num-workers 3
+# Terminal output (default)
+os4g trace package.json --direct-only
+os4g trace Cargo.lock --max-depth 2 --profile security_first
+os4g trace uv.lock --scan-depth shallow --num-workers 3
+
+# Package mode (terminal output)
+os4g trace requests --max-depth 2
+os4g trace requests --version 2.28.0 --profile security_first
+
+# File output (HTML/JSON)
+os4g trace package.json --output deps.html --direct-only
+os4g trace requests --output analysis.json
 ```
 
 ### Caching & Performance
@@ -58,10 +96,10 @@ os4g graph uv.lock --scan-depth shallow --num-workers 3
 
 ```bash
 # Bypass cache for fresh data
-os4g graph uv.lock --no-cache
+os4g trace uv.lock --no-cache
 
 # Use custom cache location
-os4g graph Cargo.lock --cache-dir /tmp/my-cache
+os4g trace Cargo.lock --cache-dir /tmp/my-cache
 ```
 
 ### Data Sampling & Scope
@@ -75,13 +113,13 @@ os4g graph Cargo.lock --cache-dir /tmp/my-cache
 
 ```bash
 # Quick scan with minimal API calls
-os4g graph package-lock.json --scan-depth shallow
+os4g trace package-lock.json --scan-depth shallow
 
 # Comprehensive analysis with maximum detail
-os4g graph requirements.txt --scan-depth very_deep
+os4g trace requirements.txt --scan-depth very_deep
 
 # Only analyze recent activity (last 90 days)
-os4g graph Cargo.lock --days-lookback 90
+os4g trace Cargo.lock --days-lookback 90
 ```
 
 ### SSL & Network
@@ -95,10 +133,10 @@ os4g graph Cargo.lock --days-lookback 90
 
 ```bash
 # For development environments with custom SSL
-os4g graph package.json --ca-cert /etc/ssl/my-ca.crt
+os4g trace package.json --ca-cert /etc/ssl/my-ca.crt
 
 # Disable SSL verification (not recommended for production)
-os4g graph uv.lock --insecure
+os4g trace uv.lock --insecure
 ```
 
 ### Verbosity & Debugging
@@ -112,24 +150,64 @@ os4g graph uv.lock --insecure
 
 ```bash
 # See detailed analysis progress and cache info
-os4g graph Cargo.lock --verbose
+os4g trace Cargo.lock --verbose
 
 # Increase parallelism for faster analysis
-os4g graph package-lock.json --num-workers 10
+os4g trace package-lock.json --num-workers 10
 ```
 
 ## Output Formats
 
-**HTML** (default): Interactive visualization with color-coded health scores
+### Terminal (Default)
+
+Tree display directly in your terminal - fast and convenient!
+
+```bash
+# Just run trace - displays in terminal
+os4g trace requests
+os4g trace uv.lock
+```
+
+Features:
+- 🎨 Color-coded packages (green/yellow/red based on scores)
+- 🌳 Tree structure showing dependency relationships
+- 📊 Scores displayed inline
+- ⭐ Direct dependencies marked with *
+- ⚡ No need to open browser!
+
+Example output:
+```
+Dependency Tree:
+Total: 6 packages | Healthy: 1 | Monitor: 4 | Needs attention: 0 | Unknown: 1
+Legend: ■ Healthy (≥80) | ■ Monitor (50-79) | ■ Needs attention (<50) | * Direct dependency
+
+temp-os4g-trace 0.1.0 *
+└── requests 2.32.5 (score: 85) *
+    ├── certifi 2026.1.4 (score: 55) *
+    ├── charset-normalizer 3.4.4 (score: 73) *
+    ├── idna 3.11 (score: 53) *
+    └── urllib3 2.6.2 (score: 76) *
+```
+
+### HTML (For Sharing)
+
+Interactive visualization for sharing with team members:
+
+```bash
+os4g trace requests --output graph.html
+os4g trace package.json --output deps.html
+```
 
 - 🟢 Green (≥80): Healthy
 - 🟡 Yellow (50-79): Monitor
 - 🔴 Red (<50): Needs support
 
-**JSON**: Export for integration with other tools
+### JSON (For Integration)
+
+Export data for integration with other tools:
 
 ```bash
-os4g graph package.json --output deps.json
+os4g trace package.json --output deps.json
 ```
 
 ## Interpreting Results
@@ -162,5 +240,22 @@ Set environment variables for analysis:
 export GITHUB_TOKEN=ghp_xxxxxxxxxxxx      # For GitHub
 export GITLAB_TOKEN=glpat_xxxxxxxxxx      # For GitLab
 
-os4g graph package-lock.json
+# Run trace (terminal output)
+os4g trace package-lock.json
+os4g trace requests
+```
+
+## Mode Detection
+
+The `trace` command automatically detects the mode based on input:
+
+- **Lockfile mode**: If input is a file path (exists, contains `/` or `\`, or has lockfile extension)
+- **Package mode**: Otherwise, treated as package name
+
+Examples:
+```bash
+os4g trace requirements.txt    # → Lockfile mode (file exists)
+os4g trace requests             # → Package mode (not a file)
+os4g trace ./package.json       # → Lockfile mode (contains ./)
+os4g trace python:requests      # → Package mode (ecosystem prefix)
 ```

@@ -1,4 +1,4 @@
-"""Dependency graph visualization command."""
+"""Dependency tree tracing and visualization command."""
 
 from pathlib import Path
 
@@ -19,24 +19,44 @@ from oss_sustain_guard.config import (
 )
 from oss_sustain_guard.core import SCORING_PROFILES
 from oss_sustain_guard.dependency_graph import get_all_dependencies
+from oss_sustain_guard.dependency_tree_resolver import (
+    is_lockfile_path,
+    resolve_dependency_tree,
+)
 from oss_sustain_guard.http_client import close_async_http_client
-from oss_sustain_guard.visualization import PlotlyVisualizer, build_networkx_graph
+from oss_sustain_guard.visualization import (
+    PlotlyVisualizer,
+    TerminalTreeVisualizer,
+    build_networkx_graph,
+)
 
 app = typer.Typer()
 
 
-@app.command("graph")
+@app.command("trace")
 @syncify
-async def graph(
-    lockfile: Path = typer.Argument(
+async def trace(
+    input: str = typer.Argument(
         ...,
-        help="Path to lockfile (requirements.txt, package.json, Cargo.lock, etc.)",
+        help="Lockfile path OR package name to trace (e.g., requirements.txt or requests)",
+    ),
+    ecosystem: str | None = typer.Option(
+        None,
+        "--ecosystem",
+        "-e",
+        help="Package ecosystem (python, javascript, rust, etc.) - for package mode only",
+    ),
+    version: str | None = typer.Option(
+        None,
+        "--version",
+        "-V",
+        help="Package version to trace (default: latest) - for package mode only",
     ),
     output: str = typer.Option(
-        "dependency_graph.html",
+        "-",
         "--output",
         "-o",
-        help="Output file path (HTML or JSON)",
+        help="Output destination: '-' for terminal (default), or file path for HTML/JSON",
     ),
     profile: str = typer.Option(
         "balanced",
@@ -113,16 +133,34 @@ async def graph(
     ),
 ) -> None:
     """
-    Generate interactive dependency graph visualization.
+    Trace and visualize package dependency trees.
 
-    Analyzes lockfile dependencies and creates an interactive graph showing
-    package relationships colored by sustainability score.
+    Supports two modes:
+    1. Lockfile mode: Analyze existing lockfiles (requirements.txt, package.json, etc.)
+    2. Package mode: Resolve dependencies for a specific package name
 
-    Example:
-        osg graph requirements.txt --output=graph.html
-        osg graph package.json --output=graph.json --profile=security
-        osg graph package.json --direct-only
-        osg graph package.json --max-depth=2
+    Output formats:
+    - Terminal (default): Color-coded tree in terminal
+    - HTML: Interactive visualization (use --output file.html)
+    - JSON: Export for integration (use --output file.json)
+
+    Examples:
+        # Terminal output (default)
+        os4g trace requests
+        os4g trace uv.lock
+        os4g trace requests --version 2.28.0
+
+        # Lockfile mode
+        os4g trace requirements.txt
+        os4g trace package.json --max-depth=2
+
+        # Package mode with options
+        os4g trace javascript:react --max-depth=2
+        os4g trace -e rust serde --profile security_first
+
+        # File output (HTML or JSON)
+        os4g trace requests --output graph.html
+        os4g trace uv.lock --output deps.json
     """
     # Apply config defaults if not specified via CLI
     if verbose is None:
@@ -185,10 +223,6 @@ async def graph(
     else:
         set_verify_ssl(not insecure)
 
-    if not lockfile.exists():
-        console.print(f"[red]Error: Lockfile not found: {lockfile}[/red]")
-        raise typer.Exit(1)
-
     # Determine cache usage flags
     use_cache = not no_cache
     use_local = use_cache and not no_local_cache
@@ -196,19 +230,59 @@ async def graph(
     # Load database with cache configuration
     db = load_database(use_cache=use_cache, use_local_cache=use_local, verbose=verbose)
 
-    console.print(f"[cyan]Parsing lockfile: {lockfile}[/cyan]")
+    # DUAL MODE: Detect input type and resolve dependency graph
+    if is_lockfile_path(input):
+        # LOCKFILE MODE
+        lockfile_path = Path(input)
+        if not lockfile_path.exists():
+            console.print(f"[red]Error: Lockfile not found: {lockfile_path}[/red]")
+            raise typer.Exit(1)
 
-    # Parse dependencies
-    dep_graphs = get_all_dependencies([lockfile])
-    if not dep_graphs:
-        console.print("[red]Error: Could not parse lockfile[/red]")
-        raise typer.Exit(1)
+        console.print(f"[cyan]Parsing lockfile: {lockfile_path}[/cyan]")
 
-    dep_graph = dep_graphs[0]
-    console.print(
-        f"[cyan]Found {len(dep_graph.direct_dependencies)} direct and "
-        f"{len(dep_graph.transitive_dependencies)} transitive dependencies[/cyan]"
-    )
+        # Parse dependencies from lockfile
+        dep_graphs = get_all_dependencies([lockfile_path])
+        if not dep_graphs:
+            console.print("[red]Error: Could not parse lockfile[/red]")
+            raise typer.Exit(1)
+
+        dep_graph = dep_graphs[0]
+        console.print(
+            f"[cyan]Found {len(dep_graph.direct_dependencies)} direct and "
+            f"{len(dep_graph.transitive_dependencies)} transitive dependencies[/cyan]"
+        )
+    else:
+        # PACKAGE MODE
+        package_name = input
+        console.print(
+            f"[cyan]Resolving dependency tree for package: {package_name}[/cyan]"
+        )
+        if version:
+            console.print(f"[dim]Version: {version}[/dim]")
+        if ecosystem:
+            console.print(f"[dim]Ecosystem: {ecosystem}[/dim]")
+
+        try:
+            # Resolve dependency tree using external tools
+            dep_graph = await resolve_dependency_tree(
+                package_name=package_name,
+                ecosystem=ecosystem,
+                version=version,
+                max_depth=max_depth,
+            )
+            console.print(
+                f"[cyan]Resolved {len(dep_graph.direct_dependencies)} direct and "
+                f"{len(dep_graph.transitive_dependencies)} transitive dependencies[/cyan]"
+            )
+        except RuntimeError as e:
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1) from e
+        except ValueError as e:
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1) from e
+        except NotImplementedError as e:
+            console.print(f"[yellow]⚠️  {e}[/yellow]")
+            raise typer.Exit(1) from e
 
     # Apply filters to dependency list
     all_deps_list = dep_graph.direct_dependencies + dep_graph.transitive_dependencies
@@ -245,23 +319,31 @@ async def graph(
         dep_graph, scores, direct_only=direct_only, max_depth=max_depth
     )
 
-    # Export
-    output_path = Path(output)
-    visualizer = PlotlyVisualizer(nx_graph)
-
-    if str(output_path).endswith(".json"):
-        visualizer.export_json(output_path)
-        console.print(f"[green]Graph exported to: {output_path}[/green]")
+    # Export based on output format
+    if output == "-" or output.lower() == "terminal":
+        # Terminal output
+        terminal_viz = TerminalTreeVisualizer(nx_graph)
+        terminal_viz.display()
     else:
-        visualizer.export_html(output_path)
-        console.print(f"[green]Interactive graph exported to: {output_path}[/green]")
+        # File output (HTML or JSON)
+        output_path = Path(output)
+        visualizer = PlotlyVisualizer(nx_graph)
 
-    # Print summary statistics
-    stats = visualizer._get_health_distribution()
-    console.print("\n[bold cyan]Health Distribution:[/bold cyan]")
-    for status, count in stats.items():
-        if count > 0:
-            console.print(f"  {status}: {count}")
+        if str(output_path).endswith(".json"):
+            visualizer.export_json(output_path)
+            console.print(f"[green]Graph exported to: {output_path}[/green]")
+        else:
+            visualizer.export_html(output_path)
+            console.print(
+                f"[green]Interactive graph exported to: {output_path}[/green]"
+            )
+
+        # Print summary statistics for file output
+        stats = visualizer._get_health_distribution()
+        console.print("\n[bold cyan]Health Distribution:[/bold cyan]")
+        for status, count in stats.items():
+            if count > 0:
+                console.print(f"  {status}: {count}")
 
     # Clean up HTTP clients
     await close_async_http_client()
