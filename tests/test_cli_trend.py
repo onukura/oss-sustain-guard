@@ -180,16 +180,19 @@ class TestGenerateTimeWindows:
             assert window.label.isdigit() and len(window.label) == 4
 
     def test_generate_time_windows_default_end_date(self):
-        """Test that end_date defaults to now if not specified."""
-        before = datetime.now(timezone.utc)
+        """Test that end_date defaults to now if not specified, with seconds normalized."""
+        before = datetime.now(timezone.utc).replace(second=0, microsecond=0)
         windows = generate_time_windows(
             TrendInterval.MONTHLY,
             periods=2,
             window_days=30,
             end_date=None,
         )
-        after = datetime.now(timezone.utc)
+        after = (datetime.now(timezone.utc) + timedelta(seconds=1)).replace(
+            second=0, microsecond=0
+        )
 
+        # end_date should be normalized (seconds and microseconds = 0)
         assert windows[-1].end >= before
         assert windows[-1].end <= after
 

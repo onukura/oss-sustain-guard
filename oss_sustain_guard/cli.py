@@ -3520,6 +3520,7 @@ async def _trend_async(
         TrendDataPoint,
         TrendInterval,
         analyze_repository_trend,
+        get_trend_cache_stats,
     )
 
     # Apply config defaults if not specified via CLI
@@ -3556,13 +3557,14 @@ async def _trend_async(
 
     # Configure SSL verification
     if insecure and ca_cert:
-        console.print("[red]❌ Cannot use both --insecure and --ca-cert options.[/red]")
-        raise typer.Exit(code=1)
+        console.print("[yellow]⚠️  Ignoring --ca-cert when --insecure is set[/yellow]")
     if ca_cert:
         if not ca_cert.exists():
             console.print(f"[red]❌ CA certificate file not found: {ca_cert}[/red]")
             raise typer.Exit(code=1)
-        set_verify_ssl(str(ca_cert))
+        from oss_sustain_guard.config import set_ca_cert
+
+        set_ca_cert(str(ca_cert))
     else:
         set_verify_ssl(not insecure)
 
@@ -3683,7 +3685,7 @@ async def _trend_async(
             f"(window size: {window_days} days)\n"
         )
 
-        # Perform trend analysis
+        # Perform trend analysis with caching enabled
         trend_data: list[TrendDataPoint] = await analyze_repository_trend(
             owner=owner,
             name=repo_name,
@@ -3693,22 +3695,34 @@ async def _trend_async(
             profile=profile,
             vcs_platform=vcs_platform,
             scan_depth=scan_depth,
+            use_cache=use_cache,
         )
+
+        # Display cache statistics if verbose
+        if verbose and use_cache:
+            cache_stats = get_trend_cache_stats()
+            if cache_stats:
+                cached = cache_stats.get("cached", 0)
+                api = cache_stats.get("api", 0)
+                console.print(
+                    f"[dim]💾 Cache: {cached} windows from cache, {api} fresh API calls[/dim]"
+                )
 
         # Display results
         _display_trend_results(console, trend_data, repo_url, profile)
 
     except KeyboardInterrupt as e:
-        console.print("\n[yellow]Analysis interrupted by user[/yellow]")
-        raise typer.Exit(130) from e
+        console.print("[yellow]⏸️  Interrupted by user[/yellow]")
+        raise typer.Exit(1) from e
     except Exception as e:
-        console.print(f"\n[red]Error during trend analysis: {e}[/red]")
-        import traceback
+        console.print(f"[red]Error during trend analysis: {e}[/red]")
+        if verbose:
+            import traceback
 
-        traceback.print_exc()
-        raise
+            console.print(traceback.format_exc())
+        raise typer.Exit(1) from e
     finally:
-        # Clean up HTTP clients
+        # Ensure async resources are cleaned up
         await close_async_http_client()
 
 

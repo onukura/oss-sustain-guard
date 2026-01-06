@@ -3,6 +3,8 @@ Time Machine Mode (Trend Analysis) for OSS Sustain Guard.
 
 This module provides functionality to analyze sustainability score trends over time
 by collecting data across multiple time windows and comparing metric evolution.
+
+Trend data is cached per time window to enable efficient incremental analysis.
 """
 
 from datetime import datetime, timedelta
@@ -10,6 +12,9 @@ from enum import Enum
 from typing import NamedTuple
 
 from oss_sustain_guard.metrics.base import Metric
+
+# Module-level cache statistics for monitoring
+_trend_cache_stats: dict[str, int] = {}
 
 
 class TrendInterval(str, Enum):
@@ -92,7 +97,7 @@ def generate_time_windows(
         interval: Display interval for labeling (daily/weekly/monthly/etc.)
         periods: Number of time windows to generate
         window_days: Size of each window in days
-        end_date: End date for analysis (defaults to now)
+        end_date: End date for analysis (defaults to now, normalized for cache stability)
 
     Returns:
         List of TimeWindow objects, ordered from oldest to newest
@@ -100,11 +105,20 @@ def generate_time_windows(
     Note:
         This is an approximation. Historical data may not be complete due to
         API limitations and data availability.
+
+        **Important for Caching**: end_date seconds and microseconds are normalized to 0
+        to ensure consistent cache keys across multiple runs within the same minute.
+        This enables reliable cache hits when the same trend analysis is run multiple times.
     """
     from datetime import timezone
 
     if end_date is None:
         end_date = datetime.now(timezone.utc)
+
+    # CRITICAL: Normalize seconds and microseconds for consistent cache keys
+    # This prevents cache misses when the same command is run multiple times
+    # within the same hour/minute. We DON'T change the date to preserve test expectations
+    end_date = end_date.replace(second=0, microsecond=0)
 
     windows: list[TimeWindow] = []
     delta = timedelta(days=window_days)
@@ -209,12 +223,15 @@ async def analyze_repository_trend(
     profile: str = "balanced",
     vcs_platform: str = "github",
     scan_depth: str = "default",
+    use_cache: bool = True,
 ) -> list[TrendDataPoint]:
     """
     Analyze repository sustainability trends over multiple time windows.
 
-    This function collects historical data by analyzing the repository across
-    multiple time periods, calculating metrics for each period separately.
+    This function efficiently collects historical data by analyzing the repository
+    across multiple time periods, calculating metrics for each period separately.
+    VCS data is cached per time window to enable efficient incremental analysis
+    and reduce API calls.
 
     Args:
         owner: Repository owner (username or organization)
@@ -225,6 +242,7 @@ async def analyze_repository_trend(
         profile: Scoring profile name
         vcs_platform: VCS platform ('github', 'gitlab', etc.)
         scan_depth: Sampling depth - "shallow", "default", or "deep"
+        use_cache: If True, use and cache VCS data per time window (default: True)
 
     Returns:
         List of TrendDataPoint objects, one per time window (chronological order)
@@ -233,7 +251,12 @@ async def analyze_repository_trend(
         This analysis is approximate due to API limitations. Some metrics
         (e.g., stars, vulnerability alerts) cannot be historically analyzed
         and are excluded from trend calculations.
+
+        Caching is enabled by default to minimize API calls. Cached data per
+        time window is stored and reused across trend analyses, making
+        re-analysis of the same repository with different profiles much faster.
     """
+    from oss_sustain_guard.cache import load_trend_vcs_data, save_trend_vcs_data
     from oss_sustain_guard.core import (
         _analyze_repository_data,
         compute_weighted_total_score,
@@ -247,19 +270,48 @@ async def analyze_repository_trend(
     vcs = get_vcs_provider(vcs_platform)
 
     trend_data: list[TrendDataPoint] = []
+    cached_windows = 0
+    api_windows = 0
 
     for window in windows:
         # Convert datetime to ISO format strings
         since = window.start.isoformat()
         until = window.end.isoformat()
 
-        # Fetch VCS data for this time window
-        vcs_data = await vcs.get_repository_data(
-            owner,
-            name,
-            scan_depth=scan_depth,
-            time_window=(since, until),
-        )
+        # Try to load from cache first
+        vcs_data = None
+        if use_cache:
+            cached_vcs_dict = load_trend_vcs_data(
+                owner, name, since, until, vcs_platform
+            )
+            if cached_vcs_dict:
+                # Convert cached dict back to VCSRepositoryData
+                from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+                vcs_data = VCSRepositoryData(**cached_vcs_dict)
+                cached_windows += 1
+
+        # Fetch from VCS if not cached
+        if vcs_data is None:
+            vcs_data = await vcs.get_repository_data(
+                owner,
+                name,
+                scan_depth=scan_depth,
+                time_window=(since, until),
+            )
+            api_windows += 1
+
+            # Cache the result for future analyses
+            if use_cache:
+                # Convert VCSRepositoryData to dict before caching
+                vcs_data_dict = (
+                    vcs_data._asdict()
+                    if hasattr(vcs_data, "_asdict")
+                    else dict(vcs_data)
+                )
+                save_trend_vcs_data(
+                    owner, name, since, until, vcs_data_dict, vcs_platform
+                )
 
         # Analyze repository data with standard logic
         result = _analyze_repository_data(
@@ -292,4 +344,24 @@ async def analyze_repository_trend(
         )
         trend_data.append(data_point)
 
+    # Store cache stats in module-level for visibility (optional)
+    if cached_windows > 0 or api_windows > 0:
+        _trend_cache_stats["cached"] = cached_windows
+        _trend_cache_stats["api"] = api_windows
+
     return trend_data
+
+
+def get_trend_cache_stats() -> dict[str, int]:
+    """Get statistics about the most recent trend analysis.
+
+    Returns:
+        Dict with 'cached' (windows from cache) and 'api' (fresh API calls) counts.
+        Returns empty dict if no trend analysis has been run yet.
+    """
+    return _trend_cache_stats.copy()
+
+
+def reset_trend_cache_stats() -> None:
+    """Reset trend cache statistics."""
+    _trend_cache_stats.clear()
