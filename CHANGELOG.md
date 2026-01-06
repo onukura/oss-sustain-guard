@@ -4,6 +4,17 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+## v0.21.0 - 2026-01-06
+
+### Improved
+
+- Trend analysis performance with per-window caching mechanism
+  - Granular caching for VCS data by time window to minimize redundant API calls
+  - Cache reuse across multiple analyses and profiles
+  - Configurable cache TTL and manual cache clearing support
+  - Cache statistics displayed in CLI output for transparency
+  - Comprehensive documentation and unit tests for caching mechanism
+
 ## v0.20.0 - 2026-01-06
 
 ### Added
