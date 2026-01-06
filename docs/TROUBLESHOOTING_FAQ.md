@@ -189,7 +189,7 @@ os4g check requests  # Loads from cache, no API call
 # Cache default TTL
 # Default: 7 days
 # Manual reset
-os4g check --clear-cache
+os4g cache clear
 ```
 
 ## ❓ Frequently Asked Questions
@@ -203,7 +203,7 @@ os4g check --clear-cache
 os4g check requests --cache-dir /path/to/custom/cache
 
 # Clear cache
-os4g check --clear-cache
+os4g cache clear
 
 # Change cache TTL (seconds)
 os4g check requests --cache-ttl 2592000  # 30 days

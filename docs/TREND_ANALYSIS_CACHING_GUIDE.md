@@ -125,7 +125,7 @@ Clear all cached trend data:
 
 ```bash
 # Clear all trend cache
-os4g clear-cache --trend-only
+os4g cache clear --trend-only
 
 # Or use the cache module functions
 python -c "from oss_sustain_guard.cache import clear_trend_cache; clear_trend_cache()"

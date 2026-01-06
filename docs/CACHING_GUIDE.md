@@ -75,11 +75,11 @@ os4g check --include-lock --no-cache
 
 ```bash
 # Display overall cache statistics
-os4g cache-stats
+os4g cache stats
 
 # Show statistics for a specific ecosystem
-os4g cache-stats python
-os4g cache-stats javascript
+os4g cache stats python
+os4g cache stats javascript
 ```
 
 Output shows:
@@ -91,45 +91,45 @@ Output shows:
 
 ```bash
 # List all cached packages (top 100 by default)
-os4g list-cache
+os4g cache list
 
 # List packages from a specific ecosystem
-os4g list-cache python
-os4g list-cache javascript
+os4g cache list python
+os4g cache list javascript
 
 # Show all cached packages (including expired)
-os4g list-cache --all
+os4g cache list --all
 
 # Sort by different criteria
-os4g list-cache --sort name          # Sort by package name
-os4g list-cache --sort date          # Sort by cache date
-os4g list-cache --sort ecosystem     # Sort by ecosystem then score
+os4g cache list --sort name          # Sort by package name
+os4g cache list --sort date          # Sort by cache date
+os4g cache list --sort ecosystem     # Sort by ecosystem then score
 
 # Filter packages by keyword
-os4g list-cache --filter requests     # Find packages with "requests" in the name
-os4g list-cache --filter github.com   # Find packages from a specific URL
+os4g cache list --filter requests     # Find packages with "requests" in the name
+os4g cache list --filter github.com   # Find packages from a specific URL
 
 # Limit results
-os4g list-cache --limit 50           # Show top 50 packages
-os4g list-cache --limit 0            # Show all packages (unlimited)
+os4g cache list --limit 50           # Show top 50 packages
+os4g cache list --limit 0            # Show all packages (unlimited)
 
 # Use different scoring profile for recalculation
-os4g list-cache --profile security_first
+os4g cache list --profile security_first
 ```
 
 ### Clear Cache
 
 ```bash
 # Clear all caches
-os4g clear-cache
+os4g cache clear
 
 # Clear specific ecosystem
-os4g clear-cache python
-os4g clear-cache javascript
+os4g cache clear python
+os4g cache clear javascript
 
 # Remove only expired entries (keep valid ones)
-os4g clear-cache --expired-only
-os4g clear-cache python --expired-only
+os4g cache clear --expired-only
+os4g cache clear python --expired-only
 
 # Manual removal (filesystem)
 rm -rf ~/.cache/oss-sustain-guard/  # Linux/macOS

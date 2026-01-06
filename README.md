@@ -85,7 +85,7 @@ For critical dependencies, we recommend:
 
 - ✅ **Local caching** - Analysis results are cached locally in `~/.cache/oss-sustain-guard/`
   - No cloud storage or external uploads
-  - You control the cache directory and can clear it anytime with `os4g clear-cache`
+  - You control the cache directory and can clear it anytime with `os4g cache clear`
   - Cache files are standard JSON　gzip with TTL metadata
 
 - ✅ **Analysis is transparent** - All metrics are calculated client-side from public GitHub or GitLab data
