@@ -14,7 +14,7 @@ description: Interactive release workflow for OSS Sustain Guard with version upd
 make test && make lint && make doc-build
 
 # 2. Analyze changes & update version
-# - Run: git log --oneline to see actual changes
+# - Run: git log --stat or git log -p to see detailed changes
 # - Edit pyproject.toml: change version
 # - Run: uv sync
 # - Edit CHANGELOG.md: add new section based on actual changes
@@ -32,6 +32,7 @@ git push origin vX.Y.Z
 # 5. Prepare English release notes
 # → Claude will generate English release notes based on CHANGELOG
 # → Copy to GitHub Releases description
+# → Should be in Markdown format in RAW mode 
 ```
 
 ## The 5 Steps
@@ -58,12 +59,20 @@ Use [Semantic Versioning](https://semver.org/):
 
 **Step 1: Analyze actual changes**
 
-View what changed since last version:
+View what changed since last version with detailed information:
 
 ```bash
-git log --oneline --since="2 weeks ago"
-# Or compare with last tag:
-git log --oneline v0.14.0..HEAD
+# Show commits with file statistics:
+git log --stat --since="2 weeks ago"
+
+# Or show full patch diffs (verbose):
+git log -p --since="2 weeks ago"
+
+# Or compare with last tag (file statistics):
+git log --stat v0.14.0..HEAD
+
+# Or with full diffs:
+git log -p v0.14.0..HEAD
 ```
 
 **pyproject.toml** - Change version:
