@@ -1,5 +1,6 @@
 """Shared HTTP client handling."""
 
+from ssl import SSLContext
 from typing import Union
 
 import httpx
@@ -7,13 +8,13 @@ import httpx
 from oss_sustain_guard.config import get_verify_ssl
 
 _async_http_client: httpx.AsyncClient | None = None
-_http_client_verify_ssl: Union[bool, str, None] = None
+_http_client_verify_ssl: Union[SSLContext | bool, None] = None
 
 
 async def _get_async_http_client() -> httpx.AsyncClient:
     """Get or create an asynchronous HTTP client with connection pooling."""
     global _async_http_client, _http_client_verify_ssl
-    current_verify_ssl = get_verify_ssl()
+    current_verify_ssl: SSLContext | bool = get_verify_ssl()
     if (
         _async_http_client is None
         or _async_http_client.is_closed

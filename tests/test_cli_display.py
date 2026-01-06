@@ -4,12 +4,13 @@ Tests for CLI display functions (display_results, display_results_compact, displ
 
 import re
 
-from oss_sustain_guard.cli import (
+from oss_sustain_guard.cli_utils.display import (
     display_results,
     display_results_compact,
     display_results_detailed,
 )
-from oss_sustain_guard.core import AnalysisResult, Metric, MetricModel
+from oss_sustain_guard.core import AnalysisResult, MetricModel
+from oss_sustain_guard.metrics import Metric
 
 
 def strip_ansi(text: str) -> str:

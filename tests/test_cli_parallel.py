@@ -4,30 +4,10 @@ Tests for parallel package analysis in the CLI.
 
 from unittest.mock import patch
 
-from oss_sustain_guard.cli import ANALYSIS_VERSION, analyze_packages_parallel
+from oss_sustain_guard.cli_utils.constants import ANALYSIS_VERSION
+from oss_sustain_guard.commands.check import analyze_packages_parallel
 from oss_sustain_guard.core import AnalysisResult, Metric
 from oss_sustain_guard.repository import RepositoryReference
-
-
-class DummyProgress:
-    """Minimal Progress replacement for tests."""
-
-    def __init__(self, *args, **kwargs):
-        self._tasks = {}
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def add_task(self, description, total):
-        task_id = len(self._tasks) + 1
-        self._tasks[task_id] = {"total": total, "advanced": 0}
-        return task_id
-
-    def advance(self, task_id):
-        self._tasks[task_id]["advanced"] += 1
 
 
 class FakeResolver:
@@ -55,7 +35,7 @@ async def test_analyze_packages_parallel_single_uses_analyze_package():
     )
 
     with patch(
-        "oss_sustain_guard.cli.analyze_package", return_value=result
+        "oss_sustain_guard.commands.check.analyze_package", return_value=result
     ) as mock_analyze:
         results, _ = await analyze_packages_parallel(
             [("python", "project")],
@@ -69,14 +49,16 @@ async def test_analyze_packages_parallel_single_uses_analyze_package():
 
     assert results == [result]
     mock_analyze.assert_called_once_with(
-        "project",
-        "python",
-        {},
-        "balanced",
-        True,
-        "lockfile",
-        True,
-        False,
+        package_name="project",
+        ecosystem="python",
+        db={},
+        profile="balanced",
+        show_dependencies=True,
+        lockfile_path="lockfile",
+        verbose=True,
+        use_local_cache=False,
+        log_buffer={},
+        max_workers=5,
     )
 
 
@@ -121,6 +103,13 @@ async def test_analyze_packages_parallel_mixed_results():
         }
     )
 
+    cached_result = AnalysisResult(
+        repo_url="https://github.com/example/cached",
+        total_score=100,  # Recalculated from metrics
+        metrics=[Metric("Custom Metric", 10, 10, "Ok", "None")],
+        ecosystem="python",
+    )
+
     batch_result = AnalysisResult(
         repo_url="https://github.com/example/live",
         total_score=77,
@@ -128,17 +117,23 @@ async def test_analyze_packages_parallel_mixed_results():
         ecosystem="python",
     )
 
+    def analyze_side_effect(**kwargs):
+        pkg_name = kwargs.get("package_name")
+        if pkg_name == "cached":
+            return cached_result
+        elif pkg_name == "live":
+            return batch_result
+        else:
+            return None
+
     with (
-        patch("oss_sustain_guard.cli.Progress", DummyProgress),
         patch(
-            "oss_sustain_guard.cli.get_resolver",
+            "oss_sustain_guard.commands.check.get_resolver",
             side_effect=lambda eco: resolver if eco == "python" else None,
         ),
         patch(
-            "oss_sustain_guard.cli.analyze_package",
-            side_effect=lambda pkg, *_args, **_kwargs: batch_result
-            if pkg == "live"
-            else None,
+            "oss_sustain_guard.commands.check.analyze_package",
+            side_effect=analyze_side_effect,
         ) as mock_analyze,
     ):
         results, _ = await analyze_packages_parallel(
@@ -166,15 +161,16 @@ async def test_analyze_packages_parallel_mixed_results():
     assert results[3] is None
 
     mock_analyze.assert_any_call(
-        "live",
-        "python",
-        cached_db,
-        "balanced",
-        False,
-        None,
-        False,
-        True,
-        {},
+        package_name="live",
+        ecosystem="python",
+        db=cached_db,
+        profile="balanced",
+        show_dependencies=False,
+        lockfile_path=None,
+        verbose=False,
+        use_local_cache=True,
+        log_buffer={},
+        max_workers=5,
     )
 
 
@@ -211,13 +207,12 @@ async def test_analyze_packages_parallel_non_batch_handles_exceptions():
         raise Exception("failure")
 
     with (
-        patch("oss_sustain_guard.cli.Progress", DummyProgress),
         patch(
-            "oss_sustain_guard.cli.get_resolver",
+            "oss_sustain_guard.commands.check.get_resolver",
             return_value=resolver,
         ),
         patch(
-            "oss_sustain_guard.cli.analyze_package",
+            "oss_sustain_guard.commands.check.analyze_package",
             side_effect=analyze_side_effect,
         ),
     ):

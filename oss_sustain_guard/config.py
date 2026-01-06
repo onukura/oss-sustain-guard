@@ -7,11 +7,12 @@ Loads excluded packages from:
 """
 
 import os
+import ssl
 
 try:
-    import tomllib
+    import tomllib  # ty:ignore[unresolved-import]
 except ImportError:  # pragma: no cover - fallback for Python < 3.11
-    import tomli as tomllib  # type: ignore
+    import tomli as tomllib
 from pathlib import Path
 from typing import Union
 
@@ -348,7 +349,7 @@ def set_verify_ssl(verify: Union[bool, str, None]) -> None:
     VERIFY_SSL = verify
 
 
-def get_verify_ssl() -> Union[bool, str]:
+def get_verify_ssl() -> ssl.SSLContext | bool:
     """
     Get the current SSL verification setting.
 
@@ -362,12 +363,20 @@ def get_verify_ssl() -> Union[bool, str]:
     """
     # Return explicitly set value (highest priority)
     if VERIFY_SSL is not None:
-        return VERIFY_SSL
+        if isinstance(VERIFY_SSL, bool):
+            return VERIFY_SSL
+        if isinstance(VERIFY_SSL, str):
+            return ssl.create_default_context(cafile=VERIFY_SSL)
+        if isinstance(VERIFY_SSL, ssl.SSLContext):
+            return VERIFY_SSL
+        raise ValueError(f"Invalid SSL verification setting: {VERIFY_SSL}")
 
     # Check environment variable
     env_ca_cert = os.getenv("OSS_SUSTAIN_GUARD_CA_CERT")
-    if env_ca_cert:
-        return env_ca_cert
+    if isinstance(env_ca_cert, str):
+        if os.path.isdir(env_ca_cert):
+            return ssl.create_default_context(capath=env_ca_cert)
+        return ssl.create_default_context(cafile=env_ca_cert)
 
     # Default: verify SSL
     return True

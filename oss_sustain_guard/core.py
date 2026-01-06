@@ -15,79 +15,69 @@ from oss_sustain_guard.metrics import load_metric_specs
 # Note: These imports are required for metric plugin registration via entry points
 # defined in pyproject.toml, even though they appear unused.
 from oss_sustain_guard.metrics.attraction import (
-    check_attraction,  # type: ignore[import-untyped] # noqa: F401
+    check_attraction,  # noqa: F401
 )
 from oss_sustain_guard.metrics.base import Metric, MetricContext
-from oss_sustain_guard.metrics.bus_factor import (
-    check_bus_factor,  # type: ignore[import-untyped] # noqa: F401
-)
-from oss_sustain_guard.metrics.ci_status import (
-    check_ci_status,  # type: ignore[import-untyped] # noqa: F401
-)
+from oss_sustain_guard.metrics.bus_factor import check_bus_factor  # noqa: F401
+from oss_sustain_guard.metrics.ci_status import check_ci_status  # noqa: F401
 from oss_sustain_guard.metrics.code_of_conduct import (
-    check_code_of_conduct,  # type: ignore[import-untyped]  # noqa: F401
+    check_code_of_conduct,  # noqa: F401
 )
 from oss_sustain_guard.metrics.community_health import (
-    check_community_health,  # type: ignore[import-untyped]  # noqa: F401
+    check_community_health,  # noqa: F401
 )
 from oss_sustain_guard.metrics.documentation_presence import (
-    check_documentation_presence,  # type: ignore[import-untyped]  # noqa: F401
+    check_documentation_presence,  # noqa: F401
 )
-from oss_sustain_guard.metrics.fork_activity import (
-    check_fork_activity,  # type: ignore[import-untyped] # noqa: F401
-)
+from oss_sustain_guard.metrics.fork_activity import check_fork_activity  # noqa: F401
 from oss_sustain_guard.metrics.funding import (
-    check_funding,  # type: ignore[import-untyped]  # noqa: F401
-    is_corporate_backed,  # type: ignore[import-untyped]  # noqa: F401
+    check_funding,  # noqa: F401
+    is_corporate_backed,  # noqa: F401
 )
 from oss_sustain_guard.metrics.issue_resolution_duration import (
-    check_issue_resolution_duration,  # type: ignore[import-untyped]  # noqa: F401
+    check_issue_resolution_duration,  # noqa: F401
 )
 from oss_sustain_guard.metrics.license_clarity import (
-    check_license_clarity,  # type: ignore[import-untyped]  # noqa: F401
+    check_license_clarity,  # noqa: F401
 )
 from oss_sustain_guard.metrics.maintainer_drain import (
-    check_maintainer_drain,  # type: ignore[import-untyped]  # noqa: F401
+    check_maintainer_drain,  # noqa: F401
 )
 from oss_sustain_guard.metrics.merge_velocity import (
-    check_merge_velocity,  # type: ignore[import-untyped] # noqa: F401
+    check_merge_velocity,  # noqa: F401
 )
 from oss_sustain_guard.metrics.organizational_diversity import (
-    check_organizational_diversity,  # type: ignore[import-untyped]  # noqa: F401
+    check_organizational_diversity,  # noqa: F401
 )
 from oss_sustain_guard.metrics.pr_acceptance_ratio import (
-    check_pr_acceptance_ratio,  # type: ignore[import-untyped]  # noqa: F401
+    check_pr_acceptance_ratio,  # noqa: F401
 )
 from oss_sustain_guard.metrics.pr_merge_speed import (
-    check_pr_merge_speed,  # type: ignore[import-untyped] # noqa: F401
+    check_pr_merge_speed,  # noqa: F401
 )
 from oss_sustain_guard.metrics.pr_responsiveness import (
-    check_pr_responsiveness,  # type: ignore[import-untyped]  # noqa: F401
+    check_pr_responsiveness,  # noqa: F401
 )
 from oss_sustain_guard.metrics.project_popularity import (
-    check_project_popularity,  # type: ignore[import-untyped]  # noqa: F401
+    check_project_popularity,  # noqa: F401
 )
 from oss_sustain_guard.metrics.release_cadence import (
-    check_release_cadence,  # type: ignore[import-untyped]   # noqa: F401
+    check_release_cadence,  # noqa: F401
 )
 from oss_sustain_guard.metrics.retention import (
-    check_retention,  # type: ignore[import-untyped] # noqa: F401
+    check_retention,  # noqa: F401
 )
-from oss_sustain_guard.metrics.review_health import (
-    check_review_health,  # type: ignore[import-untyped] # noqa: F401
-)
+from oss_sustain_guard.metrics.review_health import check_review_health  # noqa: F401
 from oss_sustain_guard.metrics.security_posture import (
-    check_security_posture,  # type: ignore[import-untyped]  # noqa: F401
+    check_security_posture,  # noqa: F401
 )
 from oss_sustain_guard.metrics.single_maintainer_load import (
-    check_single_maintainer_load,  # type: ignore[import-untyped]  # noqa: F401
+    check_single_maintainer_load,  # noqa: F401
 )
 from oss_sustain_guard.metrics.stale_issue_ratio import (
-    check_stale_issue_ratio,  # type: ignore[import-untyped]  # noqa: F401
+    check_stale_issue_ratio,  # noqa: F401
 )
-from oss_sustain_guard.metrics.zombie_status import (
-    check_zombie_status,  # type: ignore[import-untyped] # noqa: F401
-)
+from oss_sustain_guard.metrics.zombie_status import check_zombie_status  # noqa: F401
 from oss_sustain_guard.vcs import get_vcs_provider
 from oss_sustain_guard.vcs.base import VCSRepositoryData
 
@@ -354,7 +344,10 @@ def apply_profile_overrides(profile_overrides: dict[str, dict[str, object]]) -> 
         SCORING_PROFILES = copy.deepcopy(DEFAULT_SCORING_PROFILES)
         return
 
-    required_metrics = set(DEFAULT_SCORING_PROFILES["balanced"]["weights"].keys())
+    balanced_weights = DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    if not isinstance(balanced_weights, dict):
+        raise ValueError("Default balanced profile weights should be a dictionary.")
+    required_metrics = set(balanced_weights.keys())
     merged = copy.deepcopy(DEFAULT_SCORING_PROFILES)
 
     for profile_key, profile_data in profile_overrides.items():
@@ -369,14 +362,19 @@ def apply_profile_overrides(profile_overrides: dict[str, dict[str, object]]) -> 
                 raise ValueError(
                     f"Profile '{profile_key}' needs a weights table to be defined."
                 )
-            weights = merged[profile_key]["weights"]
+            merged_weights = merged[profile_key]["weights"]
+            if not isinstance(merged_weights, dict):
+                raise ValueError(
+                    f"Profile '{profile_key}' weights should be a dictionary."
+                )
+            weights = merged_weights
         else:
             if not isinstance(weights, dict):
                 raise ValueError(
                     f"Profile '{profile_key}' weights should be a table of metric names to integers."
                 )
 
-            missing_metrics = required_metrics - weights.keys()
+            missing_metrics = required_metrics - set(weights.keys())
             if missing_metrics:
                 missing_list = ", ".join(sorted(missing_metrics))
                 raise ValueError(
@@ -460,6 +458,10 @@ def compute_weighted_total_score(
     profile_config = SCORING_PROFILES[profile]
     weights = profile_config["weights"]
 
+    # Type guard: ensure weights is a dictionary
+    if not isinstance(weights, dict):
+        raise ValueError(f"Profile '{profile}' weights must be a dictionary")
+
     # Calculate weighted sum
     weighted_score_sum = 0.0
     weighted_max_sum = 0.0
@@ -529,7 +531,10 @@ def get_metric_weights(profile: str = "balanced") -> dict[str, int]:
             f"Unknown profile '{profile}'. Available: {', '.join(SCORING_PROFILES.keys())}"
         )
 
-    return SCORING_PROFILES[profile]["weights"]
+    weights = SCORING_PROFILES[profile]["weights"]
+    if not isinstance(weights, dict):
+        raise ValueError(f"Profile '{profile}' weights must be a dictionary")
+    return weights
 
 
 # --- Metric Model Calculation Functions ---

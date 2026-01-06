@@ -2,8 +2,10 @@
 Tests for the configuration module.
 """
 
+import ssl
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -402,43 +404,74 @@ def test_set_verify_ssl_with_bool():
     assert get_verify_ssl() is True
 
 
-def test_set_verify_ssl_with_cert_path():
+def test_set_verify_ssl_with_cert_path(tmp_path):
     """Test set_verify_ssl with certificate file path."""
-    cert_path = "/path/to/custom-ca.crt"
-    set_verify_ssl(cert_path)
-    assert get_verify_ssl() == cert_path
+    cert_path = tmp_path / "custom-ca.crt"
+    cert_path.write_text("dummy cert")
+    set_verify_ssl(str(cert_path))
+
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(cert_path))
 
 
 def test_get_verify_ssl_from_env(monkeypatch, tmp_path):
     """Test get_verify_ssl respects OSS_SUSTAIN_GUARD_CA_CERT environment variable."""
     set_verify_ssl(None)  # Reset to use env var
-    cert_path = str(tmp_path / "test-ca.crt")
+    cert_path = tmp_path / "test-ca.crt"
+    cert_path.write_text("dummy cert")
 
-    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", cert_path)
-    assert get_verify_ssl() == cert_path
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", str(cert_path))
+
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(cert_path))
 
 
 def test_get_verify_ssl_explicit_overrides_env(monkeypatch, tmp_path):
     """Test that explicit set_verify_ssl overrides environment variable."""
-    env_cert = str(tmp_path / "env-ca.crt")
-    explicit_cert = str(tmp_path / "explicit-ca.crt")
+    env_cert = tmp_path / "env-ca.crt"
+    env_cert.write_text("dummy cert")
+    explicit_cert = tmp_path / "explicit-ca.crt"
+    explicit_cert.write_text("dummy cert")
 
-    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", env_cert)
-    set_verify_ssl(explicit_cert)
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", str(env_cert))
+    set_verify_ssl(str(explicit_cert))
 
     # Explicit set should take priority
-    assert get_verify_ssl() == explicit_cert
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(explicit_cert))
 
 
 def test_get_verify_ssl_env_when_reset(monkeypatch, tmp_path):
     """Test that resetting to None uses environment variable."""
-    env_cert = str(tmp_path / "env-ca.crt")
+    env_cert = tmp_path / "env-ca.crt"
+    env_cert.write_text("dummy cert")
 
-    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", env_cert)
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", str(env_cert))
     set_verify_ssl(None)
 
     # Should use env var
-    assert get_verify_ssl() == env_cert
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(env_cert))
 
 
 def test_get_verify_ssl_default_when_no_env(monkeypatch):

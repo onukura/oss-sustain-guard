@@ -9,16 +9,17 @@ This module tests the trend analysis feature, including:
 - Display functions for trend results
 """
 
+import asyncio
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
-from oss_sustain_guard.cli import (
+from oss_sustain_guard.cli import app
+from oss_sustain_guard.commands.trend import (
     _display_ascii_chart,
     _display_trend_results,
-    app,
 )
 from oss_sustain_guard.core import Metric
 from oss_sustain_guard.trend import (
@@ -33,6 +34,13 @@ from oss_sustain_guard.trend import (
 )
 
 runner = CliRunner()
+
+
+def _mock_asyncio_run(coro):
+    """Mock asyncio.run that properly closes coroutines to avoid warnings."""
+    if asyncio.iscoroutine(coro):
+        coro.close()
+    return None
 
 
 class TestTrendInterval:
@@ -424,11 +432,9 @@ class TestDisplayTrendResults:
 class TestTrendCommandValidation:
     """Test trend command parameter validation."""
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_valid_interval(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_valid_interval(self, mock_run):
         """Test that valid intervals are accepted."""
-        mock_run.return_value = None
         for interval in [
             "daily",
             "weekly",
@@ -448,11 +454,9 @@ class TestTrendCommandValidation:
             )
             assert result.exit_code == 0
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_valid_profiles(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_valid_profiles(self, mock_run):
         """Test that valid profiles are accepted."""
-        mock_run.return_value = None
         for profile in [
             "balanced",
             "security_first",
@@ -470,11 +474,9 @@ class TestTrendCommandValidation:
             )
             assert result.exit_code == 0
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_positive_periods(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_positive_periods(self, mock_run):
         """Test that positive periods are accepted."""
-        mock_run.return_value = None
         result = runner.invoke(
             app,
             [
@@ -488,11 +490,9 @@ class TestTrendCommandValidation:
         # Should accept positive integer
         assert result.exit_code == 0
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_valid_scan_depths(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_valid_scan_depths(self, mock_run):
         """Test that valid scan depths are accepted."""
-        mock_run.return_value = None
         for depth in ["shallow", "default", "deep", "very_deep"]:
             result = runner.invoke(
                 app,
@@ -505,11 +505,9 @@ class TestTrendCommandValidation:
             )
             assert result.exit_code == 0
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_positive_days_lookback(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_positive_days_lookback(self, mock_run):
         """Test that positive days-lookback is accepted."""
-        mock_run.return_value = None
         result = runner.invoke(
             app,
             [
@@ -528,11 +526,9 @@ class TestTrendCommandValidation:
 class TestTrendCommandOptions:
     """Test trend command with various options."""
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_package_argument(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_package_argument(self, mock_run):
         """Test trend command with package argument."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,
@@ -545,11 +541,9 @@ class TestTrendCommandOptions:
         # Should not fail on argument parsing
         assert "Error" not in result.stdout
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_with_ecosystem_option(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_with_ecosystem_option(self, mock_run):
         """Test trend command with ecosystem option."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,
@@ -563,11 +557,9 @@ class TestTrendCommandOptions:
 
         assert result.exit_code == 0 or "Error" not in result.stdout
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_with_interval_option(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_with_interval_option(self, mock_run):
         """Test trend command with interval option."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,
@@ -581,11 +573,9 @@ class TestTrendCommandOptions:
 
         assert result.exit_code == 0 or "Error" not in result.stdout
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_with_periods_option(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_with_periods_option(self, mock_run):
         """Test trend command with periods option."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,
@@ -599,11 +589,9 @@ class TestTrendCommandOptions:
 
         assert result.exit_code == 0 or "Error" not in result.stdout
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_with_window_days_option(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_with_window_days_option(self, mock_run):
         """Test trend command with window-days option."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,
@@ -617,11 +605,9 @@ class TestTrendCommandOptions:
 
         assert result.exit_code == 0 or "Error" not in result.stdout
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_with_profile_option(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_with_profile_option(self, mock_run):
         """Test trend command with profile option."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,
@@ -635,11 +621,9 @@ class TestTrendCommandOptions:
 
         assert result.exit_code == 0 or "Error" not in result.stdout
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_with_cache_options(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_with_cache_options(self, mock_run):
         """Test trend command with cache options."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,
@@ -652,11 +636,9 @@ class TestTrendCommandOptions:
 
         assert result.exit_code == 0 or "Error" not in result.stdout
 
-    @patch("oss_sustain_guard.cli._trend_async")
-    @patch("oss_sustain_guard.cli.asyncio.run")
-    def test_trend_with_verbose_option(self, mock_run, mock_trend):
+    @patch("asyncio.run", side_effect=_mock_asyncio_run)
+    def test_trend_with_verbose_option(self, mock_run):
         """Test trend command with verbose option."""
-        mock_run.return_value = None
 
         result = runner.invoke(
             app,

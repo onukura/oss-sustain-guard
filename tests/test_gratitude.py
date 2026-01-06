@@ -76,7 +76,7 @@ def mock_database():
     }
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 def test_gratitude_displays_top_projects(mock_load_db, mock_database):
     """Test that gratitude command displays top community-driven projects."""
     mock_load_db.return_value = mock_database
@@ -93,7 +93,7 @@ def test_gratitude_displays_top_projects(mock_load_db, mock_database):
     assert "Support options:" in result.stdout
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 def test_gratitude_no_funding_links(mock_load_db):
     """Test gratitude when no projects have funding links."""
     mock_load_db.return_value = {
@@ -112,7 +112,7 @@ def test_gratitude_no_funding_links(mock_load_db):
     assert "No community-driven projects with funding links found" in result.stdout
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 def test_gratitude_empty_database(mock_load_db):
     """Test gratitude with empty database."""
     mock_load_db.return_value = {}
@@ -123,7 +123,7 @@ def test_gratitude_empty_database(mock_load_db):
     assert "No database available" in result.stdout
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 @patch("webbrowser.open")
 def test_gratitude_opens_single_funding_link(mock_browser, mock_load_db, mock_database):
     """Test opening a funding link when project has single link."""
@@ -142,7 +142,7 @@ def test_gratitude_opens_single_funding_link(mock_browser, mock_load_db, mock_da
     assert "Thank you for supporting OSS maintainers!" in result.stdout
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 @patch("webbrowser.open")
 def test_gratitude_opens_multiple_funding_links(
     mock_browser, mock_load_db, mock_database
@@ -159,7 +159,7 @@ def test_gratitude_opens_multiple_funding_links(
     assert "Opening GitHub Sponsors..." in result.stdout
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 def test_gratitude_quit(mock_load_db, mock_database):
     """Test quitting gratitude without selecting."""
     mock_load_db.return_value = mock_database
@@ -170,7 +170,7 @@ def test_gratitude_quit(mock_load_db, mock_database):
     assert "Thank you for considering supporting OSS maintainers!" in result.stdout
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 def test_gratitude_invalid_project_number(mock_load_db, mock_database):
     """Test invalid project number input."""
     mock_load_db.return_value = mock_database
@@ -181,7 +181,7 @@ def test_gratitude_invalid_project_number(mock_load_db, mock_database):
     assert "Invalid project number" in result.stdout
 
 
-@patch("oss_sustain_guard.cli.load_database")
+@patch("oss_sustain_guard.commands.gratitude.load_database")
 def test_gratitude_invalid_input(mock_load_db, mock_database):
     """Test invalid (non-numeric) input."""
     mock_load_db.return_value = mock_database

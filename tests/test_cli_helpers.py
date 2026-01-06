@@ -6,17 +6,21 @@ import json
 
 import pytest
 
-from oss_sustain_guard.cli import (
-    _build_dependency_summary,
-    _build_summary,
-    _format_health_status,
-    _render_html_report,
-    _summarize_observations,
-    _write_html_results,
-    _write_json_results,
+from oss_sustain_guard.cli_utils.cache_helpers import (
     cache_lockfile_dependencies,
     clear_lockfile_cache,
     get_cached_lockfile_dependencies,
+)
+from oss_sustain_guard.cli_utils.helpers import (
+    _build_dependency_summary,
+    _build_summary,
+    _format_health_status,
+    _summarize_observations,
+)
+from oss_sustain_guard.cli_utils.output import (
+    _render_html_report,
+    _write_html_results,
+    _write_json_results,
 )
 from oss_sustain_guard.core import AnalysisResult, Metric
 

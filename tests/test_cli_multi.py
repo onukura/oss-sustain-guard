@@ -6,11 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
 
-from oss_sustain_guard.cli import (
+from oss_sustain_guard.cli_utils.helpers import load_database, parse_package_spec
+from oss_sustain_guard.commands.check import (
     _analyze_dependencies_for_package,
     analyze_package,
-    load_database,
-    parse_package_spec,
 )
 from oss_sustain_guard.core import AnalysisResult, Metric
 from oss_sustain_guard.repository import RepositoryReference
@@ -57,13 +56,13 @@ class TestAnalyzePackage:
 
     async def test_analyze_excluded_package(self):
         """Test that excluded packages return None."""
-        with patch("oss_sustain_guard.cli.is_package_excluded", return_value=True):
+        with patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=True):
             result = await analyze_package("excluded-pkg", "python", {})
             assert result is None
 
     async def test_analyze_from_cache(self):
         """Test analyzing package from cache."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
+        from oss_sustain_guard.cli_utils.constants import ANALYSIS_VERSION
 
         cached_db = {
             "python:requests": {
@@ -86,7 +85,7 @@ class TestAnalyzePackage:
             }
         }
 
-        with patch("oss_sustain_guard.cli.is_package_excluded", return_value=False):
+        with patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False):
             result = await analyze_package("requests", "python", cached_db)
             assert result is not None
             assert result.repo_url == "https://github.com/psf/requests"
@@ -98,12 +97,12 @@ class TestAnalyzePackage:
 
     async def test_analyze_unknown_ecosystem(self):
         """Test analyzing with unknown ecosystem."""
-        with patch("oss_sustain_guard.cli.is_package_excluded", return_value=False):
+        with patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False):
             result = await analyze_package("pkg", "unknown-eco", {})
             assert result is None
 
-    @patch("oss_sustain_guard.cli.get_resolver")
-    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
+    @patch("oss_sustain_guard.commands.check.get_resolver")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False)
     async def test_analyze_package_not_found(self, mock_excluded, mock_get_resolver):
         """Test analyzing package that doesn't have GitHub URL."""
         mock_resolver = MagicMock()
@@ -113,12 +112,11 @@ class TestAnalyzePackage:
         result = await analyze_package("nonexistent", "python", {})
         assert result is None
 
-    @patch("oss_sustain_guard.cli.save_cache")
-    @patch("oss_sustain_guard.cli.analyze_repository")
-    @patch("oss_sustain_guard.cli.get_resolver")
-    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
+    @patch("oss_sustain_guard.commands.check.analyze_repository")
+    @patch("oss_sustain_guard.commands.check.get_resolver")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False)
     async def test_analyze_package_success(
-        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
+        self, mock_excluded, mock_get_resolver, mock_analyze_repo
     ):
         """Test successful package analysis."""
         mock_resolver = MagicMock()
@@ -159,12 +157,11 @@ class TestAnalyzePackage:
             vcs_platform="github",
         )
 
-    @patch("oss_sustain_guard.cli.save_cache")
-    @patch("oss_sustain_guard.cli.analyze_repository")
-    @patch("oss_sustain_guard.cli.get_resolver")
-    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
+    @patch("oss_sustain_guard.commands.check.analyze_repository")
+    @patch("oss_sustain_guard.commands.check.get_resolver")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False)
     async def test_analyze_package_error(
-        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
+        self, mock_excluded, mock_get_resolver, mock_analyze_repo
     ):
         """Test package analysis with error."""
         mock_resolver = MagicMock()
@@ -183,15 +180,13 @@ class TestAnalyzePackage:
 
         result = await analyze_package("pkg", "python", {})
         assert result is None
-        # save_cache should not be called on error
-        mock_save_cache.assert_not_called()
 
 
 class TestLoadDatabase:
     """Test database loading functionality."""
 
-    @patch("oss_sustain_guard.cli.load_cache")
-    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
+    @patch("oss_sustain_guard.cli_utils.helpers.load_cache")
+    @patch("oss_sustain_guard.cli_utils.helpers.is_cache_enabled", return_value=True)
     def test_load_database_with_local_cache(self, mock_enabled, mock_load_cache):
         """Test loading database from local cache."""
         mock_load_cache.return_value = {
@@ -210,14 +205,14 @@ class TestLoadDatabase:
         db = load_database(use_cache=False, use_local_cache=True, verbose=False)
         assert db == {}
 
-    @patch("oss_sustain_guard.cli.load_cache", return_value=None)
-    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
+    @patch("oss_sustain_guard.cli_utils.helpers.load_cache", return_value=None)
+    @patch("oss_sustain_guard.cli_utils.helpers.is_cache_enabled", return_value=True)
     def test_load_database_empty_cache(self, mock_enabled, mock_load_cache):
         """Test loading database with empty cache."""
         db = load_database(use_cache=True, use_local_cache=True, verbose=False)
         assert db == {}
 
-    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=False)
+    @patch("oss_sustain_guard.cli_utils.helpers.is_cache_enabled", return_value=False)
     def test_load_database_cache_disabled(self, mock_enabled):
         """Test loading database when cache is disabled."""
         db = load_database(use_cache=True, use_local_cache=True, verbose=False)
@@ -227,13 +222,13 @@ class TestLoadDatabase:
 class TestAnalyzeDependenciesForPackage:
     """Test dependency analysis functionality."""
 
-    @patch("oss_sustain_guard.cli.analyze_packages_parallel")
+    @patch("oss_sustain_guard.commands.check.analyze_packages_parallel")
     @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
     async def test_analyze_dependencies_success(
         self, mock_get_deps, mock_analyze_parallel
     ):
         """Test successful dependency analysis."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
+        from oss_sustain_guard.cli_utils.constants import ANALYSIS_VERSION
 
         # Mock get_package_dependencies to return a list of dependency names
         mock_get_deps.return_value = ["dep1", "dep2"]
@@ -350,13 +345,13 @@ class TestAnalyzeDependenciesForPackage:
         )
         assert result == {}
 
-    @patch("oss_sustain_guard.cli.analyze_packages_parallel")
+    @patch("oss_sustain_guard.commands.check.analyze_packages_parallel")
     @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
     async def test_analyze_dependencies_with_missing_packages(
         self, mock_get_deps, mock_analyze_parallel
     ):
         """Test dependency analysis when some dependencies are not in cache."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
+        from oss_sustain_guard.cli_utils.constants import ANALYSIS_VERSION
 
         # Mock get_package_dependencies to return 3 dependencies
         mock_get_deps.return_value = ["dep1", "dep2", "dep3"]
@@ -458,7 +453,7 @@ class TestAnalyzeDependenciesForPackage:
     @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
     async def test_analyze_dependencies_without_analyzing_missing(self, mock_get_deps):
         """Test dependency analysis with analyze_missing=False."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
+        from oss_sustain_guard.cli_utils.constants import ANALYSIS_VERSION
 
         # Mock get_package_dependencies to return 3 dependencies
         mock_get_deps.return_value = ["dep1", "dep2", "dep3"]

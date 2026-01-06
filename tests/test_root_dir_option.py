@@ -26,8 +26,8 @@ runner = CliRunner()
 def mock_ecosystem_detection():
     """Mock ecosystem and manifest detection for speed."""
     with (
-        patch("oss_sustain_guard.cli.detect_ecosystems") as mock_eco,
-        patch("oss_sustain_guard.cli.find_manifest_files") as mock_manifests,
+        patch("oss_sustain_guard.resolvers.detect_ecosystems") as mock_eco,
+        patch("oss_sustain_guard.resolvers.find_manifest_files") as mock_manifests,
     ):
         # Return empty results by default
         mock_eco.return_value = []
@@ -38,7 +38,7 @@ def mock_ecosystem_detection():
 @pytest.fixture
 def mock_analyzer():
     """Mock analyze_package to avoid real analysis."""
-    with patch("oss_sustain_guard.cli.analyze_package") as mock:
+    with patch("oss_sustain_guard.commands.check.analyze_package") as mock:
         mock.return_value = None
         yield mock
 

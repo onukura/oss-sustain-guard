@@ -12,9 +12,9 @@ import re
 import yaml
 
 try:
-    import tomllib
+    import tomllib  # ty:ignore[unresolved-import]
 except ImportError:  # pragma: no cover - fallback for Python < 3.11
-    import tomli as tomllib  # type: ignore
+    import tomli as tomllib
 from pathlib import Path
 from typing import NamedTuple
 
@@ -687,7 +687,7 @@ def _extract_stack_packages(packages: object) -> list[str]:
                     deps.add(dep_name)
             elif isinstance(entry, dict):
                 for key in ("original", "hackage", "git", "archive"):
-                    value = entry.get(key)
+                    value = entry.get(key)  # ty:ignore[invalid-argument-type]
                     if isinstance(value, str):
                         dep_name = _strip_stack_package_name(value)
                         if dep_name:
@@ -779,14 +779,14 @@ def _get_haskell_project_name(directory: Path) -> str | None:
     package_yaml = directory / "package.yaml"
     if package_yaml.exists():
         try:
-            import yaml
-        except ImportError:
-            yaml = None
-        if yaml:
-            data = yaml.safe_load(package_yaml.read_text(encoding="utf-8")) or {}
+            import yaml as yaml_module
+
+            data = yaml_module.safe_load(package_yaml.read_text(encoding="utf-8")) or {}
             name = data.get("name")
             if isinstance(name, str):
                 return name
+        except ImportError:
+            pass
 
     cabal_files = list(directory.glob("*.cabal"))
     if cabal_files:

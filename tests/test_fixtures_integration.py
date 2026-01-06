@@ -38,7 +38,7 @@ class TestJavaScriptFixtures:
         assert "typescript" in data["devDependencies"]
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_npm_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking npm packages from package.json fixture."""
         mock_excluded.return_value = False
@@ -52,7 +52,7 @@ class TestJavaScriptFixtures:
         packages = list(data["dependencies"].keys())[:3]  # Test first 3
 
         for pkg in packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=75,
@@ -103,7 +103,7 @@ class TestPythonFixtures:
         assert "pytest" in package_names
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_python_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Python packages from requirements.txt fixture."""
         mock_excluded.return_value = False
@@ -118,7 +118,7 @@ class TestPythonFixtures:
         packages = [line.split("==")[0] for line in lines[:3]]  # Test first 3
 
         for pkg in packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=80,
@@ -266,7 +266,7 @@ class TestRustFixtures:
         assert "tokio" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_rust_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Rust packages from Cargo.toml fixture."""
         mock_excluded.return_value = False
@@ -275,7 +275,7 @@ class TestRustFixtures:
         test_packages = ["tokio"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=85,
@@ -310,7 +310,7 @@ class TestJavaFixtures:
         assert "commons-lang3" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_java_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Java packages from pom.xml fixture."""
         mock_excluded.return_value = False
@@ -323,7 +323,7 @@ class TestJavaFixtures:
         ]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.split(':')[-1]}",
                     total_score=82,
@@ -358,7 +358,7 @@ class TestPHPFixtures:
         assert "monolog/monolog" in data["require"]
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_php_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking PHP packages from composer.json fixture."""
         mock_excluded.return_value = False
@@ -371,7 +371,7 @@ class TestPHPFixtures:
         packages = list(data["require"].keys())[1:4]  # Skip php version
 
         for pkg in packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.replace('/', '-')}",
                     total_score=78,
@@ -419,7 +419,7 @@ class TestRubyFixtures:
         assert "sidekiq" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_ruby_gems_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Ruby gems from Gemfile fixture."""
         mock_excluded.return_value = False
@@ -428,7 +428,7 @@ class TestRubyFixtures:
         test_gems = ["rails", "puma", "sidekiq", "devise"]
 
         for gem in test_gems:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{gem}",
                     total_score=83,
@@ -463,7 +463,7 @@ class TestCSharpFixtures:
         assert "Serilog" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_csharp_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking C# packages from packages.config fixture."""
         mock_excluded.return_value = False
@@ -472,7 +472,7 @@ class TestCSharpFixtures:
         test_packages = ["Newtonsoft.Json", "EntityFramework", "Serilog", "Dapper"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=87,
@@ -516,7 +516,7 @@ class TestGoFixtures:
         assert "github.com/gin-gonic/gin" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_go_modules_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Go modules from go.mod fixture."""
         mock_excluded.return_value = False
@@ -529,7 +529,7 @@ class TestGoFixtures:
         ]
 
         for module in test_modules:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://{module}",
                     total_score=84,
@@ -577,7 +577,7 @@ class TestDartFixtures:
         assert "lints:" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_dart_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Dart packages from pubspec.yaml fixture."""
         mock_excluded.return_value = False
@@ -586,7 +586,7 @@ class TestDartFixtures:
         test_packages = ["http", "path", "lints", "test"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=81,
@@ -632,7 +632,7 @@ class TestElixirFixtures:
         assert "ecto_sql" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_elixir_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Elixir packages from mix.exs fixture."""
         mock_excluded.return_value = False
@@ -641,7 +641,7 @@ class TestElixirFixtures:
         test_packages = ["phoenix", "ecto_sql"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=79,
@@ -709,7 +709,7 @@ class TestHaskellFixtures:
         assert "text-1.2.5.0" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_haskell_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Haskell packages from cabal/stack fixtures."""
         mock_excluded.return_value = False
@@ -718,7 +718,7 @@ class TestHaskellFixtures:
         test_packages = ["text", "bytestring"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=76,
@@ -766,7 +766,7 @@ class TestKotlinFixtures:
         assert "junit-jupiter" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_kotlin_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Kotlin packages from build.gradle.kts fixture."""
         mock_excluded.return_value = False
@@ -779,7 +779,7 @@ class TestKotlinFixtures:
         ]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.split(':')[-1]}",
                     total_score=77,
@@ -825,7 +825,7 @@ class TestPerlFixtures:
         assert "Test-Simple" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_perl_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Perl packages from cpanfile fixture."""
         mock_excluded.return_value = False
@@ -834,7 +834,7 @@ class TestPerlFixtures:
         test_packages = ["Mojolicious", "DBI"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=74,
@@ -882,7 +882,7 @@ class TestRFixtures:
         assert "ggplot2" in data["Packages"]
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_r_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking R packages from DESCRIPTION fixture."""
         mock_excluded.return_value = False
@@ -891,7 +891,7 @@ class TestRFixtures:
         test_packages = ["dplyr", "ggplot2", "testthat"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=73,
@@ -945,7 +945,7 @@ class TestSwiftFixtures:
         )
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_swift_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Swift packages from Package.swift fixture."""
         mock_excluded.return_value = False
@@ -954,7 +954,7 @@ class TestSwiftFixtures:
         test_packages = ["apple/swift-nio", "Alamofire/Alamofire"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/{pkg}",
                     total_score=72,
@@ -976,7 +976,7 @@ class TestMultiLanguageFixtures:
     """Test cross-language fixture integration."""
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_mixed_language_dependencies(self, mock_excluded, mock_load_cache):
         """Test analyzing packages from multiple language ecosystems."""
         mock_excluded.return_value = False
@@ -1002,7 +1002,7 @@ class TestMultiLanguageFixtures:
         ]
 
         for package_spec, lang in test_cases:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url="https://github.com/example/repo",
                     total_score=80,
