@@ -4,6 +4,28 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+## v0.22.0 - 2026-01-06
+
+### Added
+
+- Comprehensive CLI command test automation script (`test_all_commands.sh`) for systematically testing all major CLI commands, options, and edge cases
+- Enhanced CLI modularity with subcommand organization into dedicated modules for cache, check, graph, gratitude, and trend commands
+- New CLI utilities package (`cli_utils/`) for shared helpers, output formatting, constants, and loaders
+
+### Improved
+
+- CLI architecture with improved maintainability through modularization of monolithic CLI implementation
+- SSL verification logic to consistently use `ssl.SSLContext` with support for both file and directory CA paths
+- Type safety for profile weights in configuration handling
+- Test reliability by aligning mock patches with new import paths
+- Documentation consistency across all cache-related guides with unified `os4g cache` subcommand syntax
+- Code organization and separation of concerns for easier future CLI enhancements
+
+### Documentation
+
+- Updated release process documentation with clearer guidance on analyzing changes before versioning
+- Consolidated cache command syntax across README, guides, and troubleshooting documentation
+
 ## v0.21.0 - 2026-01-06
 
 ### Improved
