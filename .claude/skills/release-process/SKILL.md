@@ -18,6 +18,8 @@ make test && make lint && make doc-build
 # - Edit pyproject.toml: change version
 # - Run: uv sync
 # - Edit CHANGELOG.md: add new section based on actual changes
+# - Update SKILL.md if release process changed (optional)
+# - Update ROADMAP.md with completed features (optional)
 
 # 3. Commit and tag
 git add pyproject.toml uv.lock CHANGELOG.md
@@ -107,14 +109,33 @@ uv sync
 
 > **Important:** Write CHANGELOG entries based on the actual `git log` output from your recent commits, not generic templates.
 
+**SKILL.md & ROADMAP.md** - Update documentation if needed:
+
+- **SKILL.md**: Update this file if release process steps changed or new workflows added
+- **ROADMAP.md**: Update completed features marked with ✅ and their version/date
+  - Move completed items to top of list with implementation status
+  - Update upcoming features if priorities changed
+  - Add new planned features discovered during this release
+
+Example ROADMAP update:
+
+```markdown
+### My New Feature ✅ Implemented in v0.15.0, released 2026-01-20
+
+- ✅ Feature description 1
+- ✅ Feature description 2
+```
+
 ### 4️⃣ Commit & Tag
 
 ```bash
-git add pyproject.toml uv.lock CHANGELOG.md
+git add pyproject.toml uv.lock CHANGELOG.md SKILL.md ROADMAP.md
 git commit -m "chore: release version 0.15.0"
 git tag v0.15.0
 git push origin v0.15.0
 ```
+
+> **Note:** Only add SKILL.md and ROADMAP.md to commit if you made changes to them.
 
 ### 5️⃣ Watch & Verify
 
