@@ -11,7 +11,7 @@ This module tests the trend analysis feature, including:
 
 import asyncio
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner

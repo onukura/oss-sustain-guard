@@ -36,7 +36,7 @@ record_result() {
     local test_name=$1
     local status=$2
     local message=$3
-    
+
     if [ "$status" = "PASS" ]; then
         PASSED=$((PASSED + 1))
         echo -e "${GREEN}✓ PASS${NC}: $test_name"
@@ -47,7 +47,7 @@ record_result() {
         SKIPPED=$((SKIPPED + 1))
         echo -e "${YELLOW}⊘ SKIP${NC}: $test_name - $message"
     fi
-    
+
     TEST_RESULTS+=("$status: $test_name")
 }
 
@@ -64,9 +64,9 @@ run_test() {
     local test_name=$1
     shift
     local cmd="$@"
-    
+
     echo -e "${BLUE}Running:${NC} $cmd"
-    
+
     if eval "$cmd" > /tmp/os4g_test_output.log 2>&1; then
         record_result "$test_name" "PASS" ""
     else
@@ -81,9 +81,9 @@ run_optional_test() {
     local test_name=$1
     shift
     local cmd="$@"
-    
+
     echo -e "${BLUE}Running (optional):${NC} $cmd"
-    
+
     if eval "$cmd" > /tmp/os4g_test_output.log 2>&1; then
         record_result "$test_name" "PASS" ""
     else

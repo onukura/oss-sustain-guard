@@ -52,7 +52,9 @@ class TestJavaScriptFixtures:
         packages = list(data["dependencies"].keys())[:3]  # Test first 3
 
         for pkg in packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=75,
@@ -118,7 +120,9 @@ class TestPythonFixtures:
         packages = [line.split("==")[0] for line in lines[:3]]  # Test first 3
 
         for pkg in packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=80,
@@ -275,7 +279,9 @@ class TestRustFixtures:
         test_packages = ["tokio"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=85,
@@ -323,7 +329,9 @@ class TestJavaFixtures:
         ]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.split(':')[-1]}",
                     total_score=82,
@@ -371,7 +379,9 @@ class TestPHPFixtures:
         packages = list(data["require"].keys())[1:4]  # Skip php version
 
         for pkg in packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.replace('/', '-')}",
                     total_score=78,
@@ -428,7 +438,9 @@ class TestRubyFixtures:
         test_gems = ["rails", "puma", "sidekiq", "devise"]
 
         for gem in test_gems:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{gem}",
                     total_score=83,
@@ -472,7 +484,9 @@ class TestCSharpFixtures:
         test_packages = ["Newtonsoft.Json", "EntityFramework", "Serilog", "Dapper"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=87,
@@ -529,7 +543,9 @@ class TestGoFixtures:
         ]
 
         for module in test_modules:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://{module}",
                     total_score=84,
@@ -586,7 +602,9 @@ class TestDartFixtures:
         test_packages = ["http", "path", "lints", "test"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=81,
@@ -641,7 +659,9 @@ class TestElixirFixtures:
         test_packages = ["phoenix", "ecto_sql"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=79,
@@ -718,7 +738,9 @@ class TestHaskellFixtures:
         test_packages = ["text", "bytestring"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=76,
@@ -779,7 +801,9 @@ class TestKotlinFixtures:
         ]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.split(':')[-1]}",
                     total_score=77,
@@ -834,7 +858,9 @@ class TestPerlFixtures:
         test_packages = ["Mojolicious", "DBI"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=74,
@@ -891,7 +917,9 @@ class TestRFixtures:
         test_packages = ["dplyr", "ggplot2", "testthat"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=73,
@@ -954,7 +982,9 @@ class TestSwiftFixtures:
         test_packages = ["apple/swift-nio", "Alamofire/Alamofire"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/{pkg}",
                     total_score=72,
@@ -1002,7 +1032,9 @@ class TestMultiLanguageFixtures:
         ]
 
         for package_spec, lang in test_cases:
-            with patch("oss_sustain_guard.commands.check.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url="https://github.com/example/repo",
                     total_score=80,

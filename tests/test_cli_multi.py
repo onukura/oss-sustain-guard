@@ -56,7 +56,9 @@ class TestAnalyzePackage:
 
     async def test_analyze_excluded_package(self):
         """Test that excluded packages return None."""
-        with patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=True):
+        with patch(
+            "oss_sustain_guard.commands.check.is_package_excluded", return_value=True
+        ):
             result = await analyze_package("excluded-pkg", "python", {})
             assert result is None
 
@@ -85,7 +87,9 @@ class TestAnalyzePackage:
             }
         }
 
-        with patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False):
+        with patch(
+            "oss_sustain_guard.commands.check.is_package_excluded", return_value=False
+        ):
             result = await analyze_package("requests", "python", cached_db)
             assert result is not None
             assert result.repo_url == "https://github.com/psf/requests"
@@ -97,7 +101,9 @@ class TestAnalyzePackage:
 
     async def test_analyze_unknown_ecosystem(self):
         """Test analyzing with unknown ecosystem."""
-        with patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False):
+        with patch(
+            "oss_sustain_guard.commands.check.is_package_excluded", return_value=False
+        ):
             result = await analyze_package("pkg", "unknown-eco", {})
             assert result is None
 
