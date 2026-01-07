@@ -12,12 +12,14 @@ class ExternalToolName(str, Enum):
     Each tool is associated with a specific ecosystem:
     - Python: uv
     - JavaScript: npm, pnpm, bun
+    - Rust: cargo
     """
 
     UV = "uv"
     NPM = "npm"
     PNPM = "pnpm"
     BUN = "bun"
+    CARGO = "cargo"
 
 
 __all__ = ["ExternalTool", "ExternalToolName"]

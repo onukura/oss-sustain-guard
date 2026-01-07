@@ -5,7 +5,10 @@ The `trace` command traces and visualizes your project's dependency network with
 ## Requirements
 
 - For lockfile mode: A lockfile (see [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) for formats)
-- For package mode: External tool installed (`uv` for Python)
+- For package mode: External tool installed
+  - Python: `uv`
+  - JavaScript: `npm`, `pnpm`, or `bun`
+  - Rust: `cargo`
 - GitHub/GitLab token (`GITHUB_TOKEN` or `GITLAB_TOKEN`)
 
 ## Basic Usage
@@ -43,9 +46,14 @@ os4g trace requests
 # Trace with specific version
 os4g trace requests --version 2.28.0
 
-# Trace from other ecosystems (future support)
+# Trace from other ecosystems
 os4g trace javascript:react
 os4g trace -e rust serde
+os4g trace lodash --ecosystem javascript --tool pnpm
+
+# Force specific package manager tool
+os4g trace requests --tool uv
+os4g trace serde --ecosystem rust --tool cargo
 ```
 
 ## HTML Output example
@@ -58,6 +66,7 @@ os4g trace -e rust serde
 |--------|-------------|
 | `--ecosystem`, `-e` | Package ecosystem (python, javascript, rust, etc.) - for package mode |
 | `--version`, `-V` | Package version (default: latest) - for package mode |
+| `--tool`, `-t` | Force specific package manager tool (uv, npm, pnpm, bun, cargo) - for package mode |
 | `--output`, `-o` | Output destination (default: terminal). Use file path for HTML/JSON export |
 | `--direct-only` | Direct dependencies only (exclude transitive) |
 | `--max-depth N` | Limit tree depth (1=direct, 2=direct+1st transitive, etc.) |
@@ -80,10 +89,13 @@ os4g trace uv.lock --scan-depth shallow --num-workers 3
 # Package mode (terminal output)
 os4g trace requests --max-depth 2
 os4g trace requests --version 2.28.0 --profile security_first
+os4g trace serde --ecosystem rust --max-depth 3
+os4g trace react --tool npm --max-depth 2
 
 # File output (HTML/JSON)
 os4g trace package.json --output deps.html --direct-only
 os4g trace requests --output analysis.json
+os4g trace tokio --ecosystem rust --output rust-deps.html
 ```
 
 ### Caching & Performance
