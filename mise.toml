@@ -1,0 +1,44 @@
+[tools]
+# C#
+dotnet = "10"
+# Dart
+dart = "3"
+# Elixir
+elixir = "1"
+# Go
+go = "25"
+# Haskell
+haskell = "9"
+cabal = "latest"
+stack = "3"
+# Java
+java = "17"
+maven = "3"
+# JavaScript
+node = "24"
+bun = "1"
+npm = "11"
+pnpm = "10"
+# Kotlin
+gradle = "9"
+# Perl
+perl = "5"
+# cpanm = "latest"  # Not found
+# PHP
+php = "8"
+# composer = "latest"
+# Python
+pipenv = "2026"
+poetry = "2"
+uv = "latest"
+# R
+r = "4"
+# Ruby
+ruby = "4"
+# Rust
+rust = "1"
+# Scala
+scala = "3"
+sbt = "1"
+# Swift
+swift = "6"
