@@ -23,6 +23,7 @@ from oss_sustain_guard.dependency_tree_resolver import (
     is_lockfile_path,
     resolve_dependency_tree,
 )
+from oss_sustain_guard.external_tools import ExternalToolName
 from oss_sustain_guard.http_client import close_async_http_client
 from oss_sustain_guard.visualization import (
     PlotlyVisualizer,
@@ -131,6 +132,13 @@ async def trace(
         "--days-lookback",
         help="Only analyze activity from the last N days (e.g., --days-lookback 90 for last 3 months). By default, analyzes all available data within sample limits.",
     ),
+    tool: ExternalToolName | None = typer.Option(
+        None,
+        "--tool",
+        "-t",
+        help="Force specific package manager tool (uv, npm, pnpm, bun). If not specified, auto-detects best available tool.",
+        case_sensitive=False,
+    ),
 ) -> None:
     """
     Trace and visualize package dependency trees.
@@ -157,6 +165,11 @@ async def trace(
         # Package mode with options
         os4g trace javascript:react --max-depth=2
         os4g trace -e rust serde --profile security_first
+
+        # Force specific tool
+        os4g trace requests --tool uv
+        os4g trace react --tool npm
+        os4g trace lodash --tool pnpm --ecosystem javascript
 
         # File output (HTML or JSON)
         os4g trace requests --output graph.html
@@ -233,6 +246,12 @@ async def trace(
     # DUAL MODE: Detect input type and resolve dependency graph
     if is_lockfile_path(input):
         # LOCKFILE MODE
+        # Warn if --tool is specified in lockfile mode (it only applies to package mode)
+        if tool:
+            console.print(
+                "[yellow]⚠️  --tool option is ignored in lockfile mode (only applies to package mode)[/yellow]"
+            )
+
         lockfile_path = Path(input)
         if not lockfile_path.exists():
             console.print(f"[red]Error: Lockfile not found: {lockfile_path}[/red]")
@@ -269,6 +288,7 @@ async def trace(
                 ecosystem=ecosystem,
                 version=version,
                 max_depth=max_depth,
+                tool_name=tool.value if tool else None,
             )
             console.print(
                 f"[cyan]Resolved {len(dep_graph.direct_dependencies)} direct and "

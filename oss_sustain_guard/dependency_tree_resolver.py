@@ -38,6 +38,7 @@ async def resolve_dependency_tree(
     ecosystem: str | None = None,
     version: str | None = None,
     max_depth: int | None = None,
+    tool_name: str | None = None,
 ) -> DependencyGraph:
     """Resolve dependency tree for a package using external tools.
 
@@ -47,13 +48,15 @@ async def resolve_dependency_tree(
                   If None, defaults to python
         version: Specific version to analyze (if None, uses latest)
         max_depth: Maximum depth to traverse (if None, unlimited)
+        tool_name: Specific tool to use (e.g., "npm", "pnpm", "uv").
+                  If None, uses auto-detection based on availability.
 
     Returns:
         DependencyGraph containing all resolved dependencies
 
     Raises:
         RuntimeError: If required tool is not installed
-        ValueError: If package not found or invalid
+        ValueError: If package not found, invalid, or tool_name incompatible with ecosystem
     """
     # Parse ecosystem:package format if ecosystem not explicitly provided
     if ecosystem is None:
@@ -66,7 +69,7 @@ async def resolve_dependency_tree(
     if ecosystem == "python":
         from oss_sustain_guard.external_tools.python_tools import get_python_tool
 
-        tool = get_python_tool()
+        tool = get_python_tool(preferred_tool=tool_name)
         if not tool.is_available():
             raise RuntimeError(
                 f"Required tool '{tool.name}' is not installed. "
@@ -80,7 +83,7 @@ async def resolve_dependency_tree(
             get_javascript_tool,
         )
 
-        tool = get_javascript_tool()
+        tool = get_javascript_tool(preferred_tool=tool_name)
         if not tool.is_available():
             raise RuntimeError(
                 f"Required tool '{tool.name}' is not installed. "

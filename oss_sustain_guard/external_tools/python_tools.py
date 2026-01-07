@@ -122,17 +122,48 @@ dependencies = [
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def get_python_tool() -> ExternalTool:
+def get_python_tool(preferred_tool: str | None = None) -> ExternalTool:
     """Get the best available Python dependency resolution tool.
 
-    Returns:
-        ExternalTool instance (currently only UvTreeTool)
+    Args:
+        preferred_tool: Optional tool name to prefer (e.g., "uv").
+                       If specified and available, returns that tool.
+                       If specified but not available, raises RuntimeError.
+                       If None, uses auto-detection.
 
-    Priority order:
+    Returns:
+        ExternalTool instance
+
+    Raises:
+        RuntimeError: If preferred_tool is specified but not available
+        ValueError: If preferred_tool is not a valid Python tool
+
+    Priority order (when preferred_tool is None):
         1. uv (fast and modern)
         2. (future: pip, pipdeptree, etc.)
     """
-    # Try uv first
+    # Map of tool names to tool classes
+    PYTHON_TOOLS = {
+        "uv": UvTreeTool,
+    }
+
+    # If user specified a preferred tool
+    if preferred_tool:
+        if preferred_tool not in PYTHON_TOOLS:
+            raise ValueError(
+                f"Tool '{preferred_tool}' is not available for python ecosystem. "
+                f"Available tools: {', '.join(PYTHON_TOOLS.keys())}"
+            )
+
+        tool = PYTHON_TOOLS[preferred_tool]()
+        if not tool.is_available():
+            raise RuntimeError(
+                f"Required tool '{preferred_tool}' is not installed. "
+                f"Please install it to trace python packages."
+            )
+        return tool
+
+    # Auto-detection: Try uv first
     uv_tool = UvTreeTool()
     if uv_tool.is_available():
         return uv_tool

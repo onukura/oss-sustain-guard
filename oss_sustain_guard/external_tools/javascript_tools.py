@@ -357,18 +357,51 @@ class NpmTreeTool(ExternalTool):
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def get_javascript_tool() -> ExternalTool:
+def get_javascript_tool(preferred_tool: str | None = None) -> ExternalTool:
     """Get the best available JavaScript dependency resolution tool.
+
+    Args:
+        preferred_tool: Optional tool name to prefer (e.g., "npm", "pnpm", "bun").
+                       If specified and available, returns that tool.
+                       If specified but not available, raises RuntimeError.
+                       If None, uses auto-detection.
 
     Returns:
         ExternalTool instance
 
-    Priority order:
+    Raises:
+        RuntimeError: If preferred_tool is specified but not available
+        ValueError: If preferred_tool is not a valid JavaScript tool
+
+    Priority order (when preferred_tool is None):
         1. pnpm (mature and fast)
         2. bun (fastest but newer)
         3. npm (standard fallback)
     """
-    # Try pnpm first (best balance of speed and maturity)
+    # Map of tool names to tool classes
+    JAVASCRIPT_TOOLS = {
+        "npm": NpmTreeTool,
+        "pnpm": PnpmTreeTool,
+        "bun": BunTreeTool,
+    }
+
+    # If user specified a preferred tool
+    if preferred_tool:
+        if preferred_tool not in JAVASCRIPT_TOOLS:
+            raise ValueError(
+                f"Tool '{preferred_tool}' is not available for javascript ecosystem. "
+                f"Available tools: {', '.join(JAVASCRIPT_TOOLS.keys())}"
+            )
+
+        tool = JAVASCRIPT_TOOLS[preferred_tool]()
+        if not tool.is_available():
+            raise RuntimeError(
+                f"Required tool '{preferred_tool}' is not installed. "
+                f"Please install it to trace javascript packages."
+            )
+        return tool
+
+    # Auto-detection: Try pnpm first (best balance of speed and maturity)
     pnpm_tool = PnpmTreeTool()
     if pnpm_tool.is_available():
         return pnpm_tool
