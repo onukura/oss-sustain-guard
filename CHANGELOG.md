@@ -4,16 +4,31 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
-### Breaking Changes
+## v0.23.0 - 2026-01-08
 
-- **Removed `--show-dependencies` option from `check` command**: This experimental option provided limited dependency statistics (average, min, max, count only). Use the `trace` command instead for comprehensive dependency tree analysis and visualization with full tree structure, individual package scores, and flexible output formats (terminal, HTML, JSON).
+### Added
 
-  **Migration**: Replace `os4g check <package> --show-dependencies` with `os4g trace <package>`.
+- **Ruby (Bundler) support for dependency tracing**: Extended `trace` command to analyze Ruby gem dependencies using Bundler, enabling comprehensive dependency tree visualization for Ruby projects alongside existing Python, JavaScript, and Rust support
+- **Rust (Cargo) support for dependency tracing**: Added full Rust package manager integration for the `trace` command to visualize and analyze Cargo dependencies with performance optimization through deduplication
+- **Package manager tool selection option**: New `--tool` parameter for `trace` command to explicitly specify external package manager tools (e.g., `uv`, `npm`, `pnpm`, `bun`), improving flexibility and control for users with multiple tooling environments
+- **Centralized tool version configuration**: Moved language tool versions from individual fixture files to central `mise.toml` configuration, simplifying management and ensuring consistency across test environments
+
+### Improved
+
+- **Dependency tracing performance**: Eliminated duplicate repository analysis in trace command by deduplicating resolved repositories, significantly reducing API calls and "Analyzing..." messages when different package names resolve to the same GitHub repository
+- **Terminal UI simplification**: Removed HTML/JSON output support from `trace` command to focus on terminal-based visualization, streamlining the feature and aligning with primary use cases
+- **Configuration management**: Consolidated tool configuration for cleaner project structure and easier maintenance
 
 ### Fixed
 
-- **Duplicate repository analysis in trace command**: Fixed issue where the same repository was analyzed multiple times when different package names (e.g., `esbuild`, `@esbuild/linux-x64`, `@esbuild/darwin-arm64`) resolved to the same GitHub repository. The `trace` command now deduplicates by resolved repository URL, significantly improving performance and eliminating redundant "Analyzing..." messages.
-- **Test script compatibility**: Updated `test_all_commands.sh` to use `uv run --directory` for proper execution from any working directory and corrected lockfile references to use absolute paths and proper lockfile names (`package-lock.json`, `Cargo.lock`).
+- **Test script compatibility**: Updated `test_all_commands.sh` to use `uv run --directory` for proper execution from any working directory and corrected lockfile references to use absolute paths and proper lockfile names (`package-lock.json`, `Cargo.lock`)
+- **Dependency analysis documentation**: Updated guides to reflect removal of HTML/JSON output and clarify terminal-only visualization approach
+
+### Breaking Changes
+
+- **Removed `--show-dependencies` option from `check` command**: This experimental option provided limited dependency statistics (average, min, max, count only). Use the `trace` command instead for comprehensive dependency tree analysis and visualization with full tree structure, individual package scores, and flexible visualization.
+
+  **Migration**: Replace `os4g check <package> --show-dependencies` with `os4g trace <package>`.
 
 ## v0.22.0 - 2026-01-06
 
