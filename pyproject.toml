@@ -31,7 +31,6 @@ dependencies = [
     "pyyaml>=6.0",
     "aiofiles>=25.1.0",
     "networkx>=3.0",
-    "plotly>=6.5.0",
     "scipy>=1.15.3",
 ]
 

@@ -8,7 +8,7 @@ import pytest
 
 from oss_sustain_guard.core import AnalysisResult, Metric
 from oss_sustain_guard.dependency_graph import DependencyGraph, DependencyInfo
-from oss_sustain_guard.visualization import PlotlyVisualizer, build_networkx_graph
+from oss_sustain_guard.visualization import build_networkx_graph
 
 
 @pytest.fixture
@@ -110,70 +110,3 @@ def test_build_networkx_graph(sample_dep_graph: DependencyGraph, sample_scores: 
     assert urllib3_node["score"] == 0
     assert urllib3_node["health_status"] == "unknown"
 
-
-def test_plotly_visualizer_export_json(
-    sample_dep_graph: DependencyGraph,
-    sample_scores: dict,
-    tmp_path: Path,
-):
-    """Test exporting graph as JSON."""
-    graph = build_networkx_graph(sample_dep_graph, sample_scores)
-    visualizer = PlotlyVisualizer(graph)
-
-    output_file = tmp_path / "test_graph.json"
-    visualizer.export_json(output_file)
-
-    assert output_file.exists()
-
-    with open(output_file) as f:
-        data = json.load(f)
-
-    assert "nodes" in data
-    assert "edges" in data
-    assert "stats" in data
-
-    assert len(data["nodes"]) == 3
-    assert data["stats"]["total_nodes"] == 3
-
-    # Check node structure
-    requests_node = next(n for n in data["nodes"] if n["id"] == "requests")
-    assert requests_node["score"] == 85
-    assert requests_node["health_status"] == "healthy"
-
-
-def test_plotly_visualizer_health_distribution(
-    sample_dep_graph: DependencyGraph,
-    sample_scores: dict,
-):
-    """Test health status distribution calculation."""
-    graph = build_networkx_graph(sample_dep_graph, sample_scores)
-    visualizer = PlotlyVisualizer(graph)
-
-    distribution = visualizer._get_health_distribution()
-
-    assert distribution["healthy"] == 1
-    assert distribution["monitor"] == 1
-    assert distribution["unknown"] == 1
-    assert distribution["needs_attention"] == 0
-
-
-def test_plotly_visualizer_export_html(
-    sample_dep_graph: DependencyGraph,
-    sample_scores: dict,
-    tmp_path: Path,
-):
-    """Test exporting graph as interactive HTML."""
-    graph = build_networkx_graph(sample_dep_graph, sample_scores)
-    visualizer = PlotlyVisualizer(graph)
-
-    output_file = tmp_path / "test_graph.html"
-    visualizer.export_html(output_file)
-
-    assert output_file.exists()
-    assert output_file.stat().st_size > 0
-
-    # Check HTML content contains expected elements
-    content = output_file.read_text()
-    assert "plotly" in content.lower()
-    assert "requests" in content
-    assert "django" in content
