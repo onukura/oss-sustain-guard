@@ -1,6 +1,6 @@
 # Dependency Tracing and Visualization Guide
 
-The `trace` command traces and visualizes your project's dependency network with health scores. Displays in terminal by default for quick checks.
+The `trace` command traces and visualizes your project's dependency network with health scores in terminal.
 
 ## Requirements
 
@@ -9,17 +9,18 @@ The `trace` command traces and visualizes your project's dependency network with
   - Python: `uv`
   - JavaScript: `npm`, `pnpm`, or `bun`
   - Rust: `cargo`
+  - Ruby: `bundler`
 - GitHub/GitLab token (`GITHUB_TOKEN` or `GITLAB_TOKEN`)
 
 ## Basic Usage
 
-### Quick Start (Terminal Output)
+### Quick Start
 
 ```bash
-# Trace a package - shows in terminal
+# Trace a package
 os4g trace requests
 
-# Trace from lockfile - shows in terminal
+# Trace from lockfile
 os4g trace uv.lock
 os4g trace package.json
 ```
@@ -27,14 +28,10 @@ os4g trace package.json
 ### Lockfile Mode
 
 ```bash
-# Terminal output (default)
+# Trace lockfile dependencies
 os4g trace package-lock.json
-
-# Save to HTML for sharing
-os4g trace uv.lock --output deps.html
-
-# Export to JSON
-os4g trace Cargo.lock --output deps.json
+os4g trace uv.lock
+os4g trace Cargo.lock
 ```
 
 ### Package Mode
@@ -49,25 +46,22 @@ os4g trace requests --version 2.28.0
 # Trace from other ecosystems
 os4g trace javascript:react
 os4g trace -e rust serde
+os4g trace -e ruby rails
 os4g trace lodash --ecosystem javascript --tool pnpm
 
 # Force specific package manager tool
 os4g trace requests --tool uv
 os4g trace serde --ecosystem rust --tool cargo
+os4g trace rails --ecosystem ruby --tool bundler
 ```
-
-## HTML Output example
-
-![HTML Output](assets/dep_graph_html_example.png)
 
 ## Options
 
 | Option | Description |
 |--------|-------------|
-| `--ecosystem`, `-e` | Package ecosystem (python, javascript, rust, etc.) - for package mode |
+| `--ecosystem`, `-e` | Package ecosystem (python, javascript, rust, ruby, etc.) - for package mode |
 | `--version`, `-V` | Package version (default: latest) - for package mode |
-| `--tool`, `-t` | Force specific package manager tool (uv, npm, pnpm, bun, cargo) - for package mode |
-| `--output`, `-o` | Output destination (default: terminal). Use file path for HTML/JSON export |
+| `--tool`, `-t` | Force specific package manager tool (uv, npm, pnpm, bun, cargo, bundler) - for package mode |
 | `--direct-only` | Direct dependencies only (exclude transitive) |
 | `--max-depth N` | Limit tree depth (1=direct, 2=direct+1st transitive, etc.) |
 | `--profile` | Scoring profile: `balanced`, `security_first`, `contributor_experience`, `long_term_stability` |
@@ -81,21 +75,17 @@ os4g trace serde --ecosystem rust --tool cargo
 **Examples:**
 
 ```bash
-# Terminal output (default)
+# Lockfile mode
 os4g trace package.json --direct-only
 os4g trace Cargo.lock --max-depth 2 --profile security_first
 os4g trace uv.lock --scan-depth shallow --num-workers 3
 
-# Package mode (terminal output)
+# Package mode
 os4g trace requests --max-depth 2
 os4g trace requests --version 2.28.0 --profile security_first
 os4g trace serde --ecosystem rust --max-depth 3
+os4g trace rails --ecosystem ruby --max-depth 2
 os4g trace react --tool npm --max-depth 2
-
-# File output (HTML/JSON)
-os4g trace package.json --output deps.html --direct-only
-os4g trace requests --output analysis.json
-os4g trace tokio --ecosystem rust --output rust-deps.html
 ```
 
 ### Caching & Performance
@@ -171,14 +161,14 @@ os4g trace Cargo.lock --verbose
 os4g trace package-lock.json --num-workers 10
 ```
 
-## Output Formats
+## Output Format
 
-### Terminal (Default)
+### Terminal Tree Display
 
 Tree display directly in your terminal - fast and convenient!
 
 ```bash
-# Just run trace - displays in terminal
+# Trace and display dependencies
 os4g trace requests
 os4g trace uv.lock
 ```
@@ -189,7 +179,7 @@ Features:
 - 🌳 Tree structure showing dependency relationships
 - 📊 Scores displayed inline
 - ⭐ Direct dependencies marked with *
-- ⚡ No need to open browser!
+- ⚡ Quick and easy to read
 
 Example output:
 
@@ -204,27 +194,6 @@ temp-os4g-trace 0.1.0 *
     ├── charset-normalizer 3.4.4 (score: 73) *
     ├── idna 3.11 (score: 53) *
     └── urllib3 2.6.2 (score: 76) *
-```
-
-### HTML (For Sharing)
-
-Interactive visualization for sharing with team members:
-
-```bash
-os4g trace requests --output graph.html
-os4g trace package.json --output deps.html
-```
-
-- 🟢 Green (≥80): Healthy
-- 🟡 Yellow (50-79): Monitor
-- 🔴 Red (<50): Needs support
-
-### JSON (For Integration)
-
-Export data for integration with other tools:
-
-```bash
-os4g trace package.json --output deps.json
 ```
 
 ## Interpreting Results

@@ -13,6 +13,7 @@ class ExternalToolName(str, Enum):
     - Python: uv
     - JavaScript: npm, pnpm, bun
     - Rust: cargo
+    - Ruby: bundler
     """
 
     UV = "uv"
@@ -20,6 +21,7 @@ class ExternalToolName(str, Enum):
     PNPM = "pnpm"
     BUN = "bun"
     CARGO = "cargo"
+    BUNDLER = "bundler"
 
 
 __all__ = ["ExternalTool", "ExternalToolName"]

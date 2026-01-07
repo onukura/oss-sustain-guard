@@ -104,9 +104,21 @@ async def resolve_dependency_tree(
 
         return await tool.resolve_tree(package_name, version)
 
+    elif ecosystem == "ruby":
+        from oss_sustain_guard.external_tools.ruby_tools import get_ruby_tool
+
+        tool = get_ruby_tool(preferred_tool=tool_name)
+        if not tool.is_available():
+            raise RuntimeError(
+                f"Required tool '{tool.name}' is not installed. "
+                f"Please install bundler to trace {ecosystem} packages."
+            )
+
+        return await tool.resolve_tree(package_name, version)
+
     else:
         raise NotImplementedError(
             f"Package mode is not yet implemented for {ecosystem} ecosystem. "
-            f"Currently supported: Python, JavaScript, Rust. "
+            f"Currently supported: Python, JavaScript, Rust, Ruby. "
             f"For other ecosystems, please use lockfile mode: os4g trace <lockfile>"
         )
