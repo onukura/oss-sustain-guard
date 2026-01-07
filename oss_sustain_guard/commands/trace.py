@@ -26,7 +26,6 @@ from oss_sustain_guard.dependency_tree_resolver import (
 from oss_sustain_guard.external_tools import ExternalToolName
 from oss_sustain_guard.http_client import close_async_http_client
 from oss_sustain_guard.visualization import (
-    PlotlyVisualizer,
     TerminalTreeVisualizer,
     build_networkx_graph,
 )
@@ -52,12 +51,6 @@ async def trace(
         "--version",
         "-V",
         help="Package version to trace (default: latest) - for package mode only",
-    ),
-    output: str = typer.Option(
-        "-",
-        "--output",
-        "-o",
-        help="Output destination: '-' for terminal (default), or file path for HTML/JSON",
     ),
     profile: str = typer.Option(
         "balanced",
@@ -141,19 +134,17 @@ async def trace(
     ),
 ) -> None:
     """
-    Trace and visualize package dependency trees.
+    Trace and visualize package dependency trees in terminal.
 
     Supports two modes:
     1. Lockfile mode: Analyze existing lockfiles (requirements.txt, package.json, etc.)
     2. Package mode: Resolve dependencies for a specific package name
 
-    Output formats:
-    - Terminal (default): Color-coded tree in terminal
-    - HTML: Interactive visualization (use --output file.html)
-    - JSON: Export for integration (use --output file.json)
+    Output:
+    - Terminal tree with color-coded health scores
 
     Examples:
-        # Terminal output (default)
+        # Basic usage
         os4g trace requests
         os4g trace uv.lock
         os4g trace requests --version 2.28.0
@@ -170,10 +161,6 @@ async def trace(
         os4g trace requests --tool uv
         os4g trace react --tool npm
         os4g trace lodash --tool pnpm --ecosystem javascript
-
-        # File output (HTML or JSON)
-        os4g trace requests --output graph.html
-        os4g trace uv.lock --output deps.json
     """
     # Apply config defaults if not specified via CLI
     if verbose is None:
@@ -342,31 +329,9 @@ async def trace(
         dep_graph, scores, direct_only=direct_only, max_depth=max_depth
     )
 
-    # Export based on output format
-    if output == "-" or output.lower() == "terminal":
-        # Terminal output
-        terminal_viz = TerminalTreeVisualizer(nx_graph)
-        terminal_viz.display()
-    else:
-        # File output (HTML or JSON)
-        output_path = Path(output)
-        visualizer = PlotlyVisualizer(nx_graph)
-
-        if str(output_path).endswith(".json"):
-            visualizer.export_json(output_path)
-            console.print(f"[green]Graph exported to: {output_path}[/green]")
-        else:
-            visualizer.export_html(output_path)
-            console.print(
-                f"[green]Interactive graph exported to: {output_path}[/green]"
-            )
-
-        # Print summary statistics for file output
-        stats = visualizer._get_health_distribution()
-        console.print("\n[bold cyan]Health Distribution:[/bold cyan]")
-        for status, count in stats.items():
-            if count > 0:
-                console.print(f"  {status}: {count}")
+    # Display in terminal
+    terminal_viz = TerminalTreeVisualizer(nx_graph)
+    terminal_viz.display()
 
     # Clean up HTTP clients
     await close_async_http_client()

@@ -57,14 +57,10 @@ os4g trace package.json
 ### Lockfile Mode
 
 ```bash
-# Terminal output (default)
+# Trace lockfile dependencies
 os4g trace package-lock.json
-
-# Save to HTML for sharing
-os4g trace uv.lock --output deps.html
-
-# Export to JSON
-os4g trace Cargo.lock --output deps.json
+os4g trace uv.lock
+os4g trace Cargo.lock
 
 # Direct dependencies only
 os4g trace requirements.txt --direct-only
@@ -88,19 +84,6 @@ os4g trace -e rust serde
 
 # Limit to direct dependencies
 os4g trace requests --max-depth 1
-```
-
-### Output Formats
-
-```bash
-# Terminal (default)
-os4g trace requests
-
-# HTML (interactive visualization)
-os4g trace requests --output graph.html
-
-# JSON (for integration)
-os4g trace requests --output deps.json
 ```
 
 ### Advanced Options
