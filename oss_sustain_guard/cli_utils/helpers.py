@@ -1,7 +1,6 @@
 """Helper functions for CLI commands."""
 
 import asyncio
-from collections import Counter
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -135,24 +134,6 @@ def _dedupe_packages(
         seen.add(key)
         unique_packages.append((eco, pkg))
     return unique_packages
-
-
-def _build_dependency_summary(
-    direct_packages: list[tuple[str, str]],
-    results_map: dict[tuple[str, str], AnalysisResult],
-) -> dict[str, int]:
-    """Build a dependency score summary for direct dependencies."""
-    name_counts = Counter(pkg for _eco, pkg in direct_packages)
-    summary: dict[str, int] = {}
-
-    for eco, pkg in direct_packages:
-        result = results_map.get((eco, pkg))
-        if not result:
-            continue
-        display_name = f"{eco}:{pkg}" if name_counts[pkg] > 1 else pkg
-        summary[display_name] = result.total_score
-
-    return summary
 
 
 def _coerce_int(value: Any, default: int = 0) -> int:

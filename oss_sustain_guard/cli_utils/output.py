@@ -23,7 +23,6 @@ def _write_json_results(
     results: list[AnalysisResult],
     profile: str,
     output_file: Path | None,
-    dependency_summary: dict[str, int] | None = None,
     demo_notice: str | None = None,
 ) -> None:
     """Write results as JSON to stdout or a file."""
@@ -73,8 +72,6 @@ def _write_json_results(
         "summary": _build_summary(results),
         "results": results_with_lfx,
     }
-    if dependency_summary:
-        payload["dependency_summary"] = dependency_summary
     if demo_notice:
         payload["demo"] = True
         payload["demo_notice"] = demo_notice
@@ -90,7 +87,6 @@ def _write_json_results(
 def _render_html_report(
     results: list[AnalysisResult],
     profile: str,
-    dependency_summary: dict[str, int] | None = None,
     demo_notice: str | None = None,
 ) -> str:
     """Render HTML report from template and results."""
@@ -172,8 +168,6 @@ def _render_html_report(
         "summary": summary,
         "results": [analysis_result_to_dict(result) for result in results],
     }
-    if dependency_summary:
-        json_payload["dependency_summary"] = dependency_summary
     json_payload = json.dumps(
         json_payload,
         ensure_ascii=False,
@@ -197,7 +191,6 @@ def _write_html_results(
     results: list[AnalysisResult],
     profile: str,
     output_file: Path | None,
-    dependency_summary: dict[str, int] | None = None,
     demo_notice: str | None = None,
 ) -> None:
     """Write results as HTML to a file."""
@@ -207,8 +200,6 @@ def _write_html_results(
         raise IsADirectoryError(f"Output path is a directory: {output_path}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    html_text = _render_html_report(
-        results, profile, dependency_summary, demo_notice=demo_notice
-    )
+    html_text = _render_html_report(results, profile, demo_notice=demo_notice)
     output_path.write_text(html_text, encoding="utf-8")
     console.print(f"[green]✅ HTML report saved to {output_path}[/green]")

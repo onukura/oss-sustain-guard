@@ -11,6 +11,7 @@ The `trace` command traces and visualizes your project's dependency network with
 ## Basic Usage
 
 ### Quick Start (Terminal Output)
+
 ```bash
 # Trace a package - shows in terminal
 os4g trace requests
@@ -21,6 +22,7 @@ os4g trace package.json
 ```
 
 ### Lockfile Mode
+
 ```bash
 # Terminal output (default)
 os4g trace package-lock.json
@@ -33,6 +35,7 @@ os4g trace Cargo.lock --output deps.json
 ```
 
 ### Package Mode
+
 ```bash
 # Trace a specific package (Python default)
 os4g trace requests
@@ -169,6 +172,7 @@ os4g trace uv.lock
 ```
 
 Features:
+
 - 🎨 Color-coded packages (green/yellow/red based on scores)
 - 🌳 Tree structure showing dependency relationships
 - 📊 Scores displayed inline
@@ -176,6 +180,7 @@ Features:
 - ⚡ No need to open browser!
 
 Example output:
+
 ```
 Dependency Tree:
 Total: 6 packages | Healthy: 1 | Monitor: 4 | Needs attention: 0 | Unknown: 1
@@ -228,7 +233,7 @@ For security-focused analysis, use `--profile security_first`. For contributor e
 
 ## See Also
 
-- [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) - Using `--show-dependencies` flag
+- [Dependency Analysis Guide](DEPENDENCY_ANALYSIS_GUIDE.md) - Migration from `--show-dependencies` and comprehensive usage
 - [Scoring Profiles Guide](SCORING_PROFILES_GUIDE.md) - Custom scoring
 - [Caching Guide](CACHING_GUIDE.md) - Performance optimization
 
@@ -253,6 +258,7 @@ The `trace` command automatically detects the mode based on input:
 - **Package mode**: Otherwise, treated as package name
 
 Examples:
+
 ```bash
 os4g trace requirements.txt    # → Lockfile mode (file exists)
 os4g trace requests             # → Package mode (not a file)

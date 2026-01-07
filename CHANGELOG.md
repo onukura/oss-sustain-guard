@@ -4,6 +4,17 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+### Breaking Changes
+
+- **Removed `--show-dependencies` option from `check` command**: This experimental option provided limited dependency statistics (average, min, max, count only). Use the `trace` command instead for comprehensive dependency tree analysis and visualization with full tree structure, individual package scores, and flexible output formats (terminal, HTML, JSON).
+
+  **Migration**: Replace `os4g check <package> --show-dependencies` with `os4g trace <package>`.
+
+### Fixed
+
+- **Duplicate repository analysis in trace command**: Fixed issue where the same repository was analyzed multiple times when different package names (e.g., `esbuild`, `@esbuild/linux-x64`, `@esbuild/darwin-arm64`) resolved to the same GitHub repository. The `trace` command now deduplicates by resolved repository URL, significantly improving performance and eliminating redundant "Analyzing..." messages.
+- **Test script compatibility**: Updated `test_all_commands.sh` to use `uv run --directory` for proper execution from any working directory and corrected lockfile references to use absolute paths and proper lockfile names (`package-lock.json`, `Cargo.lock`).
+
 ## v0.22.0 - 2026-01-06
 
 ### Added

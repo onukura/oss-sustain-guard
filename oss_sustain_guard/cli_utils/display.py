@@ -19,8 +19,6 @@ from .helpers import _summarize_observations
 
 def display_results_compact(
     results: list[AnalysisResult],
-    show_dependencies: bool = False,
-    dependency_summary: dict[str, int] | None = None,
 ):
     """Display analysis results in compact format (CI/CD-friendly)."""
     for result in results:
@@ -58,33 +56,10 @@ def display_results_compact(
                 f"{status}"
             )
 
-        # Show dependency scores summary if available and requested
-        if show_dependencies and result.dependency_scores:
-            scores = list(result.dependency_scores.values())
-            if scores:
-                avg_score = sum(scores) / len(scores)
-                min_score = min(scores)
-                max_score = max(scores)
-                console.print(
-                    f"  🔗 Dependencies: avg={avg_score:.0f}, min={min_score}, max={max_score}, count={len(scores)}"
-                )
-
-    if dependency_summary:
-        scores = list(dependency_summary.values())
-        if scores:
-            avg_score = sum(scores) / len(scores)
-            min_score = min(scores)
-            max_score = max(scores)
-            console.print(
-                f"🔗 Dependencies: avg={avg_score:.0f}, min={min_score}, max={max_score}, count={len(scores)}"
-            )
-
 
 def display_results_table(
     results: list[AnalysisResult],
     show_models: bool = False,
-    show_dependencies: bool = False,
-    dependency_summary: dict[str, int] | None = None,
 ):
     """Display the analysis results in a rich table."""
     table = Table(title="OSS Sustain Guard Report")
@@ -163,63 +138,6 @@ def display_results_table(
                 url = link.get("url", "")
                 console.print(f"   • {platform}: [link={url}]{url}[/link]")
 
-    # Display dependency scores if available and requested
-    if show_dependencies:
-        for result in results:
-            if result.dependency_scores:
-                console.print(
-                    f"\n🔗 [bold cyan]{result.repo_url.replace('https://github.com/', '')}[/bold cyan] "
-                    f"- Dependency Reference Scores (Top 10):"
-                )
-                # Sort by score descending
-                sorted_deps = sorted(
-                    result.dependency_scores.items(), key=lambda x: x[1], reverse=True
-                )
-                for dep_name, dep_score in sorted_deps[:10]:
-                    if dep_score >= 80:
-                        health = "[green]✓ Healthy[/green]"
-                    elif dep_score >= 50:
-                        health = "[yellow]⚠ Monitor[/yellow]"
-                    else:
-                        health = "[red]✗ Needs support[/red]"
-                    score_color = (
-                        "green"
-                        if dep_score >= 80
-                        else ("yellow" if dep_score >= 50 else "red")
-                    )
-                    console.print(
-                        f"   • [{score_color}]{dep_name}[/{score_color}] "
-                        f"[{score_color}]{dep_score}/100[/{score_color}] {health}"
-                    )
-                if len(result.dependency_scores) > 10:
-                    console.print(
-                        f"   [dim]... and {len(result.dependency_scores) - 10} more dependencies[/dim]"
-                    )
-
-    if dependency_summary:
-        console.print("\n🔗 Dependency Reference Scores (Top 10):")
-        sorted_deps = sorted(
-            dependency_summary.items(), key=lambda x: x[1], reverse=True
-        )
-        for dep_name, dep_score in sorted_deps[:10]:
-            if dep_score >= 80:
-                health = "[green]✓ Healthy[/green]"
-            elif dep_score >= 50:
-                health = "[yellow]⚠ Monitor[/yellow]"
-            else:
-                health = "[red]✗ Needs support[/red]"
-            score_color = (
-                "green" if dep_score >= 80 else ("yellow" if dep_score >= 50 else "red")
-            )
-            console.print(
-                f"   • [{score_color}]{dep_name}[/{score_color}] "
-                f"[{score_color}]{dep_score}/100[/{score_color}] {health}"
-            )
-        if len(dependency_summary) > 10:
-            console.print(
-                f"   [dim]... and {len(dependency_summary) - 10} more dependencies[/dim]"
-            )
-
     # Display CHAOSS metric models if available and requested
     if show_models:
         for result in results:
@@ -253,12 +171,10 @@ def display_results_table(
 def display_results(
     results: list[AnalysisResult],
     show_models: bool = False,
-    show_dependencies: bool = False,
     output_format: str = "terminal",
     output_file: Path | None = None,
     output_style: str = "normal",
     profile: str = "balanced",
-    dependency_summary: dict[str, int] | None = None,
     demo_notice: str | None = None,
 ) -> None:
     """Display or export analysis results by format."""
@@ -269,7 +185,6 @@ def display_results(
                     results,
                     profile,
                     output_file,
-                    dependency_summary=dependency_summary,
                     demo_notice=demo_notice,
                 )
             else:
@@ -277,7 +192,6 @@ def display_results(
                     results,
                     profile,
                     output_file,
-                    dependency_summary=dependency_summary,
                     demo_notice=demo_notice,
                 )
         except (FileNotFoundError, IsADirectoryError, OSError) as exc:
@@ -291,8 +205,6 @@ def display_results(
     if output_style == "compact":
         display_results_compact(
             results,
-            show_dependencies=show_dependencies,
-            dependency_summary=dependency_summary,
         )
     elif output_style == "detail":
         display_results_detailed(
@@ -300,14 +212,11 @@ def display_results(
             show_signals=True,
             show_models=show_models,
             profile=profile,
-            dependency_summary=dependency_summary,
         )
     else:
         display_results_table(
             results,
             show_models=show_models,
-            show_dependencies=show_dependencies,
-            dependency_summary=dependency_summary,
         )
 
 
@@ -316,7 +225,6 @@ def display_results_detailed(
     show_signals: bool = False,
     show_models: bool = False,
     profile: str = "balanced",
-    dependency_summary: dict[str, int] | None = None,
 ):
     """Display detailed analysis results with all metrics for each package."""
     # Get weights for current profile
@@ -510,83 +418,3 @@ def display_results_detailed(
                 signals_table.add_row(signal_name, str(signal_value))
 
             console.print(signals_table)
-
-        # Display dependency scores if available
-        if result.dependency_scores:
-            console.print(
-                "\n   🔗 [bold magenta]Dependency Reference Scores:[/bold magenta]"
-            )
-            deps_table = Table(show_header=True, header_style="bold cyan")
-            deps_table.add_column("Package", style="cyan", no_wrap=True)
-            deps_table.add_column("Score", justify="center", style="magenta")
-            deps_table.add_column("Health", justify="left")
-
-            # Sort by score descending
-            sorted_deps = sorted(
-                result.dependency_scores.items(), key=lambda x: x[1], reverse=True
-            )
-            for dep_name, dep_score in sorted_deps[:15]:  # Show top 15 dependencies
-                if dep_score >= 80:
-                    health = "[green]Healthy[/green]"
-                elif dep_score >= 50:
-                    health = "[yellow]Monitor[/yellow]"
-                else:
-                    health = "[red]Needs support[/red]"
-
-                score_color = (
-                    "green"
-                    if dep_score >= 80
-                    else ("yellow" if dep_score >= 50 else "red")
-                )
-                deps_table.add_row(
-                    dep_name,
-                    f"[{score_color}]{dep_score}/100[/{score_color}]",
-                    health,
-                )
-
-            if len(result.dependency_scores) > 15:
-                deps_table.add_row(
-                    f"[dim]... and {len(result.dependency_scores) - 15} more[/dim]",
-                    "",
-                    "",
-                )
-
-            console.print(deps_table)
-
-    if dependency_summary:
-        console.print(
-            "\n🔗 [bold magenta]Dependency Reference Scores (Top 15):[/bold magenta]"
-        )
-        deps_table = Table(show_header=True, header_style="bold cyan")
-        deps_table.add_column("Package", style="cyan", no_wrap=True)
-        deps_table.add_column("Score", justify="center", style="magenta")
-        deps_table.add_column("Health", justify="left")
-
-        sorted_deps = sorted(
-            dependency_summary.items(), key=lambda x: x[1], reverse=True
-        )
-        for dep_name, dep_score in sorted_deps[:15]:
-            if dep_score >= 80:
-                health = "[green]Healthy[/green]"
-            elif dep_score >= 50:
-                health = "[yellow]Monitor[/yellow]"
-            else:
-                health = "[red]Needs support[/red]"
-
-            score_color = (
-                "green" if dep_score >= 80 else ("yellow" if dep_score >= 50 else "red")
-            )
-            deps_table.add_row(
-                dep_name,
-                f"[{score_color}]{dep_score}/100[/{score_color}]",
-                health,
-            )
-
-        if len(dependency_summary) > 15:
-            deps_table.add_row(
-                f"[dim]... and {len(dependency_summary) - 15} more[/dim]",
-                "",
-                "",
-            )
-
-        console.print(deps_table)

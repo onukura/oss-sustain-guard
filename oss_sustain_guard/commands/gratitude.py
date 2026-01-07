@@ -283,19 +283,21 @@ async def batch_analyze_packages(
     results: dict[str, AnalysisResult | None] = {}
 
     # Build package data list with (ecosystem, package_name) tuples
-    packages_data: list[tuple[str, str]] = []
+    # Use dict to deduplicate while preserving order
+    packages_dict: dict[tuple[str, str], str] = {}
     for pkg_name in packages:
         # Parse package specification to get ecosystem
         ecosystem, package = parse_package_spec(pkg_name)
-        packages_data.append((ecosystem, package))
+        packages_dict[(ecosystem, package)] = pkg_name
+
+    # Extract unique package tuples
+    packages_data: list[tuple[str, str]] = list(packages_dict.keys())
 
     # Use the parallel analysis function from check command
     analyzed_results, _ = await analyze_packages_parallel(
         packages_data,
         db,
         profile=profile,
-        show_dependencies=False,
-        lockfile_path=None,
         verbose=verbose,
         use_local_cache=use_local_cache,
         max_workers=max_workers,

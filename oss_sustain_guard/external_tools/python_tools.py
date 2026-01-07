@@ -32,6 +32,9 @@ class UvTreeTool(ExternalTool):
         Creates a temporary pyproject.toml, runs uv lock to generate uv.lock,
         then parses the lockfile to extract dependency information.
 
+        Note: Unlike JavaScript package managers, uv lock only generates a lockfile
+        without installing packages, making it much more storage-efficient.
+
         Args:
             package: Package name to resolve
             version: Optional specific version (if None, uses latest)
@@ -44,7 +47,7 @@ class UvTreeTool(ExternalTool):
             ValueError: If package is invalid or not found
         """
         # Create temporary directory
-        temp_dir = Path(tempfile.mkdtemp(prefix="os4g-trace-"))
+        temp_dir = Path(tempfile.mkdtemp(prefix="os4g-trace-python-"))
 
         try:
             # Create minimal pyproject.toml
@@ -59,7 +62,9 @@ dependencies = [
             pyproject_path = temp_dir / "pyproject.toml"
             pyproject_path.write_text(pyproject_content)
 
-            # Run uv lock to generate uv.lock
+            # Run uv lock to generate lockfile only (no package installation)
+            # uv lock is storage-efficient as it only creates a lockfile,
+            # unlike npm/pnpm which create node_modules directories
             process = await asyncio.create_subprocess_exec(
                 "uv",
                 "lock",
@@ -112,7 +117,8 @@ dependencies = [
             )
 
         finally:
-            # Clean up temporary directory
+            # Ensure temporary directory is always cleaned up
+            # Use ignore_errors=True to handle permission issues gracefully
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 

@@ -11,7 +11,6 @@ INCLUDE_LOCK="${INPUT_INCLUDE_LOCK:-false}"
 OUTPUT_STYLE="${INPUT_OUTPUT_STYLE:-normal}"
 VERBOSE="${INPUT_VERBOSE:-false}"
 PROFILE="${INPUT_PROFILE:-balanced}"
-SHOW_DEPENDENCIES="${INPUT_SHOW_DEPENDENCIES:-false}"
 ROOT_DIR="${INPUT_ROOT_DIR:-.}"
 MANIFEST="${INPUT_MANIFEST}"
 RECURSIVE="${INPUT_RECURSIVE:-false}"
@@ -49,11 +48,6 @@ fi
 # Add profile option
 if [ "${PROFILE}" != "balanced" ]; then
     CMD="${CMD} --profile ${PROFILE}"
-fi
-
-# Add show dependencies option
-if [ "${SHOW_DEPENDENCIES}" = "true" ]; then
-    CMD="${CMD} --show-dependencies"
 fi
 
 # Add root directory option

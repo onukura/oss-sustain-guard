@@ -12,7 +12,6 @@ from oss_sustain_guard.cli_utils.cache_helpers import (
     get_cached_lockfile_dependencies,
 )
 from oss_sustain_guard.cli_utils.helpers import (
-    _build_dependency_summary,
     _build_summary,
     _format_health_status,
     _summarize_observations,
@@ -90,37 +89,6 @@ def test_build_summary_counts():
     assert summary["healthy_count"] == 1
     assert summary["needs_attention_count"] == 0
     assert summary["needs_support_count"] == 1
-
-
-def test_build_dependency_summary_handles_duplicates():
-    """Dependency summaries disambiguate duplicates by ecosystem."""
-    direct_packages = [
-        ("python", "requests"),
-        ("javascript", "requests"),
-        ("python", "click"),
-    ]
-    results_map = {
-        ("python", "requests"): AnalysisResult(
-            repo_url="https://github.com/psf/requests",
-            total_score=80,
-            metrics=[],
-        ),
-        ("javascript", "requests"): AnalysisResult(
-            repo_url="https://github.com/example/requests-js",
-            total_score=70,
-            metrics=[],
-        ),
-        ("python", "click"): AnalysisResult(
-            repo_url="https://github.com/pallets/click",
-            total_score=90,
-            metrics=[],
-        ),
-    }
-
-    summary = _build_dependency_summary(direct_packages, results_map)
-    assert summary["python:requests"] == 80
-    assert summary["javascript:requests"] == 70
-    assert summary["click"] == 90
 
 
 def test_write_json_results_stdout(capsys):

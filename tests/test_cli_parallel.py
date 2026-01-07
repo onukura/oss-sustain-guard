@@ -34,15 +34,31 @@ async def test_analyze_packages_parallel_single_uses_analyze_package():
         metrics=[Metric("Metric", 9, 10, "Observation", "Low")],
     )
 
-    with patch(
-        "oss_sustain_guard.commands.check.analyze_package", return_value=result
-    ) as mock_analyze:
+    resolver = FakeResolver(
+        {
+            "project": RepositoryReference(
+                provider="github",
+                host="github.com",
+                path="example/project",
+                owner="example",
+                name="project",
+            ),
+        }
+    )
+
+    with (
+        patch(
+            "oss_sustain_guard.commands.check.get_resolver",
+            return_value=resolver,
+        ),
+        patch(
+            "oss_sustain_guard.commands.check.analyze_package", return_value=result
+        ) as mock_analyze,
+    ):
         results, _ = await analyze_packages_parallel(
             [("python", "project")],
             {},
             profile="balanced",
-            show_dependencies=True,
-            lockfile_path="lockfile",
             verbose=True,
             use_local_cache=False,
         )
@@ -53,12 +69,9 @@ async def test_analyze_packages_parallel_single_uses_analyze_package():
         ecosystem="python",
         db={},
         profile="balanced",
-        show_dependencies=True,
-        lockfile_path="lockfile",
         verbose=True,
         use_local_cache=False,
         log_buffer={},
-        max_workers=5,
     )
 
 
@@ -165,12 +178,9 @@ async def test_analyze_packages_parallel_mixed_results():
         ecosystem="python",
         db=cached_db,
         profile="balanced",
-        show_dependencies=False,
-        lockfile_path=None,
         verbose=False,
         use_local_cache=True,
         log_buffer={},
-        max_workers=5,
     )
 
 

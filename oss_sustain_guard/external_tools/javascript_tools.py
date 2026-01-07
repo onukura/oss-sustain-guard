@@ -49,7 +49,6 @@ class PnpmTreeTool(ExternalTool):
 
         try:
             # Create minimal package.json
-            package_spec = f"{package}@{version}" if version else package
             package_json = {
                 "name": "temp-os4g-trace",
                 "version": "1.0.0",
@@ -58,11 +57,17 @@ class PnpmTreeTool(ExternalTool):
             package_json_path = temp_dir / "package.json"
             package_json_path.write_text(json.dumps(package_json, indent=2))
 
-            # Run pnpm install
+            # Use pnpm install with minimal disk usage options:
+            # --ignore-scripts: Skip install scripts to save time and disk
+            # --no-optional: Skip optional dependencies
+            # --prefer-offline: Use cache when possible
             install_process = await asyncio.create_subprocess_exec(
                 "pnpm",
                 "install",
                 "--no-frozen-lockfile",
+                "--ignore-scripts",
+                "--no-optional",
+                "--prefer-offline",
                 cwd=str(temp_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -100,6 +105,8 @@ class PnpmTreeTool(ExternalTool):
             return self._parse_pnpm_tree(package, list_data)
 
         finally:
+            # Ensure temporary directory is always cleaned up
+            # Use ignore_errors=True to handle permission issues gracefully
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def _parse_pnpm_tree(self, root_package: str, data: dict) -> DependencyGraph:
@@ -215,10 +222,14 @@ class BunTreeTool(ExternalTool):
             package_json_path = temp_dir / "package.json"
             package_json_path.write_text(json.dumps(package_json, indent=2))
 
-            # Run bun install
+            # Run bun install with minimal disk usage options
+            # --no-save: Don't update package.json
+            # --production: Skip devDependencies
             install_process = await asyncio.create_subprocess_exec(
                 "bun",
                 "install",
+                "--no-save",
+                "--production",
                 cwd=str(temp_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -254,6 +265,8 @@ class BunTreeTool(ExternalTool):
             )
 
         finally:
+            # Ensure temporary directory is always cleaned up
+            # Use ignore_errors=True to handle permission issues gracefully
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
@@ -288,10 +301,16 @@ class NpmTreeTool(ExternalTool):
             package_json_path = temp_dir / "package.json"
             package_json_path.write_text(json.dumps(package_json, indent=2))
 
-            # Run npm install
+            # Run npm install with minimal disk usage options:
+            # --omit=dev: Skip devDependencies
+            # --ignore-scripts: Skip install scripts to save time and disk
+            # --prefer-offline: Use cache when possible
             install_process = await asyncio.create_subprocess_exec(
                 "npm",
                 "install",
+                "--omit=dev",
+                "--ignore-scripts",
+                "--prefer-offline",
                 cwd=str(temp_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -333,6 +352,8 @@ class NpmTreeTool(ExternalTool):
             )
 
         finally:
+            # Ensure temporary directory is always cleaned up
+            # Use ignore_errors=True to handle permission issues gracefully
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 

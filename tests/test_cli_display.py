@@ -95,30 +95,6 @@ class TestDisplayResultsCompact:
         assert "(40/100)" in captured.out
         assert "Needs support" in captured.out
 
-    def test_display_results_compact_with_dependencies(self, capsys):
-        """Test compact display with dependency scores."""
-        results = [
-            AnalysisResult(
-                repo_url="https://github.com/psf/requests",
-                total_score=85,
-                metrics=[
-                    Metric("Test", 85, 100, "Good", "Low"),
-                ],
-                funding_links=[],
-                is_community_driven=False,
-                models=[],
-                signals={},
-                dependency_scores={"dep1": 90, "dep2": 80, "dep3": 70},
-            )
-        ]
-
-        display_results_compact(results, show_dependencies=True)
-
-        captured = capsys.readouterr()
-        assert "Dependencies:" in captured.out
-        assert "avg=" in captured.out
-        assert "count=3" in captured.out
-
 
 class TestDisplayResults:
     """Test normal display format."""
@@ -176,29 +152,6 @@ class TestDisplayResults:
         captured = capsys.readouterr()
         assert "Consider supporting" in captured.out
         assert "GitHub Sponsors" in captured.out
-
-    def test_display_results_with_dependencies(self, capsys):
-        """Test display with dependency scores."""
-        results = [
-            AnalysisResult(
-                repo_url="https://github.com/psf/requests",
-                total_score=85,
-                metrics=[
-                    Metric("Test", 85, 100, "Good", "Low"),
-                ],
-                funding_links=[],
-                is_community_driven=False,
-                models=[],
-                signals={},
-                dependency_scores={"dep1": 90, "dep2": 80, "dep3": 70},
-            )
-        ]
-
-        display_results(results, show_dependencies=True)
-
-        captured = capsys.readouterr()
-        assert "Dependency Reference Scores" in captured.out
-        assert "dep1" in captured.out
 
     def test_display_results_with_models(self, capsys):
         """Test display with CHAOSS models."""
@@ -353,33 +306,6 @@ class TestDisplayResultsDetailed:
         assert "Raw Signals" in captured.out
         assert "total_contributors" in captured.out
         assert "100" in captured.out
-
-    def test_display_results_detailed_with_dependencies(self, capsys):
-        """Test detailed display with dependency scores."""
-        dep_scores = {f"dep{i}": 90 - i * 5 for i in range(20)}
-
-        results = [
-            AnalysisResult(
-                repo_url="https://github.com/psf/requests",
-                total_score=85,
-                metrics=[
-                    Metric("Test", 85, 100, "Good", "Low"),
-                ],
-                funding_links=[],
-                is_community_driven=False,
-                models=[],
-                signals={},
-                dependency_scores=dep_scores,
-            )
-        ]
-
-        display_results_detailed(results)
-
-        captured = capsys.readouterr()
-        assert "Dependency Reference Scores" in captured.out
-        assert "dep0" in captured.out
-        # Should show top 15 + "... and X more"
-        assert "... and 5 more" in captured.out
 
     def test_display_results_detailed_metric_status_colors(self, capsys):
         """Test metric status color coding."""
