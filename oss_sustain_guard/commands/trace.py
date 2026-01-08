@@ -18,7 +18,11 @@ from oss_sustain_guard.config import (
     set_verify_ssl,
 )
 from oss_sustain_guard.core import SCORING_PROFILES
-from oss_sustain_guard.dependency_graph import get_all_dependencies
+from oss_sustain_guard.dependency_graph import (
+    DependencyGraph,
+    DependencyInfo,
+    get_all_dependencies,
+)
 from oss_sustain_guard.dependency_tree_resolver import (
     is_lockfile_path,
     resolve_dependency_tree,
@@ -31,6 +35,160 @@ from oss_sustain_guard.visualization import (
 )
 
 app = typer.Typer()
+
+
+async def deduplicate_dep_graph_by_repository(
+    dep_graph: DependencyGraph,
+    db: dict,
+    verbose: bool = False,
+) -> DependencyGraph:
+    """
+    Deduplicate packages in dependency graph by identifying platform-specific binaries.
+
+    Removes platform-specific binary variants while preserving distinct packages
+    from the same repository. This handles two cases:
+
+    1. Platform-specific binaries (e.g., @next/swc-darwin-arm64, @next/swc-linux-arm64-gnu)
+       These are kept as one representative since they contain the same functionality.
+
+    2. Distinct packages from same repo (e.g., langchain-core, langchain-openai)
+       These are all preserved since they have different functionality.
+
+    Args:
+        dep_graph: Original dependency graph
+        db: Database for caching package information
+        verbose: If True, display deduplication info
+
+    Returns:
+        DependencyGraph with platform-specific binary duplicates removed
+    """
+    from collections import defaultdict
+
+    all_deps = dep_graph.direct_dependencies + dep_graph.transitive_dependencies
+
+    # Platform identifiers that indicate platform-specific binaries
+    platform_keywords = {
+        "darwin",
+        "linux",
+        "win32",
+        "win64",
+        "freebsd",
+        "sunos",
+        "aix",
+        "arm64",
+        "x64",
+        "x86",
+        "musl",
+        "gnu",
+        "msvc",
+    }
+
+    def is_platform_specific(package_name: str) -> bool:
+        """Check if package name contains platform-specific keywords."""
+        name_lower = package_name.lower()
+        return any(keyword in name_lower for keyword in platform_keywords)
+
+    def get_base_package_name(package_name: str) -> str:
+        """Extract base package name by removing platform-specific suffix.
+
+        Examples:
+            @next/swc-darwin-arm64 -> @next/swc
+            @next/swc-linux-x64-gnu -> @next/swc
+            langchain-openai -> langchain-openai (no change)
+        """
+        # Handle scoped packages (@org/name)
+        if package_name.startswith("@"):
+            parts = package_name.split("/", 1)
+            if len(parts) == 2:
+                scope = parts[0]
+                name = parts[1]
+                # Split by hyphen and remove platform keywords from the end
+                segments = name.split("-")
+                filtered = []
+                for seg in segments:
+                    if seg.lower() in platform_keywords:
+                        break
+                    filtered.append(seg)
+                if filtered:
+                    return f"{scope}/{'-'.join(filtered)}"
+        else:
+            # Handle unscoped packages
+            segments = package_name.split("-")
+            filtered = []
+            for seg in segments:
+                if seg.lower() in platform_keywords:
+                    break
+                filtered.append(seg)
+            if filtered:
+                return "-".join(filtered)
+
+        return package_name
+
+    # Group packages by base name (for platform-specific binaries)
+    base_to_packages: dict[tuple[str, str], list[DependencyInfo]] = defaultdict(list)
+
+    for dep in all_deps:
+        base_name = get_base_package_name(dep.name)
+        base_key = (dep.ecosystem, base_name)
+        base_to_packages[base_key].append(dep)
+
+    # Decide which packages to keep
+    unique_deps: list[DependencyInfo] = []
+    duplicates_removed: dict[str, list[str]] = {}
+
+    for base_key, packages in base_to_packages.items():
+        if len(packages) == 1:
+            # Only one package with this base name, keep it
+            unique_deps.append(packages[0])
+        else:
+            # Multiple packages with same base name
+            # Check if they are all platform-specific binaries
+            all_platform_specific = all(
+                is_platform_specific(pkg.name) for pkg in packages
+            )
+
+            if all_platform_specific:
+                # Keep only the first platform-specific variant
+                unique_deps.append(packages[0])
+                removed = [pkg.name for pkg in packages[1:]]
+                repo_display = f"{packages[0].ecosystem}:{base_key[1]}"
+                duplicates_removed[repo_display] = removed
+            else:
+                # These are distinct packages (like langchain-core vs langchain-openai)
+                # Keep all of them
+                unique_deps.extend(packages)
+
+    # Display deduplication info if verbose
+    if verbose and duplicates_removed:
+        console.print("[dim]Deduplicated platform-specific binaries:[/dim]")
+        for base_name, removed_pkgs in duplicates_removed.items():
+            console.print(
+                f"[dim]  {base_name}: kept first, removed {len(removed_pkgs)} platform variants[/dim]"
+            )
+
+    # Separate direct and transitive dependencies from unique list
+    deduped_direct = [
+        dep for dep in unique_deps if dep in dep_graph.direct_dependencies
+    ]
+    deduped_transitive = [
+        dep for dep in unique_deps if dep in dep_graph.transitive_dependencies
+    ]
+
+    # Filter edges to only include kept packages
+    kept_package_names = {dep.name for dep in unique_deps}
+    deduped_edges = [
+        edge
+        for edge in dep_graph.edges
+        if edge.source in kept_package_names and edge.target in kept_package_names
+    ]
+
+    return DependencyGraph(
+        root_package=dep_graph.root_package,
+        ecosystem=dep_graph.ecosystem,
+        direct_dependencies=deduped_direct,
+        transitive_dependencies=deduped_transitive,
+        edges=deduped_edges,
+    )
 
 
 @app.command("trace")
@@ -290,6 +448,11 @@ async def trace(
         except NotImplementedError as e:
             console.print(f"[yellow]⚠️  {e}[/yellow]")
             raise typer.Exit(1) from e
+
+    # Deduplicate packages by repository URL
+    dep_graph = await deduplicate_dep_graph_by_repository(
+        dep_graph, db, verbose=verbose
+    )
 
     # Apply filters to dependency list
     all_deps_list = dep_graph.direct_dependencies + dep_graph.transitive_dependencies
