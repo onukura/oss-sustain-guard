@@ -1,8 +1,5 @@
 """Tests for dependency graph visualization."""
 
-import json
-from pathlib import Path
-
 import networkx as nx
 import pytest
 
@@ -109,4 +106,3 @@ def test_build_networkx_graph(sample_dep_graph: DependencyGraph, sample_scores: 
     urllib3_node = graph.nodes["urllib3"]
     assert urllib3_node["score"] == 0
     assert urllib3_node["health_status"] == "unknown"
-
