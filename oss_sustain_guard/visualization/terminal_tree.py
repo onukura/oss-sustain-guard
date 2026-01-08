@@ -45,8 +45,7 @@ class TerminalTreeVisualizer:
         self.console.print(
             "[dim]Legend: [green]■[/green] Healthy (≥80) | "
             "[yellow]■[/yellow] Monitor (50-79) | "
-            "[red]■[/red] Needs attention (<50) | "
-            "[bold magenta]*[/bold magenta] Direct dependency[/dim]\n"
+            "[red]■[/red] Needs attention (<50)[/dim]\n"
         )
 
         # Build and display tree for each root
@@ -70,7 +69,6 @@ class TerminalTreeVisualizer:
         score = attrs.get("score", 0)
         health_status = attrs.get("health_status", "unknown")
         version = attrs.get("version", "")
-        is_direct = attrs.get("is_direct", False)
 
         # Format node label with color based on health status
         color = self._get_health_color(health_status)
@@ -83,10 +81,6 @@ class TerminalTreeVisualizer:
         # Add score if available (already on 0-100 scale)
         if score > 0:
             label += f" [dim](score: {score:.0f})[/dim]"
-
-        # Add direct dependency marker
-        if is_direct:
-            label += " [bold magenta]*[/bold magenta]"
 
         # Create tree node
         tree = Tree(label)

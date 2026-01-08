@@ -186,7 +186,7 @@ Example output:
 ```
 Dependency Tree:
 Total: 6 packages | Healthy: 1 | Monitor: 4 | Needs attention: 0 | Unknown: 1
-Legend: ■ Healthy (≥80) | ■ Monitor (50-79) | ■ Needs attention (<50) | * Direct dependency
+Legend: ■ Healthy (≥80) | ■ Monitor (50-79) | ■ Needs attention (<50)
 
 temp-os4g-trace 0.1.0 *
 └── requests 2.32.5 (score: 85) *
