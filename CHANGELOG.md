@@ -4,6 +4,17 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+## v0.23.1 - 2026-01-08
+
+### Improved
+
+- **Terminal tree visualization**: Removed direct dependency marker from tree output to reduce visual clutter and focus on health status indicators
+- **Dependency deduplication**: Eliminated redundant platform-specific binary packages from dependency graphs, retaining only a single representative for each unique codebase while preserving functionally distinct packages from the same repository, resulting in cleaner and more accurate dependency reporting
+
+### Fixed
+
+- **Dependency analysis optimization**: Removed unused visualization import from dependency analysis to streamline codebase
+
 ## v0.23.0 - 2026-01-08
 
 ### Added
