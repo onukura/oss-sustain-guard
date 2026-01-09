@@ -32,12 +32,12 @@ class GoModTool(ExternalTool):
     async def resolve_tree(
         self, package: str, version: str | None = None
     ) -> DependencyGraph:
-        """Resolve dependency tree using go mod graph.
+        """Resolve dependency tree using go get and go mod graph.
 
-        Creates a temporary Go module, adds the specified package dependency,
-        runs go mod graph to get dependency information without downloading packages.
+        Creates a temporary Go module, uses go get to fetch the specified package,
+        runs go mod graph to get dependency information without building packages.
 
-        Note: go mod graph only fetches metadata without downloading packages,
+        Note: go mod graph only fetches metadata without building packages,
         making it very efficient for dependency resolution.
 
         Args:
@@ -56,11 +56,9 @@ class GoModTool(ExternalTool):
 
         try:
             # Create minimal go.mod file
-            go_mod_content = f"""module temp-os4g-trace
+            go_mod_content = """module temp-os4g-trace
 
 go 1.21
-
-require {package} {version if version else "latest"}
 """
             go_mod_path = temp_dir / "go.mod"
             go_mod_path.write_text(go_mod_content)
@@ -68,11 +66,13 @@ require {package} {version if version else "latest"}
             # Create a dummy main.go file (required for go mod operations)
             (temp_dir / "main.go").write_text("package main\nfunc main() {}\n")
 
-            # First, run go mod tidy to resolve dependencies
+            # Use go get to fetch the package and resolve dependencies
+            # go get without any arguments will fetch the module and update go.mod/go.sum
+            package_spec = f"{package}@{version}" if version else package
             process = await asyncio.create_subprocess_exec(
                 "go",
-                "mod",
-                "tidy",
+                "get",
+                package_spec,
                 cwd=str(temp_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -87,7 +87,10 @@ require {package} {version if version else "latest"}
             if process.returncode != 0:
                 error_msg = stderr.decode().strip()
                 # Check for common errors
-                if "cannot find module" in error_msg.lower():
+                if (
+                    "cannot find module" in error_msg.lower()
+                    or "not found" in error_msg.lower()
+                ):
                     raise ValueError(
                         f"Package '{package}' not found in Go module registry.\n"
                         f"Error: {error_msg}"
@@ -131,8 +134,11 @@ require {package} {version if version else "latest"}
         The output format of 'go mod graph' is:
         parent@version child@version
         For example:
-        temp-os4g-trace@v0.0.0 github.com/spf13/cobra@v1.7.0
-        github.com/spf13/cobra@v1.7.0 github.com/inconshreveable/log15@v2.0.0
+        temp-os4g-trace@v0.0.0 github.com/go-gorm/gorm@v1.25.0
+        github.com/go-gorm/gorm@v1.25.0 github.com/jinzhu/now@v1.1.5
+        github.com/go-gorm/gorm@v1.25.0 golang.org/x/text@v0.11.0
+
+        The go get will make root_package a direct dependency of our temp module.
 
         Args:
             root_package: The root package name we're tracing
@@ -145,7 +151,6 @@ require {package} {version if version else "latest"}
         transitive_deps: list[DependencyInfo] = []
         edges: list[DependencyEdge] = []
         seen = set()
-        depth_map = {}  # Track depth of each package
 
         lines = graph_output.strip().split("\n")
         if not lines or (len(lines) == 1 and not lines[0]):
@@ -161,6 +166,7 @@ require {package} {version if version else "latest"}
         # Find the actual root module from the first line
         # The first line's parent is the temporary module we created
         actual_root_module = None
+        root_package_full = None  # The full reference with version
 
         for line in lines:
             line = line.strip()
@@ -172,7 +178,7 @@ require {package} {version if version else "latest"}
                 continue
 
             parent_full = parts[0]  # e.g., "temp-os4g-trace@v0.0.0"
-            child_full = parts[1]  # e.g., "github.com/spf13/cobra@v1.7.0"
+            child_full = parts[1]  # e.g., "github.com/go-gorm/gorm@v1.25.0"
 
             # The first non-empty line tells us the root module
             if actual_root_module is None:
@@ -182,17 +188,32 @@ require {package} {version if version else "latest"}
             parent_name, parent_version = self._parse_module_ref(parent_full)
             child_name, child_version = self._parse_module_ref(child_full)
 
-            # Check if this is a direct dependency of the temp root module
-            is_direct = parent_full == actual_root_module
-
-            # Only add child if it's not the root package itself
-            if child_name == root_package:
-                # This is the actual package we're tracing, skip it
-                # (it's in the output because go mod graph includes the actual dependency)
+            # Identify the requested root package
+            if child_name == root_package and parent_full == actual_root_module:
+                # This is the direct dependency we requested
+                root_package_full = child_full
+                dep = DependencyInfo(
+                    name=child_name,
+                    ecosystem="go",
+                    version=child_version,
+                    is_direct=True,
+                    depth=0,
+                )
+                direct_deps.append(dep)
+                seen.add(child_name)
                 continue
 
-            # Add child as dependency if not seen
-            if child_name not in seen:
+            # Skip if this child is not relevant to our dependency tree
+            # (dependencies not from the root package or its dependencies)
+            if parent_full != actual_root_module and parent_full != root_package_full:
+                # This is a transitive dependency, but we need to track it
+                pass
+
+            # Add child as dependency if not seen and not the temp module
+            if child_name not in seen and child_name != "temp-os4g-trace":
+                # Check if this is a direct dependency of root_package
+                is_direct = parent_full == root_package_full
+
                 dep = DependencyInfo(
                     name=child_name,
                     ecosystem="go",
