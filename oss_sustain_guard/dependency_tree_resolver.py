@@ -132,9 +132,21 @@ async def resolve_dependency_tree(
 
         return await tool.resolve_tree(package_name, version)
 
+    elif ecosystem == "php":
+        from oss_sustain_guard.external_tools.php_tools import get_php_tool
+
+        tool = get_php_tool(preferred_tool=tool_name)
+        if not tool.is_available():
+            raise RuntimeError(
+                f"Required tool '{tool.name}' is not installed. "
+                f"Please install composer to trace {ecosystem} packages."
+            )
+
+        return await tool.resolve_tree(package_name, version)
+
     else:
         raise NotImplementedError(
             f"Package mode is not yet implemented for {ecosystem} ecosystem. "
-            f"Currently supported: Python, JavaScript, Rust, Ruby, Go. "
+            f"Currently supported: Python, JavaScript, Rust, Ruby, Go, PHP. "
             f"For other ecosystems, please use lockfile mode: os4g trace <lockfile>"
         )

@@ -15,6 +15,7 @@ class ExternalToolName(str, Enum):
     - Rust: cargo
     - Ruby: bundler
     - Go: go
+    - PHP: composer
     """
 
     UV = "uv"
@@ -24,6 +25,7 @@ class ExternalToolName(str, Enum):
     CARGO = "cargo"
     BUNDLER = "bundler"
     GO = "go"
+    COMPOSER = "composer"
 
 
 __all__ = ["ExternalTool", "ExternalToolName"]
