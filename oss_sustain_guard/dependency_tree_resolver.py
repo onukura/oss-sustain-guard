@@ -17,6 +17,10 @@ def is_lockfile_path(input_str: str) -> bool:
     """
     path = Path(input_str)
 
+    # If input contains package format (ecosystem:package), it's always a package
+    if ":" in input_str:
+        return False
+
     # If file exists, it's definitely a lockfile
     if path.exists():
         return True
@@ -116,9 +120,21 @@ async def resolve_dependency_tree(
 
         return await tool.resolve_tree(package_name, version)
 
+    elif ecosystem == "go":
+        from oss_sustain_guard.external_tools.go_tools import get_go_tool
+
+        tool = get_go_tool(preferred_tool=tool_name)
+        if not tool.is_available():
+            raise RuntimeError(
+                f"Required tool '{tool.name}' is not installed. "
+                f"Please install go to trace {ecosystem} packages."
+            )
+
+        return await tool.resolve_tree(package_name, version)
+
     else:
         raise NotImplementedError(
             f"Package mode is not yet implemented for {ecosystem} ecosystem. "
-            f"Currently supported: Python, JavaScript, Rust, Ruby. "
+            f"Currently supported: Python, JavaScript, Rust, Ruby, Go. "
             f"For other ecosystems, please use lockfile mode: os4g trace <lockfile>"
         )
