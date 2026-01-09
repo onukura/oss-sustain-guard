@@ -131,7 +131,8 @@ require {package} {version if version else "latest"}
         The output format of 'go mod graph' is:
         parent@version child@version
         For example:
-        github.com/user/repo@v1.0.0 github.com/dep/lib@v2.1.0
+        temp-os4g-trace@v0.0.0 github.com/spf13/cobra@v1.7.0
+        github.com/spf13/cobra@v1.7.0 github.com/inconshreveable/log15@v2.0.0
 
         Args:
             root_package: The root package name we're tracing
@@ -157,6 +158,10 @@ require {package} {version if version else "latest"}
                 edges=[],
             )
 
+        # Find the actual root module from the first line
+        # The first line's parent is the temporary module we created
+        actual_root_module = None
+
         for line in lines:
             line = line.strip()
             if not line:
@@ -166,30 +171,34 @@ require {package} {version if version else "latest"}
             if len(parts) != 2:
                 continue
 
-            parent_full = parts[0]  # e.g., "github.com/user/repo@v1.0.0"
-            child_full = parts[1]  # e.g., "github.com/dep/lib@v2.1.0"
+            parent_full = parts[0]  # e.g., "temp-os4g-trace@v0.0.0"
+            child_full = parts[1]  # e.g., "github.com/spf13/cobra@v1.7.0"
+
+            # The first non-empty line tells us the root module
+            if actual_root_module is None:
+                actual_root_module = parent_full
 
             # Parse parent and child into name and version
             parent_name, parent_version = self._parse_module_ref(parent_full)
             child_name, child_version = self._parse_module_ref(child_full)
 
-            # Extract depth based on parent
-            if parent_full.startswith(root_package):
-                child_depth = 1
-            else:
-                child_depth = depth_map.get(parent_name, 1) + 1
+            # Check if this is a direct dependency of the temp root module
+            is_direct = parent_full == actual_root_module
 
-            depth_map[child_name] = child_depth
+            # Only add child if it's not the root package itself
+            if child_name == root_package:
+                # This is the actual package we're tracing, skip it
+                # (it's in the output because go mod graph includes the actual dependency)
+                continue
 
             # Add child as dependency if not seen
             if child_name not in seen:
-                is_direct = parent_full.startswith(root_package)
                 dep = DependencyInfo(
                     name=child_name,
                     ecosystem="go",
                     version=child_version,
                     is_direct=is_direct,
-                    depth=0 if is_direct else child_depth,
+                    depth=0 if is_direct else 1,
                 )
 
                 if is_direct:
@@ -199,7 +208,7 @@ require {package} {version if version else "latest"}
 
                 seen.add(child_name)
 
-            # Add edge
+            # Add edge (source is parent, target is child)
             edges.append(DependencyEdge(source=parent_name, target=child_name))
 
         return DependencyGraph(
