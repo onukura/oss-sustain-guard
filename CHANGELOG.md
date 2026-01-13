@@ -4,6 +4,24 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+## v0.25.0 - 2026-01-13
+
+### Added
+
+- **Java (Maven) ecosystem support for dependency tree resolution**: Full integration with Maven for the `trace` command, enabling visualization and analysis of Java dependencies with comprehensive dependency tree generation and parsing
+- **C# (.NET) ecosystem support for dependency tree resolution**: Complete C#/.NET integration for the `trace` command using dotnet CLI tools, enabling dependency analysis for .NET projects with proper error handling for missing SDKs
+- **Dart ecosystem support for dependency tree resolution**: Added Dart ecosystem integration for the `trace` command using dart CLI tools, enabling comprehensive dependency tree visualization for Flutter and Dart projects
+- **Multi-ecosystem CI workflow for external tools**: Introduced comprehensive GitHub Actions workflow that verifies package resolution across Python, JavaScript, Rust, Ruby, Go, PHP, C#, Dart, and Java ecosystems, ensuring consistent tool support with integration tests and fast failure feedback
+
+### Improved
+
+- **Package mode documentation**: Enhanced README and getting started guide to highlight direct package resolution capabilities for Java, C#, and Dart ecosystems with expanded examples and clearer distinction between package mode and lockfile mode
+- **Ecosystem coverage**: Significantly expanded multi-language dependency analysis support from 6 to 9 ecosystems (added Java, C#, Dart)
+
+### Fixed
+
+- **MavenTreeTool formatting**: Improved code formatting and cleanup in Maven dependency tree parsing implementation
+
 ## v0.24.0 - 2026-01-13
 
 ### Added
