@@ -4,6 +4,18 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+## v0.24.0 - 2026-01-13
+
+### Added
+
+- **Go ecosystem support for dependency tracing**: Full integration with Go module tools for the `trace` command, enabling visualization and analysis of Go module dependencies with proper direct vs transitive dependency classification and support for both `go.sum` and `go mod graph` parsing
+- **PHP (Composer) ecosystem support for dependency tracing**: Complete PHP/Composer integration for the `trace` command, parsing both `composer.json` and `composer.lock` to visualize Composer dependencies with efficient `--no-install` flag support
+
+### Improved
+
+- **Go dependency resolution accuracy**: Enhanced Go module path parsing to correctly identify direct dependencies of the requested package, properly handle version suffixes (e.g., `/v2`, `/v3`), and skip temporary modules from output for cleaner dependency trees
+- **Go module tooling**: Switched from `go mod tidy` to `go get` with proper `package@version` syntax for more reliable package fetching and dependency graph generation
+
 ## v0.23.1 - 2026-01-08
 
 ### Improved
