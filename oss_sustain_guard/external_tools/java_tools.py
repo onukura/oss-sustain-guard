@@ -107,7 +107,7 @@ class MavenTreeTool(ExternalTool):
             process = await asyncio.create_subprocess_exec(
                 "mvn",
                 "dependency:tree",
-                f"-DoutputType=json",
+                "-DoutputType=json",
                 f"-DoutputFile={output_file}",
                 "-B",  # Batch mode
                 "-q",  # Quiet
@@ -150,17 +150,13 @@ class MavenTreeTool(ExternalTool):
             tree_json = json.loads(output_file.read_text())
 
             # Convert to DependencyGraph
-            return self._parse_maven_tree(
-                f"{group_id}:{artifact_id}", tree_json
-            )
+            return self._parse_maven_tree(f"{group_id}:{artifact_id}", tree_json)
 
         finally:
             # Ensure temporary directory is always cleaned up
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def _parse_maven_tree(
-        self, root_package: str, tree_json: dict
-    ) -> DependencyGraph:
+    def _parse_maven_tree(self, root_package: str, tree_json: dict) -> DependencyGraph:
         """Parse Maven dependency tree JSON into DependencyGraph.
 
         JSON structure:
@@ -188,7 +184,9 @@ class MavenTreeTool(ExternalTool):
         # Extract root package info from JSON
         # Note: The JSON root is the temporary project (com.os4g.trace:temp-trace)
         # We need to find the actual requested package in its children
-        temp_project_name = f"{tree_json.get('groupId', '')}:{tree_json.get('artifactId', '')}"
+        _temp_project_name = (
+            f"{tree_json.get('groupId', '')}:{tree_json.get('artifactId', '')}"
+        )
 
         # Process children (should contain the actual requested package)
         children = tree_json.get("children", [])
