@@ -167,6 +167,22 @@ os4g check python:django npm:react rust:tokio
 
 Mix any languages you use in one command.
 
+**New ecosystems with package mode:**
+
+```bash
+# Java (Maven coordinates: groupId:artifactId:version)
+os4g check java:junit:junit:4.13.2 java:org.slf4j:slf4j-api:1.7.36
+
+# C# (NuGet package names)
+os4g check csharp:Newtonsoft.Json csharp:Serilog
+
+# Dart (pub.dev package names)
+os4g check dart:http dart:flutter_bloc
+
+# Mix and match ecosystems
+os4g check python:requests java:junit:junit:4.13.2 csharp:Newtonsoft.Json dart:http
+```
+
 ### 4. Scan Entire Projects (Monorepos)
 
 ```bash
@@ -437,18 +453,20 @@ For help, see [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md).
 
 ## 🌍 Supported Languages
 
-- Python (PyPI)
-- JavaScript / TypeScript (npm)
-- Rust (Cargo)
-- Dart (pub.dev)
-- Elixir (Hex.pm)
-- Haskell (Hackage)
-- Perl (CPAN)
-- R (CRAN/renv)
-- Swift (Swift Package Manager)
-- Java (Maven)
-- PHP (Packagist)
-- Ruby (RubyGems)
-- C# / .NET (NuGet)
-- Go (Go Modules)
-- Kotlin
+### Package Mode (Direct Resolution)
+These ecosystems support direct package resolution from registries:
+
+- **Python** (PyPI via uv) - `python:package` or just `package`
+- **JavaScript/TypeScript** (npm) - `javascript:package` or `npm:package`
+- **Rust** (crates.io) - `rust:package`
+- **Ruby** (RubyGems) - `ruby:package`
+- **Go** (Go Modules) - `go:github.com/user/repo`
+- **PHP** (Packagist) - `php:vendor/package`
+- **Java** (Maven Central) - `java:groupId:artifactId:version`
+- **C#/.NET** (NuGet) - `csharp:PackageName`
+- **Dart** (pub.dev) - `dart:package`
+
+### Lockfile Mode
+All languages support dependency analysis from lockfiles:
+
+Python, JavaScript, TypeScript, Rust, Dart, Elixir, Haskell, Perl, R, Swift, Java, PHP, Ruby, C#, .NET, Go, Kotlin

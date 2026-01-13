@@ -66,7 +66,7 @@ For critical dependencies, we recommend:
 - **5 CHAOSS-Aligned Models** - Stability, Sustainability, Community Engagement, Project Maturity, and Contributor Experience
 - **Metric-Weighted Scoring** - Configurable scoring profiles with integer weights per metric, normalized to 0-100 scale
 - **Custom Scoring Profiles** - Define your own scoring profiles to tailor evaluation priorities for your organization or use case.
-- **Multi-Language Support** - Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby (extensible via plugins)
+- **Multi-Language Support** - 9 ecosystems with direct package resolution (Python, JavaScript, Rust, Ruby, Go, PHP, Java, C#, Dart) + 15 total with lockfile support (extensible via plugins)
 - **LFX Insights Integration** - Automatic badges and links to Linux Foundation Insights dashboards in HTML/JSON reports
 - **Community Support Awareness** - Displays funding links for community-driven projects
 - **Local Caching** - Efficient local cache for faster repeated checks
@@ -165,8 +165,14 @@ os4g check requests
 # Check multiple packages (auto-detect language)
 os4g check django flask numpy
 
-# Multi-language support
-os4g check python:requests npm:react rust:tokio r:ggplot2 haskell:text swift:apple/swift-nio
+# Multi-language support - package mode
+os4g check python:requests npm:react rust:tokio go:github.com/gin-gonic/gin
+
+# New ecosystems with package mode support
+os4g check java:junit:junit:4.13.2 csharp:Newtonsoft.Json dart:http
+
+# Mix and match ecosystems
+os4g check python:requests java:org.slf4j:slf4j-api csharp:Newtonsoft.Json dart:http
 
 # Adjust data sampling depth
 os4g check requests --scan-depth shallow  # Quick scan (fewer samples)
@@ -207,11 +213,27 @@ For detailed usage, configuration, and features, see our documentation site:
 
 ### Supported Ecosystems
 
+#### Package Mode (Direct Resolution)
+Trace dependencies directly from package registries:
+
+- **Python** (uv) - `python:requests` or just `requests`
+- **JavaScript** (npm, pnpm, bun) - `javascript:express` or `npm:lodash`
+- **Rust** (cargo) - `rust:tokio`
+- **Ruby** (bundler) - `ruby:rails`
+- **Go** (go) - `go:github.com/gin-gonic/gin`
+- **PHP** (composer) - `php:symfony/console`
+- **Java** (maven) - `java:junit:junit:4.13.2` or `java:org.slf4j:slf4j-api`
+- **C#** (dotnet) - `csharp:Newtonsoft.Json`
+- **Dart** (dart/pub) - `dart:http`
+
+#### Lockfile Mode
+Parse dependencies from existing lockfiles:
+
 Python, JavaScript, Go, Rust, PHP, Java, Kotlin, C#, Ruby, R, Haskell, Swift, Dart, Elixir, Perl
 
 **Extensible:** Add support for additional ecosystems by creating custom resolver plugins.
 
-See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/) for ecosystem-specific syntax.
+See [Getting Started](https://onukura.github.io/oss-sustain-guard/GETTING_STARTED/) for ecosystem-specific syntax and examples.
 
 #### Repository Source Handling
 
