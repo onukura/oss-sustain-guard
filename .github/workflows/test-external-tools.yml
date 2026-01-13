@@ -1,0 +1,386 @@
+name: Test External Tools
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-python:
+    name: Python (uv)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test Python package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.python_tools import get_python_tool
+
+          async def test():
+              tool = get_python_tool()
+              assert tool.is_available(), 'uv not available'
+              graph = await tool.resolve_tree('requests', '2.31.0')
+              assert graph.root_package == 'requests'
+              assert len(graph.direct_dependencies) > 0
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-javascript:
+    name: JavaScript (npm/pnpm/bun)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test npm
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.javascript_tools import NpmTreeTool
+
+          async def test():
+              tool = NpmTreeTool()
+              assert tool.is_available(), 'npm not available'
+              graph = await tool.resolve_tree('express', '4.18.0')
+              assert graph.root_package == 'express'
+              print(f'✓ npm: Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+      - name: Test pnpm
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.javascript_tools import PnpmTreeTool
+
+          async def test():
+              tool = PnpmTreeTool()
+              assert tool.is_available(), 'pnpm not available'
+              graph = await tool.resolve_tree('lodash', '4.17.21')
+              assert graph.root_package == 'lodash'
+              print(f'✓ pnpm: Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-rust:
+    name: Rust (cargo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test Rust package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.rust_tools import get_rust_tool
+
+          async def test():
+              tool = get_rust_tool()
+              assert tool.is_available(), 'cargo not available'
+              graph = await tool.resolve_tree('serde', '1.0.0')
+              assert graph.root_package == 'serde'
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-ruby:
+    name: Ruby (bundler)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test Ruby package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.ruby_tools import get_ruby_tool
+
+          async def test():
+              tool = get_ruby_tool()
+              assert tool.is_available(), 'bundler not available'
+              graph = await tool.resolve_tree('rails', '7.0.0')
+              assert graph.root_package == 'rails'
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-go:
+    name: Go (go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test Go package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.go_tools import get_go_tool
+
+          async def test():
+              tool = get_go_tool()
+              assert tool.is_available(), 'go not available'
+              graph = await tool.resolve_tree('github.com/gin-gonic/gin', 'v1.9.0')
+              assert graph.root_package == 'github.com/gin-gonic/gin'
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-php:
+    name: PHP (composer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test PHP package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.php_tools import get_php_tool
+
+          async def test():
+              tool = get_php_tool()
+              assert tool.is_available(), 'composer not available'
+              graph = await tool.resolve_tree('symfony/console', 'v6.0.0')
+              assert graph.root_package == 'symfony/console'
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-csharp:
+    name: C# (dotnet)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test C# package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.csharp_tools import get_csharp_tool
+
+          async def test():
+              tool = get_csharp_tool()
+              assert tool.is_available(), 'dotnet not available'
+              graph = await tool.resolve_tree('Newtonsoft.Json', '13.0.3')
+              assert graph.root_package == 'Newtonsoft.Json'
+              assert len(graph.direct_dependencies) > 0
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-dart:
+    name: Dart (dart)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test Dart package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.dart_tools import get_dart_tool
+
+          async def test():
+              tool = get_dart_tool()
+              assert tool.is_available(), 'dart not available'
+              graph = await tool.resolve_tree('http', '1.1.0')
+              assert graph.root_package == 'http'
+              assert len(graph.direct_dependencies) > 0
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
+  test-summary:
+    name: Summary
+    needs:
+      - test-python
+      - test-javascript
+      - test-rust
+      - test-ruby
+      - test-go
+      - test-php
+      - test-csharp
+      - test-dart
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Test Summary
+        run: |
+          echo "## External Tools Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Ecosystem | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python (uv) | ${{ needs.test-python.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JavaScript (npm/pnpm/bun) | ${{ needs.test-javascript.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust (cargo) | ${{ needs.test-rust.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ruby (bundler) | ${{ needs.test-ruby.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go (go) | ${{ needs.test-go.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PHP (composer) | ${{ needs.test-php.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| C# (dotnet) | ${{ needs.test-csharp.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dart (dart) | ${{ needs.test-dart.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check if all tests passed
+          if [ "${{ needs.test-python.result }}" == "success" ] && \
+             [ "${{ needs.test-javascript.result }}" == "success" ] && \
+             [ "${{ needs.test-rust.result }}" == "success" ] && \
+             [ "${{ needs.test-ruby.result }}" == "success" ] && \
+             [ "${{ needs.test-go.result }}" == "success" ] && \
+             [ "${{ needs.test-php.result }}" == "success" ] && \
+             [ "${{ needs.test-csharp.result }}" == "success" ] && \
+             [ "${{ needs.test-dart.result }}" == "success" ]; then
+            echo "✅ All external tools tests passed!" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ Some external tools tests failed." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
