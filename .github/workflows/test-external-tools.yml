@@ -261,6 +261,50 @@ jobs:
           asyncio.run(test())
           "
 
+  test-java:
+    name: Java (maven)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Maven
+        run: |
+          mvn --version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv and dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv sync
+
+      - name: Test Java package resolution
+        run: |
+          uv run python -c "
+          import asyncio
+          from oss_sustain_guard.external_tools.java_tools import get_java_tool
+
+          async def test():
+              tool = get_java_tool()
+              assert tool.is_available(), 'Maven not available'
+              graph = await tool.resolve_tree('junit:junit', '4.13.2')
+              assert graph.root_package == 'junit:junit'
+              assert len(graph.direct_dependencies) > 0
+              print(f'✓ Resolved {len(graph.direct_dependencies)} dependencies')
+
+          asyncio.run(test())
+          "
+
   test-csharp:
     name: C# (dotnet)
     runs-on: ubuntu-latest
@@ -348,6 +392,7 @@ jobs:
       - test-ruby
       - test-go
       - test-php
+      - test-java
       - test-csharp
       - test-dart
     runs-on: ubuntu-latest
@@ -365,6 +410,7 @@ jobs:
           echo "| Ruby (bundler) | ${{ needs.test-ruby.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Go (go) | ${{ needs.test-go.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| PHP (composer) | ${{ needs.test-php.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Java (maven) | ${{ needs.test-java.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| C# (dotnet) | ${{ needs.test-csharp.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Dart (dart) | ${{ needs.test-dart.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -376,6 +422,7 @@ jobs:
              [ "${{ needs.test-ruby.result }}" == "success" ] && \
              [ "${{ needs.test-go.result }}" == "success" ] && \
              [ "${{ needs.test-php.result }}" == "success" ] && \
+             [ "${{ needs.test-java.result }}" == "success" ] && \
              [ "${{ needs.test-csharp.result }}" == "success" ] && \
              [ "${{ needs.test-dart.result }}" == "success" ]; then
             echo "✅ All external tools tests passed!" >> $GITHUB_STEP_SUMMARY

@@ -18,6 +18,7 @@ class ExternalToolName(str, Enum):
     - PHP: composer
     - C#: dotnet
     - Dart: pub (dart)
+    - Java: mvn (maven)
     """
 
     UV = "uv"
@@ -30,6 +31,7 @@ class ExternalToolName(str, Enum):
     COMPOSER = "composer"
     DOTNET = "dotnet"
     PUB = "pub"
+    MAVEN = "mvn"
 
 
 __all__ = ["ExternalTool", "ExternalToolName"]

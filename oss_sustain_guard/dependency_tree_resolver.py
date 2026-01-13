@@ -168,9 +168,21 @@ async def resolve_dependency_tree(
 
         return await tool.resolve_tree(package_name, version)
 
+    elif ecosystem == "java":
+        from oss_sustain_guard.external_tools.java_tools import get_java_tool
+
+        tool = get_java_tool(preferred_tool=tool_name)
+        if not tool.is_available():
+            raise RuntimeError(
+                f"Required tool '{tool.name}' is not installed. "
+                f"Please install Maven to trace {ecosystem} packages."
+            )
+
+        return await tool.resolve_tree(package_name, version)
+
     else:
         raise NotImplementedError(
             f"Package mode is not yet implemented for {ecosystem} ecosystem. "
-            f"Currently supported: Python, JavaScript, Rust, Ruby, Go, PHP, C#, Dart. "
+            f"Currently supported: Python, JavaScript, Rust, Ruby, Go, PHP, C#, Dart, Java. "
             f"For other ecosystems, please use lockfile mode: os4g trace <lockfile>"
         )
