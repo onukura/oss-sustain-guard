@@ -16,6 +16,8 @@ class ExternalToolName(str, Enum):
     - Ruby: bundler
     - Go: go
     - PHP: composer
+    - C#: dotnet
+    - Dart: pub (dart)
     """
 
     UV = "uv"
@@ -26,6 +28,8 @@ class ExternalToolName(str, Enum):
     BUNDLER = "bundler"
     GO = "go"
     COMPOSER = "composer"
+    DOTNET = "dotnet"
+    PUB = "pub"
 
 
 __all__ = ["ExternalTool", "ExternalToolName"]
