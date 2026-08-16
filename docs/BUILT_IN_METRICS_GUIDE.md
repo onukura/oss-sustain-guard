@@ -33,7 +33,7 @@ All metrics use a **0-10 scale** with supportive messaging. Metrics are combined
 Essential metrics for project viability:
 
 - [Contributor Redundancy](#contributor-redundancy)
-- [Maintainer Retention](#maintainer-retention)
+- [Commit Author Continuity](#commit-author-continuity)
 - [Release Rhythm](#release-rhythm)
 - [Funding Signals](#funding-signals)
 
@@ -124,37 +124,48 @@ This metric is **estimated from public commit history only** and has significant
 
 ---
 
-### Maintainer Retention
+### Commit Author Continuity
 
-**Alternative Name:** Maintainer Drain
+**Former Name:** Maintainer Retention (a.k.a. Maintainer Drain) — renamed in v0.26.0, see [#11](https://github.com/onukura/oss-sustain-guard/issues/11)
 
-**Purpose:** Tracks whether maintainers are staying active or leaving the project.
+**Purpose:** Tracks whether the people who were carrying the project are still carrying it.
 
-**Data Source:** Commit authorship over time, excluding automated commits (bots)
+**Data Source:** Commit authorship and PR merges over two 180-day windows, excluding automated accounts (bots)
 
 **Calculation:**
 
+- Splits history into a recent window (last 180 days) and a previous window (180-360 days ago)
 - Filters out bot contributions (Dependabot, GitHub Actions, etc.)
-- Analyzes human contributor activity trends
-- Measures percentage of human commits in recent periods
+- Merges email-only commit identities into the matching platform login
+- Identifies the *principal committers* of the previous window: the fewest top authors holding a majority of its commits
+- Counts a principal committer as retained if they authored a commit **or merged a PR** in the recent window (merge rights imply write access)
 
 **Scoring:**
 
-- Active, growing maintainers: 10/10
-- Stable maintainers: 7/10
-- Declining activity: 3/10
-- Abandoned project: 0/10
+- 80%+ of principal committers retained: 10/10
+- 50-79% retained: 7/10
+- Under 50% retained: 4/10
+- None retained, but commit volume held up (handover): 5/10
+- None retained and commit volume collapsed: 0/10
+- No human commit or merge in the recent window: 3/10 (0/10 after a full year)
 
 **Status Levels:**
 
-- **None:** Active, engaged maintainers
-- **Low:** Stable maintainer activity
-- **Medium:** Slight decline in activity
-- **High:** Significant maintainer departure
+- **None:** Principal committers still active
+- **Low:** Majority retained, worth watching
+- **Medium:** Minority retained, or an unverified handover
+- **High:** No maintainer activity in the last 180 days
+- **Critical:** Core team gone, or no maintainer activity for over a year
+
+**Insufficient data:** Projects whose commit sample does not reach back into the previous window — very busy repositories, or new ones — score 10/10 with a message stating that continuity could not be assessed. Unobservable is not the same as unhealthy.
+
+**Limitations:** Commit authorship is a proxy for maintainer activity, not a role check. Maintainers who only triage issues or review code without merging are invisible here, and the commit sample is capped, so long-lived projects are only partially observed.
 
 **CHAOSS Alignment:** ✅ [Inactive Contributors](https://chaoss.community/kb/metric-inactive-contributors/)
 
 **Use Case:** Indicates project sustainability and the likelihood of maintenance burden shifts.
+
+**Note:** This metric is excluded from `oss-guard trend`, because it needs about 12 months of history to compare its two windows and a single trend window does not provide that.
 
 ---
 
@@ -841,7 +852,7 @@ Evaluates maintainability and single-point-of-failure concerns:
 Evaluates long-term project viability:
 
 - Funding Signals (33%)
-- Maintainer Retention (33%)
+- Commit Author Continuity (33%)
 - Release Rhythm (33%)
 
 **Use:** Assess long-term sustainability concerns

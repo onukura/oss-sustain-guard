@@ -197,7 +197,7 @@ The following bots are automatically recognized without additional configuration
 Bot exclusion affects the following metrics:
 
 - **Contributor Redundancy (Bus Factor)**: Excluded from contributor count
-- **Maintainer Retention**: Excluded from maintainer analysis
+- **Commit Author Continuity**: Excluded from principal committer analysis
 - **Contributor Retention**: Excluded from retention calculations
 - **Contributor Attraction**: Excluded from new contributor count
 - **Organizational Diversity**: Excluded from diversity analysis

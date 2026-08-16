@@ -113,7 +113,7 @@ This philosophy applies to:
    - Main function: `analyze_repository(owner: str, repo: str) -> AnalysisResult`
    - Uses GitHub GraphQL API with `GITHUB_TOKEN` environment variable
    - Data structures: `NamedTuple` types - `Metric` (name, score, max_score, message, risk) and `AnalysisResult` (repo_url, total_score, metrics)
-   - Metric functions: `check_bus_factor()`, `check_maintainer_drain()`, `check_funding_status()`, etc.
+   - Metric functions: `check_bus_factor()`, `check_commit_author_continuity()`, `check_funding_status()`, etc.
    - Total score is sum of individual metric scores
 
 4. **`cli.py`** - User Interface (Typer + Rich)

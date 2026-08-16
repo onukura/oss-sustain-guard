@@ -226,6 +226,10 @@ class TestIsMetricTimeDependent:
         """Test that unknown metrics default to time-dependent."""
         assert is_metric_time_dependent("Unknown Metric") is False
 
+    def test_commit_author_continuity_excluded(self):
+        """It compares two 180-day windows, which a trend window cannot supply."""
+        assert is_metric_time_dependent("Commit Author Continuity") is False
+
     def test_no_overlap_between_sets(self):
         """Test that time-dependent and independent sets don't overlap."""
         overlap = TIME_DEPENDENT_METRICS & TIME_INDEPENDENT_METRICS

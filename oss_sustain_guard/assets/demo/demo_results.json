@@ -5,7 +5,7 @@
     "name": "balanced",
     "metric_weights": {
       "Contributor Redundancy": 3,
-      "Maintainer Retention": 2,
+      "Commit Author Continuity": 2,
       "Contributor Attraction": 2,
       "Contributor Retention": 2,
       "Organizational Diversity": 2,
@@ -50,10 +50,10 @@
           "risk": "High"
         },
         {
-          "name": "Maintainer Retention",
+          "name": "Commit Author Continuity",
           "score": 10,
           "max_score": 10,
-          "message": "Stable: 1 active maintainers. No significant drain detected.",
+          "message": "Stable: 1/1 principal committer(s) from 2025-07-07 to 2026-01-03 are still active in 2026-01-03 to 2026-07-02. Estimated from public commit and merge history.",
           "risk": "None"
         },
         {
@@ -224,7 +224,7 @@
           "name": "Sustainability Model",
           "score": 75,
           "max_score": 100,
-          "observation": "Maintainer Retention is strong; Release Rhythm is strong."
+          "observation": "Commit Author Continuity is strong; Release Rhythm is strong."
         },
         {
           "name": "Community Engagement Model",
@@ -278,10 +278,10 @@
           "risk": "None"
         },
         {
-          "name": "Maintainer Retention",
+          "name": "Commit Author Continuity",
           "score": 10,
           "max_score": 10,
-          "message": "Stable: 13 active maintainers. No significant drain detected.",
+          "message": "Stable: 3/3 principal committer(s) from 2025-07-07 to 2026-01-03 are still active in 2026-01-03 to 2026-07-02. Estimated from public commit and merge history.",
           "risk": "None"
         },
         {
@@ -452,7 +452,7 @@
           "name": "Sustainability Model",
           "score": 90,
           "max_score": 100,
-          "observation": "Funding Signals is strong; Maintainer Retention is strong."
+          "observation": "Funding Signals is strong; Commit Author Continuity is strong."
         },
         {
           "name": "Community Engagement Model",
@@ -505,10 +505,10 @@
           "risk": "None"
         },
         {
-          "name": "Maintainer Retention",
+          "name": "Commit Author Continuity",
           "score": 10,
           "max_score": 10,
-          "message": "Stable: 11 active maintainers. No significant drain detected.",
+          "message": "Stable: 2/2 principal committer(s) from 2025-07-07 to 2026-01-03 are still active in 2026-01-03 to 2026-07-02. Estimated from public commit and merge history.",
           "risk": "None"
         },
         {
@@ -679,7 +679,7 @@
           "name": "Sustainability Model",
           "score": 92,
           "max_score": 100,
-          "observation": "Funding Signals is strong; Maintainer Retention is strong."
+          "observation": "Funding Signals is strong; Commit Author Continuity is strong."
         },
         {
           "name": "Community Engagement Model",

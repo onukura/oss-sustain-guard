@@ -23,6 +23,9 @@ from oss_sustain_guard.metrics.ci_status import check_ci_status  # noqa: F401
 from oss_sustain_guard.metrics.code_of_conduct import (
     check_code_of_conduct,  # noqa: F401
 )
+from oss_sustain_guard.metrics.commit_author_continuity import (
+    check_commit_author_continuity,  # noqa: F401
+)
 from oss_sustain_guard.metrics.community_health import (
     check_community_health,  # noqa: F401
 )
@@ -41,7 +44,7 @@ from oss_sustain_guard.metrics.license_clarity import (
     check_license_clarity,  # noqa: F401
 )
 from oss_sustain_guard.metrics.maintainer_drain import (
-    check_maintainer_drain,  # noqa: F401
+    check_maintainer_drain,  # noqa: F401  # deprecated alias, kept for compatibility
 )
 from oss_sustain_guard.metrics.merge_velocity import (
     check_merge_velocity,  # noqa: F401
@@ -186,7 +189,7 @@ DEFAULT_SCORING_PROFILES = {
         "weights": {
             # Maintainer Health (25% emphasis)
             "Contributor Redundancy": 3,
-            "Maintainer Retention": 2,
+            "Commit Author Continuity": 2,
             "Contributor Attraction": 2,
             "Contributor Retention": 2,
             "Organizational Diversity": 2,
@@ -222,7 +225,7 @@ DEFAULT_SCORING_PROFILES = {
         "weights": {
             # Maintainer Health (20% emphasis)
             "Contributor Redundancy": 2,
-            "Maintainer Retention": 2,
+            "Commit Author Continuity": 2,
             "Contributor Attraction": 1,
             "Contributor Retention": 1,
             "Organizational Diversity": 2,
@@ -258,7 +261,7 @@ DEFAULT_SCORING_PROFILES = {
         "weights": {
             # Maintainer Health (15% emphasis)
             "Contributor Redundancy": 1,
-            "Maintainer Retention": 1,
+            "Commit Author Continuity": 1,
             "Contributor Attraction": 2,
             "Contributor Retention": 2,
             "Organizational Diversity": 1,
@@ -294,7 +297,7 @@ DEFAULT_SCORING_PROFILES = {
         "weights": {
             # Maintainer Health (35% emphasis) - HIGHEST
             "Contributor Redundancy": 4,
-            "Maintainer Retention": 3,
+            "Commit Author Continuity": 3,
             "Contributor Attraction": 2,
             "Contributor Retention": 3,
             "Organizational Diversity": 3,
@@ -327,6 +330,30 @@ DEFAULT_SCORING_PROFILES = {
 }
 
 SCORING_PROFILES = copy.deepcopy(DEFAULT_SCORING_PROFILES)
+
+# Metric names that were renamed after release. Configs written against the old
+# names keep working; the weight is applied to the current name instead.
+METRIC_NAME_ALIASES = {
+    "Maintainer Retention": "Commit Author Continuity",
+    "Maintainer Drain": "Commit Author Continuity",
+}
+
+
+def canonicalize_metric_weights(weights: dict[str, Any]) -> dict[str, Any]:
+    """Rewrite retired metric names in a weights table to their current names."""
+    canonical: dict[str, Any] = {}
+    renamed: list[str] = []
+    for metric_name, weight in weights.items():
+        current_name = METRIC_NAME_ALIASES.get(metric_name, metric_name)
+        if current_name != metric_name and current_name not in weights:
+            renamed.append(f"'{metric_name}' → '{current_name}'")
+        canonical[current_name] = weight
+    if renamed:
+        console.print(
+            "[yellow]⚠️  Renamed metric(s) in scoring profile: "
+            f"{', '.join(renamed)}. Update your configuration.[/yellow]"
+        )
+    return canonical
 
 
 def apply_profile_overrides(profile_overrides: dict[str, dict[str, object]]) -> None:
@@ -373,6 +400,8 @@ def apply_profile_overrides(profile_overrides: dict[str, dict[str, object]]) -> 
                 raise ValueError(
                     f"Profile '{profile_key}' weights should be a table of metric names to integers."
                 )
+
+            weights = canonicalize_metric_weights(weights)
 
             missing_metrics = required_metrics - set(weights.keys())
             if missing_metrics:
@@ -594,11 +623,11 @@ def compute_metric_models(metrics: list[Metric]) -> list[MetricModel]:
         )
     )
 
-    # Sustainability Model: weights Funding Signals, Maintainer Retention,
+    # Sustainability Model: weights Funding Signals, Commit Author Continuity,
     # Release Rhythm, Recent Activity
     sustainability_metrics = [
         ("Funding Signals", 0.3),
-        ("Maintainer Retention", 0.25),
+        ("Commit Author Continuity", 0.25),
         ("Release Rhythm", 0.25),
         ("Recent Activity", 0.2),
     ]

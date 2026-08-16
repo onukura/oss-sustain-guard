@@ -92,7 +92,7 @@ Emphasizes maintainer health and sustainable development.
 **Metric Emphasis (Key Weights):**
 
 - **Contributor Redundancy: 5** ⬆️ (Bus factor - key signal)
-- **Maintainer Retention: 4** (Team stability)
+- **Commit Author Continuity: 4** (Team stability)
 - **Contributor Attraction: 3** (Pipeline health)
 - **Organizational Diversity: 3** (Ownership distribution)
 - Recent Activity: 3 (Consistent development)
@@ -244,7 +244,7 @@ description = "Custom scoring focused on specific needs"
 "Contributor Redundancy" = 5
 "Security Signals" = 4
 "Recent Activity" = 3
-"Maintainer Retention" = 3
+"Commit Author Continuity" = 3
 "Funding Signals" = 2
 "Build Health" = 2
 "Community Health" = 2
@@ -299,7 +299,7 @@ SCORING_PROFILES["custom_enterprise"] = {
 
         # Maintainer health (moderate weights)
         "Contributor Redundancy": 3,
-        "Maintainer Retention": 2,
+        "Commit Author Continuity": 2,
         "Organizational Diversity": 2,
 
         # Other metrics (standard weights)
@@ -363,7 +363,7 @@ All profiles assign **individual weights to each metric** (not categories):
 
 **Example Metrics:**
 
-- Contributor Redundancy, Maintainer Retention, Recent Activity
+- Contributor Redundancy, Commit Author Continuity, Recent Activity
 - Security Signals, Funding Signals, Build Health
 - Community Health, PR Acceptance Ratio, Review Health
 - Documentation Presence, License Clarity, Code of Conduct

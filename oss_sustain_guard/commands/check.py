@@ -451,7 +451,7 @@ async def check(
 
     builtin_metrics = {
         "Contributor Redundancy",
-        "Maintainer Retention",
+        "Commit Author Continuity",
         "Recent Activity",
         "Change Request Resolution",
         "Issue Resolution Duration",
