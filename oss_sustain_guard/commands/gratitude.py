@@ -95,24 +95,26 @@ def gratitude(
 
         # Find specific metrics that indicate need for support
         bus_factor_score = 10  # Default max (0-10 scale)
-        maintainer_retention_score = 10  # Default max (0-10 scale)
+        continuity_score = 10  # Default max (0-10 scale)
 
+        # "Maintainer Retention"/"Maintainer Drain" are the pre-v0.26.0 names of
+        # "Commit Author Continuity"; cached analyses may still carry them.
+        continuity_names = (
+            "Commit Author Continuity",
+            "Maintainer Retention",
+            "Maintainer Drain",
+        )
         for metric in metrics_data:
             metric_name = metric.get("name", "")
             if "Bus Factor" in metric_name or "Contributor Redundancy" in metric_name:
                 bus_factor_score = metric.get("score", 10)
-            elif (
-                "Maintainer Retention" in metric_name
-                or "Maintainer Drain" in metric_name
-            ):
-                maintainer_retention_score = metric.get("score", 10)
+            elif any(name in metric_name for name in continuity_names):
+                continuity_score = metric.get("score", 10)
 
-        # Priority = (100 - total_score) + (10 - bus_factor) + (10 - maintainer_retention)
+        # Priority = (100 - total_score) + (10 - bus_factor) + (10 - continuity)
         # Higher priority = needs more support
         priority = (
-            (100 - total_score)
-            + (10 - bus_factor_score)
-            + (10 - maintainer_retention_score)
+            (100 - total_score) + (10 - bus_factor_score) + (10 - continuity_score)
         )
 
         support_candidates.append(
@@ -123,7 +125,7 @@ def gratitude(
                 "priority": priority,
                 "funding_links": funding_links,
                 "bus_factor_score": bus_factor_score,
-                "maintainer_retention_score": maintainer_retention_score,
+                "continuity_score": continuity_score,
             }
         )
 
@@ -175,9 +177,7 @@ def gratitude(
             f"   Health Score: [{status_color}]{total_score}/100[/{status_color}] ({status_text})"
         )
         console.print(f"   Contributor Redundancy: {project['bus_factor_score']}/10")
-        console.print(
-            f"   Maintainer Retention: {project['maintainer_retention_score']}/10"
-        )
+        console.print(f"   Commit Author Continuity: {project['continuity_score']}/10")
 
         # Display funding links
         funding_links = project["funding_links"]

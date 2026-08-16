@@ -59,7 +59,6 @@ TIME_DEPENDENT_METRICS = {
     "Stale Issue Ratio",  # Based on open issues in time window
     # Contributor metrics
     "Contributor Redundancy",  # Based on commits in time window
-    "Maintainer Retention",  # Based on commits in time window
     "Contributor Attraction",  # Based on commits in time window
     "Contributor Retention",  # Based on commits in time window
     "Organizational Diversity",  # Based on commits in time window
@@ -81,6 +80,9 @@ TIME_INDEPENDENT_METRICS = {
     "License Clarity",  # License info (current state)
     "Community Health",  # Community health files (current state)
     "Build Health",  # CI configuration (current state)
+    # Needs ~12 months of commit history to compare two 180-day windows, which a
+    # single trend window does not provide
+    "Commit Author Continuity",
 }
 
 

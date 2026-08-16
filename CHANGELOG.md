@@ -4,6 +4,37 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+## v0.26.0 - 2026-08-17
+
+### Changed
+
+- **`Maintainer Retention` renamed to `Commit Author Continuity`** ([#11](https://github.com/onukura/oss-sustain-guard/issues/11)): the metric is derived from commit and merge authorship, which is a proxy for maintainer activity rather than evidence of maintainer status, and the old name overstated what it could see. Existing configurations that weight `"Maintainer Retention"` keep working — the weight is applied to the new name and a warning is printed. The `oss_sustain_guard.metrics.maintainer_drain` import path and `check_maintainer_drain()` remain as deprecated aliases.
+- **The metric now compares calendar windows instead of commit slices** ([#11](https://github.com/onukura/oss-sustain-guard/issues/11)): it contrasts the last 180 days against the preceding 180 days, rather than the last 25 commits against the previous 25. A dormant project whose commit sample spanned years no longer reads as healthy — `mkdocs/mkdocs`, the project reported in the issue, went from `10/10 Healthy` to `3/10 High` on a sample whose newest commit was 10 months old.
+- **Continuity is measured on principal committers, not head count** ([#11](https://github.com/onukura/oss-sustain-guard/issues/11)): the metric now asks whether the fewest top authors holding a majority of the previous window's commits are still active, instead of comparing distinct author counts. The old ratio was inverted in exactly the case it was meant to detect — when a lead maintainer left, their commits vanished from the recent slice and the surviving drive-by contributors pushed the score *up*. Merging a PR now counts as maintainer activity too, since merge rights imply write access, and email-only commit identities are merged into the matching platform login so one person is not counted twice.
+- **`Commit Author Continuity` is excluded from `oss-guard trend`**: comparing its two windows needs about 12 months of history, which a single trend window does not provide.
+
+### Fixed
+
+- **Short commit histories no longer get a free pass**: the metric used to return a full score for any repository with fewer than 50 sampled commits. Projects whose history genuinely cannot be assessed still score full marks, but the message now states why, and quotes the windows and dates it actually looked at.
+
+## v0.25.0 - 2026-01-13
+
+### Added
+
+- **Java (Maven) ecosystem support for dependency tree resolution**: Full integration with Maven for the `trace` command, enabling visualization and analysis of Java dependencies with comprehensive dependency tree generation and parsing
+- **C# (.NET) ecosystem support for dependency tree resolution**: Complete C#/.NET integration for the `trace` command using dotnet CLI tools, enabling dependency analysis for .NET projects with proper error handling for missing SDKs
+- **Dart ecosystem support for dependency tree resolution**: Added Dart ecosystem integration for the `trace` command using dart CLI tools, enabling comprehensive dependency tree visualization for Flutter and Dart projects
+- **Multi-ecosystem CI workflow for external tools**: Introduced comprehensive GitHub Actions workflow that verifies package resolution across Python, JavaScript, Rust, Ruby, Go, PHP, C#, Dart, and Java ecosystems, ensuring consistent tool support with integration tests and fast failure feedback
+
+### Improved
+
+- **Package mode documentation**: Enhanced README and getting started guide to highlight direct package resolution capabilities for Java, C#, and Dart ecosystems with expanded examples and clearer distinction between package mode and lockfile mode
+- **Ecosystem coverage**: Significantly expanded multi-language dependency analysis support from 6 to 9 ecosystems (added Java, C#, Dart)
+
+### Fixed
+
+- **MavenTreeTool formatting**: Improved code formatting and cleanup in Maven dependency tree parsing implementation
+
 ## v0.24.0 - 2026-01-13
 
 ### Added

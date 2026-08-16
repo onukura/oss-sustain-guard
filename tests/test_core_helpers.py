@@ -121,6 +121,25 @@ def test_apply_profile_overrides_rejects_unknown_metrics():
         apply_profile_overrides({"balanced": {"weights": weights}})
 
 
+def test_apply_profile_overrides_accepts_retired_metric_names():
+    """Configs written against "Maintainer Retention" keep working (issue #11)."""
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
+    weights["Maintainer Retention"] = weights.pop("Commit Author Continuity")
+
+    apply_profile_overrides({"balanced": {"weights": weights}})
+
+    applied = get_metric_weights("balanced")
+    assert (
+        applied["Commit Author Continuity"]
+        == balanced_weights["Commit Author Continuity"]
+    )
+    assert "Maintainer Retention" not in applied
+
+    apply_profile_overrides({})
+
+
 def test_apply_profile_overrides_rejects_invalid_weights():
     balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
     assert isinstance(balanced_weights, dict)
@@ -181,7 +200,7 @@ def test_compute_metric_models_with_observations():
         Metric("Change Request Resolution", 1, 10, "msg", "Low"),
         Metric("Community Health", 1, 10, "msg", "Low"),
         Metric("Funding Signals", 10, 10, "msg", "Low"),
-        Metric("Maintainer Retention", 9, 10, "msg", "Low"),
+        Metric("Commit Author Continuity", 9, 10, "msg", "Low"),
         Metric("Release Rhythm", 8, 10, "msg", "Low"),
         Metric("Recent Activity", 9, 10, "msg", "Low"),
         Metric("Contributor Attraction", 9, 10, "msg", "Low"),
@@ -216,7 +235,7 @@ def test_compute_metric_models_with_monitoring_messages():
         Metric("Security Signals", 9, 10, "msg", "Low"),
         Metric("Change Request Resolution", 9, 10, "msg", "Low"),
         Metric("Funding Signals", 6, 10, "msg", "Low"),
-        Metric("Maintainer Retention", 6, 10, "msg", "Low"),
+        Metric("Commit Author Continuity", 6, 10, "msg", "Low"),
         Metric("Release Rhythm", 6, 10, "msg", "Low"),
         Metric("Recent Activity", 6, 10, "msg", "Low"),
         Metric("Contributor Attraction", 6, 10, "msg", "Low"),

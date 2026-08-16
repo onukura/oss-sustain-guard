@@ -24,7 +24,7 @@ CHAOSS organizes metrics into:
 | OSS Sustain Guard Metric | CHAOSS Metric | Alignment Status |
 | ------------------------ | ------------- | ---------------- |
 | **Contributor Redundancy** | [Elephant Factor](https://chaoss.community/kb/metric-elephant-factor/) | ✅ **Perfect** - Measures contributor concentration |
-| **Maintainer Retention** | [Inactive Contributors](https://chaoss.community/kb/metric-inactive-contributors/) | ✅ **Strong** - Tracks maintainer activity over time |
+| **Commit Author Continuity** | [Inactive Contributors](https://chaoss.community/kb/metric-inactive-contributors/) | ✅ **Strong** - Tracks continuity of principal committers across calendar windows |
 | **Recent Activity** | [Activity Dates and Times](https://chaoss.community/kb/metric-activity-dates-and-times/) | ✅ **Perfect** - Measures project activity recency |
 | **Change Request Resolution** | [Change Request Review Duration](https://chaoss.community/kb/metric-change-request-review-duration/) / [Change Requests Duration](https://chaoss.community/kb/metric-change-requests-duration/) | ✅ **Perfect** - Measures PR/CR merge time |
 | **Release Rhythm** | [Release Frequency](https://chaoss.community/kb/metric-release-frequency/) | ✅ **Perfect** - Tracks release cadence |
@@ -69,7 +69,7 @@ CHAOSS organizes metrics into:
 **OSS Sustain Guard Components:**
 
 - Funding Signals (33%)
-- Maintainer Retention (33%)
+- Commit Author Continuity (33%)
 - Release Rhythm (33%)
 
 **CHAOSS Alignment:** ✅ **Strong**
@@ -123,7 +123,7 @@ Based on CHAOSS standards, these metrics would enhance our coverage:
 | Original Name | Current Name | CHAOSS Alignment |
 | ------------- | ------------ | ---------------- |
 | Bus Factor | **Contributor Redundancy** | ✅ More professional than "Elephant Factor" |
-| Maintainer Drain | **Maintainer Retention** | ✅ Positive framing, CHAOSS-compatible |
+| Maintainer Drain → Maintainer Retention | **Commit Author Continuity** | ✅ Names the observable signal (commit/merge authorship) rather than implying verified maintainer status |
 | Zombie Check | **Recent Activity** | ✅ Neutral, observation-focused |
 | Merge Velocity | **Change Request Resolution** | ✅ Matches CHAOSS "Change Request" terminology |
 | CI Status | **Build Health** | ✅ Broader scope than just CI |

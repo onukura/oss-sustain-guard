@@ -33,7 +33,7 @@ use_gitignore = true
 #
 # [tool.oss-sustain-guard.profiles.my_custom.weights]
 # "Contributor Redundancy" = 5
-# "Maintainer Retention" = 4
+# "Commit Author Continuity" = 4
 # "Contributor Attraction" = 3
 # "Contributor Retention" = 3
 # "Organizational Diversity" = 2

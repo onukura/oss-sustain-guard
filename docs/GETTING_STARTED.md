@@ -384,7 +384,7 @@ The host API requires authentication for repository analysis. The token allows O
 | **Contributor Redundancy** | Distribution of contributions (lower = single-maintainer concentration) |
 | **Recent Activity** | Project's current activity level |
 | **Release Rhythm** | Release frequency and consistency |
-| **Maintainer Retention** | Stability of maintainers |
+| **Commit Author Continuity** | Are the project's principal committers still active? |
 | **Community Health** | Issue response time and responsiveness |
 
 ## 🔧 Useful Options
