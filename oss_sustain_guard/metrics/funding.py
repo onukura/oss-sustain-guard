@@ -96,10 +96,8 @@ class FundingChecker(MetricChecker):
 _CHECKER = FundingChecker()
 
 
-def check_funding(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
-    if isinstance(repo_data, VCSRepositoryData):
-        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
-    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
+def check_funding(repo_data: VCSRepositoryData) -> Metric:
+    return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:

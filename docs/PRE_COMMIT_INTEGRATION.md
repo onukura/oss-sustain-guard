@@ -15,7 +15,7 @@ pip install pre-commit
 ```yaml
 repos:
   - repo: https://github.com/onukura/oss-sustain-guard
-    rev: v0.17.0
+    rev: v0.18.0
     hooks:
       - id: oss-sustain-guard
         args: [-o, compact]

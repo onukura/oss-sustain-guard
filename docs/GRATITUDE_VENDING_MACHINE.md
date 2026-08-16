@@ -17,14 +17,14 @@ The command analyzes your cached dependencies and calculates a **support priorit
 ### Priority Calculation
 
 ```
-Priority = (100 - Health Score) + (10 - Contributor Redundancy) + (10 - Maintainer Retention)
+Priority = (100 - Health Score) + (10 - Contributor Redundancy) + (10 - Commit Author Continuity)
 ```
 
 **Higher priority = More support needed**
 
 - **Health Score** (0-100): Overall project sustainability
 - **Contributor Redundancy** (0-10): Distribution of contributions (lower = single-maintainer concentration)
-- **Maintainer Retention** (0-10): Maintainer retention and activity
+- **Commit Author Continuity** (0-10): Continuity of the project's principal committers
 
 ### Filtering Criteria
 
@@ -58,7 +58,7 @@ Top 3 projects that would appreciate your support:
    Repository: https://github.com/Textualize/rich
    Health Score: 77/100 (Monitor)
    Contributor Redundancy: 10/10
-   Maintainer Retention: 10/10
+   Commit Author Continuity: 10/10
    💝 Support options:
       • GITHUB: https://github.com/willmcgugan
 
@@ -66,7 +66,7 @@ Top 3 projects that would appreciate your support:
    Repository: https://github.com/pytest-dev/pytest
    Health Score: 78/100 (Monitor)
    Contributor Redundancy: 8/10
-   Maintainer Retention: 10/10
+   Commit Author Continuity: 10/10
    💝 Support options:
       • GITHUB: https://github.com/pytest-dev
       • TIDELIFT: https://tidelift.com/funding/github/pypi/pytest
@@ -76,7 +76,7 @@ Top 3 projects that would appreciate your support:
    Repository: https://github.com/fastapi/typer
    Health Score: 76/100 (Monitor)
    Contributor Redundancy: 8/10
-   Maintainer Retention: 10/10
+   Commit Author Continuity: 10/10
    💝 Support options:
       • GITHUB: https://github.com/tiangolo
 
@@ -128,7 +128,7 @@ Each project shows:
 
 - **Health Score**: Overall sustainability (0-100)
 - **Contributor Redundancy**: Single-maintainer concentration signal
-- **Maintainer Retention**: Maintainer retention status
+- **Commit Author Continuity**: Whether the principal committers are still active
 - **Repository URL**: Link to the project
 
 This helps you understand **why** a project needs support.

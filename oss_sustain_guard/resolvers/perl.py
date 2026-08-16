@@ -9,9 +9,10 @@ import re
 import sys
 from pathlib import Path
 
+import aiofiles
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -23,7 +24,7 @@ class PerlResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "perl"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Resolve a Perl package to a repository URL.
 
@@ -34,15 +35,15 @@ class PerlResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                response = client.get(
-                    f"https://fastapi.metacpan.org/v1/release/{package_name}",
-                    timeout=10,
-                )
-                if response.status_code == 404:
-                    return None
-                response.raise_for_status()
-                data = response.json()
+            client = await _get_async_http_client()
+            response = await client.get(
+                f"https://fastapi.metacpan.org/v1/release/{package_name}",
+                timeout=10,
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            data = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
             print(
                 f"Note: Unable to fetch MetaCPAN data for {package_name}: {e}",
@@ -71,7 +72,7 @@ class PerlResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse cpanfile.snapshot and extract package information.
 
@@ -93,7 +94,8 @@ class PerlResolver(LanguageResolver):
             raise ValueError(f"Unknown Perl lockfile type: {lockfile_path.name}")
 
         try:
-            content = lockfile_path.read_text(encoding="utf-8")
+            async with aiofiles.open(lockfile_path, "r", encoding="utf-8") as f:
+                content = await f.read()
         except OSError as e:
             raise ValueError(f"Failed to read cpanfile.snapshot: {e}") from e
 
@@ -117,7 +119,7 @@ class PerlResolver(LanguageResolver):
 
         return packages
 
-    def detect_lockfiles(self, directory: str) -> list[Path]:
+    async def detect_lockfiles(self, directory: str) -> list[Path]:
         """
         Detect Perl lockfiles in the directory.
 
@@ -131,11 +133,11 @@ class PerlResolver(LanguageResolver):
         lockfile = dir_path / "cpanfile.snapshot"
         return [lockfile] if lockfile.exists() else []
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Get Perl manifest file names."""
         return ["cpanfile"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse cpanfile and extract package information.
 
@@ -157,7 +159,8 @@ class PerlResolver(LanguageResolver):
             raise ValueError(f"Unknown Perl manifest file type: {manifest_path.name}")
 
         try:
-            content = manifest_path.read_text(encoding="utf-8")
+            async with aiofiles.open(manifest_path, "r", encoding="utf-8") as f:
+                content = await f.read()
         except OSError as e:
             raise ValueError(f"Failed to read cpanfile: {e}") from e
 
@@ -181,3 +184,6 @@ def _strip_distribution_version(name: str) -> str:
     if match:
         return match.group("base")
     return name
+
+
+RESOLVER = PerlResolver()

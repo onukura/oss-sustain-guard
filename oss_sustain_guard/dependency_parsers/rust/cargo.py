@@ -1,0 +1,1 @@
+"""Rust lockfile dependency parser."""

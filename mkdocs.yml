@@ -27,10 +27,14 @@ nav:
       - How We Differ: DIFFERENCES_FROM_SIMILAR_INITIATIVES.md
   - Usage:
       - Recursive Scanning: RECURSIVE_SCANNING_GUIDE.md
+      - Trend Analysis: TREND_ANALYSIS_GUIDE.md
       - Dependency Analysis: DEPENDENCY_ANALYSIS_GUIDE.md
+      - Dependency Graph Visualization: DEPENDENCY_GRAPH_VISUALIZATION.md
       - Gratitude Vending Machine: GRATITUDE_VENDING_MACHINE.md
   - Configuration:
       - Exclude Packages: EXCLUDE_PACKAGES_GUIDE.md
+      - Bot Detection: BOT_DETECTION_GUIDE.md
+      - Scan Depth & Time Windows: SCAN_DEPTH_GUIDE.md
       - Caching: CACHING_GUIDE.md
   - Scoring & Metrics:
       - Built-in Metrics: BUILT_IN_METRICS_GUIDE.md
@@ -38,7 +42,13 @@ nav:
       - Custom Metrics: CUSTOM_METRICS_GUIDE.md
       - Scoring Profiles (Custom): SCORING_PROFILES_GUIDE.md
   - Integrations:
+      - LFX Insights: LFX_INSIGHTS_INTEGRATION.md
       - GitHub Actions: GITHUB_ACTIONS_GUIDE.md
+      - GitLab CI/CD: GITLAB_CICD_INTEGRATION_GUIDE.md
       - Pre-commit Integration: PRE_COMMIT_INTEGRATION.md
+  - Extending:
+      - Custom Dependency Parsers: CUSTOM_DEPENDENCY_PARSERS_GUIDE.md
+      - Custom Resolvers: CUSTOM_RESOLVERS_GUIDE.md
+      - Custom VCS Providers: CUSTOM_VCS_GUIDE.md
   - Support:
       - Troubleshooting & FAQ: TROUBLESHOOTING_FAQ.md

@@ -1,7 +1,8 @@
 """
 Cache management for OSS Sustain Guard.
 
-Provides local caching of package analysis data to reduce network requests.
+Provides local caching of package analysis data to reduce network requests,
+including specialized trend analysis caching.
 """
 
 import gzip
@@ -11,6 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from oss_sustain_guard.config import get_cache_dir, get_cache_ttl
+
+# Trend cache subdirectory
+TREND_CACHE_SUBDIR = "trends"
 
 
 def _get_cache_path(ecosystem: str) -> Path:
@@ -479,3 +483,218 @@ def get_cache_stats(
         "expired_entries": expired_entries,
         "ecosystems": ecosystem_stats,
     }
+
+
+# --- Trend Data Caching ---
+
+
+def _get_trend_cache_path(
+    owner: str,
+    repo: str,
+    vcs_platform: str = "github",
+) -> Path:
+    """Get the cache file path for trend VCS data.
+
+    Trend data is cached separately with time window information to enable
+    efficient incremental analysis.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        vcs_platform: VCS platform identifier (github, gitlab, etc.)
+
+    Returns:
+        Path to trend cache file (gzip compressed JSON)
+    """
+    cache_dir = get_cache_dir() / TREND_CACHE_SUBDIR / vcs_platform
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Sanitize owner/repo for filesystem-safe naming
+    safe_owner = owner.replace("/", "_").replace("\\", "_")
+    safe_repo = repo.replace("/", "_").replace("\\", "_")
+    filename = f"{safe_owner}_{safe_repo}.json.gz"
+
+    return cache_dir / filename
+
+
+def _get_trend_window_cache_key(
+    since: str,
+    until: str,
+) -> str:
+    """Generate a cache key for a time window.
+
+    Args:
+        since: Start timestamp (ISO format)
+        until: End timestamp (ISO format)
+
+    Returns:
+        Cache key string combining both timestamps
+    """
+    return f"{since}::{until}"
+
+
+def load_trend_vcs_data(
+    owner: str,
+    repo: str,
+    since: str,
+    until: str,
+    vcs_platform: str = "github",
+) -> dict[str, Any] | None:
+    """Load cached VCS data for a specific time window.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        since: Start timestamp (ISO format)
+        until: End timestamp (ISO format)
+        vcs_platform: VCS platform identifier
+
+    Returns:
+        Cached VCS data dict, or None if not found/invalid
+    """
+    cache_path = _get_trend_cache_path(owner, repo, vcs_platform)
+
+    if not cache_path.exists():
+        return None
+
+    try:
+        with gzip.open(cache_path, "rt", encoding="utf-8") as f:
+            all_data = json.load(f)
+
+        window_key = _get_trend_window_cache_key(since, until)
+        window_data = all_data.get(window_key)
+
+        if not window_data:
+            return None
+
+        # Check if cache is still valid
+        metadata = window_data.get("cache_metadata", {})
+        if not metadata:
+            return None
+
+        # Verify cache hasn't expired
+        try:
+            fetched_at = datetime.fromisoformat(metadata["fetched_at"])
+            if fetched_at.tzinfo is None:
+                fetched_at = fetched_at.replace(tzinfo=timezone.utc)
+
+            ttl_seconds = metadata.get("ttl_seconds", get_cache_ttl())
+            now = datetime.now(timezone.utc)
+            age_seconds = (now - fetched_at).total_seconds()
+
+            if age_seconds >= ttl_seconds:
+                # Cache expired
+                return None
+
+        except (ValueError, TypeError):
+            return None
+
+        return window_data.get("vcs_data")
+
+    except (gzip.BadGzipFile, json.JSONDecodeError, IOError):
+        return None
+
+
+def save_trend_vcs_data(
+    owner: str,
+    repo: str,
+    since: str,
+    until: str,
+    vcs_data: dict[str, Any],
+    vcs_platform: str = "github",
+) -> None:
+    """Cache VCS data for a specific time window.
+
+    Trends are cached separately from regular package analysis to enable
+    efficient windowing and incremental updates.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        since: Start timestamp (ISO format)
+        until: End timestamp (ISO format)
+        vcs_data: VCS data dict to cache
+        vcs_platform: VCS platform identifier
+    """
+    cache_path = _get_trend_cache_path(owner, repo, vcs_platform)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+    window_key = _get_trend_window_cache_key(since, until)
+
+    # Load existing cache if present
+    all_data = {}
+    if cache_path.exists():
+        try:
+            with gzip.open(cache_path, "rt", encoding="utf-8") as f:
+                all_data = json.load(f)
+        except (gzip.BadGzipFile, json.JSONDecodeError):
+            all_data = {}
+
+    # Update with new window data
+    all_data[window_key] = {
+        "vcs_data": vcs_data,
+        "cache_metadata": {
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "ttl_seconds": get_cache_ttl(),
+            "since": since,
+            "until": until,
+        },
+    }
+
+    # Write cache
+    with gzip.open(cache_path, "wt", encoding="utf-8") as f:
+        json.dump(all_data, f, ensure_ascii=False, indent=2)
+
+
+def clear_trend_cache(
+    owner: str | None = None,
+    repo: str | None = None,
+    vcs_platform: str | None = None,
+) -> None:
+    """Clear trend cache entries.
+
+    Args:
+        owner: If specified, only clear for this owner
+        repo: If specified (with owner), only clear for this repo
+        vcs_platform: If specified, only clear for this platform
+    """
+    cache_dir = get_cache_dir() / TREND_CACHE_SUBDIR
+
+    if not cache_dir.exists():
+        return
+
+    if vcs_platform:
+        platform_dir = cache_dir / vcs_platform
+        if owner and repo:
+            # Clear specific repo
+            safe_owner = owner.replace("/", "_").replace("\\", "_")
+            safe_repo = repo.replace("/", "_").replace("\\", "_")
+            cache_file = platform_dir / f"{safe_owner}_{safe_repo}.json.gz"
+            if cache_file.exists():
+                cache_file.unlink()
+        elif owner:
+            # Clear all repos for this owner (wildcard match)
+            safe_owner = owner.replace("/", "_").replace("\\", "_")
+            if platform_dir.exists():
+                for cache_file in platform_dir.glob(f"{safe_owner}_*.json.gz"):
+                    cache_file.unlink()
+        else:
+            # Clear all for this platform
+            import shutil
+
+            if platform_dir.exists():
+                shutil.rmtree(platform_dir)
+    elif owner:
+        # Clear across all platforms for this owner
+        if cache_dir.exists():
+            safe_owner = owner.replace("/", "_").replace("\\", "_")
+            for platform_dir in cache_dir.iterdir():
+                if platform_dir.is_dir():
+                    for cache_file in platform_dir.glob(f"{safe_owner}_*.json.gz"):
+                        cache_file.unlink()
+    else:
+        # Clear all trend cache
+        import shutil
+
+        if cache_dir.exists():
+            shutil.rmtree(cache_dir)

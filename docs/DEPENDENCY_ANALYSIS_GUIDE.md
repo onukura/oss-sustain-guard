@@ -1,190 +1,194 @@
 # Dependency Analysis Guide
 
-## Overview
+The `trace` command provides comprehensive dependency tree analysis and visualization with health scores for all your dependencies.
 
-The `--show-dependencies` (`-D`) flag enables OSS Sustain Guard to analyze and display the health scores of your project's dependencies. This provides a **holistic sustainability assessment** by evaluating not just the primary package, but also the health of its entire dependency tree.
+> ℹ️ **Migration Notice**: The `--show-dependencies` flag has been removed from the `check` command. Use the `trace` command instead for superior dependency analysis capabilities.
 
-> ℹ️ **Experimental feature**: Dependency analysis is still undergoing validation. The results are provided as a helpful reference and may evolve as we improve accuracy and coverage.
+## Migration from `--show-dependencies`
 
-## Why Dependency Analysis Matters
+If you were previously using `check --show-dependencies`, here's how to migrate:
 
-When assessing package sustainability, evaluating only the primary package is incomplete. Dependencies form the foundation of your project:
+```bash
+# Before (deprecated)
+os4g check requests --show-dependencies
 
-- **Downstream Concerns**: Unmaintained dependencies can introduce security vulnerabilities and technical debt
-- **Supply Chain Health**: A healthy package built on unstable dependencies is like a "thin toothpick supporting a building"
-- **Long-term Viability**: Understanding the health of your entire dependency tree helps you make informed decisions about package adoption
+# After (recommended)
+os4g trace requests                    # Full dependency tree
+os4g trace requests --max-depth 1      # Direct dependencies only
+os4g trace requirements.txt            # From lockfile
+os4g trace javascript:react            # JavaScript packages
+```
+
+**Benefits of `trace` command:**
+
+- Full tree structure visualization (not just statistics)
+- Terminal, HTML, and JSON output formats
+- Depth control and filtering options
+- Support for package names and lockfiles
+- Multi-ecosystem support (Python, JavaScript, Rust, etc.)
 
 ## Requirements
 
-The `--show-dependencies` flag **only works when your project contains a lockfile**. Supported lockfiles include:
+- **For lockfile mode**: A lockfile (see supported formats below)
+- **For package mode**: External tool installed (`uv` for Python, `npm` for JavaScript, etc.)
+- **API token**: GitHub/GitLab token (`GITHUB_TOKEN` or `GITLAB_TOKEN`)
 
-### Python
+### Supported Lockfiles
 
-- `uv.lock` (UV package manager)
-- `poetry.lock` (Poetry)
-- `Pipfile.lock` (Pipenv)
-
-### JavaScript/TypeScript
-
-- `package-lock.json` (npm v7+)
-- `yarn.lock` (Yarn)
-- `pnpm-lock.yaml` (pnpm)
-
-### Other Ecosystems
-
-- `Cargo.lock` (Rust)
-- `go.mod`, `go.sum` (Go modules)
-- `cabal.project.freeze`, `stack.yaml.lock` (Haskell)
-- `cpanfile.snapshot` (Perl)
-- `mix.lock` (Elixir)
-- `pubspec.lock` (Dart)
-- `renv.lock` (R)
-- `Package.resolved` (Swift Package Manager)
-- `Gemfile.lock` (Ruby)
-- `composer.lock` (PHP)
+- **Python**: `uv.lock`, `poetry.lock`, `Pipfile.lock`
+- **JavaScript**: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `deno.lock`
+- **Rust**: `Cargo.lock`
+- **Go**: `go.mod`, `go.sum`
+- **Other**: `Gemfile.lock` (Ruby), `composer.lock` (PHP), `mix.lock` (Elixir), `cabal.project.freeze`/`stack.yaml.lock` (Haskell), `cpanfile.snapshot` (Perl), `pubspec.lock` (Dart), `renv.lock` (R), `Package.resolved` (Swift)
 
 ## Usage
 
-### Basic Usage
-
-Analyze your project with dependency scores:
+### Quick Start (Terminal Output)
 
 ```bash
-os4g check --show-dependencies
+# Trace a package - shows in terminal
+os4g trace requests
+
+# Trace from lockfile - shows in terminal
+os4g trace uv.lock
+os4g trace package.json
 ```
 
-Or with auto-detection:
+### Lockfile Mode
 
 ```bash
-os4g check --show-dependencies --include-lock
+# Trace lockfile dependencies
+os4g trace package-lock.json
+os4g trace uv.lock
+os4g trace Cargo.lock
+
+# Direct dependencies only
+os4g trace requirements.txt --direct-only
+
+# Limit depth
+os4g trace package.json --max-depth 2
 ```
 
-### With Specific Packages
-
-Dependency scores are **only available when analyzing your project directory with lockfiles present**. Specifying individual packages will show a warning:
+### Package Mode
 
 ```bash
-cd /path/to/your/project
-os4g check requests --show-dependencies
-# ℹ️  --show-dependencies specified but no lockfiles found in .
-#    Dependency scores are only available when analyzing projects with lockfiles.
+# Trace a specific package (Python default)
+os4g trace requests
+
+# Trace with specific version
+os4g trace requests --version 2.28.0
+
+# Trace from other ecosystems
+os4g trace javascript:react
+os4g trace -e rust serde
+
+# Limit to direct dependencies
+os4g trace requests --max-depth 1
 ```
 
-### Compact Format
-
-Display dependency statistics in compact format (ideal for CI/CD):
+### Advanced Options
 
 ```bash
-os4g check --show-dependencies -c
-```
+# Custom scoring profile
+os4g trace requests --profile security_first
 
-Output:
+# Shallow scan (faster)
+os4g trace package.json --scan-depth shallow
 
-```shell
-✓ my-project (87/100) - Healthy
-  🔗 Dependencies: avg=75, min=45, max=92, count=23
-```
+# No cache (fresh analysis)
+os4g trace uv.lock --no-cache
 
-### Detail Format
+# Verbose logging
+os4g trace Cargo.lock --verbose
 
-Display detailed dependency tables:
-
-```bash
-os4g check --show-dependencies -o detail
-```
-
-Output:
-
-```shell
-🔗 my-project - Dependency Reference Scores (Top 15):
-┏━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
-┃ Package        ┃ Score  ┃ Health          ┃
-┡━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
-│ click          │ 87/100 │ Healthy ✓       │
-│ requests       │ 76/100 │ Monitor │
-│ urllib3        │ 68/100 │ Monitor │
-│ ...            │        │                 │
-└────────────────┴────────┴─────────────────┘
-```
-
-### Standard Format
-
-Display top 10 dependencies with health status:
-
-```bash
-os4g check --show-dependencies
-```
-
-Output:
-
-```shell
-🔗 my-project - Dependency Reference Scores (Top 10):
-   • click 87/100 ✓ Healthy
-   • requests 76/100 ⚠ Monitor
-   • urllib3 68/100 ⚠ Monitor
-   • ...
+# Custom number of workers
+os4g trace package.json --num-workers 10
 ```
 
 ## Interpreting Results
 
-Dependency scores use the same 0-100 scale as primary packages:
+Scores use the same 0-100 scale as the `check` command:
 
-| Score Range | Status | Interpretation |
-| -------- | -------- | -------- |
-| 80-100 | ✓ Healthy | Well-maintained, actively developed |
-| 50-79 | ⚠ Monitor | Monitor for updates, consider alternatives |
-| 0-49 | ✗ Needs support | Needs support, prioritize alternatives or direct support |
+| Score | Status | Action |
+|-------|--------|--------|
+| 80-100 | ✓ Healthy | Well-maintained |
+| 50-79 | ⚠ Monitor | Review regularly |
+| 0-49 | ✗ Needs support | Consider alternatives or contribute |
 
-## Real-World Example
+### Terminal Output
 
-```bash
-# Analyze your project with dependency insights
-cd my-python-project
-os4g check --show-dependencies
+The terminal output shows:
 
-# Results show:
-# ✓ my-project (85/100) - Healthy
-#
-# 🔗 Dependency Reference Scores (Top 10):
-#    • click 87/100 ✓ Healthy
-#    • charset-normalizer 80/100 ✓ Healthy
-#    • coverage 74/100 ⚠ Monitor
-#    • anyio 66/100 ⚠ Monitor
-#    • ...
-```
+- 🌳 Tree structure showing dependency relationships
+- 📊 Scores displayed inline with color coding
+- ⭐ Direct dependencies marked with *
+- 📈 Summary statistics (total packages, health distribution)
 
-This reveals that while your project is healthy, some dependencies need monitoring. You can then:
+### HTML Output
 
-1. Check if updated versions are available
-2. Evaluate alternative packages with better sustainability scores
-3. Consider contributing to low-scoring dependencies you rely on
-4. Adjust your attention threshold based on your use case
+Interactive HTML visualization with:
 
-## Tips & Best Practices
+- 🟢 Green (≥80): Healthy dependencies
+- 🟡 Yellow (50-79): Monitor these dependencies
+- 🔴 Red (<50): Needs support or alternatives
+- Clickable nodes for details
+- Expandable/collapsible tree structure
 
-1. **Run regularly**: Dependency health changes over time. Include this in your CI/CD pipeline.
+## Tips
 
-2. **Combine with other tools**: Use alongside security scanners and vulnerability databases for comprehensive analysis.
+- **Run regularly in CI/CD** to track dependency health changes
+- **Combine with security scanners** for comprehensive analysis
+- **Focus on high-impact dependencies** (direct or heavily used)
+- **Consider supporting low-scoring projects** you rely on
+- **Use HTML output** for team reviews and documentation
+- **Use JSON output** for integration with other tools
 
-3. **Prioritize key dependencies**: Focus on dependencies that are:
-   - Core to your application logic
-   - Frequently updated or actively used
-   - On the core path of your system
+## Comparison: `trace` vs old `--show-dependencies`
 
-4. **Support low-scoring projects**: If a low-scoring dependency is core to your project, consider:
-   - Contributing code or documentation
-   - Sponsoring the maintainer
-   - Volunteering as a maintainer
+| Feature | Old `check --show-dependencies` | New `trace` |
+|---------|--------------------------------|-------------|
+| Tree visualization | ❌ No | ✅ Yes |
+| HTML output | ❌ No | ✅ Yes |
+| JSON export | ❌ No | ✅ Yes |
+| Depth control | ❌ No | ✅ Yes (`--max-depth`) |
+| Package mode | ❌ No | ✅ Yes |
+| Statistics only | ✅ avg/min/max/count | ❌ Full tree |
+| Multi-ecosystem | ✅ Yes | ✅ Yes |
 
-## Limitations
+## Troubleshooting
 
-- Dependency analysis requires lockfiles (manifest files alone are insufficient)
-- Only direct dependencies are analyzed (not transitive dependencies)
-- Scores are based on GitHub repository metrics (private packages won't be scored)
-- Cross-ecosystem dependencies (e.g., Python calling Rust native code) are not analyzed
+**Unable to analyze dependencies**: Try with fewer workers (`--num-workers 2`) or use shallow scan (`--scan-depth shallow`)
+
+**Graph data is empty**: Remove `--direct-only` flag or increase `--max-depth`
+
+**Slow analysis**: Use `--scan-depth shallow` and/or `--direct-only`
+
+**Lockfile not detected**: Ensure the lockfile exists and has a supported extension
+
+### Storage and Performance Notes
+
+When using **package mode** (analyzing packages directly without lockfiles), the tool may create temporary directories:
+
+- **JavaScript packages**: Tools like `pnpm`, `npm`, `bun` create temporary `node_modules` during resolution
+  - The tool uses minimal install options (`--ignore-scripts`, `--no-optional`, `--prefer-offline`) to reduce disk usage
+  - Typical temporary storage: 10-100 MB depending on package size
+- **Python packages**: Tool `uv` only generates a lockfile without installing packages
+  - Much more storage-efficient than JavaScript (typically <1 MB)
+  - No virtual environment or package installation required
+- **Automatic cleanup**: All temporary files are automatically cleaned up after analysis
+- **Recommendation**: For repeated analyses, prefer lockfile mode or ensure adequate temporary storage space
+
+**Storage savings tips:**
+- Use lockfile mode when possible (e.g., `trace package-lock.json` instead of `trace javascript:react`)
+- Clear system temp directory regularly if running many package analyses
+- Use `--max-depth 1` or `--direct-only` to limit dependency tree size
+- Python analysis is more storage-friendly than JavaScript for package mode
 
 ## See Also
 
+- [Dependency Graph Visualization Guide](DEPENDENCY_GRAPH_VISUALIZATION.md) - Complete `trace` command reference
 - [Getting Started](GETTING_STARTED.md) - Basic usage guide
 - [Recursive Scanning](RECURSIVE_SCANNING_GUIDE.md) - Scan multiple projects
 - [Exclude Configuration](EXCLUDE_PACKAGES_GUIDE.md) - Filter packages from analysis
+- [Scoring Profiles Guide](SCORING_PROFILES_GUIDE.md) - Custom scoring
+- [Caching Guide](CACHING_GUIDE.md) - Performance optimization

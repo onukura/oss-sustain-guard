@@ -2,8 +2,10 @@
 Tests for the configuration module.
 """
 
+import ssl
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -11,6 +13,7 @@ from oss_sustain_guard.config import (
     get_cache_dir,
     get_cache_ttl,
     get_excluded_packages,
+    get_excluded_users,
     get_output_style,
     get_verify_ssl,
     is_cache_enabled,
@@ -339,8 +342,13 @@ description = "Custom profile"
 
     profiles = load_profile_config()
     assert "custom" in profiles
-    assert profiles["custom"]["name"] == "Custom"
-    assert profiles["custom"]["weights"]["Contributor Redundancy"] == 1
+    custom_profile = profiles.get("custom")
+    assert isinstance(custom_profile, dict)
+    assert custom_profile.get("name") == "Custom"
+    weights = custom_profile.get("weights")
+    assert isinstance(weights, dict)
+    assert "Contributor Redundancy" in weights
+    assert weights["Contributor Redundancy"] == 1  # type: ignore
 
 
 def test_load_profile_config_from_profile_file(tmp_path):
@@ -358,7 +366,12 @@ name = "Custom Profile"
 
     profiles = load_profile_config(profile_file)
     assert "custom_profile" in profiles
-    assert profiles["custom_profile"]["weights"]["Contributor Redundancy"] == 2
+    custom_profile = profiles.get("custom_profile")
+    assert isinstance(custom_profile, dict)
+    weights = custom_profile.get("weights")
+    assert isinstance(weights, dict)
+    assert "Contributor Redundancy" in weights
+    assert weights["Contributor Redundancy"] == 2  # type: ignore
 
 
 def test_load_profile_config_missing_profiles_raises(tmp_path):
@@ -391,43 +404,74 @@ def test_set_verify_ssl_with_bool():
     assert get_verify_ssl() is True
 
 
-def test_set_verify_ssl_with_cert_path():
+def test_set_verify_ssl_with_cert_path(tmp_path):
     """Test set_verify_ssl with certificate file path."""
-    cert_path = "/path/to/custom-ca.crt"
-    set_verify_ssl(cert_path)
-    assert get_verify_ssl() == cert_path
+    cert_path = tmp_path / "custom-ca.crt"
+    cert_path.write_text("dummy cert")
+    set_verify_ssl(str(cert_path))
+
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(cert_path))
 
 
 def test_get_verify_ssl_from_env(monkeypatch, tmp_path):
     """Test get_verify_ssl respects OSS_SUSTAIN_GUARD_CA_CERT environment variable."""
     set_verify_ssl(None)  # Reset to use env var
-    cert_path = str(tmp_path / "test-ca.crt")
+    cert_path = tmp_path / "test-ca.crt"
+    cert_path.write_text("dummy cert")
 
-    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", cert_path)
-    assert get_verify_ssl() == cert_path
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", str(cert_path))
+
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(cert_path))
 
 
 def test_get_verify_ssl_explicit_overrides_env(monkeypatch, tmp_path):
     """Test that explicit set_verify_ssl overrides environment variable."""
-    env_cert = str(tmp_path / "env-ca.crt")
-    explicit_cert = str(tmp_path / "explicit-ca.crt")
+    env_cert = tmp_path / "env-ca.crt"
+    env_cert.write_text("dummy cert")
+    explicit_cert = tmp_path / "explicit-ca.crt"
+    explicit_cert.write_text("dummy cert")
 
-    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", env_cert)
-    set_verify_ssl(explicit_cert)
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", str(env_cert))
+    set_verify_ssl(str(explicit_cert))
 
     # Explicit set should take priority
-    assert get_verify_ssl() == explicit_cert
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(explicit_cert))
 
 
 def test_get_verify_ssl_env_when_reset(monkeypatch, tmp_path):
     """Test that resetting to None uses environment variable."""
-    env_cert = str(tmp_path / "env-ca.crt")
+    env_cert = tmp_path / "env-ca.crt"
+    env_cert.write_text("dummy cert")
 
-    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", env_cert)
+    monkeypatch.setenv("OSS_SUSTAIN_GUARD_CA_CERT", str(env_cert))
     set_verify_ssl(None)
 
     # Should use env var
-    assert get_verify_ssl() == env_cert
+    with patch("ssl.create_default_context") as mock_create_context:
+        mock_context = MagicMock(spec=ssl.SSLContext)
+        mock_create_context.return_value = mock_context
+
+        result = get_verify_ssl()
+        assert result is mock_context
+        mock_create_context.assert_called_once_with(cafile=str(env_cert))
 
 
 def test_get_verify_ssl_default_when_no_env(monkeypatch):
@@ -437,3 +481,80 @@ def test_get_verify_ssl_default_when_no_env(monkeypatch):
 
     # Should return default True
     assert get_verify_ssl() is True
+
+
+def test_get_excluded_users_from_local_config(temp_project_root):
+    """Test loading excluded users from .oss-sustain-guard.toml."""
+    config_file = temp_project_root / ".oss-sustain-guard.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+exclude-users = ["my-ci-user", "release-bot"]
+"""
+    )
+
+    excluded = get_excluded_users()
+    assert "my-ci-user" in excluded
+    assert "release-bot" in excluded
+
+
+def test_get_excluded_users_from_pyproject(temp_project_root):
+    """Test loading excluded users from pyproject.toml."""
+    config_file = temp_project_root / "pyproject.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+exclude-users = ["trusted-ci", "internal-bot"]
+"""
+    )
+
+    excluded = get_excluded_users()
+    assert "trusted-ci" in excluded
+    assert "internal-bot" in excluded
+
+
+def test_local_config_excluded_users_priority(temp_project_root):
+    """Test that .oss-sustain-guard.toml takes priority for exclude-users."""
+    # Create pyproject.toml
+    pyproject = temp_project_root / "pyproject.toml"
+    pyproject.write_text(
+        """
+[tool.oss-sustain-guard]
+exclude-users = ["user-from-pyproject"]
+"""
+    )
+
+    # Create local config (should take priority)
+    local_config = temp_project_root / ".oss-sustain-guard.toml"
+    local_config.write_text(
+        """
+[tool.oss-sustain-guard]
+exclude-users = ["user-from-local"]
+"""
+    )
+
+    excluded = get_excluded_users()
+    assert "user-from-local" in excluded
+    # pyproject.toml should be ignored when local config exists
+    assert "user-from-pyproject" not in excluded
+
+
+def test_excluded_users_empty_when_no_config(temp_project_root):
+    """Test that empty list is returned when no config exists."""
+    excluded = get_excluded_users()
+    assert excluded == []
+
+
+def test_excluded_users_with_both_formats(temp_project_root):
+    """Test that both exclude-users (TOML) and exclude_users (Python) formats work."""
+    # Test with underscore format
+    config_file = temp_project_root / ".oss-sustain-guard.toml"
+    config_file.write_text(
+        """
+[tool.oss-sustain-guard]
+exclude_users = ["python-style-user"]
+"""
+    )
+
+    excluded = get_excluded_users()
+    assert "python-style-user" in excluded

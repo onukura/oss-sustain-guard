@@ -5,7 +5,7 @@
     "name": "balanced",
     "metric_weights": {
       "Contributor Redundancy": 3,
-      "Maintainer Retention": 2,
+      "Commit Author Continuity": 2,
       "Contributor Attraction": 2,
       "Contributor Retention": 2,
       "Organizational Diversity": 2,
@@ -50,10 +50,10 @@
           "risk": "High"
         },
         {
-          "name": "Maintainer Retention",
+          "name": "Commit Author Continuity",
           "score": 10,
           "max_score": 10,
-          "message": "Stable: 1 active maintainers. No significant drain detected.",
+          "message": "Stable: 1/1 principal committer(s) from 2025-07-07 to 2026-01-03 are still active in 2026-01-03 to 2026-07-02. Estimated from public commit and merge history.",
           "risk": "None"
         },
         {
@@ -215,34 +215,34 @@
       "is_community_driven": true,
       "models": [
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Stability Model",
+          "score": 48,
+          "max_score": 100,
+          "observation": "Contributor Redundancy needs attention; Security Signals needs attention."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Sustainability Model",
+          "score": 75,
+          "max_score": 100,
+          "observation": "Commit Author Continuity is strong; Release Rhythm is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Community Engagement Model",
+          "score": 55,
+          "max_score": 100,
+          "observation": "Community Health is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Project Maturity Model",
+          "score": 65,
+          "max_score": 100,
+          "observation": "Documentation Presence is strong; Code of Conduct is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Contributor Experience Model",
+          "score": 45,
+          "max_score": 100,
+          "observation": "Contributor experience could be improved."
         }
       ],
       "signals": {
@@ -278,10 +278,10 @@
           "risk": "None"
         },
         {
-          "name": "Maintainer Retention",
+          "name": "Commit Author Continuity",
           "score": 10,
           "max_score": 10,
-          "message": "Stable: 13 active maintainers. No significant drain detected.",
+          "message": "Stable: 3/3 principal committer(s) from 2025-07-07 to 2026-01-03 are still active in 2026-01-03 to 2026-07-02. Estimated from public commit and merge history.",
           "risk": "None"
         },
         {
@@ -443,34 +443,34 @@
       "is_community_driven": false,
       "models": [
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Stability Model",
+          "score": 85,
+          "max_score": 100,
+          "observation": "All stability indicators are healthy."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Sustainability Model",
+          "score": 90,
+          "max_score": 100,
+          "observation": "Funding Signals is strong; Commit Author Continuity is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Community Engagement Model",
+          "score": 75,
+          "max_score": 100,
+          "observation": "Contributor Attraction is strong; Contributor Retention is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Project Maturity Model",
+          "score": 95,
+          "max_score": 100,
+          "observation": "Documentation Presence is strong; Code of Conduct is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Contributor Experience Model",
+          "score": 80,
+          "max_score": 100,
+          "observation": "PR Acceptance Ratio is excellent; Build Health is excellent."
         }
       ],
       "signals": {
@@ -505,10 +505,10 @@
           "risk": "None"
         },
         {
-          "name": "Maintainer Retention",
+          "name": "Commit Author Continuity",
           "score": 10,
           "max_score": 10,
-          "message": "Stable: 11 active maintainers. No significant drain detected.",
+          "message": "Stable: 2/2 principal committer(s) from 2025-07-07 to 2026-01-03 are still active in 2026-01-03 to 2026-07-02. Estimated from public commit and merge history.",
           "risk": "None"
         },
         {
@@ -670,34 +670,34 @@
       "is_community_driven": false,
       "models": [
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Stability Model",
+          "score": 90,
+          "max_score": 100,
+          "observation": "All stability indicators are healthy."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Sustainability Model",
+          "score": 92,
+          "max_score": 100,
+          "observation": "Funding Signals is strong; Commit Author Continuity is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Community Engagement Model",
+          "score": 85,
+          "max_score": 100,
+          "observation": "Contributor Attraction is strong; Contributor Retention is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Project Maturity Model",
+          "score": 80,
+          "max_score": 100,
+          "observation": "Documentation Presence is strong; Code of Conduct is strong."
         },
         {
-          "name": "",
-          "score": 0,
-          "max_score": 0,
-          "observation": ""
+          "name": "Contributor Experience Model",
+          "score": 88,
+          "max_score": 100,
+          "observation": "PR Acceptance Ratio is excellent; Build Health is excellent."
         }
       ],
       "signals": {

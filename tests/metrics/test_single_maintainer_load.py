@@ -196,10 +196,12 @@ class TestSingleMaintainerLoadMetric:
         repo_data = _vcs_data(merged_prs=[], raw_data={"closedIssues": {"edges": []}})
         context = MetricContext(owner="owner", name="repo", repo_url="url")
         result = METRIC.checker.check(repo_data, context)
+        assert result is not None
         assert result.name == "Maintainer Load Distribution"
 
     def test_single_maintainer_load_metric_spec_on_error(self):
         """Test MetricSpec error handler formatting."""
+        assert METRIC.on_error is not None
         result = METRIC.on_error(RuntimeError("boom"))
         assert result.score == 0
         assert "Analysis incomplete" in result.message

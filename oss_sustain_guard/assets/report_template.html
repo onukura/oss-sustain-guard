@@ -104,6 +104,30 @@
         color: var(--red);
         font-weight: 600;
       }}
+      .lfx-badges {{
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }}
+      .lfx-badges img {{
+        height: 20px;
+        vertical-align: middle;
+      }}
+      .lfx-link {{
+        color: #3b82f6;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 500;
+      }}
+      .lfx-link:hover {{
+        text-decoration: underline;
+      }}
+      .lfx-not-available {{
+        color: var(--muted);
+        font-size: 12px;
+        font-style: italic;
+      }}
       footer {{
         padding: 24px 40px;
         color: var(--muted);
@@ -144,6 +168,7 @@
             <th>Score</th>
             <th>Health Status</th>
             <th>Key Observations</th>
+            <th>LFX Insights</th>
           </tr>
         </thead>
         <tbody>

@@ -1,6 +1,6 @@
 [project]
 name = "oss-sustain-guard"
-version = "0.17.0"
+version = "0.26.0"
 description = "Sustainability signals for OSS dependencies across ecosystems"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -29,6 +29,9 @@ dependencies = [
     "httpx>=0.28.1",
     "tomli>=2.0.0",
     "pyyaml>=6.0",
+    "aiofiles>=25.1.0",
+    "networkx>=3.0",
+    "scipy>=1.15.3",
 ]
 
 [dependency-groups]
@@ -39,6 +42,8 @@ dev = [
     "prek>=0.2.22",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.0",
+    "pytest-asyncio>=1.3.0",
+    "ty>=0.0.9",
 ]
 
 [project.urls]
@@ -53,7 +58,7 @@ os4g = "oss_sustain_guard.cli:app"
 
 [project.entry-points."oss_sustain_guard.metrics"]
 bus_factor = "oss_sustain_guard.metrics.bus_factor:METRIC"
-maintainer_drain = "oss_sustain_guard.metrics.maintainer_drain:METRIC"
+commit_author_continuity = "oss_sustain_guard.metrics.commit_author_continuity:METRIC"
 recent_activity = "oss_sustain_guard.metrics.zombie_status:METRIC"
 merge_velocity = "oss_sustain_guard.metrics.merge_velocity:METRIC"
 issue_resolution_duration = "oss_sustain_guard.metrics.issue_resolution_duration:METRIC"
@@ -76,6 +81,56 @@ ci_status = "oss_sustain_guard.metrics.ci_status:METRIC"
 stale_issue_ratio = "oss_sustain_guard.metrics.stale_issue_ratio:METRIC"
 pr_merge_speed = "oss_sustain_guard.metrics.pr_merge_speed:METRIC"
 maintainer_load_distribution = "oss_sustain_guard.metrics.single_maintainer_load:METRIC"
+
+[project.entry-points."oss_sustain_guard.resolvers"]
+python = "oss_sustain_guard.resolvers.python:RESOLVER"
+javascript = "oss_sustain_guard.resolvers.javascript:RESOLVER"
+dart = "oss_sustain_guard.resolvers.dart:RESOLVER"
+elixir = "oss_sustain_guard.resolvers.elixir:RESOLVER"
+go = "oss_sustain_guard.resolvers.go:RESOLVER"
+haskell = "oss_sustain_guard.resolvers.haskell:RESOLVER"
+java = "oss_sustain_guard.resolvers.java:RESOLVER"
+kotlin = "oss_sustain_guard.resolvers.kotlin:RESOLVER"
+perl = "oss_sustain_guard.resolvers.perl:RESOLVER"
+php = "oss_sustain_guard.resolvers.php:RESOLVER"
+r = "oss_sustain_guard.resolvers.r:RESOLVER"
+ruby = "oss_sustain_guard.resolvers.ruby:RESOLVER"
+rust = "oss_sustain_guard.resolvers.rust:RESOLVER"
+csharp = "oss_sustain_guard.resolvers.csharp:RESOLVER"
+swift = "oss_sustain_guard.resolvers.swift:RESOLVER"
+
+[project.entry-points."oss_sustain_guard.dependency_parsers"]
+pip = "oss_sustain_guard.dependency_parsers.python.pip:PARSER"
+pipenv = "oss_sustain_guard.dependency_parsers.python.pipenv:PARSER"
+poetry = "oss_sustain_guard.dependency_parsers.python.poetry:PARSER"
+uv = "oss_sustain_guard.dependency_parsers.python.uv:PARSER"
+npm = "oss_sustain_guard.dependency_parsers.javascript.npm:PARSER"
+yarn = "oss_sustain_guard.dependency_parsers.javascript.yarn:PARSER"
+pnpm = "oss_sustain_guard.dependency_parsers.javascript.pnpm:PARSER"
+bun = "oss_sustain_guard.dependency_parsers.javascript.bun:PARSER"
+deno = "oss_sustain_guard.dependency_parsers.javascript.deno:PARSER"
+rust = "oss_sustain_guard.dependency_parsers.rust.cargo_lock:PARSER"
+go = "oss_sustain_guard.dependency_parsers.go.gomod:PARSER"
+ruby = "oss_sustain_guard.dependency_parsers.ruby.bundler:PARSER"
+php = "oss_sustain_guard.dependency_parsers.php.composer:PARSER"
+csharp = "oss_sustain_guard.dependency_parsers.csharp.nuget:PARSER"
+dart = "oss_sustain_guard.dependency_parsers.dart.pub:PARSER"
+r = "oss_sustain_guard.dependency_parsers.r.renv:PARSER"
+elixir = "oss_sustain_guard.dependency_parsers.elixir.mix:PARSER"
+perl = "oss_sustain_guard.dependency_parsers.perl.cpanfile:PARSER"
+swift = "oss_sustain_guard.dependency_parsers.swift.spm:PARSER"
+java = "oss_sustain_guard.dependency_parsers.java.gradle_maven:PARSER"
+kotlin = "oss_sustain_guard.dependency_parsers.kotlin:PARSER"
+scala = "oss_sustain_guard.dependency_parsers.scala:PARSER"
+haskell = "oss_sustain_guard.dependency_parsers.haskell.cabal_stack:PARSER"
+
+[project.entry-points."oss_sustain_guard.vcs"]
+github = "oss_sustain_guard.vcs.github:PROVIDER"
+gitlab = "oss_sustain_guard.vcs.gitlab:PROVIDER"
+
+[tool.uv.workspace]
+members = [
+]  # Add this with empty value, so that tests/fixtures/python/uv/pyproject.toml works correctly
 
 [build-system]
 requires = ["hatchling"]
@@ -157,6 +212,17 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.ty.rules]
+unused-ignore-comment = "warn"
+redundant-cast = "ignore"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+possibly-unresolved-reference = "warn"
+
+[tool.ty.environment]
+# Multiple directories (priority order)
+root = ["./oss_sustain_guard"]
 
 [tool.oss-sustain-guard]
 # Example: packages to exclude from sustainability checks

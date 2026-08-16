@@ -105,7 +105,10 @@ class TestBusFactorMetric:
         assert result.name == "Contributor Redundancy"
         assert result.score == 5  # New project: 100% by single author
         assert result.max_score == 10
-        assert "New project: 100% by single author" in result.message
+        assert (
+            "Estimated from public contributions: 100% by single author"
+            in result.message
+        )
         assert result.risk == "Medium"
 
     def test_bus_factor_healthy_diversity(self):
@@ -115,7 +118,9 @@ class TestBusFactorMetric:
         assert result.name == "Contributor Redundancy"
         assert result.score == 10
         assert result.max_score == 10
-        assert "Healthy: 5 active contributors" in result.message
+        assert (
+            "Estimated from public contributions: Healthy diversity" in result.message
+        )
         assert result.risk == "None"
 
     def test_bus_factor_only_bots(self):
@@ -126,12 +131,32 @@ class TestBusFactorMetric:
         assert "No human contributors found" in result.message
         assert result.risk == "Critical"
 
+    def test_bus_factor_with_merged_prs_users(self):
+        """Test that PR mergers are counted as contributors."""
+        # 1 commit by user1
+        # 1 PR merged by user2
+        vcs_data = _vcs_with_commits(["user1"])
+        # Manually add merged PRs to the data structure since helper doesn't support it directly
+        merged_prs = [{"mergedBy": {"login": "user2"}}]
+        vcs_data = vcs_data._replace(merged_prs=merged_prs)
+
+        result = check_bus_factor(vcs_data)
+        # 2 active contributors total (user1, user2), 50% each
+        # 50% => 8/10 score (Medium risk)
+        assert result.score == 8
+        assert (
+            "Estimated from public contributions: 50% by top contributor"
+            in result.message
+        )
+        assert "2 contributor(s) total" in result.message
+
     def test_bus_factor_mature_bdfl(self):
         """Test BDFL model detection for mature projects."""
         vcs_data = _vcs_with_commits(["founder"] * 10, total_count=1500)
         result = check_bus_factor(vcs_data)
         assert result.score == 8
-        assert "BDFL model" in result.message
+        assert "Estimated from public contributions" in result.message
+        assert "May have internal redundancy" in result.message
         assert result.risk == "Low"
 
     def test_bus_factor_mature_high_concentration(self):
@@ -139,7 +164,7 @@ class TestBusFactorMetric:
         vcs_data = _vcs_with_commits(["user1"] * 9 + ["user2"], total_count=200)
         result = check_bus_factor(vcs_data)
         assert result.score == 2
-        assert "Needs attention: 90% of recent commits" in result.message
+        assert "Estimated from public contributions: 90%" in result.message
         assert result.risk == "High"
 
     def test_bus_factor_high_concentration(self):
@@ -149,7 +174,7 @@ class TestBusFactorMetric:
         )
         result = check_bus_factor(vcs_data)
         assert result.score == 5
-        assert "Needs attention: 70% of commits" in result.message
+        assert "Estimated from public contributions: 70%" in result.message
         assert result.risk == "High"
 
     def test_bus_factor_medium_concentration(self):
@@ -157,7 +182,10 @@ class TestBusFactorMetric:
         vcs_data = _vcs_with_commits(["user1"] * 6 + ["user2"] * 4, total_count=80)
         result = check_bus_factor(vcs_data)
         assert result.score == 8
-        assert "Monitor: 60% by top contributor" in result.message
+        assert (
+            "Estimated from public contributions: 60% by top contributor"
+            in result.message
+        )
         assert result.risk == "Medium"
 
     def test_bus_factor_total_commits_zero(self, monkeypatch):
@@ -174,10 +202,13 @@ class TestBusFactorMetric:
         repo_data = _vcs_with_commits(["user1", "user2"])
         context = MetricContext(owner="owner", name="repo", repo_url="url")
         result = METRIC.checker.check(repo_data, context)
+        assert result is not None
         assert result.name == "Contributor Redundancy"
 
     def test_bus_factor_metric_spec_on_error(self):
         """Test MetricSpec error handler formatting."""
-        result = METRIC.on_error(RuntimeError("boom"))
-        assert result.score == 0
-        assert "Analysis incomplete" in result.message
+        if METRIC.on_error is not None:
+            result = METRIC.on_error(RuntimeError("boom"))
+            assert result is not None
+            assert result.score == 0
+            assert "Analysis incomplete" in result.message

@@ -4,13 +4,14 @@ Haskell package resolver (Hackage).
 
 from __future__ import annotations
 
+import asyncio
 import re
 import sys
 from pathlib import Path
 
 import httpx
 
-from oss_sustain_guard.config import get_verify_ssl
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
@@ -22,7 +23,7 @@ class HaskellResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "haskell"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Resolve a Haskell package to a repository URL.
 
@@ -38,42 +39,42 @@ class HaskellResolver(LanguageResolver):
             RepositoryReference if a supported repository URL is found, otherwise None.
         """
         try:
-            with httpx.Client(verify=get_verify_ssl()) as client:
-                # First, get the package versions to find the latest
-                versions_response = client.get(
-                    f"https://hackage.haskell.org/package/{package_name}.json",
-                    timeout=10,
-                )
-                if versions_response.status_code == 404:
-                    return None
-                versions_response.raise_for_status()
-                versions_data = versions_response.json()
+            client = await _get_async_http_client()
+            # First, get the package versions to find the latest
+            versions_response = await client.get(
+                f"https://hackage.haskell.org/package/{package_name}.json",
+                timeout=10,
+            )
+            if versions_response.status_code == 404:
+                return None
+            versions_response.raise_for_status()
+            versions_data = versions_response.json()
 
-                # Get the latest version using semantic version sorting
-                versions = list(versions_data.keys())
-                if not versions:
-                    return None
+            # Get the latest version using semantic version sorting
+            versions = list(versions_data.keys())
+            if not versions:
+                return None
 
-                # Sort versions by semantic versioning rules
-                def version_key(v: str) -> tuple[int, ...]:
-                    """Convert version string to tuple of integers for proper sorting."""
-                    try:
-                        return tuple(int(x) for x in v.split("."))
-                    except ValueError:
-                        # Fallback for non-numeric versions
-                        return (0,)
+            # Sort versions by semantic versioning rules
+            def version_key(v: str) -> tuple[int, ...]:
+                """Convert version string to tuple of integers for proper sorting."""
+                try:
+                    return tuple(int(x) for x in v.split("."))
+                except ValueError:
+                    # Fallback for non-numeric versions
+                    return (0,)
 
-                latest_version = max(versions, key=version_key)
+            latest_version = max(versions, key=version_key)
 
-                # Fetch the cabal file for the latest version
-                cabal_response = client.get(
-                    f"https://hackage.haskell.org/package/{package_name}-{latest_version}/{package_name}.cabal",
-                    timeout=10,
-                )
-                if cabal_response.status_code == 404:
-                    return None
-                cabal_response.raise_for_status()
-                cabal_content = cabal_response.text
+            # Fetch the cabal file for the latest version
+            cabal_response = await client.get(
+                f"https://hackage.haskell.org/package/{package_name}-{latest_version}/{package_name}.cabal",
+                timeout=10,
+            )
+            if cabal_response.status_code == 404:
+                return None
+            cabal_response.raise_for_status()
+            cabal_content = cabal_response.text
 
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             print(
@@ -90,7 +91,7 @@ class HaskellResolver(LanguageResolver):
 
         return None
 
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse Haskell lockfiles and extract package information.
 
@@ -111,13 +112,13 @@ class HaskellResolver(LanguageResolver):
             raise FileNotFoundError(f"Lockfile not found: {lockfile_path}")
 
         if lockfile_path.name == "cabal.project.freeze":
-            return _parse_cabal_freeze(lockfile_path)
+            return await _parse_cabal_freeze(lockfile_path)
         if lockfile_path.name == "stack.yaml.lock":
-            return _parse_stack_lock(lockfile_path)
+            return await _parse_stack_lock(lockfile_path)
 
         raise ValueError(f"Unknown Haskell lockfile type: {lockfile_path.name}")
 
-    def detect_lockfiles(self, directory: str) -> list[Path]:
+    async def detect_lockfiles(self, directory: str) -> list[Path]:
         """
         Detect Haskell lockfiles in the directory.
 
@@ -137,11 +138,11 @@ class HaskellResolver(LanguageResolver):
             lockfiles.append(stack_lock)
         return lockfiles
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """Get Haskell manifest file names."""
         return ["cabal.project", "stack.yaml", "package.yaml"]
 
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse Haskell manifest files and extract package information.
 
@@ -160,9 +161,9 @@ class HaskellResolver(LanguageResolver):
             raise FileNotFoundError(f"Manifest file not found: {manifest_path}")
 
         if manifest_path.name == "cabal.project":
-            return _parse_cabal_project(manifest_path)
+            return await _parse_cabal_project(manifest_path)
         if manifest_path.name in {"stack.yaml", "package.yaml"}:
-            return _parse_stack_manifest(manifest_path)
+            return await _parse_stack_manifest(manifest_path)
 
         raise ValueError(f"Unknown Haskell manifest file type: {manifest_path.name}")
 
@@ -210,10 +211,10 @@ def _extract_cabal_repo_urls(cabal_content: str) -> list[str]:
     return urls
 
 
-def _parse_cabal_freeze(lockfile_path: Path) -> list[PackageInfo]:
+async def _parse_cabal_freeze(lockfile_path: Path) -> list[PackageInfo]:
     """Parse cabal.project.freeze file."""
     try:
-        content = lockfile_path.read_text(encoding="utf-8")
+        content = await asyncio.to_thread(lockfile_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read cabal.project.freeze: {e}") from e
 
@@ -238,10 +239,10 @@ def _parse_cabal_freeze(lockfile_path: Path) -> list[PackageInfo]:
     return packages
 
 
-def _parse_stack_lock(lockfile_path: Path) -> list[PackageInfo]:
+async def _parse_stack_lock(lockfile_path: Path) -> list[PackageInfo]:
     """Parse stack.yaml.lock file."""
     try:
-        content = lockfile_path.read_text(encoding="utf-8")
+        content = await asyncio.to_thread(lockfile_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read stack.yaml.lock: {e}") from e
 
@@ -266,10 +267,10 @@ def _parse_stack_lock(lockfile_path: Path) -> list[PackageInfo]:
     return packages
 
 
-def _parse_cabal_project(manifest_path: Path) -> list[PackageInfo]:
+async def _parse_cabal_project(manifest_path: Path) -> list[PackageInfo]:
     """Parse cabal.project for dependency constraints."""
     try:
-        content = manifest_path.read_text(encoding="utf-8")
+        content = await asyncio.to_thread(manifest_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read cabal.project: {e}") from e
 
@@ -287,10 +288,10 @@ def _parse_cabal_project(manifest_path: Path) -> list[PackageInfo]:
     return packages
 
 
-def _parse_stack_manifest(manifest_path: Path) -> list[PackageInfo]:
+async def _parse_stack_manifest(manifest_path: Path) -> list[PackageInfo]:
     """Parse stack.yaml or package.yaml for extra dependency entries."""
     try:
-        content = manifest_path.read_text(encoding="utf-8")
+        content = await asyncio.to_thread(manifest_path.read_text, encoding="utf-8")
     except OSError as e:
         raise ValueError(f"Failed to read {manifest_path.name}: {e}") from e
 
@@ -312,3 +313,6 @@ def _parse_stack_manifest(manifest_path: Path) -> list[PackageInfo]:
         packages.append(PackageInfo(name=name, ecosystem="haskell"))
 
     return packages
+
+
+RESOLVER = HaskellResolver()

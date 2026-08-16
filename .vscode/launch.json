@@ -1,0 +1,795 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "run-with-cache",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--insecure"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-no-cache",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-with-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-with-lockfile-js-npm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/npm"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-js-npm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/npm"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-csharp",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/csharp"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-csharp-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/csharp"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-dart",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/dart"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-dart-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/dart"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-elixir",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/elixir"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-elixir-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/elixir"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-go",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/go"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-go-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/go"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-haskell-cabal",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/haskell/cabal"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-haskell-cabal-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/haskell/cabal"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-haskell-stack",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/haskell/stack"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-haskell-stack-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/haskell/stack"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-java-maven",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/java/maven"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-java-maven-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/java/maven"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-js-bun",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/bun"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-js-bun-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/bun"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-js-deno",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/deno"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-js-deno-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/deno"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-js-pnpm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/pnpm"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-js-pnpm-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/javascript/pnpm"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-kotlin-gradle",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/kotlin/gradle"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-kotlin-gradle-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/kotlin/gradle"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-kotlin-maven",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/kotlin/maven"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-kotlin-maven-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/kotlin/maven"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-perl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/perl"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-perl-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/perl"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-php",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/php"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-php-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/php"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-pip",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/pip"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-pip-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/pip"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-pipenv",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/pipenv"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-pipenv-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/pipenv"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-poetry",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/poetry"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-poetry-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/poetry"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-uv",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/uv"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-python-uv-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/python/uv"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-r",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/r"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-r-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/r"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-ruby",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/ruby"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-ruby-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/ruby"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-rust",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/rust"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-rust-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/rust"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-scala-gradle",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/scala/gradle"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-scala-gradle-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/scala/gradle"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-scala-maven",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/scala/maven"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-scala-maven-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/scala/maven"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-scala-sbt",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/scala/sbt"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-scala-sbt-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/scala/sbt"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-swift",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/swift"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run-swift-lockfile",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/oss_sustain_guard/cli.py",
+            "args": [
+                "check",
+                "--no-cache",
+                "--include-lock",
+                "--insecure",
+                "-r",
+                "${workspaceFolder}/tests/fixtures/swift"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

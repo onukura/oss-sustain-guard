@@ -22,7 +22,13 @@ example_metrics = [
         "Good: 8 contributors with >10% commits each",
         "Low",
     ),
-    Metric("Maintainer Retention", 8, 10, "Good: 80% maintainer retention", "Low"),
+    Metric(
+        "Commit Author Continuity",
+        8,
+        10,
+        "Monitor: only 4/5 principal committer(s) remain active",
+        "Low",
+    ),
     Metric(
         "Contributor Attraction",
         7,

@@ -4,30 +4,10 @@ Tests for parallel package analysis in the CLI.
 
 from unittest.mock import patch
 
-from oss_sustain_guard.cli import ANALYSIS_VERSION, analyze_packages_parallel
+from oss_sustain_guard.cli_utils.constants import ANALYSIS_VERSION
+from oss_sustain_guard.commands.check import analyze_packages_parallel
 from oss_sustain_guard.core import AnalysisResult, Metric
 from oss_sustain_guard.repository import RepositoryReference
-
-
-class DummyProgress:
-    """Minimal Progress replacement for tests."""
-
-    def __init__(self, *args, **kwargs):
-        self._tasks = {}
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def add_task(self, description, total):
-        task_id = len(self._tasks) + 1
-        self._tasks[task_id] = {"total": total, "advanced": 0}
-        return task_id
-
-    def advance(self, task_id):
-        self._tasks[task_id]["advanced"] += 1
 
 
 class FakeResolver:
@@ -36,17 +16,17 @@ class FakeResolver:
     def __init__(self, mapping):
         self._mapping = mapping
 
-    def resolve_repository(self, package_name):
+    async def resolve_repository(self, package_name):
         return self._mapping.get(package_name)
 
 
-def test_analyze_packages_parallel_empty():
+async def test_analyze_packages_parallel_empty():
     """Empty inputs return an empty result list."""
-    results = analyze_packages_parallel([], {}, use_batch_queries=True)
+    results, _ = await analyze_packages_parallel([], {})
     assert results == []
 
 
-def test_analyze_packages_parallel_single_uses_analyze_package():
+async def test_analyze_packages_parallel_single_uses_analyze_package():
     """Single package analysis avoids parallel execution."""
     result = AnalysisResult(
         repo_url="https://github.com/example/project",
@@ -54,34 +34,49 @@ def test_analyze_packages_parallel_single_uses_analyze_package():
         metrics=[Metric("Metric", 9, 10, "Observation", "Low")],
     )
 
-    with patch(
-        "oss_sustain_guard.cli.analyze_package", return_value=result
-    ) as mock_analyze:
-        results = analyze_packages_parallel(
+    resolver = FakeResolver(
+        {
+            "project": RepositoryReference(
+                provider="github",
+                host="github.com",
+                path="example/project",
+                owner="example",
+                name="project",
+            ),
+        }
+    )
+
+    with (
+        patch(
+            "oss_sustain_guard.commands.check.get_resolver",
+            return_value=resolver,
+        ),
+        patch(
+            "oss_sustain_guard.commands.check.analyze_package", return_value=result
+        ) as mock_analyze,
+    ):
+        results, _ = await analyze_packages_parallel(
             [("python", "project")],
             {},
             profile="balanced",
-            show_dependencies=True,
-            lockfile_path="lockfile",
             verbose=True,
             use_local_cache=False,
         )
 
     assert results == [result]
     mock_analyze.assert_called_once_with(
-        "project",
-        "python",
-        {},
-        "balanced",
-        True,
-        "lockfile",
-        True,
-        False,
+        package_name="project",
+        ecosystem="python",
+        db={},
+        profile="balanced",
+        verbose=True,
+        use_local_cache=False,
+        log_buffer={},
     )
 
 
-def test_analyze_packages_parallel_batch_mixed_results():
-    """Batch analysis respects cache, unsupported resolvers, and non-GitHub repos."""
+async def test_analyze_packages_parallel_mixed_results():
+    """Parallel analysis respects cache, unsupported resolvers, and missing results."""
     cached_db = {
         "python:cached": {
             "github_url": "https://github.com/example/cached",
@@ -121,25 +116,40 @@ def test_analyze_packages_parallel_batch_mixed_results():
         }
     )
 
+    cached_result = AnalysisResult(
+        repo_url="https://github.com/example/cached",
+        total_score=100,  # Recalculated from metrics
+        metrics=[Metric("Custom Metric", 10, 10, "Ok", "None")],
+        ecosystem="python",
+    )
+
     batch_result = AnalysisResult(
         repo_url="https://github.com/example/live",
         total_score=77,
         metrics=[Metric("Metric", 7, 10, "Observation", "Low")],
+        ecosystem="python",
     )
 
+    def analyze_side_effect(**kwargs):
+        pkg_name = kwargs.get("package_name")
+        if pkg_name == "cached":
+            return cached_result
+        elif pkg_name == "live":
+            return batch_result
+        else:
+            return None
+
     with (
-        patch("oss_sustain_guard.cli.Progress", DummyProgress),
         patch(
-            "oss_sustain_guard.cli.get_resolver",
+            "oss_sustain_guard.commands.check.get_resolver",
             side_effect=lambda eco: resolver if eco == "python" else None,
         ),
         patch(
-            "oss_sustain_guard.cli.analyze_repositories_batch",
-            return_value={("example", "live"): batch_result},
-        ) as mock_batch,
-        patch("oss_sustain_guard.cli.save_cache") as mock_save_cache,
+            "oss_sustain_guard.commands.check.analyze_package",
+            side_effect=analyze_side_effect,
+        ) as mock_analyze,
     ):
-        results = analyze_packages_parallel(
+        results, _ = await analyze_packages_parallel(
             [
                 ("python", "cached"),
                 ("python", "live"),
@@ -148,7 +158,6 @@ def test_analyze_packages_parallel_batch_mixed_results():
             ],
             cached_db,
             profile="balanced",
-            use_batch_queries=True,
         )
 
     assert len(results) == 4
@@ -164,14 +173,18 @@ def test_analyze_packages_parallel_batch_mixed_results():
     assert results[2] is None
     assert results[3] is None
 
-    mock_batch.assert_called_once_with([("example", "live")], profile="balanced")
-    mock_save_cache.assert_called_once()
-    cache_args = mock_save_cache.call_args[0]
-    assert cache_args[0] == "python"
-    assert "python:live" in cache_args[1]
+    mock_analyze.assert_any_call(
+        package_name="live",
+        ecosystem="python",
+        db=cached_db,
+        profile="balanced",
+        verbose=False,
+        use_local_cache=True,
+        log_buffer={},
+    )
 
 
-def test_analyze_packages_parallel_non_batch_handles_exceptions():
+async def test_analyze_packages_parallel_non_batch_handles_exceptions():
     """Non-batch mode handles per-package errors."""
     resolver = FakeResolver(
         {
@@ -204,20 +217,18 @@ def test_analyze_packages_parallel_non_batch_handles_exceptions():
         raise Exception("failure")
 
     with (
-        patch("oss_sustain_guard.cli.Progress", DummyProgress),
         patch(
-            "oss_sustain_guard.cli.get_resolver",
+            "oss_sustain_guard.commands.check.get_resolver",
             return_value=resolver,
         ),
         patch(
-            "oss_sustain_guard.cli.analyze_package",
+            "oss_sustain_guard.commands.check.analyze_package",
             side_effect=analyze_side_effect,
         ),
     ):
-        results = analyze_packages_parallel(
+        results, _ = await analyze_packages_parallel(
             [("python", "pkg1"), ("python", "pkg2")],
             {},
-            use_batch_queries=False,
         )
 
     assert results[0] == result

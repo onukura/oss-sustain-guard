@@ -1,0 +1,10 @@
+[package]
+name = "rust-sample-project"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+
+[dev-dependencies]
+criterion = "0.5"
