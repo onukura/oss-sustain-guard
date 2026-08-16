@@ -2,7 +2,7 @@
 Tests for C# resolver.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -17,20 +17,20 @@ class TestCSharpResolver:
         resolver = CSharpResolver()
         assert resolver.ecosystem_name == "csharp"
 
-    def test_get_manifest_files(self):
+    async def test_get_manifest_files(self):
         """Test manifest files for C#."""
         resolver = CSharpResolver()
-        manifests = resolver.get_manifest_files()
+        manifests = await resolver.get_manifest_files()
         assert "*.csproj" in manifests
         assert "*.vbproj" in manifests
         assert "packages.config" in manifests
         assert "packages.lock.json" in manifests
 
-    @patch("oss_sustain_guard.resolvers.csharp.httpx.Client")
-    def test_resolve_github_url_success(self, mock_client_class):
+    @patch("oss_sustain_guard.resolvers.csharp._get_async_http_client")
+    async def test_resolve_github_url_success(self, mock_get_client):
         """Test resolving GitHub URL from NuGet."""
         mock_client_inst = MagicMock()
-        mock_client_class.return_value = mock_client_inst
+        mock_get_client.return_value = mock_client_inst
 
         # Create response mocks for flat container API
         versions_response = MagicMock()
@@ -46,20 +46,20 @@ class TestCSharpResolver:
             "</package>"
         )
 
-        # Setup context manager
-        mock_client_inst.__enter__ = MagicMock(return_value=mock_client_inst)
-        mock_client_inst.__exit__ = MagicMock(return_value=False)
-        mock_client_inst.get.side_effect = [versions_response, nuspec_response]
+        # Setup async mocks for get method
+        mock_client_inst.get = AsyncMock(
+            side_effect=[versions_response, nuspec_response]
+        )
 
         resolver = CSharpResolver()
-        result = resolver.resolve_github_url("Newtonsoft.Json")
+        result = await resolver.resolve_github_url("Newtonsoft.Json")
         assert result == ("JamesNK", "Newtonsoft.Json")
 
-    @patch("oss_sustain_guard.resolvers.csharp.httpx.Client")
-    def test_resolve_github_url_missing_repo(self, mock_client_class):
+    @patch("oss_sustain_guard.resolvers.csharp._get_async_http_client")
+    async def test_resolve_github_url_missing_repo(self, mock_get_client):
         """Test resolving NuGet package with no repository entry."""
         mock_client_inst = MagicMock()
-        mock_client_class.return_value = mock_client_inst
+        mock_get_client.return_value = mock_client_inst
 
         versions_response = MagicMock()
         versions_response.raise_for_status = MagicMock()
@@ -69,19 +69,19 @@ class TestCSharpResolver:
         nuspec_response.raise_for_status = MagicMock()
         nuspec_response.text = '<?xml version="1.0"?><package></package>'
 
-        mock_client_inst.__enter__ = MagicMock(return_value=mock_client_inst)
-        mock_client_inst.__exit__ = MagicMock(return_value=False)
-        mock_client_inst.get.side_effect = [versions_response, nuspec_response]
+        mock_client_inst.get = AsyncMock(
+            side_effect=[versions_response, nuspec_response]
+        )
 
         resolver = CSharpResolver()
-        result = resolver.resolve_github_url("NoRepo")
+        result = await resolver.resolve_github_url("NoRepo")
         assert result is None
 
-    @patch("oss_sustain_guard.resolvers.csharp.httpx.Client")
-    def test_resolve_github_url_not_found(self, mock_client_class):
+    @patch("oss_sustain_guard.resolvers.csharp._get_async_http_client")
+    async def test_resolve_github_url_not_found(self, mock_get_client):
         """Test resolving package not in NuGet."""
         mock_client_inst = MagicMock()
-        mock_client_class.return_value = mock_client_inst
+        mock_get_client.return_value = mock_client_inst
 
         # Create response mocks
         index_response = MagicMock()
@@ -99,38 +99,39 @@ class TestCSharpResolver:
         pkg_response.raise_for_status = MagicMock()
         pkg_response.json.return_value = {"items": []}
 
-        # Setup context manager
-        mock_client_inst.__enter__ = MagicMock(return_value=mock_client_inst)
-        mock_client_inst.__exit__ = MagicMock(return_value=False)
-        mock_client_inst.get.side_effect = [index_response, pkg_response]
+        mock_client_inst.get = AsyncMock(side_effect=[index_response, pkg_response])
 
         resolver = CSharpResolver()
-        result = resolver.resolve_github_url("NonExistentPackage")
+        result = await resolver.resolve_github_url("NonExistentPackage")
         assert result is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_github_url_network_error(self, mock_get):
+    @patch("oss_sustain_guard.resolvers.csharp._get_async_http_client")
+    async def test_resolve_github_url_network_error(self, mock_get_client):
         """Test resolving with network error."""
         import httpx
 
-        mock_get.side_effect = httpx.RequestError("Network error")
+        mock_client_inst = MagicMock()
+        mock_get_client.return_value = mock_client_inst
+        mock_client_inst.get = AsyncMock(
+            side_effect=httpx.RequestError("Network error")
+        )
 
         resolver = CSharpResolver()
-        result = resolver.resolve_github_url("Newtonsoft.Json")
+        result = await resolver.resolve_github_url("Newtonsoft.Json")
         assert result is None
 
-    def test_detect_lockfiles(self, tmp_path):
+    async def test_detect_lockfiles(self, tmp_path):
         """Test detecting C# lockfiles."""
         (tmp_path / "packages.lock.json").touch()
         (tmp_path / "other.txt").touch()
 
         resolver = CSharpResolver()
-        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
 
         assert len(lockfiles) >= 1
         assert any(lf.name == "packages.lock.json" for lf in lockfiles)
 
-    def test_detect_lockfiles_nested(self, tmp_path):
+    async def test_detect_lockfiles_nested(self, tmp_path):
         """Test detecting nested packages.lock.json files."""
         (tmp_path / "packages.lock.json").touch()
         nested = tmp_path / "src" / "proj"
@@ -138,12 +139,12 @@ class TestCSharpResolver:
         (nested / "packages.lock.json").touch()
 
         resolver = CSharpResolver()
-        lockfiles = resolver.detect_lockfiles(str(tmp_path))
+        lockfiles = await resolver.detect_lockfiles(str(tmp_path))
 
         assert len(lockfiles) == 2
         assert {lf.parent.name for lf in lockfiles} == {"proj", tmp_path.name}
 
-    def test_parse_lockfile_success(self, tmp_path):
+    async def test_parse_lockfile_success(self, tmp_path):
         """Test parsing valid packages.lock.json."""
         lockfile = tmp_path / "packages.lock.json"
         lockfile.write_text(
@@ -166,7 +167,7 @@ class TestCSharpResolver:
         )
 
         resolver = CSharpResolver()
-        packages = resolver.parse_lockfile(str(lockfile))
+        packages = await resolver.parse_lockfile(str(lockfile))
 
         assert len(packages) == 2
         assert packages[0].name == "Newtonsoft.Json"
@@ -175,22 +176,22 @@ class TestCSharpResolver:
         assert packages[1].name == "Microsoft.Extensions.Logging"
         assert packages[1].version == "5.0.0"
 
-    def test_parse_lockfile_not_found(self):
+    async def test_parse_lockfile_not_found(self):
         """Test parsing non-existent lockfile."""
         resolver = CSharpResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_lockfile("/nonexistent/packages.lock.json")
+            await resolver.parse_lockfile("/nonexistent/packages.lock.json")
 
-    def test_parse_lockfile_invalid_json(self, tmp_path):
+    async def test_parse_lockfile_invalid_json(self, tmp_path):
         """Test parsing invalid JSON lockfile."""
         lockfile = tmp_path / "packages.lock.json"
         lockfile.write_text("{ invalid json }")
 
         resolver = CSharpResolver()
         with pytest.raises(ValueError):
-            resolver.parse_lockfile(str(lockfile))
+            await resolver.parse_lockfile(str(lockfile))
 
-    def test_parse_manifest_csproj(self, tmp_path):
+    async def test_parse_manifest_csproj(self, tmp_path):
         """Test parsing .csproj manifest."""
         manifest = tmp_path / "example.csproj"
         manifest.write_text(
@@ -203,23 +204,23 @@ class TestCSharpResolver:
         )
 
         resolver = CSharpResolver()
-        packages = resolver.parse_manifest(str(manifest))
+        packages = await resolver.parse_manifest(str(manifest))
 
         assert len(packages) == 2
         assert packages[0].name == "Newtonsoft.Json"
         assert packages[0].version == "13.0.0"
         assert packages[1].name == "Serilog"
 
-    def test_parse_manifest_csproj_invalid(self, tmp_path):
+    async def test_parse_manifest_csproj_invalid(self, tmp_path):
         """Test parsing invalid .csproj manifest."""
         manifest = tmp_path / "broken.csproj"
         manifest.write_text("<Project><ItemGroup>")
 
         resolver = CSharpResolver()
         with pytest.raises(ValueError, match="Failed to parse project file"):
-            resolver.parse_manifest(str(manifest))
+            await resolver.parse_manifest(str(manifest))
 
-    def test_parse_manifest_packages_config(self, tmp_path):
+    async def test_parse_manifest_packages_config(self, tmp_path):
         """Test parsing packages.config manifest."""
         manifest = tmp_path / "packages.config"
         manifest.write_text(
@@ -230,20 +231,20 @@ class TestCSharpResolver:
         )
 
         resolver = CSharpResolver()
-        packages = resolver.parse_manifest(str(manifest))
+        packages = await resolver.parse_manifest(str(manifest))
 
         assert len(packages) == 2
         assert packages[0].name == "NUnit"
         assert packages[1].version == "4.18.4"
 
-    def test_parse_manifest_packages_config_invalid(self, tmp_path):
+    async def test_parse_manifest_packages_config_invalid(self, tmp_path):
         """Test parsing invalid packages.config manifest."""
         manifest = tmp_path / "packages.config"
         manifest.write_text("<packages><package id='NUnit'>")
 
         resolver = CSharpResolver()
         with pytest.raises(ValueError, match="Failed to parse packages.config"):
-            resolver.parse_manifest(str(manifest))
+            await resolver.parse_manifest(str(manifest))
 
     def test_parse_repository_url_github(self):
         """Test parsing valid GitHub URL."""

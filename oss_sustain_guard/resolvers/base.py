@@ -6,38 +6,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import NamedTuple
 
-import httpx
-
-from oss_sustain_guard.config import get_verify_ssl
 from oss_sustain_guard.repository import RepositoryReference
-
-# --- Global HTTP Client for Resolvers ---
-# Reuse connections across all resolver instances
-_resolver_http_client: httpx.Client | None = None
-
-
-def get_resolver_http_client() -> httpx.Client:
-    """Get or create a global HTTP client for resolvers with connection pooling."""
-    global _resolver_http_client
-    if _resolver_http_client is None or _resolver_http_client.is_closed:
-        _resolver_http_client = httpx.Client(
-            verify=get_verify_ssl(),
-            timeout=10,
-            limits=httpx.Limits(
-                max_connections=20,
-                max_keepalive_connections=10,
-                keepalive_expiry=30.0,
-            ),
-        )
-    return _resolver_http_client
-
-
-def close_resolver_http_client():
-    """Close the global resolver HTTP client."""
-    global _resolver_http_client
-    if _resolver_http_client is not None and not _resolver_http_client.is_closed:
-        _resolver_http_client.close()
-        _resolver_http_client = None
 
 
 class PackageInfo(NamedTuple):
@@ -59,7 +28,7 @@ class LanguageResolver(ABC):
         pass
 
     @abstractmethod
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         """
         Resolve package name to a repository reference.
 
@@ -74,19 +43,19 @@ class LanguageResolver(ABC):
         """
         pass
 
-    def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
+    async def resolve_github_url(self, package_name: str) -> tuple[str, str] | None:
         """
         Resolve package name to GitHub (owner, repo).
 
         Legacy helper for GitHub-only workflows.
         """
-        repo = self.resolve_repository(package_name)
+        repo = await self.resolve_repository(package_name)
         if repo and repo.provider == "github":
             return repo.owner, repo.name
         return None
 
     @abstractmethod
-    def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str | Path) -> list[PackageInfo]:
         """
         Parse a lockfile and extract package information.
 
@@ -103,7 +72,7 @@ class LanguageResolver(ABC):
         pass
 
     @abstractmethod
-    def detect_lockfiles(self, directory: str) -> list[Path]:
+    async def detect_lockfiles(self, directory: str) -> list[Path]:
         """
         Detect lockfiles for this ecosystem in the given directory.
 
@@ -116,7 +85,7 @@ class LanguageResolver(ABC):
         pass
 
     @abstractmethod
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         """
         Return list of manifest file names for this ecosystem.
 
@@ -126,7 +95,7 @@ class LanguageResolver(ABC):
         pass
 
     @abstractmethod
-    def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str | Path) -> list[PackageInfo]:
         """
         Parse a manifest file and extract package information.
 

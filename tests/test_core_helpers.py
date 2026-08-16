@@ -5,7 +5,7 @@ Additional tests for core helpers and error handling.
 from __future__ import annotations
 
 import copy
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -15,10 +15,8 @@ from oss_sustain_guard.core import (
     AnalysisResult,
     Metric,
     MetricModel,
-    _get_batch_repository_query,
     analysis_result_to_dict,
     analyze_dependencies,
-    analyze_repositories_batch,
     analyze_repository,
     apply_profile_overrides,
     compare_scoring_profiles,
@@ -61,21 +59,15 @@ def test_analysis_result_to_dict_handles_mixed_metrics_and_models():
         total_score=88,
         metrics=[
             Metric("Metric A", 7, 10, "Message A", "Low"),
-            {
-                "name": "Metric B",
-                "score": 4,
-                "max_score": 10,
-                "message": "B",
-                "risk": "Medium",
-            },
-            _LegacyMetric(),
+            Metric("Metric B", 4, 10, "B", "Medium"),
+            Metric("Legacy Metric", 4, 10, "Legacy message", "Low"),
         ],
         funding_links=[{"platform": "GitHub", "url": "https://github.com/sponsors/x"}],
         is_community_driven=True,
         models=[
             MetricModel("Model A", 6, 10, "Observation A"),
-            {"name": "Model B", "score": 3, "max_score": 10, "observation": "B"},
-            _LegacyModel(),
+            MetricModel("Model B", 3, 10, "B"),
+            MetricModel("Legacy Model", 6, 10, "Legacy observation"),
         ],
         signals={"signal": 1},
         dependency_scores={"dep": 80},
@@ -102,8 +94,8 @@ def test_apply_profile_overrides_resets_defaults():
 
 
 def test_apply_profile_overrides_rejects_non_dict_profile():
-    with pytest.raises(ValueError, match="should be a table"):
-        apply_profile_overrides({"bad": "nope"})
+    with pytest.raises(ValueError, match="needs a weights table"):
+        apply_profile_overrides({"bad": {}})
 
 
 def test_apply_profile_overrides_requires_weights_for_new_profile():
@@ -112,28 +104,55 @@ def test_apply_profile_overrides_requires_weights_for_new_profile():
 
 
 def test_apply_profile_overrides_rejects_missing_metrics():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights.pop(next(iter(weights)))
     with pytest.raises(ValueError, match="missing metrics"):
         apply_profile_overrides({"balanced": {"weights": weights}})
 
 
 def test_apply_profile_overrides_rejects_unknown_metrics():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights["Unknown Metric"] = 2
     with pytest.raises(ValueError, match="includes unknown metrics"):
         apply_profile_overrides({"balanced": {"weights": weights}})
 
 
+def test_apply_profile_overrides_accepts_retired_metric_names():
+    """Configs written against "Maintainer Retention" keep working (issue #11)."""
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
+    weights["Maintainer Retention"] = weights.pop("Commit Author Continuity")
+
+    apply_profile_overrides({"balanced": {"weights": weights}})
+
+    applied = get_metric_weights("balanced")
+    assert (
+        applied["Commit Author Continuity"]
+        == balanced_weights["Commit Author Continuity"]
+    )
+    assert "Maintainer Retention" not in applied
+
+    apply_profile_overrides({})
+
+
 def test_apply_profile_overrides_rejects_invalid_weights():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights["Contributor Redundancy"] = 0
     with pytest.raises(ValueError, match="Invalid values"):
         apply_profile_overrides({"balanced": {"weights": weights}})
 
 
 def test_apply_profile_overrides_accepts_valid_override():
-    weights = copy.deepcopy(core.DEFAULT_SCORING_PROFILES["balanced"]["weights"])
+    balanced_weights = core.DEFAULT_SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    weights = dict(balanced_weights)
     weights["Contributor Redundancy"] = 5
     apply_profile_overrides(
         {
@@ -145,7 +164,9 @@ def test_apply_profile_overrides_accepts_valid_override():
         }
     )
     assert core.SCORING_PROFILES["balanced"]["name"] == "Balanced Updated"
-    assert core.SCORING_PROFILES["balanced"]["weights"]["Contributor Redundancy"] == 5
+    balanced_weights = core.SCORING_PROFILES["balanced"]["weights"]
+    assert isinstance(balanced_weights, dict)
+    assert balanced_weights["Contributor Redundancy"] == 5
 
 
 def test_compute_weighted_total_score_empty_metrics_returns_zero():
@@ -179,7 +200,7 @@ def test_compute_metric_models_with_observations():
         Metric("Change Request Resolution", 1, 10, "msg", "Low"),
         Metric("Community Health", 1, 10, "msg", "Low"),
         Metric("Funding Signals", 10, 10, "msg", "Low"),
-        Metric("Maintainer Retention", 9, 10, "msg", "Low"),
+        Metric("Commit Author Continuity", 9, 10, "msg", "Low"),
         Metric("Release Rhythm", 8, 10, "msg", "Low"),
         Metric("Recent Activity", 9, 10, "msg", "Low"),
         Metric("Contributor Attraction", 9, 10, "msg", "Low"),
@@ -214,7 +235,7 @@ def test_compute_metric_models_with_monitoring_messages():
         Metric("Security Signals", 9, 10, "msg", "Low"),
         Metric("Change Request Resolution", 9, 10, "msg", "Low"),
         Metric("Funding Signals", 6, 10, "msg", "Low"),
-        Metric("Maintainer Retention", 6, 10, "msg", "Low"),
+        Metric("Commit Author Continuity", 6, 10, "msg", "Low"),
         Metric("Release Rhythm", 6, 10, "msg", "Low"),
         Metric("Recent Activity", 6, 10, "msg", "Low"),
         Metric("Contributor Attraction", 6, 10, "msg", "Low"),
@@ -250,38 +271,87 @@ def test_compute_metric_models_with_monitoring_messages():
 
 
 def test_extract_signals_parses_repo_and_metric_messages():
+    # Use metadata instead of parsing messages for structured data
+    from oss_sustain_guard.vcs.base import VCSRepositoryData
+
     metrics = [
-        Metric("Funding Signals", 5, 10, "msg", "Low"),
-        Metric("Recent Activity", 5, 10, "msg", "Low"),
+        Metric("Funding Signals", 5, 10, "msg", "Low", None),
+        Metric("Recent Activity", 5, 10, "msg", "Low", None),
         Metric(
             "Contributor Attraction",
             5,
             10,
             "2 new contributors in 6 months",
             "Low",
+            {"new_contributors": 2, "total_contributors": 10},
         ),
-        Metric("Contributor Retention", 5, 10, "Retention at 75%", "Low"),
-        Metric("Review Health", 5, 10, "Avg time to first review: 3.5h", "Low"),
+        Metric(
+            "Contributor Retention",
+            5,
+            10,
+            "Retention at 75%",
+            "Low",
+            {
+                "retention_rate": 75,
+                "retained_contributors": 3,
+                "earlier_contributors": 4,
+            },
+        ),
+        Metric(
+            "Review Health",
+            5,
+            10,
+            "Avg time to first review: 3.5h",
+            "Low",
+            {"avg_review_time_hours": 3.5, "avg_review_count": 2.1},
+        ),
     ]
-    repo_data = {
-        "fundingLinks": [
-            {"platform": "GitHub", "url": "https://github.com/sponsors/x"}
-        ],
-        "pushedAt": "2024-01-01T00:00:00Z",
-        "defaultBranchRef": {
-            "target": {
-                "history": {
-                    "edges": [
-                        {"node": {"author": {"user": {"login": "alice"}}}},
-                        {"node": {"author": {"user": {"login": "dependabot[bot]"}}}},
-                        {"node": {"author": {"user": {"login": "bob"}}}},
-                    ]
-                }
-            }
-        },
-    }
 
-    signals = extract_signals(metrics, repo_data)
+    vcs_data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at="2024-01-01T00:00:00Z",
+        owner_type="User",
+        owner_login="testuser",
+        owner_name="Test User",
+        star_count=100,
+        description="Test repo",
+        homepage_url=None,
+        topics=[],
+        readme_size=None,
+        contributing_file_size=None,
+        default_branch="main",
+        watchers_count=10,
+        open_issues_count=5,
+        language="Python",
+        commits=[
+            {"author": {"user": {"login": "alice"}}},
+            {"author": {"user": {"login": "dependabot[bot]"}}},
+            {"author": {"user": {"login": "bob"}}},
+        ],
+        total_commits=3,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[{"platform": "GitHub", "url": "https://github.com/sponsors/x"}],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data=None,
+    )
+
+    signals = extract_signals(metrics, vcs_data)
 
     assert signals["funding_link_count"] == 1
     assert isinstance(signals["last_activity_days"], int)
@@ -291,68 +361,20 @@ def test_extract_signals_parses_repo_and_metric_messages():
     assert signals["avg_review_time_hours"] == 3.5
 
 
-def test_get_batch_repository_query_contains_aliases():
-    query = _get_batch_repository_query([("org", "repo"), ("user", "repo2")])
-    assert 'repo0: repository(owner: "org", name: "repo")' in query
-    assert 'repo1: repository(owner: "user", name: "repo2")' in query
-
-
-def test_analyze_repositories_batch_empty_list_returns_empty_dict():
-    assert analyze_repositories_batch([]) == {}
-
-
-def test_analyze_repositories_batch_handles_missing_and_error():
-    repo_list = [
-        ("owner1", "repo1", "Pypi", "package-one"),
-        ("owner2", "repo2", None, None),
-    ]
-    with (
-        patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs,
-        patch("oss_sustain_guard.core._analyze_repository_data") as mock_analyze,
-    ):
-        mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = ValueError(
-            "Repository not found"
-        )
-        mock_analyze.side_effect = ValueError("boom")
-
-        results = analyze_repositories_batch(repo_list)
-
-    assert results[("owner1", "repo1")] is None
-    assert results[("owner2", "repo2")] is None
-
-
-def test_analyze_repositories_batch_falls_back_to_individual():
-    repo_list = [
-        ("owner1", "repo1", "Pypi", "package-one"),
-        ("owner2", "repo2", None, None),
-    ]
-    result = AnalysisResult(
-        repo_url="https://github.com/owner1/repo1",
-        total_score=50,
-        metrics=[Metric("Metric A", 5, 10, "msg", "Low")],
-    )
-    with (
-        patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs,
-        patch("oss_sustain_guard.core.analyze_repository") as mock_analyze,
-    ):
-        mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = RuntimeError("network")
-        mock_analyze.side_effect = [result, RuntimeError("boom")]
-
-        results = analyze_repositories_batch(repo_list)
-
-    assert results[("owner1", "repo1")] == result
-    assert results[("owner2", "repo2")] is None
-
-
 def test_analyze_repository_data_handles_metric_errors():
-    def failing_checker(_repo_info, _context):
-        raise ValueError("broken")
+    from oss_sustain_guard.metrics.base import MetricChecker
+    from oss_sustain_guard.vcs.base import VCSRepositoryData
+
+    class FailingChecker(MetricChecker):
+        def check(
+            self, vcs_data: VCSRepositoryData, _context: core.MetricContext
+        ) -> Metric:
+            raise ValueError("broken")
 
     def on_error_metric(exc: Exception) -> Metric:
         return Metric("Recover", 1, 10, f"Recovered: {exc}", "Low")
 
+    failing_checker = FailingChecker()
     specs = [
         MetricSpec(
             name="First",
@@ -360,29 +382,69 @@ def test_analyze_repository_data_handles_metric_errors():
             on_error=on_error_metric,
             error_log="Note: {error}",
         ),
-        MetricSpec(name="Second", checker=failing_checker),
+        MetricSpec(
+            name="Second",
+            checker=failing_checker,
+            on_error=on_error_metric,
+            error_log="",
+        ),
     ]
 
-    repo_info = {
-        "fundingLinks": [
-            {"platform": "GitHub", "url": "https://github.com/sponsors/x"}
-        ],
-        "owner": {"__typename": "Organization"},
-    }
+    vcs_data = VCSRepositoryData(
+        is_archived=False,
+        pushed_at=None,
+        owner_type="Organization",
+        owner_login="testorg",
+        owner_name="Test Org",
+        star_count=100,
+        description="Test repo",
+        homepage_url=None,
+        topics=[],
+        readme_size=None,
+        contributing_file_size=None,
+        default_branch="main",
+        watchers_count=10,
+        open_issues_count=5,
+        language="Python",
+        commits=[],
+        total_commits=0,
+        merged_prs=[],
+        closed_prs=[],
+        total_merged_prs=0,
+        releases=[],
+        open_issues=[],
+        closed_issues=[],
+        total_closed_issues=0,
+        vulnerability_alerts=None,
+        has_security_policy=False,
+        code_of_conduct=None,
+        license_info=None,
+        has_wiki=False,
+        has_issues=True,
+        has_discussions=False,
+        funding_links=[{"platform": "GitHub", "url": "https://github.com/sponsors/x"}],
+        forks=[],
+        total_forks=0,
+        ci_status=None,
+        sample_counts={},
+        raw_data=None,
+    )
 
     with (
         patch("oss_sustain_guard.core.load_metric_specs", return_value=specs),
         patch("oss_sustain_guard.core.console.print") as mock_print,
     ):
-        result = core._analyze_repository_data("owner", "repo", repo_info)
+        result = core._analyze_repository_data("owner", "repo", vcs_data)
 
     assert len(result.metrics) == 2
     assert result.is_community_driven is True
-    assert result.funding_links == repo_info["fundingLinks"]
+    assert result.funding_links == [
+        {"platform": "GitHub", "url": "https://github.com/sponsors/x"}
+    ]
     assert any("Note: " in call.args[0] for call in mock_print.call_args_list)
 
 
-def test_analyze_repository_handles_http_status_error():
+async def test_analyze_repository_handles_http_status_error():
     error = httpx.HTTPStatusError(
         "boom",
         request=httpx.Request("POST", "https://example.com"),
@@ -390,17 +452,17 @@ def test_analyze_repository_handles_http_status_error():
     )
     with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
         mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = error
+        mock_provider.get_repository_data = AsyncMock(side_effect=error)
         with pytest.raises(httpx.HTTPStatusError):
-            analyze_repository("owner", "repo")
+            await analyze_repository("owner", "repo")
 
 
-def test_analyze_repository_handles_unexpected_error():
+async def test_analyze_repository_handles_unexpected_error():
     with patch("oss_sustain_guard.core.get_vcs_provider") as mock_vcs:
         mock_provider = mock_vcs.return_value
-        mock_provider.get_repository_data.side_effect = RuntimeError("boom")
+        mock_provider.get_repository_data = AsyncMock(side_effect=RuntimeError("boom"))
         with pytest.raises(RuntimeError):
-            analyze_repository("owner", "repo")
+            await analyze_repository("owner", "repo")
 
 
 def test_analyze_dependencies_handles_bad_data():

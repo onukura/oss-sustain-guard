@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 from dotenv import load_dotenv
 
-from oss_sustain_guard.http_client import _get_http_client
+from oss_sustain_guard.http_client import _get_async_http_client
 from oss_sustain_guard.vcs.base import BaseVCSProvider, VCSRepositoryData
 
 # Load environment variables
@@ -20,16 +20,52 @@ load_dotenv()
 # GitLab API endpoint
 GITLAB_GRAPHQL_API = "https://gitlab.com/api/graphql"
 
-# Sample size constants from GraphQL queries
-GRAPHQL_SAMPLE_LIMITS = {
-    "commits": 100,
-    "merged_mrs": 50,
-    "closed_mrs": 50,
-    "open_issues": 20,
-    "closed_issues": 50,
-    "releases": 10,
-    "forks": 20,
+# Sample size constants by scan depth
+SCAN_DEPTH_LIMITS = {
+    "shallow": {
+        "commits": 50,
+        "merged_mrs": 20,
+        "closed_mrs": 20,
+        "open_issues": 10,
+        "closed_issues": 20,
+        "releases": 5,
+        "forks": 10,
+        "reviews": 3,
+    },
+    "default": {
+        "commits": 100,
+        "merged_mrs": 50,
+        "closed_mrs": 50,
+        "open_issues": 20,
+        "closed_issues": 50,
+        "releases": 10,
+        "forks": 20,
+        "reviews": 10,
+    },
+    "deep": {
+        "commits": 100,
+        "merged_mrs": 100,
+        "closed_mrs": 100,
+        "open_issues": 50,
+        "closed_issues": 100,
+        "releases": 20,
+        "forks": 50,
+        "reviews": 20,
+    },
+    "very_deep": {
+        "commits": 100,
+        "merged_mrs": 100,
+        "closed_mrs": 100,
+        "open_issues": 100,
+        "closed_issues": 100,
+        "releases": 50,
+        "forks": 100,
+        "reviews": 50,
+    },
 }
+
+# Legacy constant for backward compatibility
+GRAPHQL_SAMPLE_LIMITS = SCAN_DEPTH_LIMITS["default"]
 
 
 class GitLabProvider(BaseVCSProvider):
@@ -72,13 +108,24 @@ class GitLabProvider(BaseVCSProvider):
         """Construct GitLab repository URL."""
         return f"https://gitlab.com/{owner}/{repo}"
 
-    def get_repository_data(self, owner: str, repo: str) -> VCSRepositoryData:
+    async def get_repository_data(
+        self,
+        owner: str,
+        repo: str,
+        scan_depth: str = "default",
+        days_lookback: int | None = None,
+        time_window: tuple[str, str] | None = None,
+    ) -> VCSRepositoryData:
         """
         Fetch repository data from GitLab GraphQL API.
 
         Args:
             owner: GitLab repository owner (username or organization)
             repo: GitLab repository name
+            scan_depth: Sampling depth - "shallow", "default", or "deep"
+            days_lookback: Optional time filter (days to look back), None = no limit
+            time_window: Optional (since, until) ISO timestamp tuple for precise window.
+                        If provided, takes precedence over days_lookback.
 
         Returns:
             Normalized VCSRepositoryData structure
@@ -87,19 +134,41 @@ class GitLabProvider(BaseVCSProvider):
             ValueError: If repository not found or is inaccessible
             httpx.HTTPStatusError: If GitLab API returns an error
         """
+        from datetime import datetime, timedelta, timezone
+
+        # Get sample limits based on scan depth
+        limits = SCAN_DEPTH_LIMITS.get(scan_depth, SCAN_DEPTH_LIMITS["default"])
+
+        # Determine time filter parameters
+        since_date = None
+        until_date = None
+
+        if time_window is not None:
+            # Use explicit time window (for trend analysis)
+            since_date, until_date = time_window
+        elif days_lookback is not None:
+            # Use days_lookback (for regular analysis)
+            since_date = (
+                datetime.now(timezone.utc) - timedelta(days=days_lookback)
+            ).isoformat()
+
         # GitLab uses full path for project queries
         full_path = f"{owner}/{repo}"
-        query = self._get_graphql_query()
+        query = self._get_graphql_query(limits)
         variables = {"fullPath": full_path}
-        raw_data = self._query_graphql(query, variables)
+        raw_data = await self._query_graphql(query, variables)
 
         if "project" not in raw_data or raw_data["project"] is None:
             raise ValueError(f"Repository {owner}/{repo} not found or is inaccessible.")
 
         project_info = raw_data["project"]
-        return self._normalize_gitlab_data(project_info, owner, repo)
+        return await self._normalize_gitlab_data(
+            project_info, owner, repo, since_date, limits, until_date
+        )
 
-    def _query_graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+    async def _query_graphql(
+        self, query: str, variables: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Execute GraphQL query against GitLab API.
 
@@ -117,8 +186,8 @@ class GitLabProvider(BaseVCSProvider):
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-        client = _get_http_client()
-        response = client.post(
+        client = await _get_async_http_client()
+        response = await client.post(
             GITLAB_GRAPHQL_API,
             json={"query": query, "variables": variables},
             headers=headers,
@@ -136,94 +205,105 @@ class GitLabProvider(BaseVCSProvider):
 
         return data.get("data", {})
 
-    def _get_graphql_query(self) -> str:
-        """Return the GraphQL query to fetch project metrics."""
-        return """
-        query GetProject($fullPath: ID!) {
-          project(fullPath: $fullPath) {
+    def _get_graphql_query(self, limits: dict[str, int]) -> str:
+        """
+        Return the GraphQL query to fetch project metrics.
+
+        Args:
+            limits: Dictionary with sample size limits for each data type
+        """
+        return f"""
+        query GetProject($fullPath: ID!) {{
+          project(fullPath: $fullPath) {{
             archived
             lastActivityAt
-            namespace {
+            namespace {{
               fullPath
               name
-            }
-            repository {
+            }}
+            repository {{
               rootRef
-            }
-            mergeRequests(first: 50, state: merged, sort: UPDATED_DESC) {
-              edges {
-                node {
+            }}
+            mergeRequests(first: {limits["merged_mrs"]}, state: merged, sort: UPDATED_DESC) {{
+              edges {{
+                node {{
                   mergedAt
                   createdAt
-                  mergeUser {
+                  mergeUser {{
                     username
-                  }
-                  approvedBy {
-                    nodes {
+                  }}
+                  approvedBy {{
+                    nodes {{
                       createdAt
-                    }
-                  }
-                }
-              }
-              pageInfo {
+                    }}
+                  }}
+                }}
+              }}
+              pageInfo {{
                 hasNextPage
-              }
+              }}
               count
-            }
-            closedMergeRequests: mergeRequests(first: 50, state: closed, sort: UPDATED_DESC) {
-              edges {
-                node {
+            }}
+            closedMergeRequests: mergeRequests(first: {limits["closed_mrs"]}, state: closed, sort: UPDATED_DESC) {{
+              edges {{
+                node {{
                   closedAt
                   createdAt
                   state
-                }
-              }
+                }}
+              }}
               count
-            }
-            releases(first: 10, sort: CREATED_DESC) {
-              edges {
-                node {
+            }}
+            releases(first: {limits["releases"]}, sort: CREATED_DESC) {{
+              edges {{
+                node {{
                   releasedAt
                   tagName
-                }
-              }
-            }
-            issues(first: 20, state: opened, sort: CREATED_DESC) {
-              edges {
-                node {
+                }}
+              }}
+            }}
+            issues(first: {limits["open_issues"]}, state: opened, sort: CREATED_DESC) {{
+              edges {{
+                node {{
                   createdAt
-                  notes(first: 1) {
-                    edges {
-                      node {
+                  notes(first: 1) {{
+                    edges {{
+                      node {{
                         createdAt
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            closedIssues: issues(first: 50, state: closed, sort: UPDATED_DESC) {
-              edges {
-                node {
+                      }}
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            closedIssues: issues(first: {limits["closed_issues"]}, state: closed, sort: UPDATED_DESC) {{
+              edges {{
+                node {{
                   createdAt
                   closedAt
                   updatedAt
-                }
-              }
+                }}
+              }}
               count
-            }
+            }}
             issuesEnabled
             wikiEnabled
             starCount
             forksCount
             description
             webUrl
-          }
-        }
+          }}
+        }}
         """
 
-    def _normalize_gitlab_data(
-        self, project_info: dict[str, Any], owner: str, repo: str
+    async def _normalize_gitlab_data(
+        self,
+        project_info: dict[str, Any],
+        owner: str,
+        repo: str,
+        since_date: str | None = None,
+        limits: dict[str, int] | None = None,
+        until_date: str | None = None,
     ) -> VCSRepositoryData:
         """
         Normalize GitLab GraphQL response to VCSRepositoryData format.
@@ -232,10 +312,26 @@ class GitLabProvider(BaseVCSProvider):
             project_info: GitLab project data from GraphQL response
             owner: Repository owner
             repo: Repository name
+            since_date: ISO format date string for time filtering (start), None = no limit
+            limits: Sample size limits for data fetching
+            until_date: ISO format date string for time filtering (end), None = no limit
 
         Returns:
             Normalized VCSRepositoryData structure
         """
+        from datetime import datetime
+
+        # For backward compatibility with client-side filtering (MRs and issues)
+        cutoff_date = None
+        until_cutoff_date = None
+
+        if since_date:
+            cutoff_date = datetime.fromisoformat(since_date.replace("Z", "+00:00"))
+        if until_date:
+            until_cutoff_date = datetime.fromisoformat(
+                until_date.replace("Z", "+00:00")
+            )
+
         # Extract namespace (owner) information
         namespace = project_info.get("namespace", {})
         owner_login = namespace.get("fullPath", owner).split("/")[0]
@@ -263,13 +359,13 @@ class GitLabProvider(BaseVCSProvider):
 
         for ref in refs_to_try:
             if readme_size is None:
-                readme_size = self._fetch_first_matching_file_size(
+                readme_size = await self._fetch_first_matching_file_size(
                     full_path,
                     ref,
                     ["README.md", "readme.md", "README"],
                 )
             if contributing_file_size is None:
-                contributing_file_size = self._fetch_first_matching_file_size(
+                contributing_file_size = await self._fetch_first_matching_file_size(
                     full_path,
                     ref,
                     ["CONTRIBUTING.md", "CONTRIBUTING.MD", "CONTRIBUTING"],
@@ -278,10 +374,14 @@ class GitLabProvider(BaseVCSProvider):
                 break
 
         # Fetch commits separately (GitLab GraphQL doesn't support commits in project query easily)
+        # Pass since_date and limits to use API-level filtering
         commits = []
         total_commits = 0
         try:
-            commits_data = self._fetch_commits(f"{owner}/{repo}")
+            per_page = limits.get("commits", 100) if limits else 100
+            commits_data = await self._fetch_commits(
+                f"{owner}/{repo}", since=since_date, per_page=per_page
+            )
             commits = commits_data.get("commits", [])
             total_commits = commits_data.get("total_commits", len(commits))
         except Exception:
@@ -290,16 +390,48 @@ class GitLabProvider(BaseVCSProvider):
 
         # Extract merge requests (GitLab's equivalent of pull requests)
         merged_mrs_data = project_info.get("mergeRequests", {})
-        merged_prs = [
+        all_merged_prs = [
             self._normalize_merge_request(edge["node"])
             for edge in merged_mrs_data.get("edges", [])
         ]
 
+        # Apply time filter if specified
+        if cutoff_date or until_cutoff_date:
+            merged_prs = []
+            for pr in all_merged_prs:
+                merged_at = pr.get("mergedAt")
+                if not merged_at:
+                    continue
+                merged_dt = datetime.fromisoformat(merged_at.replace("Z", "+00:00"))
+                if cutoff_date and merged_dt < cutoff_date:
+                    continue
+                if until_cutoff_date and merged_dt > until_cutoff_date:
+                    continue
+                merged_prs.append(pr)
+        else:
+            merged_prs = all_merged_prs
+
         closed_mrs_data = project_info.get("closedMergeRequests", {})
-        closed_prs = [
+        all_closed_prs = [
             self._normalize_merge_request(edge["node"])
             for edge in closed_mrs_data.get("edges", [])
         ]
+
+        # Apply time filter if specified
+        if cutoff_date or until_cutoff_date:
+            closed_prs = []
+            for pr in all_closed_prs:
+                closed_at = pr.get("closedAt")
+                if not closed_at:
+                    continue
+                closed_dt = datetime.fromisoformat(closed_at.replace("Z", "+00:00"))
+                if cutoff_date and closed_dt < cutoff_date:
+                    continue
+                if until_cutoff_date and closed_dt > until_cutoff_date:
+                    continue
+                closed_prs.append(pr)
+        else:
+            closed_prs = all_closed_prs
 
         total_merged_prs = merged_mrs_data.get("count", len(merged_prs))
 
@@ -323,7 +455,7 @@ class GitLabProvider(BaseVCSProvider):
             self._normalize_issue(edge["node"])
             for edge in closed_issues_data.get("edges", [])
         ]
-        rest_closed_issues = self._fetch_closed_issues(full_path)
+        rest_closed_issues = await self._fetch_closed_issues(full_path)
         if rest_closed_issues is not None:
             closed_issues = rest_closed_issues
         total_closed_issues = closed_issues_data.get("count", len(closed_issues))
@@ -348,7 +480,7 @@ class GitLabProvider(BaseVCSProvider):
         total_forks = project_info.get("forksCount", 0)
         try:
             if total_forks > 0:
-                forks_data = self._fetch_forks(f"{owner}/{repo}")
+                forks_data = await self._fetch_forks(f"{owner}/{repo}")
                 forks = forks_data.get("forks", [])
         except Exception:
             # If forks fetch fails, continue with just the count
@@ -409,16 +541,16 @@ class GitLabProvider(BaseVCSProvider):
             raw_data=None,  # Don't use raw_data to force proper reconstruction
         )
 
-    def _fetch_first_matching_file_size(
+    async def _fetch_first_matching_file_size(
         self, full_path: str, ref: str, candidates: list[str]
     ) -> int | None:
         for file_path in candidates:
-            size = self._fetch_repository_file_size(full_path, ref, file_path)
+            size = await self._fetch_repository_file_size(full_path, ref, file_path)
             if size is not None:
                 return size
         return None
 
-    def _fetch_repository_file_size(
+    async def _fetch_repository_file_size(
         self, full_path: str, ref: str, file_path: str
     ) -> int | None:
         """
@@ -442,9 +574,9 @@ class GitLabProvider(BaseVCSProvider):
                 f"/repository/files/{encoded_file}"
             )
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            response = await client.get(
                 url,
                 headers=headers,
                 params={"ref": ref},
@@ -470,7 +602,7 @@ class GitLabProvider(BaseVCSProvider):
             )
             return None
 
-    def _fetch_closed_issues(self, full_path: str) -> list[dict[str, Any]] | None:
+    async def _fetch_closed_issues(self, full_path: str) -> list[dict[str, Any]] | None:
         """
         Fetch closed issues using GitLab REST API to capture close actors.
 
@@ -486,9 +618,9 @@ class GitLabProvider(BaseVCSProvider):
             encoded_path = urllib.parse.quote(full_path, safe="")
             url = f"https://gitlab.com/api/v4/projects/{encoded_path}/issues"
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            response = await client.get(
                 url,
                 headers=headers,
                 params={
@@ -510,12 +642,16 @@ class GitLabProvider(BaseVCSProvider):
             print(f"Warning: Failed to fetch closed issues for {full_path}: {exc}")
             return None
 
-    def _fetch_commits(self, full_path: str) -> dict[str, Any]:
+    async def _fetch_commits(
+        self, full_path: str, since: str | None = None, per_page: int = 100
+    ) -> dict[str, Any]:
         """
         Fetch commit data using GitLab REST API.
 
         Args:
             full_path: Full project path (owner/repo)
+            since: ISO 8601 format date string to get commits after this date
+            per_page: Number of commits to fetch (default: 100)
 
         Returns:
             Dictionary with commits list and total count
@@ -526,17 +662,22 @@ class GitLabProvider(BaseVCSProvider):
 
             encoded_path = urllib.parse.quote(full_path, safe="")
 
-            # Fetch commits via REST API (first 100 commits)
+            # Fetch commits via REST API with optional time filtering
             url = (
                 f"https://gitlab.com/api/v4/projects/{encoded_path}/repository/commits"
             )
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            # Build params with optional 'since' parameter
+            params: dict[str, Any] = {"per_page": per_page, "page": 1}
+            if since:
+                params["since"] = since
+
+            response = await client.get(
                 url,
                 headers=headers,
-                params={"per_page": 100, "page": 1},
+                params=params,
                 timeout=30,
             )
             response.raise_for_status()
@@ -559,7 +700,7 @@ class GitLabProvider(BaseVCSProvider):
 
             # Get total commit count from project stats
             stats_url = f"https://gitlab.com/api/v4/projects/{encoded_path}"
-            stats_response = client.get(
+            stats_response = await client.get(
                 stats_url,
                 headers=headers,
                 timeout=30,
@@ -579,7 +720,7 @@ class GitLabProvider(BaseVCSProvider):
             print(f"Warning: Failed to fetch commits for {full_path}: {e}")
             return {"commits": [], "total_commits": 0}
 
-    def _fetch_forks(self, full_path: str) -> dict[str, Any]:
+    async def _fetch_forks(self, full_path: str) -> dict[str, Any]:
         """
         Fetch fork data using GitLab REST API.
 
@@ -597,9 +738,9 @@ class GitLabProvider(BaseVCSProvider):
             # Fetch forks via REST API (first 20 forks)
             url = f"https://gitlab.com/api/v4/projects/{encoded_path}/forks"
             headers = {"Authorization": f"Bearer {self.token}"}
-            client = _get_http_client()
+            client = await _get_async_http_client()
 
-            response = client.get(
+            response = await client.get(
                 url,
                 headers=headers,
                 params={"per_page": 20, "page": 1},
@@ -689,3 +830,6 @@ class GitLabProvider(BaseVCSProvider):
             or fork_node.get("last_activity_at"),
             "owner": {"login": owner_login},
         }
+
+
+PROVIDER = GitLabProvider

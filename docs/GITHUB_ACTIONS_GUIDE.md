@@ -51,7 +51,7 @@ jobs:
 
 **Automatically detects from:**
 
-- `package-lock.json` / `yarn.lock` / `pnpm-lock.yaml` (JavaScript)
+- `package-lock.json` / `pnpm-lock.yaml` / `bun.lock` / `deno.lock` (JavaScript)
 - `requirements.txt` / `poetry.lock` / `uv.lock` (Python)
 - `Cargo.lock` (Rust)
 - `Gemfile.lock` (Ruby)

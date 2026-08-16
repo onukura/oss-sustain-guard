@@ -20,8 +20,8 @@ class TestHaskellResolver:
         resolver = HaskellResolver()
         assert resolver.ecosystem_name == "haskell"
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository(self, mock_get):
         """Test resolving repository from Hackage metadata."""
         # First call: get versions
         versions_response = MagicMock()
@@ -44,23 +44,23 @@ source-repository head
         mock_get.side_effect = [versions_response, cabal_response]
 
         resolver = HaskellResolver()
-        result = resolver.resolve_repository("text")
+        result = await resolver.resolve_repository("text")
         assert result is not None
         assert result.owner == "haskell"
         assert result.name == "text"
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_not_found(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_not_found(self, mock_get):
         """Test handling missing Hackage package."""
         mock_response = MagicMock()
         mock_response.status_code = 404
         mock_get.return_value = mock_response
 
         resolver = HaskellResolver()
-        assert resolver.resolve_repository("missing") is None
+        assert await resolver.resolve_repository("missing") is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_no_versions(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_no_versions(self, mock_get):
         """Test handling package with no versions."""
         versions_response = MagicMock()
         versions_response.status_code = 200
@@ -68,10 +68,10 @@ source-repository head
         mock_get.return_value = versions_response
 
         resolver = HaskellResolver()
-        assert resolver.resolve_repository("empty") is None
+        assert await resolver.resolve_repository("empty") is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_non_numeric_version(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_non_numeric_version(self, mock_get):
         """Test resolving with non-numeric version strings."""
         versions_response = MagicMock()
         versions_response.status_code = 200
@@ -87,13 +87,13 @@ source-repository head
         mock_get.side_effect = [versions_response, cabal_response]
 
         resolver = HaskellResolver()
-        result = resolver.resolve_repository("text")
+        result = await resolver.resolve_repository("text")
         assert result is not None
         assert result.owner == "haskell"
         assert result.name == "text"
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_cabal_not_found(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_cabal_not_found(self, mock_get):
         """Test handling missing cabal file."""
         versions_response = MagicMock()
         versions_response.status_code = 200
@@ -105,55 +105,55 @@ source-repository head
         mock_get.side_effect = [versions_response, cabal_response]
 
         resolver = HaskellResolver()
-        assert resolver.resolve_repository("text") is None
+        assert await resolver.resolve_repository("text") is None
 
-    @patch("httpx.Client.get")
-    def test_resolve_repository_request_error(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_resolve_repository_request_error(self, mock_get):
         """Test handling Hackage request errors."""
         import httpx
 
         mock_get.side_effect = httpx.RequestError("Network error")
 
         resolver = HaskellResolver()
-        assert resolver.resolve_repository("text") is None
+        assert await resolver.resolve_repository("text") is None
 
-    def test_parse_cabal_freeze(self, tmp_path):
+    async def test_parse_cabal_freeze(self, tmp_path):
         """Test parsing cabal.project.freeze."""
         content = "constraints: any.text ==1.2.5.0, any.bytestring ==0.11.5.2"
         lockfile = tmp_path / "cabal.project.freeze"
         lockfile.write_text(content)
 
         resolver = HaskellResolver()
-        packages = resolver.parse_lockfile(lockfile)
+        packages = await resolver.parse_lockfile(lockfile)
 
         names = {pkg.name for pkg in packages}
         assert names == {"text", "bytestring"}
 
-    def test_parse_stack_lock(self, tmp_path):
+    async def test_parse_stack_lock(self, tmp_path):
         """Test parsing stack.yaml.lock."""
         content = "hackage: text-1.2.5.0@sha256:abc,456\n"
         lockfile = tmp_path / "stack.yaml.lock"
         lockfile.write_text(content)
 
         resolver = HaskellResolver()
-        packages = resolver.parse_lockfile(lockfile)
+        packages = await resolver.parse_lockfile(lockfile)
 
         assert len(packages) == 1
         assert packages[0].name == "text"
 
-    def test_parse_cabal_freeze_duplicates(self, tmp_path):
+    async def test_parse_cabal_freeze_duplicates(self, tmp_path):
         """Test parsing cabal.project.freeze with duplicates."""
         content = "constraints: any.text ==1.2.5.0, any.text ==1.2.5.0"
         lockfile = tmp_path / "cabal.project.freeze"
         lockfile.write_text(content)
 
         resolver = HaskellResolver()
-        packages = resolver.parse_lockfile(lockfile)
+        packages = await resolver.parse_lockfile(lockfile)
 
         assert len(packages) == 1
         assert packages[0].name == "text"
 
-    def test_parse_cabal_freeze_read_error(self, tmp_path, monkeypatch):
+    async def test_parse_cabal_freeze_read_error(self, tmp_path, monkeypatch):
         """Test read errors for cabal.project.freeze."""
         lockfile = tmp_path / "cabal.project.freeze"
         lockfile.write_text("constraints: any.text ==1.2.5.0")
@@ -165,9 +165,9 @@ source-repository head
 
         resolver = HaskellResolver()
         with pytest.raises(ValueError, match="Failed to read cabal.project.freeze"):
-            resolver.parse_lockfile(lockfile)
+            await resolver.parse_lockfile(lockfile)
 
-    def test_parse_stack_lock_duplicates(self, tmp_path):
+    async def test_parse_stack_lock_duplicates(self, tmp_path):
         """Test parsing stack.yaml.lock with duplicates."""
         content = (
             "hackage: text-1.2.5.0@sha256:abc,456\n"
@@ -177,12 +177,12 @@ source-repository head
         lockfile.write_text(content)
 
         resolver = HaskellResolver()
-        packages = resolver.parse_lockfile(lockfile)
+        packages = await resolver.parse_lockfile(lockfile)
 
         assert len(packages) == 1
         assert packages[0].name == "text"
 
-    def test_parse_stack_lock_read_error(self, tmp_path, monkeypatch):
+    async def test_parse_stack_lock_read_error(self, tmp_path, monkeypatch):
         """Test read errors for stack.yaml.lock."""
         lockfile = tmp_path / "stack.yaml.lock"
         lockfile.write_text("hackage: text-1.2.5.0@sha256:abc,456\n")
@@ -194,57 +194,57 @@ source-repository head
 
         resolver = HaskellResolver()
         with pytest.raises(ValueError, match="Failed to read stack.yaml.lock"):
-            resolver.parse_lockfile(lockfile)
+            await resolver.parse_lockfile(lockfile)
 
-    def test_parse_lockfile_not_found(self):
+    async def test_parse_lockfile_not_found(self):
         """Test parsing missing lockfile."""
         resolver = HaskellResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_lockfile("/missing/cabal.project.freeze")
+            await resolver.parse_lockfile("/missing/cabal.project.freeze")
 
-    def test_parse_lockfile_unknown(self, tmp_path):
+    async def test_parse_lockfile_unknown(self, tmp_path):
         """Test parsing unknown lockfile type."""
         unknown = tmp_path / "unknown.lock"
         unknown.touch()
 
         resolver = HaskellResolver()
         with pytest.raises(ValueError, match="Unknown Haskell lockfile type"):
-            resolver.parse_lockfile(unknown)
+            await resolver.parse_lockfile(unknown)
 
-    def test_parse_manifest_cabal_project(self, tmp_path):
+    async def test_parse_manifest_cabal_project(self, tmp_path):
         """Test parsing cabal.project manifest."""
         manifest = tmp_path / "cabal.project"
         manifest.write_text("constraints: any.text, any.bytestring")
 
         resolver = HaskellResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
 
         names = {pkg.name for pkg in packages}
         assert names == {"text", "bytestring"}
 
-    def test_parse_manifest_stack_yaml(self, tmp_path):
+    async def test_parse_manifest_stack_yaml(self, tmp_path):
         """Test parsing stack.yaml manifest."""
         manifest = tmp_path / "stack.yaml"
         manifest.write_text("extra-deps:\n  - text-1.2.5.0\n")
 
         resolver = HaskellResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
 
         assert len(packages) == 1
         assert packages[0].name == "text"
 
-    def test_parse_manifest_cabal_project_duplicates(self, tmp_path):
+    async def test_parse_manifest_cabal_project_duplicates(self, tmp_path):
         """Test parsing cabal.project with duplicate constraints."""
         manifest = tmp_path / "cabal.project"
         manifest.write_text("constraints: any.text, any.text\n")
 
         resolver = HaskellResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
 
         assert len(packages) == 1
         assert packages[0].name == "text"
 
-    def test_parse_manifest_cabal_project_read_error(self, tmp_path, monkeypatch):
+    async def test_parse_manifest_cabal_project_read_error(self, tmp_path, monkeypatch):
         """Test read errors for cabal.project."""
         manifest = tmp_path / "cabal.project"
         manifest.write_text("constraints: any.text\n")
@@ -256,9 +256,9 @@ source-repository head
 
         resolver = HaskellResolver()
         with pytest.raises(ValueError, match="Failed to read cabal.project"):
-            resolver.parse_manifest(manifest)
+            await resolver.parse_manifest(manifest)
 
-    def test_parse_manifest_stack_read_error(self, tmp_path, monkeypatch):
+    async def test_parse_manifest_stack_read_error(self, tmp_path, monkeypatch):
         """Test read errors for stack.yaml."""
         manifest = tmp_path / "stack.yaml"
         manifest.write_text("extra-deps:\n  - text-1.2.5.0\n")
@@ -270,41 +270,41 @@ source-repository head
 
         resolver = HaskellResolver()
         with pytest.raises(ValueError, match="Failed to read stack.yaml"):
-            resolver.parse_manifest(manifest)
+            await resolver.parse_manifest(manifest)
 
-    def test_parse_manifest_stack_duplicates(self, tmp_path):
+    async def test_parse_manifest_stack_duplicates(self, tmp_path):
         """Test parsing stack manifest with duplicate entries."""
         manifest = tmp_path / "package.yaml"
         manifest.write_text("extra-deps:\n  - text-1.2.5.0\n  - text-1.2.5.0\n")
 
         resolver = HaskellResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
 
         assert len(packages) == 1
         assert packages[0].name == "text"
 
-    def test_parse_manifest_not_found(self):
+    async def test_parse_manifest_not_found(self):
         """Test missing manifest."""
         resolver = HaskellResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_manifest("/missing/cabal.project")
+            await resolver.parse_manifest("/missing/cabal.project")
 
-    def test_parse_manifest_unknown(self, tmp_path):
+    async def test_parse_manifest_unknown(self, tmp_path):
         """Test unknown manifest type."""
         unknown = tmp_path / "unknown.yaml"
         unknown.touch()
 
         resolver = HaskellResolver()
         with pytest.raises(ValueError, match="Unknown Haskell manifest file type"):
-            resolver.parse_manifest(unknown)
+            await resolver.parse_manifest(unknown)
 
-    def test_detect_lockfiles_both(self, tmp_path):
+    async def test_detect_lockfiles_both(self, tmp_path):
         """Test detecting both Haskell lockfiles."""
         (tmp_path / "cabal.project.freeze").touch()
         (tmp_path / "stack.yaml.lock").touch()
 
         resolver = HaskellResolver()
-        lockfiles = resolver.detect_lockfiles(tmp_path)
+        lockfiles = await resolver.detect_lockfiles(tmp_path)
 
         assert {lf.name for lf in lockfiles} == {
             "cabal.project.freeze",

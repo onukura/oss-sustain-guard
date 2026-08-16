@@ -181,3 +181,4 @@ pyrightconfig.json
 
 # Custom ignores
 docs/local/
+**/*.zip

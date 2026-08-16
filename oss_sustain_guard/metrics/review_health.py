@@ -136,16 +136,19 @@ class ReviewHealthChecker(MetricChecker):
                 f"Consider increasing reviewer engagement."
             )
 
-        return Metric("Review Health", score, max_score, message, risk)
+        metadata = {
+            "avg_review_time_hours": round(avg_review_time, 2),
+            "avg_review_count": round(avg_review_count, 2),
+        }
+
+        return Metric("Review Health", score, max_score, message, risk, metadata)
 
 
 _CHECKER = ReviewHealthChecker()
 
 
-def check_review_health(repo_data: dict[str, Any] | VCSRepositoryData) -> Metric:
-    if isinstance(repo_data, VCSRepositoryData):
-        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
-    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
+def check_review_health(repo_data: VCSRepositoryData) -> Metric:
+    return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:

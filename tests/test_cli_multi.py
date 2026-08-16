@@ -2,15 +2,13 @@
 Tests for multi-language CLI functionality.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
 
-from oss_sustain_guard.cli import (
-    _analyze_dependencies_for_package,
+from oss_sustain_guard.cli_utils.helpers import load_database, parse_package_spec
+from oss_sustain_guard.commands.check import (
     analyze_package,
-    load_database,
-    parse_package_spec,
 )
 from oss_sustain_guard.core import AnalysisResult, Metric
 from oss_sustain_guard.repository import RepositoryReference
@@ -55,15 +53,17 @@ class TestParsePackageSpec:
 class TestAnalyzePackage:
     """Test package analysis functionality."""
 
-    def test_analyze_excluded_package(self):
+    async def test_analyze_excluded_package(self):
         """Test that excluded packages return None."""
-        with patch("oss_sustain_guard.cli.is_package_excluded", return_value=True):
-            result = analyze_package("excluded-pkg", "python", {})
+        with patch(
+            "oss_sustain_guard.commands.check.is_package_excluded", return_value=True
+        ):
+            result = await analyze_package("excluded-pkg", "python", {})
             assert result is None
 
-    def test_analyze_from_cache(self):
+    async def test_analyze_from_cache(self):
         """Test analyzing package from cache."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
+        from oss_sustain_guard.cli_utils.constants import ANALYSIS_VERSION
 
         cached_db = {
             "python:requests": {
@@ -86,8 +86,10 @@ class TestAnalyzePackage:
             }
         }
 
-        with patch("oss_sustain_guard.cli.is_package_excluded", return_value=False):
-            result = analyze_package("requests", "python", cached_db)
+        with patch(
+            "oss_sustain_guard.commands.check.is_package_excluded", return_value=False
+        ):
+            result = await analyze_package("requests", "python", cached_db)
             assert result is not None
             assert result.repo_url == "https://github.com/psf/requests"
             # Score is recalculated based on metric weights (only 1/21 metrics = low score)
@@ -96,38 +98,41 @@ class TestAnalyzePackage:
                 result.total_score < 85
             )  # Lower than cached due to incomplete metrics
 
-    def test_analyze_unknown_ecosystem(self):
+    async def test_analyze_unknown_ecosystem(self):
         """Test analyzing with unknown ecosystem."""
-        with patch("oss_sustain_guard.cli.is_package_excluded", return_value=False):
-            result = analyze_package("pkg", "unknown-eco", {})
+        with patch(
+            "oss_sustain_guard.commands.check.is_package_excluded", return_value=False
+        ):
+            result = await analyze_package("pkg", "unknown-eco", {})
             assert result is None
 
-    @patch("oss_sustain_guard.cli.get_resolver")
-    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
-    def test_analyze_package_not_found(self, mock_excluded, mock_get_resolver):
+    @patch("oss_sustain_guard.commands.check.get_resolver")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False)
+    async def test_analyze_package_not_found(self, mock_excluded, mock_get_resolver):
         """Test analyzing package that doesn't have GitHub URL."""
         mock_resolver = MagicMock()
-        mock_resolver.resolve_repository.return_value = None
+        mock_resolver.resolve_repository = AsyncMock(return_value=None)
         mock_get_resolver.return_value = mock_resolver
 
-        result = analyze_package("nonexistent", "python", {})
+        result = await analyze_package("nonexistent", "python", {})
         assert result is None
 
-    @patch("oss_sustain_guard.cli.save_cache")
-    @patch("oss_sustain_guard.cli.analyze_repository")
-    @patch("oss_sustain_guard.cli.get_resolver")
-    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
-    def test_analyze_package_success(
-        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
+    @patch("oss_sustain_guard.commands.check.analyze_repository")
+    @patch("oss_sustain_guard.commands.check.get_resolver")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False)
+    async def test_analyze_package_success(
+        self, mock_excluded, mock_get_resolver, mock_analyze_repo
     ):
         """Test successful package analysis."""
         mock_resolver = MagicMock()
-        mock_resolver.resolve_repository.return_value = RepositoryReference(
-            provider="github",
-            host="github.com",
-            path="psf/requests",
-            owner="psf",
-            name="requests",
+        mock_resolver.resolve_repository = AsyncMock(
+            return_value=RepositoryReference(
+                provider="github",
+                host="github.com",
+                path="psf/requests",
+                owner="psf",
+                name="requests",
+            )
         )
         mock_get_resolver.return_value = mock_resolver
 
@@ -147,7 +152,7 @@ class TestAnalyzePackage:
         )
         mock_analyze_repo.return_value = mock_result
 
-        result = analyze_package("requests", "python", {})
+        result = await analyze_package("requests", "python", {})
         assert result == mock_result
         # Registry context is not used when analyzing packages directly.
         mock_analyze_repo.assert_called_once_with(
@@ -157,37 +162,36 @@ class TestAnalyzePackage:
             vcs_platform="github",
         )
 
-    @patch("oss_sustain_guard.cli.save_cache")
-    @patch("oss_sustain_guard.cli.analyze_repository")
-    @patch("oss_sustain_guard.cli.get_resolver")
-    @patch("oss_sustain_guard.cli.is_package_excluded", return_value=False)
-    def test_analyze_package_error(
-        self, mock_excluded, mock_get_resolver, mock_analyze_repo, mock_save_cache
+    @patch("oss_sustain_guard.commands.check.analyze_repository")
+    @patch("oss_sustain_guard.commands.check.get_resolver")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded", return_value=False)
+    async def test_analyze_package_error(
+        self, mock_excluded, mock_get_resolver, mock_analyze_repo
     ):
         """Test package analysis with error."""
         mock_resolver = MagicMock()
-        mock_resolver.resolve_repository.return_value = RepositoryReference(
-            provider="github",
-            host="github.com",
-            path="user/repo",
-            owner="user",
-            name="repo",
+        mock_resolver.resolve_repository = AsyncMock(
+            return_value=RepositoryReference(
+                provider="github",
+                host="github.com",
+                path="user/repo",
+                owner="user",
+                name="repo",
+            )
         )
         mock_get_resolver.return_value = mock_resolver
 
         mock_analyze_repo.side_effect = Exception("API error")
 
-        result = analyze_package("pkg", "python", {})
+        result = await analyze_package("pkg", "python", {})
         assert result is None
-        # save_cache should not be called on error
-        mock_save_cache.assert_not_called()
 
 
 class TestLoadDatabase:
     """Test database loading functionality."""
 
-    @patch("oss_sustain_guard.cli.load_cache")
-    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
+    @patch("oss_sustain_guard.cli_utils.helpers.load_cache")
+    @patch("oss_sustain_guard.cli_utils.helpers.is_cache_enabled", return_value=True)
     def test_load_database_with_local_cache(self, mock_enabled, mock_load_cache):
         """Test loading database from local cache."""
         mock_load_cache.return_value = {
@@ -206,286 +210,15 @@ class TestLoadDatabase:
         db = load_database(use_cache=False, use_local_cache=True, verbose=False)
         assert db == {}
 
-    @patch("oss_sustain_guard.cli.load_cache", return_value=None)
-    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=True)
+    @patch("oss_sustain_guard.cli_utils.helpers.load_cache", return_value=None)
+    @patch("oss_sustain_guard.cli_utils.helpers.is_cache_enabled", return_value=True)
     def test_load_database_empty_cache(self, mock_enabled, mock_load_cache):
         """Test loading database with empty cache."""
         db = load_database(use_cache=True, use_local_cache=True, verbose=False)
         assert db == {}
 
-    @patch("oss_sustain_guard.cli.is_cache_enabled", return_value=False)
+    @patch("oss_sustain_guard.cli_utils.helpers.is_cache_enabled", return_value=False)
     def test_load_database_cache_disabled(self, mock_enabled):
         """Test loading database when cache is disabled."""
         db = load_database(use_cache=True, use_local_cache=True, verbose=False)
         assert db == {}
-
-
-class TestAnalyzeDependenciesForPackage:
-    """Test dependency analysis functionality."""
-
-    @patch("oss_sustain_guard.cli.analyze_packages_parallel")
-    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
-    def test_analyze_dependencies_success(self, mock_get_deps, mock_analyze_parallel):
-        """Test successful dependency analysis."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
-
-        # Mock get_package_dependencies to return a list of dependency names
-        mock_get_deps.return_value = ["dep1", "dep2"]
-
-        db = {
-            "python:dep1": {
-                "analysis_version": ANALYSIS_VERSION,
-                "metrics": [
-                    {
-                        "name": "Contributor Redundancy",
-                        "score": 20,
-                        "max_score": 20,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                    {
-                        "name": "Recent Activity",
-                        "score": 15,
-                        "max_score": 20,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                    {
-                        "name": "Security Signals",
-                        "score": 10,
-                        "max_score": 15,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                ],
-            },
-            "python:dep2": {
-                "analysis_version": ANALYSIS_VERSION,
-                "metrics": [
-                    {
-                        "name": "Contributor Redundancy",
-                        "score": 20,
-                        "max_score": 20,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                    {
-                        "name": "Recent Activity",
-                        "score": 20,
-                        "max_score": 20,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                    {
-                        "name": "Security Signals",
-                        "score": 15,
-                        "max_score": 15,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                ],
-            },
-        }
-
-        # Create a temporary lockfile
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as tmp:
-            tmp.write("")
-            tmp_path = tmp.name
-
-        try:
-            result = _analyze_dependencies_for_package(
-                "python", tmp_path, db, "test-package"
-            )
-
-            assert "dep1" in result
-            assert "dep2" in result
-            # Scores are calculated from metrics using balanced profile
-            # dep1: Contributor Redundancy (20/20) + Recent Activity (15/20) + Security Signals (10/15)
-            # dep2: Contributor Redundancy (20/20) + Recent Activity (20/20) + Security Signals (15/15)
-            # Scores will be weighted by category
-            assert result["dep1"] > 0  # Should have a positive score
-            assert result["dep2"] > 0  # Should have a positive score
-            assert result["dep2"] > result["dep1"]  # dep2 has better scores
-
-            # Verify parallel analysis was NOT called (all deps in cache)
-            mock_analyze_parallel.assert_not_called()
-        finally:
-            import os
-
-            os.unlink(tmp_path)
-
-    def test_analyze_dependencies_missing_lockfile(self):
-        """Test dependency analysis with missing lockfile."""
-        result = _analyze_dependencies_for_package(
-            "python", "/nonexistent/file.lock", {}, "test-package"
-        )
-        assert result == {}
-
-    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
-    def test_analyze_dependencies_no_deps(self, mock_get_deps):
-        """Test dependency analysis with no dependencies found."""
-        mock_get_deps.return_value = []
-
-        result = _analyze_dependencies_for_package(
-            "python", "/tmp/test.lock", {}, "test-package"
-        )
-        assert result == {}
-
-    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
-    def test_analyze_dependencies_exception(self, mock_get_deps):
-        """Test dependency analysis with exception."""
-        mock_get_deps.side_effect = Exception("Parse error")
-
-        result = _analyze_dependencies_for_package(
-            "python", "/tmp/test.lock", {}, "test-package"
-        )
-        assert result == {}
-
-    @patch("oss_sustain_guard.cli.analyze_packages_parallel")
-    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
-    def test_analyze_dependencies_with_missing_packages(
-        self, mock_get_deps, mock_analyze_parallel
-    ):
-        """Test dependency analysis when some dependencies are not in cache."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
-
-        # Mock get_package_dependencies to return 3 dependencies
-        mock_get_deps.return_value = ["dep1", "dep2", "dep3"]
-
-        # Only dep1 is in cache, dep2 and dep3 need to be analyzed
-        db = {
-            "python:dep1": {
-                "analysis_version": ANALYSIS_VERSION,
-                "metrics": [
-                    {
-                        "name": "Contributor Redundancy",
-                        "score": 20,
-                        "max_score": 20,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                    {
-                        "name": "Recent Activity",
-                        "score": 15,
-                        "max_score": 20,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                ],
-            },
-        }
-
-        # Mock the parallel analysis to return results for dep2 and dep3
-        mock_analyze_parallel.return_value = [
-            AnalysisResult(
-                repo_url="https://github.com/owner/dep2",
-                total_score=75,
-                metrics=[
-                    Metric(
-                        name="Test Metric",
-                        score=75,
-                        max_score=100,
-                        message="Test",
-                        risk="Low",
-                    )
-                ],
-                ecosystem="python",
-            ),
-            AnalysisResult(
-                repo_url="https://github.com/owner/dep3",
-                total_score=80,
-                metrics=[
-                    Metric(
-                        name="Test Metric",
-                        score=80,
-                        max_score=100,
-                        message="Test",
-                        risk="Low",
-                    )
-                ],
-                ecosystem="python",
-            ),
-        ]
-
-        # Create a temporary lockfile
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as tmp:
-            tmp.write("")
-            tmp_path = tmp.name
-
-        try:
-            result = _analyze_dependencies_for_package(
-                "python", tmp_path, db, "test-package"
-            )
-
-            # Verify all dependencies are in result
-            assert "dep1" in result
-            assert "dep2" in result
-            assert "dep3" in result
-
-            # Verify dep1 score is from cache
-            assert result["dep1"] > 0
-
-            # Verify dep2 and dep3 scores are from analysis
-            assert result["dep2"] == 75
-            assert result["dep3"] == 80
-
-            # Verify parallel analysis was called for missing packages
-            mock_analyze_parallel.assert_called_once()
-            call_args = mock_analyze_parallel.call_args
-            packages_to_analyze = call_args[0][0]
-            assert len(packages_to_analyze) == 2
-            assert ("python", "dep2") in packages_to_analyze
-            assert ("python", "dep3") in packages_to_analyze
-        finally:
-            import os
-
-            os.unlink(tmp_path)
-
-    @patch("oss_sustain_guard.dependency_graph.get_package_dependencies")
-    def test_analyze_dependencies_without_analyzing_missing(self, mock_get_deps):
-        """Test dependency analysis with analyze_missing=False."""
-        from oss_sustain_guard.cli import ANALYSIS_VERSION
-
-        # Mock get_package_dependencies to return 3 dependencies
-        mock_get_deps.return_value = ["dep1", "dep2", "dep3"]
-
-        # Only dep1 is in cache
-        db = {
-            "python:dep1": {
-                "analysis_version": ANALYSIS_VERSION,
-                "metrics": [
-                    {
-                        "name": "Contributor Redundancy",
-                        "score": 20,
-                        "max_score": 20,
-                        "message": "Test message",
-                        "risk": "None",
-                    },
-                ],
-            },
-        }
-
-        # Create a temporary lockfile
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as tmp:
-            tmp.write("")
-            tmp_path = tmp.name
-
-        try:
-            result = _analyze_dependencies_for_package(
-                "python", tmp_path, db, "test-package", analyze_missing=False
-            )
-
-            # Only dep1 should be in result (dep2 and dep3 are missing from cache)
-            assert "dep1" in result
-            assert "dep2" not in result
-            assert "dep3" not in result
-        finally:
-            import os
-
-            os.unlink(tmp_path)

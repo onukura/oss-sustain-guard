@@ -7,11 +7,12 @@ Loads excluded packages from:
 """
 
 import os
+import ssl
 
 try:
-    import tomllib
+    import tomllib  # ty:ignore[unresolved-import]
 except ImportError:  # pragma: no cover - fallback for Python < 3.11
-    import tomli as tomllib  # type: ignore
+    import tomli as tomllib
 from pathlib import Path
 from typing import Union
 
@@ -37,6 +38,20 @@ DEFAULT_CACHE_TTL = 7 * 24 * 60 * 60
 # Global cache settings (can be overridden)
 _CACHE_DIR: Path | None = None
 _CACHE_TTL: int | None = None
+
+# Scan depth configuration for GitHub/GitLab API sampling
+# Options: "shallow", "default", "deep"
+_SCAN_DEPTH: str = "default"
+
+# Days to look back for temporal filtering (None = no time limit)
+_DAYS_LOOKBACK: int | None = None
+
+# Scan depth configuration for GitHub API sampling
+# Options: "shallow", "default", "deep"
+_SCAN_DEPTH: str = "default"
+
+# Days to look back for temporal filtering (None = no time limit)
+_DAYS_LOOKBACK: int | None = None
 
 
 def load_config_file(config_path: Path) -> dict:
@@ -94,6 +109,53 @@ def is_package_excluded(package_name: str) -> bool:
     """
     excluded = get_excluded_packages()
     return package_name.lower() in [pkg.lower() for pkg in excluded]
+
+
+def get_excluded_users() -> list[str]:
+    """
+    Load excluded users (bots) from configuration files.
+
+    Priority:
+    1. .oss-sustain-guard.toml (local config, highest priority)
+    2. pyproject.toml (project-level config, fallback)
+
+    This allows users to configure which accounts should be treated as bots.
+    Useful for CI/CD accounts or internal automation accounts not in the default list.
+
+    Example in .oss-sustain-guard.toml:
+        [tool.oss-sustain-guard]
+        exclude-users = ["my-ci-user", "release-bot"]
+
+    Returns:
+        List of excluded user logins.
+    """
+    excluded = []
+
+    # Try .oss-sustain-guard.toml first (highest priority)
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        # Support both "exclude-users" (TOML style) and "exclude_users" (Python style)
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude-users", [])
+        )
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude_users", [])
+        )
+
+    # Try pyproject.toml (fallback)
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists() and not excluded:
+        config = load_config_file(pyproject_path)
+        # Support both "exclude-users" (TOML style) and "exclude_users" (Python style)
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude-users", [])
+        )
+        excluded.extend(
+            config.get("tool", {}).get("oss-sustain-guard", {}).get("exclude_users", [])
+        )
+
+    return list(set(excluded))  # Remove duplicates
 
 
 def get_default_exclusion_patterns() -> set[str]:
@@ -287,7 +349,7 @@ def set_verify_ssl(verify: Union[bool, str, None]) -> None:
     VERIFY_SSL = verify
 
 
-def get_verify_ssl() -> Union[bool, str]:
+def get_verify_ssl() -> ssl.SSLContext | bool:
     """
     Get the current SSL verification setting.
 
@@ -301,12 +363,20 @@ def get_verify_ssl() -> Union[bool, str]:
     """
     # Return explicitly set value (highest priority)
     if VERIFY_SSL is not None:
-        return VERIFY_SSL
+        if isinstance(VERIFY_SSL, bool):
+            return VERIFY_SSL
+        if isinstance(VERIFY_SSL, str):
+            return ssl.create_default_context(cafile=VERIFY_SSL)
+        if isinstance(VERIFY_SSL, ssl.SSLContext):
+            return VERIFY_SSL
+        raise ValueError(f"Invalid SSL verification setting: {VERIFY_SSL}")
 
     # Check environment variable
     env_ca_cert = os.getenv("OSS_SUSTAIN_GUARD_CA_CERT")
-    if env_ca_cert:
-        return env_ca_cert
+    if isinstance(env_ca_cert, str):
+        if os.path.isdir(env_ca_cert):
+            return ssl.create_default_context(capath=env_ca_cert)
+        return ssl.create_default_context(cafile=env_ca_cert)
 
     # Default: verify SSL
     return True
@@ -411,6 +481,49 @@ def set_cache_ttl(seconds: int) -> None:
     """
     global _CACHE_TTL
     _CACHE_TTL = seconds
+
+
+def set_scan_depth(depth: str) -> None:
+    """Set the scan depth for data collection.
+
+    Args:
+        depth: One of "shallow", "default", "deep", "very_deep"
+
+    Raises:
+        ValueError: If depth is not a valid option
+    """
+    global _SCAN_DEPTH
+    valid_depths = {"shallow", "default", "deep", "very_deep"}
+    if depth not in valid_depths:
+        raise ValueError(
+            f"Invalid scan depth: {depth}. Must be one of: {', '.join(sorted(valid_depths))}"
+        )
+    _SCAN_DEPTH = depth
+
+
+def get_scan_depth() -> str:
+    """Get the configured scan depth (shallow, default, or deep)."""
+    return _SCAN_DEPTH
+
+
+def set_days_lookback(days: int | None) -> None:
+    """Set the number of days to look back for temporal filtering.
+
+    Args:
+        days: Number of days to look back, or None for no time limit
+
+    Raises:
+        ValueError: If days is negative
+    """
+    global _DAYS_LOOKBACK
+    if days is not None and days < 0:
+        raise ValueError(f"Days lookback must be non-negative, got {days}")
+    _DAYS_LOOKBACK = days
+
+
+def get_days_lookback() -> int | None:
+    """Get the configured days lookback value (None = no time limit)."""
+    return _DAYS_LOOKBACK
 
 
 def is_cache_enabled() -> bool:
@@ -563,3 +676,53 @@ def is_verbose_enabled() -> bool:
 
     # Default: disabled
     return False
+
+
+def get_lfx_config() -> dict:
+    """
+    Load LFX Insights integration configuration.
+
+    Returns:
+        Dictionary with LFX configuration:
+        - enabled: bool (default: True)
+        - badges: list of badge types (default: ["health-score", "active-contributors"])
+        - project_map: dict mapping package names to LFX project slugs (default: {})
+
+    Priority:
+    1. .oss-sustain-guard.toml
+    2. pyproject.toml
+    3. Default values
+    """
+    default_config = {
+        "enabled": True,
+        "badges": ["health-score", "active-contributors"],
+        "project_map": {},
+    }
+
+    # Try .oss-sustain-guard.toml first
+    local_config_path = PROJECT_ROOT / ".oss-sustain-guard.toml"
+    if local_config_path.exists():
+        config = load_config_file(local_config_path)
+        lfx_config = (
+            config.get("tool", {})
+            .get("oss-sustain-guard", {})
+            .get("integrations", {})
+            .get("lfx", {})
+        )
+        if lfx_config:
+            return {**default_config, **lfx_config}
+
+    # Try pyproject.toml (fallback)
+    pyproject_path = PROJECT_ROOT / "pyproject.toml"
+    if pyproject_path.exists():
+        config = load_config_file(pyproject_path)
+        lfx_config = (
+            config.get("tool", {})
+            .get("oss-sustain-guard", {})
+            .get("integrations", {})
+            .get("lfx", {})
+        )
+        if lfx_config:
+            return {**default_config, **lfx_config}
+
+    return default_config

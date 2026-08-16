@@ -17,49 +17,49 @@ class TestSwiftResolver:
         resolver = SwiftResolver()
         assert resolver.ecosystem_name == "swift"
 
-    def test_resolve_repository_direct_url(self):
+    async def test_resolve_repository_direct_url(self):
         """Test resolving repository for direct URL."""
         resolver = SwiftResolver()
-        repo = resolver.resolve_repository("https://github.com/apple/swift-nio")
+        repo = await resolver.resolve_repository("https://github.com/apple/swift-nio")
         assert repo is not None
         assert repo.owner == "apple"
         assert repo.name == "swift-nio"
 
-    def test_resolve_repository_owner_repo(self):
+    async def test_resolve_repository_owner_repo(self):
         """Test resolving repository for owner/repo input."""
         resolver = SwiftResolver()
-        repo = resolver.resolve_repository("apple/swift-nio")
+        repo = await resolver.resolve_repository("apple/swift-nio")
         assert repo is not None
         assert repo.owner == "apple"
         assert repo.name == "swift-nio"
 
-    def test_resolve_repository_empty(self):
+    async def test_resolve_repository_empty(self):
         """Test resolving empty package name."""
         resolver = SwiftResolver()
-        assert resolver.resolve_repository("  ") is None
+        assert await resolver.resolve_repository("  ") is None
 
-    def test_resolve_repository_git_ssh(self):
+    async def test_resolve_repository_git_ssh(self):
         """Test resolving repository for git SSH URL."""
         resolver = SwiftResolver()
-        repo = resolver.resolve_repository("git@github.com:apple/swift-nio.git")
+        repo = await resolver.resolve_repository("git@github.com:apple/swift-nio.git")
         assert repo is not None
         assert repo.owner == "apple"
         assert repo.name == "swift-nio"
 
-    def test_resolve_repository_host_path(self):
+    async def test_resolve_repository_host_path(self):
         """Test resolving repository for host/path input."""
         resolver = SwiftResolver()
-        repo = resolver.resolve_repository("github.com/apple/swift-nio")
+        repo = await resolver.resolve_repository("github.com/apple/swift-nio")
         assert repo is not None
         assert repo.owner == "apple"
         assert repo.name == "swift-nio"
 
-    def test_resolve_repository_invalid(self):
+    async def test_resolve_repository_invalid(self):
         """Test resolving repository for invalid input."""
         resolver = SwiftResolver()
-        assert resolver.resolve_repository("swift-nio") is None
+        assert await resolver.resolve_repository("swift-nio") is None
 
-    def test_parse_lockfile(self, tmp_path):
+    async def test_parse_lockfile(self, tmp_path):
         """Test parsing Package.resolved."""
         payload = {
             "object": {
@@ -75,22 +75,22 @@ class TestSwiftResolver:
         lockfile.write_text(json.dumps(payload))
 
         resolver = SwiftResolver()
-        packages = resolver.parse_lockfile(lockfile)
+        packages = await resolver.parse_lockfile(lockfile)
 
         assert len(packages) == 1
         assert packages[0].name == "apple/swift-nio"
         assert packages[0].version == "2.56.0"
 
-    def test_parse_lockfile_invalid_json(self, tmp_path):
+    async def test_parse_lockfile_invalid_json(self, tmp_path):
         """Test parsing invalid Package.resolved."""
         lockfile = tmp_path / "Package.resolved"
         lockfile.write_text("{ invalid json }")
 
         resolver = SwiftResolver()
         with pytest.raises(ValueError, match="Failed to parse Package.resolved"):
-            resolver.parse_lockfile(lockfile)
+            await resolver.parse_lockfile(lockfile)
 
-    def test_parse_lockfile_skips_invalid_pins(self, tmp_path):
+    async def test_parse_lockfile_skips_invalid_pins(self, tmp_path):
         """Test parsing Package.resolved with invalid pin entries."""
         payload = {
             "pins": [
@@ -106,27 +106,27 @@ class TestSwiftResolver:
         lockfile.write_text(json.dumps(payload))
 
         resolver = SwiftResolver()
-        packages = resolver.parse_lockfile(lockfile)
+        packages = await resolver.parse_lockfile(lockfile)
 
         assert len(packages) == 1
         assert packages[0].name == "apple/swift-collections"
 
-    def test_parse_lockfile_not_found(self):
+    async def test_parse_lockfile_not_found(self):
         """Test parsing missing lockfile."""
         resolver = SwiftResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_lockfile("/missing/Package.resolved")
+            await resolver.parse_lockfile("/missing/Package.resolved")
 
-    def test_parse_lockfile_unknown(self, tmp_path):
+    async def test_parse_lockfile_unknown(self, tmp_path):
         """Test parsing unknown lockfile type."""
         unknown = tmp_path / "unknown.lock"
         unknown.touch()
 
         resolver = SwiftResolver()
         with pytest.raises(ValueError, match="Unknown Swift lockfile type"):
-            resolver.parse_lockfile(unknown)
+            await resolver.parse_lockfile(unknown)
 
-    def test_parse_manifest(self, tmp_path):
+    async def test_parse_manifest(self, tmp_path):
         """Test parsing Package.swift."""
         manifest = tmp_path / "Package.swift"
         manifest.write_text(
@@ -144,11 +144,11 @@ class TestSwiftResolver:
         )
 
         resolver = SwiftResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
         assert len(packages) == 1
         assert packages[0].name == "apple/swift-nio"
 
-    def test_parse_manifest_duplicates(self, tmp_path):
+    async def test_parse_manifest_duplicates(self, tmp_path):
         """Test parsing Package.swift with duplicate URLs."""
         manifest = tmp_path / "Package.swift"
         manifest.write_text(
@@ -159,27 +159,27 @@ class TestSwiftResolver:
         )
 
         resolver = SwiftResolver()
-        packages = resolver.parse_manifest(manifest)
+        packages = await resolver.parse_manifest(manifest)
 
         assert len(packages) == 1
         assert packages[0].name == "apple/swift-nio"
 
-    def test_parse_manifest_not_found(self):
+    async def test_parse_manifest_not_found(self):
         """Test missing manifest."""
         resolver = SwiftResolver()
         with pytest.raises(FileNotFoundError):
-            resolver.parse_manifest("/missing/Package.swift")
+            await resolver.parse_manifest("/missing/Package.swift")
 
-    def test_parse_manifest_unknown(self, tmp_path):
+    async def test_parse_manifest_unknown(self, tmp_path):
         """Test unknown manifest type."""
         unknown = tmp_path / "unknown.swift"
         unknown.touch()
 
         resolver = SwiftResolver()
         with pytest.raises(ValueError, match="Unknown Swift manifest file type"):
-            resolver.parse_manifest(unknown)
+            await resolver.parse_manifest(unknown)
 
-    def test_parse_manifest_read_error(self, tmp_path, monkeypatch):
+    async def test_parse_manifest_read_error(self, tmp_path, monkeypatch):
         """Test error reading Package.swift."""
         manifest = tmp_path / "Package.swift"
         manifest.write_text("let package = Package(dependencies: [])\n")
@@ -187,8 +187,8 @@ class TestSwiftResolver:
         def _raise(*_args, **_kwargs):
             raise OSError("read error")
 
-        monkeypatch.setattr("builtins.open", _raise)
+        monkeypatch.setattr("aiofiles.open", _raise)
 
         resolver = SwiftResolver()
         with pytest.raises(ValueError, match="Failed to read Package.swift"):
-            resolver.parse_manifest(manifest)
+            await resolver.parse_manifest(manifest)

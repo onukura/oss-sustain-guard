@@ -1,7 +1,5 @@
 """PR acceptance ratio metric."""
 
-from typing import Any
-
 from oss_sustain_guard.metrics.base import (
     Metric,
     MetricChecker,
@@ -90,12 +88,8 @@ class PrAcceptanceRatioChecker(MetricChecker):
 _CHECKER = PrAcceptanceRatioChecker()
 
 
-def check_pr_acceptance_ratio(
-    repo_data: dict[str, Any] | VCSRepositoryData,
-) -> Metric:
-    if isinstance(repo_data, VCSRepositoryData):
-        return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
-    return _CHECKER.check_legacy(repo_data, _LEGACY_CONTEXT)
+def check_pr_acceptance_ratio(repo_data: VCSRepositoryData) -> Metric:
+    return _CHECKER.check(repo_data, _LEGACY_CONTEXT)
 
 
 def _on_error(error: Exception) -> Metric:

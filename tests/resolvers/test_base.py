@@ -13,7 +13,7 @@ class MockResolver(LanguageResolver):
     def ecosystem_name(self) -> str:
         return "mock"
 
-    def resolve_repository(self, package_name: str) -> RepositoryReference | None:
+    async def resolve_repository(self, package_name: str) -> RepositoryReference | None:
         if package_name == "mock-pkg":
             return RepositoryReference(
                 provider="github",
@@ -24,22 +24,22 @@ class MockResolver(LanguageResolver):
             )
         return None
 
-    def parse_lockfile(self, lockfile_path: str) -> list[PackageInfo]:
+    async def parse_lockfile(self, lockfile_path: str) -> list[PackageInfo]:
         return [
             PackageInfo(name="pkg1", ecosystem="mock", version="1.0.0"),
             PackageInfo(name="pkg2", ecosystem="mock", version="2.0.0"),
         ]
 
-    def parse_manifest(self, manifest_path: str) -> list[PackageInfo]:
+    async def parse_manifest(self, manifest_path: str) -> list[PackageInfo]:
         return [
             PackageInfo(name="pkg1", ecosystem="mock", version="1.0.0"),
             PackageInfo(name="pkg2", ecosystem="mock", version="2.0.0"),
         ]
 
-    def detect_lockfiles(self, directory: str) -> list:
+    async def detect_lockfiles(self, directory: str) -> list:
         return []
 
-    def get_manifest_files(self) -> list[str]:
+    async def get_manifest_files(self) -> list[str]:
         return ["mock.lock"]
 
 
@@ -71,28 +71,28 @@ class TestPackageInfo:
 class TestLanguageResolver:
     """Test LanguageResolver abstract base class."""
 
-    def test_resolver_implementation(self):
+    async def test_resolver_implementation(self):
         """Test that resolver can be instantiated with mock."""
         resolver = MockResolver()
         assert resolver.ecosystem_name == "mock"
-        assert resolver.get_manifest_files() == ["mock.lock"]
+        assert await resolver.get_manifest_files() == ["mock.lock"]
 
-    def test_resolve_github_url(self):
+    async def test_resolve_github_url(self):
         """Test resolving GitHub URL."""
         resolver = MockResolver()
-        result = resolver.resolve_github_url("mock-pkg")
+        result = await resolver.resolve_github_url("mock-pkg")
         assert result == ("owner", "repo")
 
-    def test_resolve_github_url_not_found(self):
+    async def test_resolve_github_url_not_found(self):
         """Test resolving non-existent package."""
         resolver = MockResolver()
-        result = resolver.resolve_github_url("unknown-pkg")
+        result = await resolver.resolve_github_url("unknown-pkg")
         assert result is None
 
-    def test_parse_lockfile(self):
+    async def test_parse_lockfile(self):
         """Test parsing lockfile."""
         resolver = MockResolver()
-        packages = resolver.parse_lockfile("dummy.lock")
+        packages = await resolver.parse_lockfile("dummy.lock")
         assert len(packages) == 2
         assert packages[0].name == "pkg1"
         assert packages[1].name == "pkg2"

@@ -2,7 +2,7 @@
 Tests for the core analysis logic.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -26,7 +26,7 @@ def mock_vcs_provider():
 # --- Tests ---
 
 
-def test_analyze_repository_structure(mock_vcs_provider):
+async def test_analyze_repository_structure(mock_vcs_provider):
     """
     Tests that analyze_repository returns the correct data structure.
     This test uses the VCS abstraction layer.
@@ -90,13 +90,13 @@ def test_analyze_repository_structure(mock_vcs_provider):
             "fundingLinks": [],
         },
     )
-    mock_provider_instance.get_repository_data.return_value = mock_vcs_data
+    mock_provider_instance.get_repository_data = AsyncMock(return_value=mock_vcs_data)
     mock_provider_instance.get_repository_url.return_value = (
         "https://github.com/test-owner/test-repo"
     )
 
     # Act
-    result = analyze_repository("test-owner", "test-repo")
+    result = await analyze_repository("test-owner", "test-repo")
 
     # Assert
     assert isinstance(result, AnalysisResult)
@@ -112,7 +112,7 @@ def test_analyze_repository_structure(mock_vcs_provider):
     assert isinstance(first_metric.risk, str)
 
 
-def test_total_score_is_sum_of_metric_scores(mock_vcs_provider):
+async def test_total_score_is_sum_of_metric_scores(mock_vcs_provider):
     """
     Tests that the total_score is calculated using category-weighted approach.
     """
@@ -174,13 +174,13 @@ def test_total_score_is_sum_of_metric_scores(mock_vcs_provider):
             "fundingLinks": [],
         },
     )
-    mock_provider_instance.get_repository_data.return_value = mock_vcs_data
+    mock_provider_instance.get_repository_data = AsyncMock(return_value=mock_vcs_data)
     mock_provider_instance.get_repository_url.return_value = (
         "https://github.com/test-owner/test-repo"
     )
 
     # Act
-    result = analyze_repository("test-owner", "test-repo")
+    result = await analyze_repository("test-owner", "test-repo")
 
     # Assert
     # Score should be normalized to 100-point scale using category weights
@@ -190,7 +190,7 @@ def test_total_score_is_sum_of_metric_scores(mock_vcs_provider):
 
 
 @patch.dict("os.environ", {"GITHUB_TOKEN": "fake_token"}, clear=True)
-def test_analyze_repository_with_vcs_provider(mock_vcs_provider):
+async def test_analyze_repository_with_vcs_provider(mock_vcs_provider):
     """Test analyze_repository using VCS provider."""
     # Arrange
     from oss_sustain_guard.vcs.base import VCSRepositoryData
@@ -244,20 +244,20 @@ def test_analyze_repository_with_vcs_provider(mock_vcs_provider):
             "fundingLinks": [],
         },
     )
-    mock_provider_instance.get_repository_data.return_value = mock_vcs_data
+    mock_provider_instance.get_repository_data = AsyncMock(return_value=mock_vcs_data)
     mock_provider_instance.get_repository_url.return_value = (
         "https://github.com/test-owner/test-repo"
     )
 
     # Act
-    result = analyze_repository("test-owner", "test-repo")
+    result = await analyze_repository("test-owner", "test-repo")
 
     # Assert
     assert isinstance(result, AnalysisResult)
     assert result.repo_url == "https://github.com/test-owner/test-repo"
 
 
-def test_analyze_repository_vcs_error(mock_vcs_provider):
+async def test_analyze_repository_vcs_error(mock_vcs_provider):
     """Test analyze_repository handles VCS provider errors."""
     mock_provider_instance = MagicMock()
     mock_vcs_provider.return_value = mock_provider_instance
@@ -268,13 +268,13 @@ def test_analyze_repository_vcs_error(mock_vcs_provider):
     )
 
     with pytest.raises(httpx.HTTPStatusError):
-        analyze_repository("owner", "repo")
+        await analyze_repository("owner", "repo")
 
 
 # --- Tests for analyze_repository error handling ---
 
 
-def test_analyze_repository_not_found(mock_vcs_provider):
+async def test_analyze_repository_not_found(mock_vcs_provider):
     """Test analyze_repository raises error for non-existent repository."""
     mock_provider_instance = MagicMock()
     mock_vcs_provider.return_value = mock_provider_instance
@@ -283,4 +283,4 @@ def test_analyze_repository_not_found(mock_vcs_provider):
     )
 
     with pytest.raises(ValueError, match="not found or is inaccessible"):
-        analyze_repository("nonexistent", "repo")
+        await analyze_repository("nonexistent", "repo")

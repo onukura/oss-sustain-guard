@@ -2,30 +2,220 @@
 
 All notable changes to OSS Sustain Guard are documented in this file.
 
+## Unreleased
+
+## v0.26.0 - 2026-08-17
+
+### Changed
+
+- **`Maintainer Retention` renamed to `Commit Author Continuity`** ([#11](https://github.com/onukura/oss-sustain-guard/issues/11)): the metric is derived from commit and merge authorship, which is a proxy for maintainer activity rather than evidence of maintainer status, and the old name overstated what it could see. Existing configurations that weight `"Maintainer Retention"` keep working — the weight is applied to the new name and a warning is printed. The `oss_sustain_guard.metrics.maintainer_drain` import path and `check_maintainer_drain()` remain as deprecated aliases.
+- **The metric now compares calendar windows instead of commit slices** ([#11](https://github.com/onukura/oss-sustain-guard/issues/11)): it contrasts the last 180 days against the preceding 180 days, rather than the last 25 commits against the previous 25. A dormant project whose commit sample spanned years no longer reads as healthy — `mkdocs/mkdocs`, the project reported in the issue, went from `10/10 Healthy` to `3/10 High` on a sample whose newest commit was 10 months old.
+- **Continuity is measured on principal committers, not head count** ([#11](https://github.com/onukura/oss-sustain-guard/issues/11)): the metric now asks whether the fewest top authors holding a majority of the previous window's commits are still active, instead of comparing distinct author counts. The old ratio was inverted in exactly the case it was meant to detect — when a lead maintainer left, their commits vanished from the recent slice and the surviving drive-by contributors pushed the score *up*. Merging a PR now counts as maintainer activity too, since merge rights imply write access, and email-only commit identities are merged into the matching platform login so one person is not counted twice.
+- **`Commit Author Continuity` is excluded from `oss-guard trend`**: comparing its two windows needs about 12 months of history, which a single trend window does not provide.
+
+### Fixed
+
+- **Short commit histories no longer get a free pass**: the metric used to return a full score for any repository with fewer than 50 sampled commits. Projects whose history genuinely cannot be assessed still score full marks, but the message now states why, and quotes the windows and dates it actually looked at.
+
+## v0.25.0 - 2026-01-13
+
+### Added
+
+- **Java (Maven) ecosystem support for dependency tree resolution**: Full integration with Maven for the `trace` command, enabling visualization and analysis of Java dependencies with comprehensive dependency tree generation and parsing
+- **C# (.NET) ecosystem support for dependency tree resolution**: Complete C#/.NET integration for the `trace` command using dotnet CLI tools, enabling dependency analysis for .NET projects with proper error handling for missing SDKs
+- **Dart ecosystem support for dependency tree resolution**: Added Dart ecosystem integration for the `trace` command using dart CLI tools, enabling comprehensive dependency tree visualization for Flutter and Dart projects
+- **Multi-ecosystem CI workflow for external tools**: Introduced comprehensive GitHub Actions workflow that verifies package resolution across Python, JavaScript, Rust, Ruby, Go, PHP, C#, Dart, and Java ecosystems, ensuring consistent tool support with integration tests and fast failure feedback
+
+### Improved
+
+- **Package mode documentation**: Enhanced README and getting started guide to highlight direct package resolution capabilities for Java, C#, and Dart ecosystems with expanded examples and clearer distinction between package mode and lockfile mode
+- **Ecosystem coverage**: Significantly expanded multi-language dependency analysis support from 6 to 9 ecosystems (added Java, C#, Dart)
+
+### Fixed
+
+- **MavenTreeTool formatting**: Improved code formatting and cleanup in Maven dependency tree parsing implementation
+
+## v0.24.0 - 2026-01-13
+
+### Added
+
+- **Go ecosystem support for dependency tracing**: Full integration with Go module tools for the `trace` command, enabling visualization and analysis of Go module dependencies with proper direct vs transitive dependency classification and support for both `go.sum` and `go mod graph` parsing
+- **PHP (Composer) ecosystem support for dependency tracing**: Complete PHP/Composer integration for the `trace` command, parsing both `composer.json` and `composer.lock` to visualize Composer dependencies with efficient `--no-install` flag support
+
+### Improved
+
+- **Go dependency resolution accuracy**: Enhanced Go module path parsing to correctly identify direct dependencies of the requested package, properly handle version suffixes (e.g., `/v2`, `/v3`), and skip temporary modules from output for cleaner dependency trees
+- **Go module tooling**: Switched from `go mod tidy` to `go get` with proper `package@version` syntax for more reliable package fetching and dependency graph generation
+
+## v0.23.1 - 2026-01-08
+
+### Improved
+
+- **Terminal tree visualization**: Removed direct dependency marker from tree output to reduce visual clutter and focus on health status indicators
+- **Dependency deduplication**: Eliminated redundant platform-specific binary packages from dependency graphs, retaining only a single representative for each unique codebase while preserving functionally distinct packages from the same repository, resulting in cleaner and more accurate dependency reporting
+
+### Fixed
+
+- **Dependency analysis optimization**: Removed unused visualization import from dependency analysis to streamline codebase
+
+## v0.23.0 - 2026-01-08
+
+### Added
+
+- **Ruby (Bundler) support for dependency tracing**: Extended `trace` command to analyze Ruby gem dependencies using Bundler, enabling comprehensive dependency tree visualization for Ruby projects alongside existing Python, JavaScript, and Rust support
+- **Rust (Cargo) support for dependency tracing**: Added full Rust package manager integration for the `trace` command to visualize and analyze Cargo dependencies with performance optimization through deduplication
+- **Package manager tool selection option**: New `--tool` parameter for `trace` command to explicitly specify external package manager tools (e.g., `uv`, `npm`, `pnpm`, `bun`), improving flexibility and control for users with multiple tooling environments
+- **Centralized tool version configuration**: Moved language tool versions from individual fixture files to central `mise.toml` configuration, simplifying management and ensuring consistency across test environments
+
+### Improved
+
+- **Dependency tracing performance**: Eliminated duplicate repository analysis in trace command by deduplicating resolved repositories, significantly reducing API calls and "Analyzing..." messages when different package names resolve to the same GitHub repository
+- **Terminal UI simplification**: Removed HTML/JSON output support from `trace` command to focus on terminal-based visualization, streamlining the feature and aligning with primary use cases
+- **Configuration management**: Consolidated tool configuration for cleaner project structure and easier maintenance
+
+### Fixed
+
+- **Test script compatibility**: Updated `test_all_commands.sh` to use `uv run --directory` for proper execution from any working directory and corrected lockfile references to use absolute paths and proper lockfile names (`package-lock.json`, `Cargo.lock`)
+- **Dependency analysis documentation**: Updated guides to reflect removal of HTML/JSON output and clarify terminal-only visualization approach
+
+### Breaking Changes
+
+- **Removed `--show-dependencies` option from `check` command**: This experimental option provided limited dependency statistics (average, min, max, count only). Use the `trace` command instead for comprehensive dependency tree analysis and visualization with full tree structure, individual package scores, and flexible visualization.
+
+  **Migration**: Replace `os4g check <package> --show-dependencies` with `os4g trace <package>`.
+
+## v0.22.0 - 2026-01-06
+
+### Added
+
+- Comprehensive CLI command test automation script (`test_all_commands.sh`) for systematically testing all major CLI commands, options, and edge cases
+- Enhanced CLI modularity with subcommand organization into dedicated modules for cache, check, graph, gratitude, and trend commands
+- New CLI utilities package (`cli_utils/`) for shared helpers, output formatting, constants, and loaders
+
+### Improved
+
+- CLI architecture with improved maintainability through modularization of monolithic CLI implementation
+- SSL verification logic to consistently use `ssl.SSLContext` with support for both file and directory CA paths
+- Type safety for profile weights in configuration handling
+- Test reliability by aligning mock patches with new import paths
+- Documentation consistency across all cache-related guides with unified `os4g cache` subcommand syntax
+- Code organization and separation of concerns for easier future CLI enhancements
+
+### Documentation
+
+- Updated release process documentation with clearer guidance on analyzing changes before versioning
+- Consolidated cache command syntax across README, guides, and troubleshooting documentation
+
+## v0.21.0 - 2026-01-06
+
+### Improved
+
+- Trend analysis performance with per-window caching mechanism
+  - Granular caching for VCS data by time window to minimize redundant API calls
+  - Cache reuse across multiple analyses and profiles
+  - Configurable cache TTL and manual cache clearing support
+  - Cache statistics displayed in CLI output for transparency
+  - Comprehensive documentation and unit tests for caching mechanism
+
+## v0.20.0 - 2026-01-06
+
+### Added
+
+- Trend analysis feature (`os4g trend`) for tracking sustainability score changes over time
+  - Support for multiple time intervals: daily, weekly, monthly, quarterly, semi-annual, annual
+  - Configurable analysis periods and time window sizes
+  - Client-side filtering to prevent sampling bias in historical data
+  - Classification of 16 time-dependent metrics vs 8 time-independent metrics
+  - Terminal visualization with score trend table, ASCII chart, and top metric changes
+  - Package specification formats: `package`, `ecosystem:package`, or `-e ecosystem package`
+  - Ecosystem auto-inference (defaults to Python when not specified)
+  - Comprehensive trend analysis documentation
+- LFX Insights integration with badges and links for ecosystem visibility
+
+### Improved
+
+- VCS providers (GitHub, GitLab) to support time window filtering for historical analysis
+- Repository data fetching to avoid API sampling bias by filtering client-side
+- Trend command to support ecosystem:package format and ecosystem inference
+- Python type analysis with Ty integration for enhanced type checking
+- Unit tests robustness and error handling across the codebase
+- Metric API by removing legacy input support for simplified usage
+- Documentation with trend analysis guide and updated getting started examples
+
+## v0.19.0 - 2026-01-04
+
+### Added
+
+- Strategic product roadmap documenting planned features and future improvements
+- Interactive dependency graph visualization with interactive visualization capabilities
+- Launch configurations for debugging various languages in VSCode
+
+### Improved
+
+- Demo data with populated CHAOSS metric models and observations for better examples
+- Bus Factor metric to recognize PR mergers as contributors alongside commit authors
+- GitHub Actions documentation to include bun.lock and deno.lock in JavaScript ecosystem detection
+- Metric messages to refer to "public contributions" instead of just "commits"
+- Pre-commit hook version references to v0.18.0
+
+### Documentation
+
+- Added GitLab CI/CD integration guide for repository analysis workflows
+- Dependency graph visualization documentation
+
+## v0.18.0 - 2026-01-04
+
+### Added
+
+- Robust, multi-stage bot detection and exclusion system with configurable rules for contributor analysis
+- Support for parsing pnpm-lock.yaml v9 format for improved lockfile compatibility
+
+### Improved
+
+- Installation instructions with expanded options (pipx, uv, Docker, GitHub Actions) and better isolation guidance
+- CHAOSS metrics alignment documentation with refined table consistency and priority ordering
+- Package name extraction for pnpm paths with scoped and versioned package handling
+- Bun.lock parsing with array-based and dict-based package format support
+- JSONC compatibility with trailing comma handling in lockfile parsing
+- API rate limit handling with reduced default parallel worker count (10 → 5)
+- Bus factor metric documentation emphasizing estimation limitations and encouraging further investigation
+- Overall transparency in contributor redundancy metrics with explicit warnings about data accuracy
+
+### Fixed
+
+- Markdown links for Quality & Maintenance and Visibility & Adoption metrics documentation
+- Async result handling in make_resolver_parser function
+- Type hint for _coerce_int function parameter
+
 ## v0.17.0 - 2026-01-03
 
 ### Removed
+
 - Optional dependents analysis feature
 - Libraries.io integration for dependents analysis
 
 ## v0.16.0 - 2026-01-03
 
 ### Added
+
 - GitLab VCS provider support for GitLab repository analysis
 
 ### Improved
+
 - Metric checking refactored to use VCS-agnostic data model for better multi-provider support
 - Cache file format updated to JSON gzip with improved metric naming (Cache Build Health metric)
 - Plugin loading error handling with enhanced warning messages for better visibility of metric issues
 - Overall score calculation now uses weighted metric scoring
 
 ### Fixed
+
 - Enhanced warning messages for metric plugin loading errors
 - Updated metric name to "Build Health" for consistency
 
 ## v0.15.0 - 2026-01-02
 
 ### Added
+
 - VCS abstraction layer for flexible version control system support.
 - Demo mode support for testing without actual API calls.
 - Skipped metric reporting in analysis results.
@@ -35,12 +225,14 @@ All notable changes to OSS Sustain Guard are documented in this file.
 - Multi-ecosystem dependency summary with enhanced lockfile support.
 
 ### Improved
+
 - Unified metric naming to 'Community Health' for consistency.
 - Optional field handling across multiple resolvers for better Python compatibility.
 - Dependency extraction capabilities for Swift, Stack (Haskell), and CPAN (Perl) ecosystems.
 - Ecosystem descriptions to accurately reflect supported languages.
 
 ### Documentation
+
 - Clarified dependency analysis as an experimental feature.
 - Enhanced release process documentation with detailed CHANGELOG guidelines.
 - Renamed 'Maintainer Responsiveness' metric to 'Community Health' for better alignment.

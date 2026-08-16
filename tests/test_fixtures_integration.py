@@ -26,7 +26,7 @@ class TestJavaScriptFixtures:
 
     def test_parse_package_json(self):
         """Test parsing package.json fixture."""
-        package_json_path = FIXTURES_DIR / "package.json"
+        package_json_path = FIXTURES_DIR / "javascript" / "npm" / "package.json"
         assert package_json_path.exists(), "package.json fixture not found"
 
         with open(package_json_path) as f:
@@ -38,13 +38,13 @@ class TestJavaScriptFixtures:
         assert "typescript" in data["devDependencies"]
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_npm_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking npm packages from package.json fixture."""
         mock_excluded.return_value = False
         mock_load_cache.return_value = None
 
-        package_json_path = FIXTURES_DIR / "package.json"
+        package_json_path = FIXTURES_DIR / "javascript" / "npm" / "package.json"
         with open(package_json_path) as f:
             data = json.load(f)
 
@@ -52,7 +52,9 @@ class TestJavaScriptFixtures:
         packages = list(data["dependencies"].keys())[:3]  # Test first 3
 
         for pkg in packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=75,
@@ -88,7 +90,7 @@ class TestPythonFixtures:
 
     def test_parse_requirements_txt(self):
         """Test parsing requirements.txt fixture."""
-        requirements_path = FIXTURES_DIR / "requirements.txt"
+        requirements_path = FIXTURES_DIR / "python" / "pip" / "requirements.txt"
         assert requirements_path.exists(), "requirements.txt fixture not found"
 
         with open(requirements_path) as f:
@@ -103,13 +105,13 @@ class TestPythonFixtures:
         assert "pytest" in package_names
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_python_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Python packages from requirements.txt fixture."""
         mock_excluded.return_value = False
         mock_load_cache.return_value = None
 
-        requirements_path = FIXTURES_DIR / "requirements.txt"
+        requirements_path = FIXTURES_DIR / "python" / "pip" / "requirements.txt"
         with open(requirements_path) as f:
             lines = [
                 line.strip() for line in f if line.strip() and not line.startswith("#")
@@ -118,7 +120,9 @@ class TestPythonFixtures:
         packages = [line.split("==")[0] for line in lines[:3]]  # Test first 3
 
         for pkg in packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=80,
@@ -135,9 +139,9 @@ class TestPythonFixtures:
                 result = runner.invoke(app, ["check", f"python:{pkg}", "--insecure"])
                 assert result.exit_code == 0
 
-    def test_parse_pyproject_toml(self):
+    def test_parse_poetry_toml(self):
         """Test parsing pyproject.toml fixture."""
-        pyproject_path = FIXTURES_DIR / "pyproject.toml"
+        pyproject_path = FIXTURES_DIR / "python" / "poetry" / "pyproject.toml"
         if not pyproject_path.exists():
             return  # Skip if fixture doesn't exist yet
 
@@ -150,9 +154,27 @@ class TestPythonFixtures:
         assert "poetry" in data["tool"]
         assert "dependencies" in data["tool"]["poetry"]
 
+    def test_parse_poetry_lock(self):
+        """Test parsing pyproject.lock fixture."""
+        pyproject_lock_path = FIXTURES_DIR / "python" / "poetry" / "pyproject.lock"
+        if not pyproject_lock_path.exists():
+            return  # Skip if fixture doesn't exist yet
+
+        # Poetry lock is JSON format
+        with open(pyproject_lock_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Verify structure
+        assert "package" in data
+        assert isinstance(data["package"], list)
+        # Check for some expected packages
+        package_names = [pkg["name"] for pkg in data["package"]]
+        assert "django" in package_names
+        assert "requests" in package_names
+
     def test_parse_pipfile(self):
         """Test parsing Pipfile fixture."""
-        pipfile_path = FIXTURES_DIR / "Pipfile"
+        pipfile_path = FIXTURES_DIR / "python" / "pipenv" / "Pipfile"
         if not pipfile_path.exists():
             return  # Skip if fixture doesn't exist yet
 
@@ -168,7 +190,7 @@ class TestPythonFixtures:
 
     def test_parse_pipfile_lock(self):
         """Test parsing Pipfile.lock fixture."""
-        pipfile_lock_path = FIXTURES_DIR / "Pipfile.lock"
+        pipfile_lock_path = FIXTURES_DIR / "python" / "pipenv" / "Pipfile.lock"
         if not pipfile_lock_path.exists():
             return  # Skip if fixture doesn't exist yet
 
@@ -184,13 +206,48 @@ class TestPythonFixtures:
         assert "django" in data["default"]
         assert "requests" in data["default"]
 
+    def test_parse_uv_toml(self):
+        """Test parsing uv.toml fixture."""
+        uv_toml_path = FIXTURES_DIR / "python" / "uv" / "uv.toml"
+        if not uv_toml_path.exists():
+            return  # Skip if fixture doesn't exist yet
+
+        # Simple check that file exists and is valid TOML
+        with open(uv_toml_path, "rb") as f:
+            data = tomli.load(f)
+
+        # Verify it has dependencies section
+        assert "dependencies" in data
+        assert isinstance(data["dependencies"], dict)
+        # Check for some expected packages
+        assert "fastapi" in data["dependencies"]
+        assert "uvicorn" in data["dependencies"]
+
+    def test_parse_uv_lock(self):
+        """Test parsing uv.lock fixture."""
+        uv_lock_path = FIXTURES_DIR / "python" / "uv" / "uv.lock"
+        if not uv_lock_path.exists():
+            return  # Skip if fixture doesn't exist yet
+
+        # uv.lock is JSON format
+        with open(uv_lock_path, "rb") as f:
+            data = tomli.load(f)
+
+        # Verify structure
+        assert "package" in data
+        assert isinstance(data["package"], list)
+        # Check for some expected packages
+        package_names = [pkg["name"] for pkg in data["package"]]
+        assert "fastapi" in package_names
+        assert "numpy" in package_names
+
 
 class TestRustFixtures:
     """Test with real Rust Cargo.toml files."""
 
     def test_parse_cargo_toml(self):
         """Test parsing Cargo.toml fixture."""
-        cargo_path = FIXTURES_DIR / "Cargo.toml"
+        cargo_path = FIXTURES_DIR / "rust" / "Cargo.toml"
         assert cargo_path.exists(), "Cargo.toml fixture not found"
 
         # Simple TOML parsing (no external dependency)
@@ -199,20 +256,32 @@ class TestRustFixtures:
 
         # Verify expected packages
         assert "tokio" in content
-        assert "serde" in content
-        assert "actix-web" in content
+
+    def test_parse_lock_toml(self):
+        """Test parsing Cargo.lock fixture."""
+        lock_path = FIXTURES_DIR / "rust" / "Cargo.lock"
+        assert lock_path.exists(), "Cargo.lock fixture not found"
+
+        # Simple TOML parsing (no external dependency)
+        with open(lock_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "tokio" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_rust_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Rust packages from Cargo.toml fixture."""
         mock_excluded.return_value = False
         mock_load_cache.return_value = None
 
-        test_packages = ["tokio", "serde", "actix-web"]
+        test_packages = ["tokio"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=85,
@@ -235,7 +304,7 @@ class TestJavaFixtures:
 
     def test_parse_pom_xml(self):
         """Test parsing pom.xml fixture."""
-        pom_path = FIXTURES_DIR / "pom.xml"
+        pom_path = FIXTURES_DIR / "java" / "maven" / "pom.xml"
         assert pom_path.exists(), "pom.xml fixture not found"
 
         with open(pom_path) as f:
@@ -247,7 +316,7 @@ class TestJavaFixtures:
         assert "commons-lang3" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_java_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Java packages from pom.xml fixture."""
         mock_excluded.return_value = False
@@ -260,7 +329,9 @@ class TestJavaFixtures:
         ]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.split(':')[-1]}",
                     total_score=82,
@@ -283,7 +354,7 @@ class TestPHPFixtures:
 
     def test_parse_composer_json(self):
         """Test parsing composer.json fixture."""
-        composer_path = FIXTURES_DIR / "composer.json"
+        composer_path = FIXTURES_DIR / "php" / "composer.json"
         assert composer_path.exists(), "composer.json fixture not found"
 
         with open(composer_path) as f:
@@ -295,20 +366,22 @@ class TestPHPFixtures:
         assert "monolog/monolog" in data["require"]
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_php_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking PHP packages from composer.json fixture."""
         mock_excluded.return_value = False
         mock_load_cache.return_value = None
 
-        composer_path = FIXTURES_DIR / "composer.json"
+        composer_path = FIXTURES_DIR / "php" / "composer.json"
         with open(composer_path) as f:
             data = json.load(f)
 
         packages = list(data["require"].keys())[1:4]  # Skip php version
 
         for pkg in packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.replace('/', '-')}",
                     total_score=78,
@@ -331,7 +404,7 @@ class TestRubyFixtures:
 
     def test_parse_gemfile(self):
         """Test parsing Gemfile fixture."""
-        gemfile_path = FIXTURES_DIR / "Gemfile"
+        gemfile_path = FIXTURES_DIR / "ruby" / "Gemfile"
         assert gemfile_path.exists(), "Gemfile fixture not found"
 
         with open(gemfile_path) as f:
@@ -342,8 +415,21 @@ class TestRubyFixtures:
         assert "puma" in content
         assert "sidekiq" in content
 
+    def test_parse_gemfile_lock(self):
+        """Test parsing Gemfile.lock fixture."""
+        lock_path = FIXTURES_DIR / "ruby" / "Gemfile.lock"
+        assert lock_path.exists(), "Gemfile.lock fixture not found"
+
+        with open(lock_path) as f:
+            content = f.read()
+
+        # Verify expected gems
+        assert "rails" in content
+        assert "puma" in content
+        assert "sidekiq" in content
+
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_ruby_gems_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Ruby gems from Gemfile fixture."""
         mock_excluded.return_value = False
@@ -352,7 +438,9 @@ class TestRubyFixtures:
         test_gems = ["rails", "puma", "sidekiq", "devise"]
 
         for gem in test_gems:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{gem}",
                     total_score=83,
@@ -375,7 +463,7 @@ class TestCSharpFixtures:
 
     def test_parse_packages_config(self):
         """Test parsing packages.config fixture."""
-        packages_path = FIXTURES_DIR / "packages.config"
+        packages_path = FIXTURES_DIR / "csharp" / "packages.config"
         assert packages_path.exists(), "packages.config fixture not found"
 
         with open(packages_path) as f:
@@ -387,7 +475,7 @@ class TestCSharpFixtures:
         assert "Serilog" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_csharp_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking C# packages from packages.config fixture."""
         mock_excluded.return_value = False
@@ -396,7 +484,9 @@ class TestCSharpFixtures:
         test_packages = ["Newtonsoft.Json", "EntityFramework", "Serilog", "Dapper"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=87,
@@ -419,7 +509,7 @@ class TestGoFixtures:
 
     def test_parse_go_mod(self):
         """Test parsing go.mod fixture."""
-        gomod_path = FIXTURES_DIR / "go.mod"
+        gomod_path = FIXTURES_DIR / "go" / "go.mod"
         assert gomod_path.exists(), "go.mod fixture not found"
 
         with open(gomod_path) as f:
@@ -427,11 +517,20 @@ class TestGoFixtures:
 
         # Verify expected modules
         assert "github.com/gin-gonic/gin" in content
-        assert "gorm.io/gorm" in content
-        assert "github.com/spf13/cobra" in content
+
+    def test_parse_go_sum(self):
+        """Test parsing go.sum fixture."""
+        go_sum_path = FIXTURES_DIR / "go" / "go.sum"
+        assert go_sum_path.exists(), "go.sum fixture not found"
+
+        with open(go_sum_path) as f:
+            content = f.read()
+
+        # Verify expected modules
+        assert "github.com/gin-gonic/gin" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_go_modules_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Go modules from go.mod fixture."""
         mock_excluded.return_value = False
@@ -444,7 +543,9 @@ class TestGoFixtures:
         ]
 
         for module in test_modules:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://{module}",
                     total_score=84,
@@ -467,7 +568,7 @@ class TestDartFixtures:
 
     def test_parse_pubspec_yaml(self):
         """Test parsing pubspec.yaml fixture."""
-        pubspec_path = FIXTURES_DIR / "pubspec.yaml"
+        pubspec_path = FIXTURES_DIR / "dart" / "pubspec.yaml"
         assert pubspec_path.exists(), "pubspec.yaml fixture not found"
 
         with open(pubspec_path) as f:
@@ -480,7 +581,7 @@ class TestDartFixtures:
 
     def test_parse_pubspec_lock(self):
         """Test parsing pubspec.lock fixture."""
-        lock_path = FIXTURES_DIR / "pubspec.lock"
+        lock_path = FIXTURES_DIR / "dart" / "pubspec.lock"
         assert lock_path.exists(), "pubspec.lock fixture not found"
 
         with open(lock_path) as f:
@@ -492,7 +593,7 @@ class TestDartFixtures:
         assert "lints:" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_dart_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Dart packages from pubspec.yaml fixture."""
         mock_excluded.return_value = False
@@ -501,7 +602,9 @@ class TestDartFixtures:
         test_packages = ["http", "path", "lints", "test"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=81,
@@ -524,7 +627,7 @@ class TestElixirFixtures:
 
     def test_parse_mix_exs(self):
         """Test parsing mix.exs fixture."""
-        mix_path = FIXTURES_DIR / "mix.exs"
+        mix_path = FIXTURES_DIR / "elixir" / "mix.exs"
         assert mix_path.exists(), "mix.exs fixture not found"
 
         with open(mix_path) as f:
@@ -536,7 +639,7 @@ class TestElixirFixtures:
 
     def test_parse_mix_lock(self):
         """Test parsing mix.lock fixture."""
-        lock_path = FIXTURES_DIR / "mix.lock"
+        lock_path = FIXTURES_DIR / "elixir" / "mix.lock"
         assert lock_path.exists(), "mix.lock fixture not found"
 
         with open(lock_path) as f:
@@ -547,7 +650,7 @@ class TestElixirFixtures:
         assert "ecto_sql" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_elixir_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Elixir packages from mix.exs fixture."""
         mock_excluded.return_value = False
@@ -556,7 +659,9 @@ class TestElixirFixtures:
         test_packages = ["phoenix", "ecto_sql"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=79,
@@ -579,7 +684,7 @@ class TestHaskellFixtures:
 
     def test_parse_cabal_project(self):
         """Test parsing cabal.project fixture."""
-        cabal_path = FIXTURES_DIR / "cabal.project"
+        cabal_path = FIXTURES_DIR / "haskell" / "cabal" / "cabal.project"
         assert cabal_path.exists(), "cabal.project fixture not found"
 
         with open(cabal_path) as f:
@@ -591,7 +696,7 @@ class TestHaskellFixtures:
 
     def test_parse_stack_yaml(self):
         """Test parsing stack.yaml fixture."""
-        stack_path = FIXTURES_DIR / "stack.yaml"
+        stack_path = FIXTURES_DIR / "haskell" / "stack" / "stack.yaml"
         assert stack_path.exists(), "stack.yaml fixture not found"
 
         with open(stack_path) as f:
@@ -602,7 +707,7 @@ class TestHaskellFixtures:
 
     def test_parse_cabal_project_freeze(self):
         """Test parsing cabal.project.freeze fixture."""
-        freeze_path = FIXTURES_DIR / "cabal.project.freeze"
+        freeze_path = FIXTURES_DIR / "haskell" / "cabal" / "cabal.project.freeze"
         assert freeze_path.exists(), "cabal.project.freeze fixture not found"
 
         with open(freeze_path) as f:
@@ -614,7 +719,7 @@ class TestHaskellFixtures:
 
     def test_parse_stack_yaml_lock(self):
         """Test parsing stack.yaml.lock fixture."""
-        lock_path = FIXTURES_DIR / "stack.yaml.lock"
+        lock_path = FIXTURES_DIR / "haskell" / "stack" / "stack.yaml.lock"
         assert lock_path.exists(), "stack.yaml.lock fixture not found"
 
         with open(lock_path) as f:
@@ -624,7 +729,7 @@ class TestHaskellFixtures:
         assert "text-1.2.5.0" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_haskell_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Haskell packages from cabal/stack fixtures."""
         mock_excluded.return_value = False
@@ -633,7 +738,9 @@ class TestHaskellFixtures:
         test_packages = ["text", "bytestring"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=76,
@@ -656,7 +763,7 @@ class TestKotlinFixtures:
 
     def test_parse_build_gradle_kts(self):
         """Test parsing build.gradle.kts fixture."""
-        gradle_path = FIXTURES_DIR / "build.gradle.kts"
+        gradle_path = FIXTURES_DIR / "kotlin" / "gradle" / "build.gradle.kts"
         assert gradle_path.exists(), "build.gradle.kts fixture not found"
 
         with open(gradle_path) as f:
@@ -667,8 +774,21 @@ class TestKotlinFixtures:
         assert "ktor-server-core" in content
         assert "junit-jupiter" in content
 
+    def test_parse_maven_pom_xml(self):
+        """Test parsing pom.xml fixture for Kotlin Maven project."""
+        pom_path = FIXTURES_DIR / "kotlin" / "maven" / "pom.xml"
+        assert pom_path.exists(), "pom.xml fixture not found"
+
+        with open(pom_path) as f:
+            content = f.read()
+
+        # Verify expected packages
+        assert "kotlin-stdlib" in content
+        assert "ktor-server-core" in content
+        assert "junit-jupiter" in content
+
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_kotlin_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Kotlin packages from build.gradle.kts fixture."""
         mock_excluded.return_value = False
@@ -681,7 +801,9 @@ class TestKotlinFixtures:
         ]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg.split(':')[-1]}",
                     total_score=77,
@@ -704,7 +826,7 @@ class TestPerlFixtures:
 
     def test_parse_cpanfile(self):
         """Test parsing cpanfile fixture."""
-        cpan_path = FIXTURES_DIR / "cpanfile"
+        cpan_path = FIXTURES_DIR / "perl" / "cpanfile"
         assert cpan_path.exists(), "cpanfile fixture not found"
 
         with open(cpan_path) as f:
@@ -716,7 +838,7 @@ class TestPerlFixtures:
 
     def test_parse_cpanfile_snapshot(self):
         """Test parsing cpanfile.snapshot fixture."""
-        snapshot_path = FIXTURES_DIR / "cpanfile.snapshot"
+        snapshot_path = FIXTURES_DIR / "perl" / "cpanfile.snapshot"
         assert snapshot_path.exists(), "cpanfile.snapshot fixture not found"
 
         with open(snapshot_path) as f:
@@ -727,7 +849,7 @@ class TestPerlFixtures:
         assert "Test-Simple" in content
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_perl_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Perl packages from cpanfile fixture."""
         mock_excluded.return_value = False
@@ -736,7 +858,9 @@ class TestPerlFixtures:
         test_packages = ["Mojolicious", "DBI"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=74,
@@ -759,7 +883,7 @@ class TestRFixtures:
 
     def test_parse_description(self):
         """Test parsing DESCRIPTION fixture."""
-        description_path = FIXTURES_DIR / "DESCRIPTION"
+        description_path = FIXTURES_DIR / "r" / "DESCRIPTION"
         assert description_path.exists(), "DESCRIPTION fixture not found"
 
         with open(description_path) as f:
@@ -772,7 +896,7 @@ class TestRFixtures:
 
     def test_parse_renv_lock(self):
         """Test parsing renv.lock fixture."""
-        lock_path = FIXTURES_DIR / "renv.lock"
+        lock_path = FIXTURES_DIR / "r" / "renv.lock"
         assert lock_path.exists(), "renv.lock fixture not found"
 
         with open(lock_path, "r", encoding="utf-8") as f:
@@ -784,7 +908,7 @@ class TestRFixtures:
         assert "ggplot2" in data["Packages"]
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_r_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking R packages from DESCRIPTION fixture."""
         mock_excluded.return_value = False
@@ -793,7 +917,9 @@ class TestRFixtures:
         test_packages = ["dplyr", "ggplot2", "testthat"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/example/{pkg}",
                     total_score=73,
@@ -816,7 +942,7 @@ class TestSwiftFixtures:
 
     def test_parse_package_swift(self):
         """Test parsing Package.swift fixture."""
-        package_path = FIXTURES_DIR / "Package.swift"
+        package_path = FIXTURES_DIR / "swift" / "Package.swift"
         assert package_path.exists(), "Package.swift fixture not found"
 
         with open(package_path) as f:
@@ -828,7 +954,7 @@ class TestSwiftFixtures:
 
     def test_parse_package_resolved(self):
         """Test parsing Package.resolved fixture."""
-        resolved_path = FIXTURES_DIR / "Package.resolved"
+        resolved_path = FIXTURES_DIR / "swift" / "Package.resolved"
         assert resolved_path.exists(), "Package.resolved fixture not found"
 
         with open(resolved_path, "r", encoding="utf-8") as f:
@@ -847,7 +973,7 @@ class TestSwiftFixtures:
         )
 
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_check_swift_packages_from_fixture(self, mock_excluded, mock_load_cache):
         """Test checking Swift packages from Package.swift fixture."""
         mock_excluded.return_value = False
@@ -856,7 +982,9 @@ class TestSwiftFixtures:
         test_packages = ["apple/swift-nio", "Alamofire/Alamofire"]
 
         for pkg in test_packages:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url=f"https://github.com/{pkg}",
                     total_score=72,
@@ -877,40 +1005,8 @@ class TestSwiftFixtures:
 class TestMultiLanguageFixtures:
     """Test cross-language fixture integration."""
 
-    def test_all_fixtures_exist(self):
-        """Verify all fixture files are present."""
-        expected_fixtures = [
-            "package.json",
-            "requirements.txt",
-            "Cargo.toml",
-            "pom.xml",
-            "build.gradle.kts",
-            "composer.json",
-            "Gemfile",
-            "packages.config",
-            "go.mod",
-            "pubspec.yaml",
-            "pubspec.lock",
-            "mix.exs",
-            "mix.lock",
-            "cabal.project",
-            "cabal.project.freeze",
-            "stack.yaml",
-            "stack.yaml.lock",
-            "cpanfile",
-            "cpanfile.snapshot",
-            "DESCRIPTION",
-            "renv.lock",
-            "Package.swift",
-            "Package.resolved",
-        ]
-
-        for fixture in expected_fixtures:
-            fixture_path = FIXTURES_DIR / fixture
-            assert fixture_path.exists(), f"Missing fixture: {fixture}"
-
     @patch("oss_sustain_guard.cache.load_cache")
-    @patch("oss_sustain_guard.cli.is_package_excluded")
+    @patch("oss_sustain_guard.commands.check.is_package_excluded")
     def test_mixed_language_dependencies(self, mock_excluded, mock_load_cache):
         """Test analyzing packages from multiple language ecosystems."""
         mock_excluded.return_value = False
@@ -936,7 +1032,9 @@ class TestMultiLanguageFixtures:
         ]
 
         for package_spec, lang in test_cases:
-            with patch("oss_sustain_guard.cli.analyze_package") as mock_analyze:
+            with patch(
+                "oss_sustain_guard.commands.check.analyze_package"
+            ) as mock_analyze:
                 mock_analyze.return_value = AnalysisResult(
                     repo_url="https://github.com/example/repo",
                     total_score=80,

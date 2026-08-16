@@ -4,7 +4,54 @@ OSS Sustain Guard is a multi-language package sustainability analyzer that helps
 
 ## 📦 Installation
 
-Install easily from PyPI:
+### Recommended: Isolated Environment (for non-Python developers)
+
+If you're not a Python developer or want to avoid polluting your global Python environment, use one of these methods:
+
+**Using pipx** (recommended for most users):
+
+```bash
+# Install pipx first (if not already installed)
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+
+# Install oss-sustain-guard in isolated environment
+pipx install oss-sustain-guard
+```
+
+**Using uv tool** (fastest option):
+
+```bash
+# Install uv first (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install oss-sustain-guard in isolated environment
+uv tool install oss-sustain-guard
+```
+
+**Using Docker** (no Python installation needed):
+
+```bash
+# Pull the Docker image
+docker pull ghcr.io/onukura/oss-sustain-guard:latest
+
+# Run analysis (pass GitHub token as environment variable)
+docker run --rm -e GITHUB_TOKEN=$GITHUB_TOKEN ghcr.io/onukura/oss-sustain-guard:latest check requests
+```
+
+**Using GitHub Actions** (for CI/CD):
+
+```yaml
+- uses: onukura/oss-sustain-guard@main
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+See [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) for more details.
+
+### Standard Installation (for Python developers)
+
+Install directly from PyPI:
 
 ```bash
 pip install oss-sustain-guard
@@ -120,6 +167,22 @@ os4g check python:django npm:react rust:tokio
 
 Mix any languages you use in one command.
 
+**New ecosystems with package mode:**
+
+```bash
+# Java (Maven coordinates: groupId:artifactId:version)
+os4g check java:junit:junit:4.13.2 java:org.slf4j:slf4j-api:1.7.36
+
+# C# (NuGet package names)
+os4g check csharp:Newtonsoft.Json csharp:Serilog
+
+# Dart (pub.dev package names)
+os4g check dart:http dart:flutter_bloc
+
+# Mix and match ecosystems
+os4g check python:requests java:junit:junit:4.13.2 csharp:Newtonsoft.Json dart:http
+```
+
 ### 4. Scan Entire Projects (Monorepos)
 
 ```bash
@@ -181,6 +244,41 @@ os4g check requests --profile long_term_stability
 ```bash
 os4g check requests --no-cache
 ```
+
+### Visualize Your Dependency Network
+
+Create an interactive graph of your project's dependencies and their health scores:
+
+```bash
+# Generate an interactive HTML dependency graph
+os4g graph package.json
+
+# Export as JSON for integration with other tools
+os4g graph Cargo.lock --output deps.json
+
+# Expoer as HTML file
+os4g graph uv.lock --output my-dependencies.html
+```
+
+See [Dependency Graph Visualization Guide](DEPENDENCY_GRAPH_VISUALIZATION.md) for more options.
+
+### Track Sustainability Trends Over Time
+
+Analyze how a repository's sustainability score changes over multiple time periods:
+
+```bash
+# Default: 6 monthly periods, 30-day windows
+os4g trend requests
+
+# Custom periods and intervals
+os4g trend requests --periods 12 --interval weekly
+os4g trend requests --periods 4 --interval quarterly --window-days 90
+
+# Analyze recent history with daily granularity
+os4g trend requests --periods 30 --interval daily --window-days 7
+```
+
+See [Trend Analysis Guide](TREND_ANALYSIS_GUIDE.md) for details on time-dependent metrics and visualization.
 
 ## 🔐 Token Setup (GitHub or GitLab)
 
@@ -286,7 +384,7 @@ The host API requires authentication for repository analysis. The token allows O
 | **Contributor Redundancy** | Distribution of contributions (lower = single-maintainer concentration) |
 | **Recent Activity** | Project's current activity level |
 | **Release Rhythm** | Release frequency and consistency |
-| **Maintainer Retention** | Stability of maintainers |
+| **Commit Author Continuity** | Are the project's principal committers still active? |
 | **Community Health** | Issue response time and responsiveness |
 
 ## 🔧 Useful Options
@@ -344,7 +442,8 @@ os4g check requests --no-cache
 
 - **Configure Exclusions**: [Exclude Configuration Guide](EXCLUDE_PACKAGES_GUIDE.md) - Exclude internal packages
 - **Scan Entire Project**: [Recursive Scanning Guide](RECURSIVE_SCANNING_GUIDE.md) - Scan monorepos and complex projects
-- **Track Changes**: Monitor dependency health over time
+- **Visualize Dependencies**: [Dependency Graph Visualization](DEPENDENCY_GRAPH_VISUALIZATION.md) - Interactive dependency health networks
+- **Track Sustainability Trends**: [Trend Analysis Guide](TREND_ANALYSIS_GUIDE.md) - Monitor health changes over time
 - **CI/CD Integration**: [GitHub Actions Guide](GITHUB_ACTIONS_GUIDE.md) - Integrate with your workflow
 - **Discover Projects to Support**: [Gratitude Vending Machine](GRATITUDE_VENDING_MACHINE.md) - Find projects that need support
 
@@ -354,18 +453,20 @@ For help, see [Troubleshooting & FAQ](TROUBLESHOOTING_FAQ.md).
 
 ## 🌍 Supported Languages
 
-- Python (PyPI)
-- JavaScript / TypeScript (npm)
-- Rust (Cargo)
-- Dart (pub.dev)
-- Elixir (Hex.pm)
-- Haskell (Hackage)
-- Perl (CPAN)
-- R (CRAN/renv)
-- Swift (Swift Package Manager)
-- Java (Maven)
-- PHP (Packagist)
-- Ruby (RubyGems)
-- C# / .NET (NuGet)
-- Go (Go Modules)
-- Kotlin
+### Package Mode (Direct Resolution)
+These ecosystems support direct package resolution from registries:
+
+- **Python** (PyPI via uv) - `python:package` or just `package`
+- **JavaScript/TypeScript** (npm) - `javascript:package` or `npm:package`
+- **Rust** (crates.io) - `rust:package`
+- **Ruby** (RubyGems) - `ruby:package`
+- **Go** (Go Modules) - `go:github.com/user/repo`
+- **PHP** (Packagist) - `php:vendor/package`
+- **Java** (Maven Central) - `java:groupId:artifactId:version`
+- **C#/.NET** (NuGet) - `csharp:PackageName`
+- **Dart** (pub.dev) - `dart:package`
+
+### Lockfile Mode
+All languages support dependency analysis from lockfiles:
+
+Python, JavaScript, TypeScript, Rust, Dart, Elixir, Haskell, Perl, R, Swift, Java, PHP, Ruby, C#, .NET, Go, Kotlin

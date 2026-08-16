@@ -13,7 +13,7 @@ from oss_sustain_guard.metrics.base import (
 
 _BUILTIN_MODULES = [
     "oss_sustain_guard.metrics.bus_factor",
-    "oss_sustain_guard.metrics.maintainer_drain",
+    "oss_sustain_guard.metrics.commit_author_continuity",
     "oss_sustain_guard.metrics.zombie_status",
     "oss_sustain_guard.metrics.merge_velocity",
     "oss_sustain_guard.metrics.issue_resolution_duration",

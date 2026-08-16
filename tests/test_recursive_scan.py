@@ -11,7 +11,7 @@ from oss_sustain_guard.resolvers import (
 )
 
 
-def test_detect_ecosystems_non_recursive(tmp_path: Path):
+async def test_detect_ecosystems_non_recursive(tmp_path: Path):
     """Test that non-recursive scan only detects root directory files."""
     # Create root manifest
     (tmp_path / "package.json").write_text('{"dependencies": {"react": "^18.0.0"}}')
@@ -21,14 +21,14 @@ def test_detect_ecosystems_non_recursive(tmp_path: Path):
     subdir.mkdir()
     (subdir / "requirements.txt").write_text("requests==2.28.0\n")
 
-    detected = detect_ecosystems(str(tmp_path), recursive=False)
+    detected = await detect_ecosystems(str(tmp_path), recursive=False)
 
     # Should only detect javascript from root
     assert "javascript" in detected
     assert "python" not in detected
 
 
-def test_detect_ecosystems_recursive(tmp_path: Path):
+async def test_detect_ecosystems_recursive(tmp_path: Path):
     """Test that recursive scan detects manifests in subdirectories."""
     # Create root manifest
     (tmp_path / "package.json").write_text('{"dependencies": {"react": "^18.0.0"}}')
@@ -42,7 +42,7 @@ def test_detect_ecosystems_recursive(tmp_path: Path):
     deeper_dir.mkdir()
     (deeper_dir / "Cargo.toml").write_text('[package]\nname = "example"\n')
 
-    detected = detect_ecosystems(str(tmp_path), recursive=True)
+    detected = await detect_ecosystems(str(tmp_path), recursive=True)
 
     # Should detect all ecosystems
     assert "javascript" in detected
@@ -50,7 +50,7 @@ def test_detect_ecosystems_recursive(tmp_path: Path):
     assert "rust" in detected
 
 
-def test_detect_ecosystems_with_depth_limit(tmp_path: Path):
+async def test_detect_ecosystems_with_depth_limit(tmp_path: Path):
     """Test that depth limit is respected."""
     # Root
     (tmp_path / "package.json").write_text('{"dependencies": {"react": "^18.0.0"}}')
@@ -66,14 +66,14 @@ def test_detect_ecosystems_with_depth_limit(tmp_path: Path):
     (level2 / "Cargo.toml").write_text('[package]\nname = "example"\n')
 
     # With depth=1, should only detect root and level1
-    detected = detect_ecosystems(str(tmp_path), recursive=True, max_depth=1)
+    detected = await detect_ecosystems(str(tmp_path), recursive=True, max_depth=1)
 
     assert "javascript" in detected
     assert "python" in detected
     assert "rust" not in detected  # Too deep
 
 
-def test_find_manifest_files_non_recursive(tmp_path: Path):
+async def test_find_manifest_files_non_recursive(tmp_path: Path):
     """Test finding manifest files without recursion."""
     (tmp_path / "package.json").write_text('{"dependencies": {}}')
     (tmp_path / "requirements.txt").write_text("requests==2.28.0\n")
@@ -82,7 +82,7 @@ def test_find_manifest_files_non_recursive(tmp_path: Path):
     subdir.mkdir()
     (subdir / "Cargo.toml").write_text('[package]\nname = "test"\n')
 
-    manifests = find_manifest_files(str(tmp_path), recursive=False)
+    manifests = await find_manifest_files(str(tmp_path), recursive=False)
 
     assert "javascript" in manifests
     assert "python" in manifests
@@ -91,7 +91,7 @@ def test_find_manifest_files_non_recursive(tmp_path: Path):
     assert len(manifests["python"]) == 1
 
 
-def test_find_manifest_files_recursive(tmp_path: Path):
+async def test_find_manifest_files_recursive(tmp_path: Path):
     """Test finding manifest files with recursion."""
     (tmp_path / "package.json").write_text('{"dependencies": {}}')
 
@@ -99,7 +99,7 @@ def test_find_manifest_files_recursive(tmp_path: Path):
     subdir.mkdir()
     (subdir / "requirements.txt").write_text("requests==2.28.0\n")
 
-    manifests = find_manifest_files(str(tmp_path), recursive=True)
+    manifests = await find_manifest_files(str(tmp_path), recursive=True)
 
     assert "javascript" in manifests
     assert "python" in manifests
@@ -107,7 +107,7 @@ def test_find_manifest_files_recursive(tmp_path: Path):
     assert len(manifests["python"]) == 1
 
 
-def test_find_lockfiles_recursive(tmp_path: Path):
+async def test_find_lockfiles_recursive(tmp_path: Path):
     """Test finding lockfiles with recursion."""
     # Root lockfile
     (tmp_path / "package-lock.json").write_text('{"lockfileVersion": 2}')
@@ -117,13 +117,13 @@ def test_find_lockfiles_recursive(tmp_path: Path):
     subdir.mkdir()
     (subdir / "poetry.lock").write_text("# Poetry lock\n")
 
-    lockfiles = find_lockfiles(str(tmp_path), recursive=True)
+    lockfiles = await find_lockfiles(str(tmp_path), recursive=True)
 
     assert "javascript" in lockfiles
     assert "python" in lockfiles
 
 
-def test_skips_common_directories(tmp_path: Path):
+async def test_skips_common_directories(tmp_path: Path):
     """Test that common build/cache directories are skipped."""
     # Create manifest in node_modules (should be skipped)
     node_modules = tmp_path / "node_modules" / "@types" / "react"
@@ -138,7 +138,7 @@ def test_skips_common_directories(tmp_path: Path):
     # Create manifest in root (should be detected)
     (tmp_path / "package.json").write_text('{"dependencies": {}}')
 
-    manifests = find_manifest_files(str(tmp_path), recursive=True)
+    manifests = await find_manifest_files(str(tmp_path), recursive=True)
 
     # Should only find root manifest
     assert "javascript" in manifests
@@ -146,19 +146,19 @@ def test_skips_common_directories(tmp_path: Path):
     assert manifests["javascript"][0] == tmp_path / "package.json"
 
 
-def test_find_manifest_files_with_ecosystem_filter(tmp_path: Path):
+async def test_find_manifest_files_with_ecosystem_filter(tmp_path: Path):
     """Test filtering by specific ecosystem."""
     (tmp_path / "package.json").write_text('{"dependencies": {}}')
     (tmp_path / "requirements.txt").write_text("requests==2.28.0\n")
 
     # Filter for JavaScript only
-    manifests = find_manifest_files(str(tmp_path), ecosystem="javascript")
+    manifests = await find_manifest_files(str(tmp_path), ecosystem="javascript")
 
     assert "javascript" in manifests
     assert "python" not in manifests
 
 
-def test_recursive_depth_zero_means_root_only(tmp_path: Path):
+async def test_recursive_depth_zero_means_root_only(tmp_path: Path):
     """Test that depth=0 only scans the root directory."""
     (tmp_path / "package.json").write_text('{"dependencies": {}}')
 
@@ -166,14 +166,14 @@ def test_recursive_depth_zero_means_root_only(tmp_path: Path):
     subdir.mkdir()
     (subdir / "requirements.txt").write_text("requests==2.28.0\n")
 
-    detected = detect_ecosystems(str(tmp_path), recursive=True, max_depth=0)
+    detected = await detect_ecosystems(str(tmp_path), recursive=True, max_depth=0)
 
     # With depth=0 in recursive mode, should only see root
     assert "javascript" in detected
     assert "python" not in detected
 
 
-def test_multiple_manifests_same_ecosystem(tmp_path: Path):
+async def test_multiple_manifests_same_ecosystem(tmp_path: Path):
     """Test finding multiple manifest files for the same ecosystem."""
     # Create multiple Python projects
     (tmp_path / "requirements.txt").write_text("requests==2.28.0\n")
@@ -186,14 +186,14 @@ def test_multiple_manifests_same_ecosystem(tmp_path: Path):
     proj2.mkdir()
     (proj2 / "pyproject.toml").write_text('[project]\nname = "example"\n')
 
-    manifests = find_manifest_files(str(tmp_path), recursive=True)
+    manifests = await find_manifest_files(str(tmp_path), recursive=True)
 
     # Should find all three Python manifests
     assert "python" in manifests
     assert len(manifests["python"]) == 3
 
 
-def test_respects_gitignore(tmp_path: Path):
+async def test_respects_gitignore(tmp_path: Path):
     """Test that .gitignore patterns are respected."""
     # Create .gitignore
     gitignore = tmp_path / ".gitignore"
@@ -211,7 +211,7 @@ def test_respects_gitignore(tmp_path: Path):
     # Create manifest in non-ignored directory
     (tmp_path / "package.json").write_text('{"dependencies": {}}')
 
-    manifests = find_manifest_files(str(tmp_path), recursive=True)
+    manifests = await find_manifest_files(str(tmp_path), recursive=True)
 
     # Should only find root manifest
     assert "javascript" in manifests
@@ -221,7 +221,7 @@ def test_respects_gitignore(tmp_path: Path):
     assert "python" not in manifests
 
 
-def test_skips_hidden_directories(tmp_path: Path):
+async def test_skips_hidden_directories(tmp_path: Path):
     """Test that hidden directories (starting with .) are skipped."""
     # Create manifest in hidden directory
     hidden = tmp_path / ".hidden"
@@ -231,7 +231,7 @@ def test_skips_hidden_directories(tmp_path: Path):
     # Create manifest in root
     (tmp_path / "package.json").write_text('{"dependencies": {}}')
 
-    manifests = find_manifest_files(str(tmp_path), recursive=True)
+    manifests = await find_manifest_files(str(tmp_path), recursive=True)
 
     # Should only find root manifest
     assert "javascript" in manifests
