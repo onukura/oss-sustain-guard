@@ -4,6 +4,13 @@ All notable changes to OSS Sustain Guard are documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- **Rust dependency resolution was broken for every pinned version**: the generated `Cargo.toml` put the `=` operator outside the version string, producing `serde = = "1.0.0"`, which cargo rejects with ``extra `=`, expected nothing``. Cargo requirement operators belong inside the string (`serde = "=1.0.0"`). This made the `Rust (cargo)` CI job fail on every run since it was added, and `oss-guard trace` unable to resolve any Rust package at a specific version. Manifest construction is now a testable `build_cargo_manifest()` helper.
+- **Legacy Deno lockfiles resolved to a hostname instead of package names**: the `remote` section handler scanned a registry URL's slash-separated parts for the first one not starting with `http`, which was always `registry.npmjs.org`. `https://registry.npmjs.org/react/-/react-18.2.0.tgz` was reported as the package `registry.npmjs.org` rather than `react`. Package names are now taken from the URL path, with scoped packages (`@babel/core`) handled.
+- **`Comment coverage on PR` failed on every pull request**: `.coverage` recorded absolute runner paths, which do not exist inside the action's container, so `coverage json` aborted with `No source for code`. Added `relative_files = true` to `[tool.coverage.run]`, granted the job `pull-requests: write`, and made the step `continue-on-error` — Dependabot pull requests get a read-only token regardless of what the workflow requests, and coverage reporting should not redden a passing test job. This is why `main` was green while every pull request showed `test (ubuntu-latest, 3.13)` as failed.
+- **Host checks in URL handling used substring matching**: `LFXProjectResolver.resolve_from_github_url()` accepted any URL merely containing `github.com/`, so `https://elsewhere.example.com/github.com/pwned/repo` resolved to the LFX slug `pwned-repo`; the npm registry check had the same shape. Both now validate the host exactly, reusing `parse_repository_url()` for GitHub URLs. Resolves code scanning alerts 22, 23, and 24.
+
 ## v0.26.0 - 2026-08-17
 
 ### Changed

@@ -7,7 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from oss_sustain_guard.resolvers.javascript import JavaScriptResolver
+from oss_sustain_guard.resolvers.javascript import (
+    JavaScriptResolver,
+    _npm_package_from_registry_url,
+)
 
 
 class TestJavaScriptResolver:
@@ -667,3 +670,52 @@ packages: []
         lockfile_strs = [str(f) for f in lockfiles]
         assert str(bun_lock) in lockfile_strs
         assert str(bun_lockb) in lockfile_strs
+
+
+class TestNpmPackageFromRegistryUrl:
+    """Test package name extraction from npm registry tarball URLs."""
+
+    def test_plain_package(self):
+        """Regression test: this used to return the hostname, not the package.
+
+        The old loop scanned the URL's slash-separated parts for the first one
+        that did not start with "http", which was always "registry.npmjs.org",
+        so every legacy Deno `remote` entry produced a bogus package name.
+        """
+        assert (
+            _npm_package_from_registry_url(
+                "https://registry.npmjs.org/react/-/react-18.2.0.tgz"
+            )
+            == "react"
+        )
+
+    def test_scoped_package(self):
+        assert (
+            _npm_package_from_registry_url(
+                "https://registry.npmjs.org/@babel/core/-/core-7.0.0.tgz"
+            )
+            == "@babel/core"
+        )
+
+    def test_rejects_host_in_path(self):
+        """The host must match exactly, not appear anywhere in the URL."""
+        assert (
+            _npm_package_from_registry_url(
+                "https://evil.example.com/registry.npmjs.org/pwned/-/pwned-1.0.0.tgz"
+            )
+            is None
+        )
+
+    def test_rejects_other_hosts(self):
+        assert (
+            _npm_package_from_registry_url("https://deno.land/std/http/server.ts")
+            is None
+        )
+
+    def test_rejects_registry_root(self):
+        assert _npm_package_from_registry_url("https://registry.npmjs.org/") is None
+
+    def test_rejects_scope_without_package(self):
+        assert (
+            _npm_package_from_registry_url("https://registry.npmjs.org/@babel") is None
+        )

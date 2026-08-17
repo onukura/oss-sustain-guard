@@ -13,6 +13,10 @@ permissions:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    # Overrides the workflow default: "Comment coverage on PR" posts to the PR.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -79,6 +83,10 @@ jobs:
       - name: Comment coverage on PR
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         uses: py-cov-action/python-coverage-comment-action@v3
+        # Dependabot PRs get a read-only GITHUB_TOKEN no matter what this
+        # workflow requests, so posting the comment can fail for reasons the
+        # branch cannot fix. Reporting coverage must not redden the test job.
+        continue-on-error: true
         with:
           GITHUB_TOKEN: ${{ github.token }}
           MINIMUM_GREEN: 80

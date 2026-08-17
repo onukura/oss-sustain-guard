@@ -105,6 +105,36 @@ class TestLFXProjectResolver:
         slug = LFXProjectResolver.resolve_from_github_url(None)  # type: ignore
         assert slug is None
 
+    def test_resolve_from_github_url_rejects_host_in_path(self):
+        """The host must match exactly, not appear anywhere in the URL.
+
+        The previous `"github.com/" in url` check resolved this to
+        `pwned-repo`, treating another host's path as a GitHub repository.
+        """
+        slug = LFXProjectResolver.resolve_from_github_url(
+            "https://elsewhere.example.com/github.com/pwned/repo"
+        )
+        assert slug is None
+
+    def test_resolve_from_github_url_rejects_other_providers(self):
+        """GitLab URLs are not GitHub repositories."""
+        slug = LFXProjectResolver.resolve_from_github_url(
+            "https://gitlab.com/owner/repo"
+        )
+        assert slug is None
+
+    def test_resolve_from_github_url_ignores_deep_paths(self):
+        """A link into a branch still resolves to the repository itself."""
+        slug = LFXProjectResolver.resolve_from_github_url(
+            "https://github.com/owner/repo/tree/main"
+        )
+        assert slug == "owner-repo"
+
+    def test_resolve_from_github_url_requires_owner_and_repo(self):
+        """An owner with no repository name is not resolvable."""
+        slug = LFXProjectResolver.resolve_from_github_url("https://github.com/nodejs")
+        assert slug is None
+
     def test_resolve_with_config_mapping(self):
         """Test resolving with explicit config mapping (highest priority)."""
         config = {"pypi:requests": "psf-requests"}

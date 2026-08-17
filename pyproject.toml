@@ -148,6 +148,10 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["oss_sustain_guard"]
+# Store paths relative to the project root. The coverage-comment action reads
+# .coverage from inside its own container, where the runner's absolute paths do
+# not exist, and fails with "No source for code" without this.
+relative_files = true
 omit = [
     "*/tests/*",
     "*/test_*.py",

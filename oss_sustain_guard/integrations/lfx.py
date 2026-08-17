@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from typing import Literal
 from urllib.parse import quote
 
+from oss_sustain_guard.repository import parse_repository_url
+
 # Type definitions
 ResolutionMethod = Literal["config", "heuristic", "none"]
 BadgeType = Literal["health-score", "active-contributors", "contributors"]
@@ -171,30 +173,21 @@ class LFXProjectResolver:
         if not github_url or not isinstance(github_url, str):
             return None
 
-        # Normalize URL
-        github_url = github_url.rstrip("/")
-
-        # Extract owner and repo from GitHub URL
-        # Supports formats:
-        # - https://github.com/owner/repo
-        # - git@github.com:owner/repo.git
-        parts = None
-        if "github.com/" in github_url:
-            parts = github_url.split("github.com/")[-1].split("/")
-        elif "github.com:" in github_url:
-            parts = github_url.split("github.com:")[-1].split("/")
-
-        if not parts or len(parts) < 2:
+        # Delegate to the shared parser, which validates the host exactly rather
+        # than by substring. A plain "github.com/" check accepted URLs that only
+        # mention the host in their path, e.g. https://elsewhere/github.com/a/b.
+        # Handles https:// and git@github.com:owner/repo.git alike.
+        reference = parse_repository_url(github_url)
+        if reference is None or reference.provider != "github":
             return None
 
-        owner = parts[0]
-        repo = parts[1].replace(".git", "")
-
-        if not owner or not repo:
+        # A GitHub repository is always owner/name; ignore deeper path segments.
+        segments = reference.path.split("/")
+        if len(segments) < 2:
             return None
 
         # Common LFX pattern: owner-repo
-        return f"{owner}-{repo}"
+        return f"{segments[0]}-{segments[1]}"
 
     @staticmethod
     def resolve(
@@ -236,12 +229,12 @@ class LFXProjectResolver:
         if config_mapping and package_name in config_mapping:
             return config_mapping[package_name], "config"
 
-        # Priority 2: Heuristic from repository URL
+        # Priority 2: Heuristic from repository URL.
+        # resolve_from_github_url() validates the host itself, so no pre-check.
         if repo_url:
-            if "github.com" in repo_url:
-                slug = LFXProjectResolver.resolve_from_github_url(repo_url)
-                if slug:
-                    return slug, "heuristic"
+            slug = LFXProjectResolver.resolve_from_github_url(repo_url)
+            if slug:
+                return slug, "heuristic"
 
         # Unable to resolve
         return None, "none"

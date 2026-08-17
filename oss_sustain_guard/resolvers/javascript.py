@@ -5,6 +5,7 @@ JavaScript/TypeScript package resolver (npm ecosystem).
 import json
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 import aiofiles
 import httpx
@@ -393,13 +394,9 @@ class JavaScriptResolver(LanguageResolver):
             remote = data.get("remote", {})
             if remote:
                 for url in remote.keys():
-                    # Try to extract package name from URL
-                    if "registry.npmjs.org" in url:
-                        parts = url.split("/")
-                        for part in parts:
-                            if part and not part.startswith("http") and "@" not in part:
-                                packages.add(part)
-                                break
+                    package_name = _npm_package_from_registry_url(url)
+                    if package_name:
+                        packages.add(package_name)
 
             return [
                 PackageInfo(
@@ -553,6 +550,31 @@ class JavaScriptResolver(LanguageResolver):
             ]
         except Exception:
             return []
+
+
+def _npm_package_from_registry_url(url: str) -> str | None:
+    """Extract an npm package name from a registry tarball URL.
+
+    Matches the host exactly rather than by substring, so a URL merely
+    containing "registry.npmjs.org" somewhere in its path is not accepted.
+
+    Examples:
+        https://registry.npmjs.org/react/-/react-18.2.0.tgz    -> react
+        https://registry.npmjs.org/@babel/core/-/core-7.0.0.tgz -> @babel/core
+    """
+    try:
+        hostname = urlparse(url).hostname
+    except ValueError:
+        return None
+    if hostname != "registry.npmjs.org":
+        return None
+
+    segments = [segment for segment in urlparse(url).path.split("/") if segment]
+    if not segments:
+        return None
+    if segments[0].startswith("@"):
+        return "/".join(segments[:2]) if len(segments) >= 2 else None
+    return segments[0]
 
 
 def _extract_npm_package_name(package_path: str) -> str | None:

@@ -14,6 +14,24 @@ from oss_sustain_guard.dependency_graph import (
 from oss_sustain_guard.external_tools.base import ExternalTool
 
 
+def build_cargo_manifest(package: str, version: str | None = None) -> str:
+    """Build a minimal Cargo.toml that depends on a single crate.
+
+    Cargo version requirement operators live inside the version string, so an
+    exact pin is `serde = "=1.0.0"` — emitting the operator outside it produces
+    `serde = = "1.0.0"`, which cargo rejects with "extra `=`, expected nothing".
+    """
+    version_spec = f"={version}" if version else "*"
+    return f"""[package]
+name = "temp-os4g-trace"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+{package} = "{version_spec}"
+"""
+
+
 class CargoTreeTool(ExternalTool):
     """Use cargo to resolve Rust package dependencies."""
 
@@ -56,17 +74,8 @@ class CargoTreeTool(ExternalTool):
 
         try:
             # Create minimal Cargo.toml
-            version_spec = f'= "{version}"' if version else '"*"'
-            cargo_content = f"""[package]
-name = "temp-os4g-trace"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-{package} = {version_spec}
-"""
             cargo_path = temp_dir / "Cargo.toml"
-            cargo_path.write_text(cargo_content)
+            cargo_path.write_text(build_cargo_manifest(package, version))
 
             # Create dummy src/main.rs (required for cargo to work)
             src_dir = temp_dir / "src"
