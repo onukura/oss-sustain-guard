@@ -54,6 +54,27 @@ class TestSwiftResolver:
         assert repo.owner == "apple"
         assert repo.name == "swift-nio"
 
+    async def test_resolve_repository_host_path_gitlab(self):
+        """Test resolving repository for a scheme-less GitLab path."""
+        resolver = SwiftResolver()
+        repo = await resolver.resolve_repository("gitlab.com/owner/repo")
+        assert repo is not None
+        assert repo.provider == "gitlab"
+        assert repo.owner == "owner"
+
+    async def test_resolve_repository_host_path_is_case_insensitive(self):
+        """Hosts are compared case-insensitively, as DNS names are."""
+        resolver = SwiftResolver()
+        repo = await resolver.resolve_repository("GitHub.com/apple/swift-nio")
+        assert repo is not None
+        assert repo.host == "github.com"
+        assert repo.name == "swift-nio"
+
+    async def test_resolve_repository_host_without_path(self):
+        """A bare host names no repository."""
+        resolver = SwiftResolver()
+        assert await resolver.resolve_repository("github.com") is None
+
     async def test_resolve_repository_invalid(self):
         """Test resolving repository for invalid input."""
         resolver = SwiftResolver()

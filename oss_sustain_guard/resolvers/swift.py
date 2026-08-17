@@ -10,7 +10,11 @@ from pathlib import Path
 
 import aiofiles
 
-from oss_sustain_guard.repository import RepositoryReference, parse_repository_url
+from oss_sustain_guard.repository import (
+    SUPPORTED_HOSTS,
+    RepositoryReference,
+    parse_repository_url,
+)
 from oss_sustain_guard.resolvers.base import LanguageResolver, PackageInfo
 
 
@@ -38,9 +42,14 @@ class SwiftResolver(LanguageResolver):
         if candidate.startswith("git@") or "://" in candidate:
             return parse_repository_url(candidate)
 
-        if candidate.startswith("github.com/") or candidate.startswith("gitlab.com/"):
+        # Scheme-less "host/owner/name". Compare the first segment against the
+        # supported hosts exactly — a prefix check would also accept a candidate
+        # that merely starts with those characters.
+        head, _, rest = candidate.partition("/")
+        if rest and head.lower() in SUPPORTED_HOSTS:
             return parse_repository_url(f"https://{candidate}")
 
+        # Bare "owner/name" is GitHub shorthand.
         if "/" in candidate:
             return parse_repository_url(f"https://github.com/{candidate}")
 

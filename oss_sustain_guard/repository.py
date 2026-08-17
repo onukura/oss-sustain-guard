@@ -5,6 +5,9 @@ Repository URL parsing utilities.
 from typing import NamedTuple
 from urllib.parse import urlparse
 
+# Hosts this module can turn into a repository reference, mapped to provider id.
+SUPPORTED_HOSTS = {"github.com": "github", "gitlab.com": "gitlab"}
+
 
 class RepositoryReference(NamedTuple):
     """Unified repository reference for supported hosting providers."""
@@ -71,8 +74,7 @@ def parse_repository_url(url: str) -> RepositoryReference | None:
         host = host.split("@", 1)[-1]
     host = host.lower()
 
-    supported_hosts = {"github.com": "github", "gitlab.com": "gitlab"}
-    provider = supported_hosts.get(host)
+    provider = SUPPORTED_HOSTS.get(host)
     if not provider:
         return None
 

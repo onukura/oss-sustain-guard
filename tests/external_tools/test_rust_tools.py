@@ -2,8 +2,7 @@
 Tests for the Rust (cargo) external tool.
 """
 
-import tomllib
-
+from oss_sustain_guard.dependency_graph import tomllib
 from oss_sustain_guard.external_tools.rust_tools import build_cargo_manifest
 
 
